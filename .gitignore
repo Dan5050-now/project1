@@ -1,0 +1,14 @@
+# Excel lock files created when a workbook is open
+~$*.xlsx
+~$*.xlsm
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
