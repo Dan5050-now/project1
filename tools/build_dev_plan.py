@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "0.3"
-DOC_STATUS = "Draft 3 - second review round incorporated, re-issued for review"
+DOC_VERSION = "0.4"
+DOC_STATUS = "Draft 4 - third review round incorporated, re-issued for review"
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -162,10 +162,10 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Reviewer", "Requester - v0.1 returned as v0.11_reviewed; v0.2 returned as v0.2_reviewed"),
+    ("Reviewer", "Requester - three review rounds: v0.11_reviewed, v0.2_reviewed, v0.3_reviewed"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
-    ("Supersedes", "v0.2 (2026-07-31)"),
+    ("Supersedes", "v0.3 (2026-07-31)"),
 ]
 r = 4
 for k, v in cover:
@@ -178,27 +178,31 @@ ws.column_dimensions["A"].width = 26
 ws.column_dimensions["B"].width = 84
 
 r += 1
-r = section(ws, r, "What changed in v0.3")
+r = section(ws, r, "What changed in v0.4")
 r = lines(ws, r, [
-    "The second review round answered Q-13 to Q-20. Three blockers cleared and three things changed shape:",
+    "The third review round answered Q-21 to Q-26 and settled the period model. The three coverage gaps",
+    "found in v0.3 are closed - by your rules, not by my assumptions - and one answer changed the shape of",
+    "the data model:",
     "",
-    "  1. Q-13 and Q-17 are closed, and with them the two items that were blocking progress. No example",
-    "     template is coming - the structure already in this plan is modelled on the existing one - and the",
-    "     weight and role-factor VALUES will be entered as data in the source workbook rather than fixed",
-    "     here. Nothing in Step 2 now waits on an input.",
-    "  2. Period sets are per project type (Q-18). Clinical Trial keeps Before-Start-up / Start-up / Conduct /",
-    "     Close-out; 'Others' gets Planning / Develop / Close. One list no longer serves both.",
-    "  3. Period boundaries are computed from milestone dates and month offsets (Q-16), not from milestone",
-    "     dates alone. Start-up is a fixed 4-month window; Conduct and Close-out hang off the DB lock.",
-    "  4. Every field is editable (Q-20), with referential integrity enforced by rule rather than by making",
-    "     identifiers read-only. Editing a referenced ID now cascades - see C-09 on sheet 05.",
+    "  1. Close-out now starts 3 months before the DB lock, not 2 (Q-22). Conduct ends the day before it.",
+    "  2. A trial with an interim DB lock gets TWO close-out periods (Q-23): 'Close-out (interim)' and",
+    "     'Close-out (final)', with Conduct resuming in between. This is the structural change - 'Conduct'",
+    "     can now occur TWICE in one project, as two separate stretches. A period name is therefore no",
+    "     longer unique within a project, and ProjectPeriod gains a sequence number to keep the segments",
+    "     apart. The clinical-trial period set grows from four names to five.",
+    "  3. Project weight is keyed on clinical_phase for clinical trials (Q-26). PeriodWeightStandard is",
+    "     re-keyed accordingly, and clinical_phase stops being merely descriptive - it now drives the",
+    "     simulation, so a missing phase is an error rather than a note.",
+    "  4. 'Protocol (v1)' is the eighth milestone (Q-24). 'Others' projects have no milestone mapping and",
+    "     their periods are entered by hand (Q-25), confirming what v0.3 assumed.",
     "",
-    "The milestone list was also replaced (Q-15): 'First SIV' enters, FPI leaves, and DB lock cut-off and DB",
-    "lock each split into interim and final.",
+    "The derivation was tested against five timelines - the normal case, an interim and final lock only one",
+    "month apart, no interim lock, a CTA submission earlier than the project start, and a trial too short",
+    "to have a Conduct phase at all. All five come out contiguous, with no gap and no overlap. Where a",
+    "period is squeezed to nothing it is omitted rather than written with a negative length; the rules are",
+    "on sheet 05.",
     "",
-    "IMPORTANT - the mapping in the Q-16 answer leaves three stretches of a project with no period, and so",
-    "no weight. Worked through on sheet 05, and raised as Q-21, Q-22 and Q-23. v0.3 adopts a no-gap reading",
-    "so the plan stays buildable, but those three need your confirmation before Step 2 closes.",
+    "Two small questions remain, Q-27 and Q-28. Neither blocks Step 2.",
 ])
 
 r += 1
@@ -215,8 +219,8 @@ guide = [
     ("08_WBS_Schedule", "The five steps broken into tasks, deliverables and review gates."),
     ("09_Version_Control", "How plan, specification and output files are versioned together."),
     ("10_Risks", "Risks and assumptions with mitigations."),
-    ("11_Open_Questions", "Your answers to Q-01..Q-20, and the open items Q-21..Q-26."),
-    ("12_Review_Log", "Every change made in v0.2 and v0.3, and why."),
+    ("11_Open_Questions", "Your answers to Q-01..Q-26, and the two open items Q-27..Q-28."),
+    ("12_Review_Log", "Every change made in v0.2, v0.3 and v0.4, and why."),
 ]
 r = table(ws, r, ["Sheet", "Contents"], guide, [26, 84], wrap_cols=(2,))
 r = legend(ws, r)
@@ -243,13 +247,23 @@ rows = [
     ["0.21", DOC_DATE, "Requester", "Requester",
      "Second reviewer mark-up returned as PRAP_Development_Plan_v0.2_reviewed.xlsx, answering Q-13 to Q-20.",
      "Review input"],
-    ["0.3", DOC_DATE, "Claude Code", "Pending",
+    ["0.3", DOC_DATE, "Claude Code", "Requester",
      "Q-13 and Q-17 closed, clearing both blockers. Milestone list replaced (First SIV in, FPI out, DB lock "
      "cut-off and DB lock split interim/final). Period sets made type-specific: Clinical Trial keeps its four, "
      "'Others' gets Planning / Develop / Close. Period boundaries now computed from milestone dates plus month "
      "offsets. outsourcing_type fixed to three values; system_prepared_by dropped. All fields made editable with "
      "cascading referential integrity. Three coverage gaps in the supplied period mapping identified and raised "
      "as Q-21 to Q-23.",
+     "Superseded"],
+    ["0.31", DOC_DATE, "Requester", "Requester",
+     "Third reviewer mark-up returned as PRAP_Development_Plan_v0.3_reviewed.xlsx, answering Q-21 to Q-26.",
+     "Review input"],
+    ["0.4", DOC_DATE, "Claude Code", "Pending",
+     "Period model settled. Close-out starts 3 months before DB lock; a trial with an interim lock carries "
+     "two close-out periods with Conduct resuming between them, so 'Conduct' may occur twice and "
+     "ProjectPeriod gains period_seq. Clinical-trial period set grows to five names. PeriodWeightStandard "
+     "re-keyed on clinical_phase. 'Protocol (v1)' added as the eighth milestone. Derivation verified "
+     "contiguous against five timelines including four degenerate ones. Two questions remain.",
      "Draft for review"],
 ]
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary of change", "Status"],
@@ -338,12 +352,12 @@ reqs = [
     ["REQ-PRJ-02", "Project data", "Each project records a project category. Where type = 'Clinical Trial' the category is the product name; the field is optional for 'Others'.", "Must", "Requester", "2"],
     ["REQ-PRJ-03", "Project data", "Each project records a project name, unique within the source workbook.", "Must", "Requester", "2"],
     [f"{MARK_CHG}REQ-PRJ-04", "Project data", "Each project records its conditions: outsourcing type ('Full outsourcing' / 'Partial outsourcing' / 'Full In-house') and the number of project members.", "Must", "Q-14", "2"],
+    [f"{MARK_CHG}REQ-PRJ-06", "Project data", "Each project carries a resource weight per period. For a clinical trial the standard weight is keyed on clinical phase; for 'Others' a single standard set applies.", "Must", "Q-26", "2"],
     ["REQ-PRJ-05", "Project data", "Each project records a timeline: start date, major milestone dates, and total period.", "Must", "Requester", "2"],
-    ["REQ-PRJ-06", "Project data", "Each project carries a resource weight applicable to a defined period, so burden can differ across the project's phases.", "Must", "Requester", "2"],
     ["REQ-PRJ-07", "Project data", "The project record accepts further project-related information without a schema change (free/extension columns).", "Should", "Requester", "2"],
     ["REQ-PRJ-08", "Project data", "Total period is derived from start and end dates rather than typed by hand, so it cannot contradict the timeline.", "Should", "Derived", "2"],
-    [f"{MARK_NEW}REQ-PRJ-12", "Project data", "The set of periods a project carries depends on its type: 'Clinical Trial' uses Before-Start-up / Start-up / Conduct / Close-out; 'Others' uses Planning / Develop / Close.", "Must", "Q-18", "2"],
-    [f"{MARK_NEW}REQ-PRJ-09", "Project data", "A 'Clinical Trial' project records its clinical phase (phase 1 / 2 / 3 / 4).", "Must", "Reviewer v0.11", "2"],
+    [f"{MARK_CHG}REQ-PRJ-12", "Project data", "The set of periods a project carries depends on its type: 'Clinical Trial' uses Before-Start-up / Start-up / Conduct / Close-out (interim) / Close-out (final); 'Others' uses Planning / Develop / Close.", "Must", "Q-18, Q-23", "2"],
+    [f"{MARK_CHG}REQ-PRJ-09", "Project data", "A 'Clinical Trial' project records its clinical phase (phase 1 / 2 / 3 / 4). The phase determines the project's period weights, so it drives the simulation rather than merely describing the project.", "Must", "Q-26", "2"],
     [f"{MARK_NEW}REQ-PRJ-10", "Project data", "A 'Clinical Trial' project records who performs each of EDC set-up, data-review-system set-up, RBQM set-up and DM conduct ('by CRO' / 'by SB').", "Must", "Reviewer v0.11", "2"],
     [f"{MARK_NEW}REQ-PRJ-11", "Project data", "A 'Clinical Trial' project records the EDC system, data review system and RBQM system in use, from data-driven value lists.", "Must", "Reviewer v0.11", "2"],
 
@@ -363,8 +377,10 @@ reqs = [
     ["REQ-CAL-06", "Calculation", "All weights, factors and thresholds are data, held in the source workbook, never hardcoded in the program.", "Must", "Derived", "4"],
     [f"{MARK_NEW}REQ-CAL-07", "Calculation", "A person whose monthly total stays below the under-allocation threshold (default 0.80 FTE) for three or more consecutive months is flagged as under-allocated, with the run's start and length reported.", "Must", "Q-08", "4"],
     [f"{MARK_NEW}REQ-CAL-08", "Calculation", "Load is expressed in FTE, where 1.00 FTE = 160 hours per month (8 h/day x 5 days/week x 20 days/month). Hours are shown alongside FTE where useful.", "Must", "Q-08", "4"],
-    [f"{MARK_CHG}REQ-CAL-09", "Calculation", "For a 'Clinical Trial' project, period boundaries are computed from milestone dates plus fixed month offsets (sheet 05), so a timeline change re-shapes the periods without re-typing them. For 'Others', periods are entered directly.", "Must", "Q-16, Q-18", "2,4"],
+    [f"{MARK_CHG}REQ-CAL-09", "Calculation", "For a 'Clinical Trial' project, period boundaries are computed from milestone dates plus fixed month offsets (sheet 05), so a timeline change re-shapes the periods without re-typing them. For 'Others', periods are entered directly - those projects have no milestone mapping.", "Must", "Q-16, Q-22, Q-23, Q-25", "2,4"],
     [f"{MARK_NEW}REQ-CAL-10", "Calculation", "Every month of a project's timeline falls in exactly one period. A month left uncovered by the derivation is reported and carries weight 1.00 rather than being dropped from the simulation.", "Must", "Derived from Q-16", "2,4"],
+    [f"{MARK_NEW}REQ-CAL-11", "Calculation", "A period name may occur more than once in one project: 'Conduct' runs as two separate stretches where an interim DB lock splits it. Each occurrence is its own row with its own dates and a sequence number.", "Must", "Q-23", "2,4"],
+    [f"{MARK_NEW}REQ-CAL-12", "Calculation", "Where a timeline squeezes a derived period to zero or negative length, that period is omitted and the omission reported. Boundaries are applied in order so the periods always stay contiguous.", "Must", "Derived from Q-22, Q-23", "2,4"],
 
     ["REQ-DSH-01", "Dashboard", "Tab 'Overall' shows monthly resource simulation per project and per person as tables.", "Must", "Requester", "3,4"],
     ["REQ-DSH-02", "Dashboard", "Tab 'Overall' shows appropriate graphs of the same simulation.", "Must", "Requester", "3,4"],
@@ -415,7 +431,7 @@ counts = [
     ["Total", f"=COUNTA(A{r_start + 1}:A{last})"],
 ]
 r = table(ws, r, ["Priority", "Count"], counts, [15, 12])
-r = note(ws, r, "v0.1 held 47 requirements, v0.2 held 58. v0.3 adds 4 and rewords 6.")
+r = note(ws, r, "47 requirements at v0.1, 58 at v0.2, 61 at v0.3. v0.4 adds 2 and rewords 5.")
 r = note(ws, r, "'Source' = Requester (in the original request), a Q-number (answered at v0.11 review), "
                 "'Reviewer v0.11' (added by the reviewer directly), Derived (engineering consequence), "
                 "or a Decision ID from 07_Architecture.")
@@ -471,18 +487,19 @@ r = section(ws, r, "Sheet: Milestone")
 mile = [
     ["project_id", "Text", "Yes", "Foreign key to Project.", "REQ-PRJ-05"],
     [f"{MARK_NEW}project_name", "Text", "No", "Display convenience added at v0.11. Not authoritative: checked against Project on import and refreshed from it, so a mismatch cannot corrupt the link.", "REQ-PRJ-05"],
-    [f"{MARK_CHG}milestone_name", "List", "Yes", "Standard list replaced at Q-15: 'CTA submission', 'First SIV', 'LPI', 'interim DB lock cut-off', 'interim DB lock', 'final DB lock cut-off', 'final DB lock'. FPI is no longer standard. Held in Lists, not fixed in code, so a project may add its own.", "REQ-PRJ-05"],
+    [f"{MARK_CHG}milestone_name", "List", "Yes", "Standard list (8), settled at Q-15 and Q-24: 'Protocol (v1)', 'CTA submission', 'First SIV', 'LPI', 'interim DB lock cut-off', 'interim DB lock', 'final DB lock cut-off', 'final DB lock'. FPI is no longer standard. Held in Lists, not fixed in code, so a project may add its own.", "REQ-PRJ-05"],
     ["milestone_date", "Date", "Yes", "Planned date.", "REQ-PRJ-05"],
     ["milestone_seq", "Integer", "No", "Display order on the timeline.", "REQ-PRJ-05"],
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
           mile, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
-r = note(ws, r, "The Q-15 answer says 'Standard milestones (8)' but names seven. Listed as given; the eighth is asked for at Q-24.")
+r = note(ws, r, "Of the eight, only CTA submission and the DB locks set period boundaries. 'Protocol (v1)', 'First SIV', 'LPI' and the two cut-off dates are markers shown on the timeline.")
 
 r = section(ws, r, "Sheet: ProjectPeriod  [was ProjectPeriodWeight]")
 pp = [
     ["project_id", "Text", "Yes", "Foreign key to Project.", "REQ-PRJ-06"],
-    [f"{MARK_CHG}period_name", "List", "Yes", "From the period set for the project's TYPE - see the two sets below. A period name from the wrong set is rejected.", "REQ-PRJ-12"],
+    [f"{MARK_CHG}period_name", "List", "Yes", "From the period set for the project's TYPE - see the two sets below. A period name from the wrong set is rejected. NOT unique within a project: 'Conduct' occurs twice where an interim DB lock splits it.", "REQ-PRJ-12, REQ-CAL-11"],
+    [f"{MARK_NEW}period_seq", "Integer", "Yes", "Orders the periods along the timeline and tells the two 'Conduct' stretches apart. Unique within a project.", "REQ-CAL-11"],
     [f"{MARK_CHG}period_start", "Date", "Yes", "Inclusive. For Clinical Trial, computed from milestones (sheet 05) and then editable. For Others, entered directly.", "REQ-CAL-09"],
     [f"{MARK_CHG}period_end", "Date", "Yes", "Inclusive. Periods for one project must not overlap and must leave no gap (REQ-CAL-10).", "REQ-CAL-09"],
     [f"{MARK_CHG}weight", "Decimal", "Yes", "Effort multiplier for this period. Seeded from PeriodWeightStandard, then editable per project. Values are supplied as data (Q-17), not fixed in this plan.", "REQ-PRJ-06"],
@@ -492,24 +509,23 @@ r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
 
 r = note(ws, r, "Period sets are type-specific (Q-18). The derivation itself is on sheet 05.")
 sets = [
-    ["Clinical Trial", "Before-Start-up, Start-up, Conduct, Close-out", "Computed from milestone dates plus month offsets"],
-    ["Others", "Planning, Develop, Close", "Entered directly - 'Others' projects carry no clinical milestones to derive from (Q-25)"],
+    ["Clinical Trial", "Before-Start-up, Start-up, Conduct, Close-out (interim), Close-out (final)", "Computed from milestone dates plus month offsets. 'Conduct' may appear twice; 'Close-out (interim)' only where an interim DB lock exists."],
+    ["Others", "Planning, Develop, Close", "Entered directly - confirmed at Q-25 that 'Others' projects have no milestone mapping."],
 ]
-r = table(ws, r, ["project_type", "Period set", "How boundaries are set"], sets, [20, 52, 62], wrap_cols=(2, 3))
+r = table(ws, r, ["project_type", "Period set", "How boundaries are set"], sets, [18, 50, 66], wrap_cols=(2, 3))
 
 r = section(ws, r, "Sheet: PeriodWeightStandard")
 pws = [
     [f"{MARK_NEW}project_type", "List", "Yes", "'Clinical Trial' or 'Others'. Determines which period set the row may use.", "Q-18"],
-    [f"{MARK_CHG}project_category", "Text", "Yes", "The category the standard applies to. Use '*' as a catch-all so a type-wide default can be given without naming every product.", "Q-01"],
+    [f"{MARK_CHG}clinical_phase", "List", "Yes", "The phase the standard applies to, for clinical trials. Use '*' for 'Others' projects, which have no phase.", "Q-26"],
     ["period_name", "List", "Yes", "A period from that type's set.", "Q-04, Q-18"],
     [f"{MARK_CHG}weight", "Decimal", "Yes", "Default multiplier. You fill these in the source workbook (Q-17); the plan fixes only where they live.", "Q-01"],
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "Basis"],
           pws, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
-r = note(ws, r, "Most-specific match wins: an exact project_category row beats a '*' row for the same type and period. "
-                "The key carries both type and category because Q-17 did not say which of the two 'category of "
-                "project' means - filling only the '*' rows makes the weight type-wide, filling named rows makes it "
-                "per product. Either reading works without a schema change. Raised as Q-26.")
+r = note(ws, r, "Re-keyed at Q-26: a clinical trial's weights come from its CLINICAL PHASE, not its product category. "
+                "So a phase 1 trial and a phase 3 trial of the same product carry different period weights, which is "
+                "the intended behaviour. 'Others' projects have no phase, so they use the '*' rows - see Q-28.")
 
 r = section(ws, r, "Sheet: RoleFactor")
 rf = [
@@ -597,11 +613,13 @@ rules = [
     ["V-09", "schema_version in Config matches the version the application expects.", "Warning - proceeds, banner shown."],
     [f"{MARK_NEW}V-10", "Clinical-trial projects carry clinical_phase and the four *_setup values.", "Warning - the project still simulates; the gap is listed."],
     [f"{MARK_NEW}V-11", "Every list-typed value appears in the Lists sheet for its list.", "Warning - value kept, reported as unrecognised."],
-    [f"{MARK_CHG}V-12", "Every project carries the full period set for its type, and those periods leave no gap in its timeline.", "Warning - months with no period use weight 1.00 and are listed (REQ-CAL-10)."],
+    [f"{MARK_CHG}V-12", "A project's periods leave no gap and no overlap across its timeline. The full set need not be present - a period may be legitimately omitted (REQ-CAL-12).", "Warning - months with no period use weight 1.00 and are listed (REQ-CAL-10)."],
     [f"{MARK_NEW}V-13", "Denormalised project_name / person_name match their master row.", "Warning - the master value wins and the copy is refreshed."],
     [f"{MARK_NEW}V-14", "A milestone date falls inside its project's start..end window, and the standard milestones appear in chronological order.", "Error for period-defining milestones - the derivation cannot run. Warning for markers."],
     [f"{MARK_NEW}V-15", "A period_name belongs to the period set of its project's type.", "Error - a 'Planning' period on a clinical trial is a category mistake, not a typo."],
     [f"{MARK_NEW}V-16", "A clinical trial carries the milestones the derivation needs: CTA submission, and at least one DB lock.", "Error - without them no period boundary can be computed."],
+    [f"{MARK_NEW}V-18", "period_seq is unique within a project and orders the periods by date.", "Error - the two Conduct stretches cannot be told apart otherwise."],
+    [f"{MARK_NEW}V-19", "A clinical trial carries a clinical_phase, and PeriodWeightStandard has rows for that phase.", "Error - since Q-26 the phase selects the weights, so a missing phase leaves the project unweighted."],
     [f"{MARK_NEW}V-17", "On editing an identifier, every referencing row is updated; on deleting a row, nothing may still reference it.", "Cascade after confirmation / deletion refused (REQ-IMP-10)."],
 ]
 r = table(ws, r, ["ID", "Rule", "On failure"], rules, [9, 84, 60], wrap_cols=(2, 3), mark_col=1)
@@ -654,28 +672,44 @@ r = note(ws, r, "Under-allocation needs a rolling window, not a per-month test: 
                 "in a row is a signal. A run is reported once, at its start, rather than as three separate flags.")
 r += 1
 
-r = section(ws, r, "Period derivation for a 'Clinical Trial' project   [Q-16]")
+r = section(ws, r, "Period derivation for a 'Clinical Trial' project   [settled at Q-21, Q-22, Q-23]")
 r = lines(ws, r, [
     "Boundaries come from milestone dates plus month offsets, so moving a milestone re-shapes the periods.",
-    "DBL below means the interim DB lock where one exists, otherwise the final DB lock.",
+    "Only 'CTA submission' and the DB locks are boundaries; the other five milestones are markers.",
 ])
 r += 1
 deriv = [
-    [f"{MARK_NEW}Before-Start-up", "project start_date", "day before Start-up begins", "Not defined in the Q-16 answer. Filled in so the months before Start-up are not left without a weight - Q-21."],
-    ["Start-up", "one month before 'CTA submission'", "start + 4 months - 1 day", "As given: a fixed four-month window, not milestone-bounded at its end."],
-    [f"{MARK_CHG}Conduct", "day after Start-up ends", "day before Close-out begins", "The answer said 'up to 3 months prior to DBL', but Close-out starts 2 months prior - which leaves one month uncovered. Ending Conduct where Close-out starts closes it - Q-22."],
-    [f"{MARK_CHG}Close-out", "2 months before DBL", "the project's LAST DB lock (final where present, else interim)", "The answer said 'to DB lock' without saying which. Ending at the interim lock would leave everything after it uncovered - Q-23."],
+    ["1", "Before-Start-up", "project start_date", "day before Start-up begins", "Q-21"],
+    ["2", "Start-up", "one month before 'CTA submission'", "start + 4 months - 1 day", "Q-16"],
+    ["3", "Conduct", "day after Start-up ends", "day before the next Close-out begins", "Q-22"],
+    [f"{MARK_NEW}4", "Close-out (interim)", "3 months before 'interim DB lock'", "'interim DB lock'", "Q-22, Q-23"],
+    [f"{MARK_NEW}5", "Conduct   (second stretch)", "day after 'interim DB lock'", "day before Close-out (final) begins", "Q-23"],
+    [f"{MARK_CHG}6", "Close-out (final)", "3 months before 'final DB lock'", "'final DB lock' (or project end_date if later)", "Q-22, Q-23"],
 ]
-r = table(ws, r, ["Period", "Starts", "Ends", "Note"], deriv, [22, 34, 44, 56], wrap_cols=(2, 3, 4), mark_col=1)
-
-r = note(ws, r, "Worked through against a test project (start 2026-01-01, CTA submission 2026-04-01, interim DB lock "
-                "2027-10-01, final DB lock 2028-04-01), the mapping exactly as written leaves three stretches with no "
-                "period: 59 days before Start-up, 30 days between Conduct and Close-out, and 183 days after the "
-                "interim lock. v0.3 adopts the no-gap reading above so the plan stays buildable. If any of the three "
-                "is wrong, only this table changes - the engine reads it as data.")
+r = table(ws, r, ["Seq", "Period", "Starts", "Ends", "Basis"],
+          deriv, [6, 24, 34, 44, 12], wrap_cols=(3, 4), mark_col=1)
+r = note(ws, r, "Rows 4 and 5 exist only where the project has an interim DB lock. Without one, Conduct runs as a "
+                "single stretch straight into Close-out (final).")
 r += 1
-r = note(ws, r, "'First SIV' and 'LPI' are not boundaries under this mapping; they are markers shown on the timeline. "
-                "For an 'Others' project there is nothing to derive from, so its three periods are entered directly.")
+
+r = section(ws, r, "Degenerate timelines   [REQ-CAL-12]")
+r = lines(ws, r, [
+    "Real timelines do not always leave room for every period. Boundaries are applied in sequence order and a",
+    "later one wins, so the periods stay contiguous; any period squeezed to zero or negative length is omitted",
+    "and reported rather than written with a nonsensical range.",
+])
+r += 1
+degen = [
+    ["CTA submission is within a month of the project start", "Before-Start-up would be empty or negative.", "Before-Start-up omitted; Start-up begins at the project start date."],
+    ["Interim and final DB lock less than 3 months apart", "The second Conduct stretch would be negative, and Close-out (final) would start before the interim lock.", "Second Conduct omitted; Close-out (final) begins the day after the interim DB lock."],
+    ["No interim DB lock recorded", "Rows 4 and 5 have no anchor.", "Both omitted; one Conduct stretch runs into Close-out (final)."],
+    ["Trial too short for a Conduct phase", "Start-up's fixed 4 months would overrun the Close-out start.", "Conduct omitted; Start-up is clipped where Close-out begins."],
+    ["No CTA submission, or no DB lock at all", "Nothing to derive from.", "Error, not a silent default - V-16. The project's periods must then be entered by hand."],
+]
+r = table(ws, r, ["Timeline", "What would go wrong", "What happens instead"],
+          degen, [40, 52, 54], wrap_cols=(1, 2, 3))
+r = note(ws, r, "The five cases above were each run through the derivation. All produce a contiguous set of periods "
+                "with no gap and no overlap. The check is worth repeating as an automated test at Step 4.")
 r += 1
 
 r = section(ws, r, "Worked example - the acceptance test for the calculation engine")
@@ -683,8 +717,8 @@ ex = [
     ["Assignment", "PSN-001 on PRJ-001 (Clinical Trial), role = Lead data manager", ""],
     ["person_weight", "0.40", "How much this person works on this project"],
     ["Assignment window", "2026-03-10 to 2026-12-31", "Joins part-way through March"],
-    ["Project periods", "Start-up 2026-01-01..2026-06-30 weight 1.50; Conduct from 2026-07-01 weight 1.00", "Seeded from the project's category"],
-    ["role_factor", "1.20 for Lead data manager", "Illustrative - real values still needed (Q-17)"],
+    ["Project periods", "Start-up 2026-01-01..2026-06-30 weight 1.50; Conduct from 2026-07-01 weight 1.00", "Seeded from the project's CLINICAL PHASE (Q-26)"],
+    ["role_factor", "1.20 for Lead data manager", "Illustrative. Real values are entered in the source workbook (Q-17), not fixed here"],
     ["Coverage, March 2026", "22 / 31 = 0.7097", "10 Mar to 31 Mar inclusive = 22 days"],
     ["Load, March 2026", "1.50 x 1.20 x 0.40 x 0.7097 = 0.511 FTE", "81.8 hours"],
     ["Load, April 2026", "1.50 x 1.20 x 0.40 x 1.0000 = 0.720 FTE", "115.2 hours. Full month inside Start-up"],
@@ -709,6 +743,7 @@ dec = [
     [f"{MARK_NEW}C-08", "A month is attributed to the period containing its first day.", "Avoids splitting a month across two weights. Simpler to explain and to check by hand.", "Confirm"],
     [f"{MARK_NEW}C-09", "Editing an identifier cascades to every row referencing it; deleting a referenced row is refused.", "Q-20 asked for every field to be editable with rules preventing inconsistency. Cascading is what makes an editable ID safe - blocking the edit instead would make the field read-only in all but name.", "Confirm"],
     [f"{MARK_NEW}C-10", "Period boundaries are recomputed whenever a milestone date changes, unless the period dates were edited by hand.", "Keeps derived dates true to the timeline - the frequent-change problem this tool exists for - without silently discarding a deliberate manual override.", "Confirm"],
+    [f"{MARK_NEW}C-11", "Derived boundaries are applied in sequence order, a later one overriding an earlier; a period squeezed to nothing is omitted.", "The only rule that keeps periods contiguous on every timeline, including the awkward ones. Verified against five cases on this sheet.", "Confirm"],
 ]
 r = table(ws, r, ["ID", "Decision", "Rationale", "Status"], dec, [9, 46, 76, 14], wrap_cols=(2, 3), mark_col=1)
 r = legend(ws, r)
@@ -806,7 +841,7 @@ r = table(ws, r, ["Concern", "Choice and reason", "REQ-ID"], tech, [24, 108, 20]
 r = section(ws, r, "Internal structure - built for later change (REQ-NFR-01)")
 layers = [
     ["1. IO layer", "Reads the chosen workbook into raw rows; writes .xlsx on export.", "Swapping the file-access method touches this layer only."],
-    ["2. Validation layer", "Applies rules V-01..V-17, produces one findings report.", "New rules are added here without touching parsing or maths."],
+    ["2. Validation layer", "Applies rules V-01..V-19, produces one findings report.", "New rules are added here without touching parsing or maths."],
     ["3. Model layer", "Typed in-memory objects: Project, Milestone, ProjectPeriod, RoleFactor, Person, Assignment, PersonPeriodWeight, Config, Lists.", "New fields are added here and flow outward."],
     [f"{MARK_NEW}4. Edit buffer", "Holds on-screen changes, tracks which rows are dirty, re-runs validation per edit, and feeds export.", "Added for REQ-IMP-07. Keeping edits out of the model layer means the calculation never has to care whether a value came from the file or the screen."],
     [f"{MARK_CHG}5. Calculation layer", "The monthly engine above. Pure functions - no DOM, no file access.", "Directly unit-testable, and the piece most likely to be refined once you see real output."],
@@ -835,15 +870,17 @@ wbs = [
     ["1", "1.2", "Requester reviews; answers the open questions.", "v0.11_reviewed mark-up", "Complete"],
     ["1", "1.3", "Propagate the answers across all sheets and re-issue.", "PRAP_Development_Plan_v0.2.xlsx", "Complete"],
     ["1", "1.4", "Answer the follow-up questions Q-13..Q-20.", "v0.2_reviewed mark-up", "Complete"],
-    ["1", "1.5", "Incorporate round 2; work the period mapping through for coverage gaps.", "PRAP_Development_Plan_v0.3.xlsx", "Complete - issued for review"],
-    ["1", "1.6", "Settle the period-boundary questions Q-21..Q-26.", "Answers on sheet 11", "Pending you"],
-    ["1", "1.7", "Final plan issue.", "PRAP_Development_Plan_v1.0.xlsx", "Not started"],
+    ["1", "1.5", "Incorporate round 2; work the period mapping through for coverage gaps.", "PRAP_Development_Plan_v0.3.xlsx", "Complete"],
+    ["1", "1.6", "Settle the period-boundary questions Q-21..Q-26.", "v0.3_reviewed mark-up", "Complete"],
+    ["1", "1.7", "Incorporate round 3; verify the derivation against degenerate timelines.", "PRAP_Development_Plan_v0.4.xlsx", "Complete - issued for review"],
+    ["1", "1.8", "Answer Q-27 and Q-28.", "Answers on sheet 11", "Pending you"],
+    ["1", "1.9", "Final plan issue.", "PRAP_Development_Plan_v1.0.xlsx", "Not started"],
     ["1", "G1", "GATE 1 - development plan approved.", "Approval recorded on 12_Review_Log", "Not started"],
 
     ["2", "2.1", "Fix the source workbook schema: exact sheet names, column headers, types, value lists.", "Specification sheet 'Data schema'", "Not started"],
     ["2", "2.2", "Specify the calculation engine as pseudocode plus the worked example as an acceptance test.", "Specification sheet 'Calculation'", "Not started"],
     ["2", "2.3", "Specify period derivation per project type, and the over/under-allocation detection.", "Specification sheet 'Calculation'", "Not started"],
-    ["2", "2.4", "Specify import validation rules V-01..V-17 and the findings report.", "Specification sheet 'Validation'", "Not started"],
+    ["2", "2.4", "Specify import validation rules V-01..V-19 and the findings report.", "Specification sheet 'Validation'", "Not started"],
     ["2", "2.5", "Specify each dashboard tab: every table, column, graph, filter and interaction.", "Specification sheet 'UI spec'", "Not started"],
     ["2", "2.6", "Specify on-screen editing, the dirty-state model and export round-tripping.", "Specification sheet 'Editing & IO'", "Not started"],
     ["2", "2.7", "Specify the version/compatibility check.", "Specification sheet 'IO & versioning'", "Not started"],
@@ -856,7 +893,7 @@ wbs = [
     ["3", "G3", "GATE 3 - final design and component list approved. Code generation starts only for approved components.", "Approved component list", "Not started"],
 
     ["4", "4.1", "IO layer: workbook load, sheet/column mapping, export.", "Application code", "Not started"],
-    ["4", "4.2", "Validation layer: rules V-01..V-17 and the findings report.", "Application code", "Not started"],
+    ["4", "4.2", "Validation layer: rules V-01..V-19 and the findings report.", "Application code", "Not started"],
     ["4", "4.3", "Model layer, Lists and Config handling.", "Application code", "Not started"],
     ["4", "4.4", "Edit buffer: on-screen editing, dirty state, per-edit validation.", "Application code", "Not started"],
     ["4", "4.5", "Calculation engine, verified against the worked example.", "Application code + test evidence", "Not started"],
@@ -923,7 +960,8 @@ r = section(ws, r, "Version alignment - which versions belong together")
 align = [
     ["v0.1", "-", "-", "-", "2026-07-25", "Plan issued for review"],
     ["v0.2", "-", "-", "1 (draft)", "2026-07-31", "Reviewer answers incorporated; single-workbook schema defined"],
-    ["v0.3", "-", "-", "1 (draft)", DOC_DATE, "Round 2 incorporated; type-specific period sets; milestone list replaced"],
+    ["v0.3", "-", "-", "1 (draft)", "2026-07-31", "Round 2 incorporated; type-specific period sets; milestone list replaced"],
+    ["v0.4", "-", "-", "1 (draft)", DOC_DATE, "Round 3 incorporated; period model settled and verified"],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -965,8 +1003,8 @@ risks = [
      "Raised from Medium impact: at v0.3 the derivation depends on specific milestones, so a missing CTA submission or DB lock now stops it outright. V-14 and V-16 make those errors rather than warnings; V-12 catches any remaining gap and falls back to weight 1.00 with a report."],
     [f"{MARK_CHG}R-10", "The weight and role-factor values are unknown to the plan, so output cannot be checked against reality until they are entered.", "Medium", "Medium",
      "Downgraded at Q-17: the values are data you enter in the source workbook, not a plan input, which is what REQ-CAL-06 always required. The engine is validated against the worked example on sheet 05; realism of the numbers is validated at WBS 4.9 against your real data."],
-    [f"{MARK_NEW}R-11", "The supplied period mapping leaves parts of a project with no period, so months silently carry a default weight.", "High", "Medium",
-     "Found by working the Q-16 mapping through a test project: three uncovered stretches. v0.3 adopts a no-gap reading and raises Q-21 to Q-23. REQ-CAL-10 makes any residual gap visible rather than silent."],
+    [f"{MARK_CHG}R-11", "The period mapping leaves parts of a project with no period, so months silently carry a default weight.", "Low", "Medium",
+     "Closed in substance at Q-21..Q-23: the mapping is now contiguous, verified against five timelines including four degenerate ones. REQ-CAL-10 and V-12 keep any residual gap visible rather than silent."],
     [f"{MARK_NEW}R-12", "Fully editable identifiers let a user break the links between sheets.", "Medium", "High",
      "The direct cost of the Q-20 answer. Mitigated by V-17 and REQ-IMP-10: identifier edits cascade after confirmation, and a referenced row cannot be deleted. Without that, 'every field editable' and 'no inconsistency' could not both hold."],
 ]
@@ -982,9 +1020,9 @@ assum = [
     [f"{MARK_CHG}A-05", "Windows 10 or 11 with Edge or Chrome, and local .html files open.", "CONFIRMED Q-05"],
     ["A-06", "Only one person maintains the workbook at a time - no concurrent editing to reconcile.", "Standing"],
     [f"{MARK_CHG}A-07", "Milestone dates now DRIVE period boundaries (REQ-CAL-09); they are no longer merely informational.", "Changed by Q-01/Q-04"],
-    [f"{MARK_CHG}A-08", "Period sets are type-specific: four for Clinical Trial, three for 'Others'.", "CONFIRMED Q-18"],
-    [f"{MARK_CHG}A-09", "'Category of project' may mean either project_type or project_category. The weight table is keyed on both, so either reading works without a schema change.", "Handled by design - Q-26"],
-    [f"{MARK_NEW}A-10", "'Others' projects have no derivable milestones, so their three periods are entered by hand.", "To confirm - Q-25"],
+    [f"{MARK_CHG}A-08", "Period sets are type-specific: five names for Clinical Trial (Conduct occurring up to twice), three for 'Others'.", "CONFIRMED Q-18, Q-23"],
+    [f"{MARK_CHG}A-09", "A clinical trial's period weights are selected by its clinical phase.", "CONFIRMED Q-26"],
+    [f"{MARK_CHG}A-10", "'Others' projects have no milestone mapping, so their three periods are entered by hand.", "CONFIRMED Q-25"],
     [f"{MARK_NEW}A-11", "No example source file is coming; the structure in this plan is taken as matching the existing one.", "CONFIRMED Q-13"],
 ]
 r = table(ws, r, ["ID", "Assumption", "Status"], assum, [9, 110, 24], wrap_cols=(2,), mark_col=1)
@@ -992,7 +1030,20 @@ r = legend(ws, r)
 
 # ---- 11 Open questions ----------------------------------------------------
 ws, r = sheet(wb, "11_Open_Questions", "Open questions",
-              "Q-01..Q-20 are answered and closed. Q-21..Q-26 are new. Please answer in the YELLOW cells.")
+              "Q-01..Q-26 are answered and closed. Q-27 and Q-28 are new and minor. "
+              "Please answer in the YELLOW cells.")
+
+r = section(ws, r, "Answered at the v0.3 review  [round 3]")
+round3 = [
+    ["Q-21", "Calculation", "Is 'Before-Start-up' the stretch before Start-up?", "Yes - project start date to 1 month before CTA submission.", "Applied - confirms the v0.3 reading. Sequence 1 on sheet 05."],
+    ["Q-22", "Calculation", "Conduct ends 3 months prior, Close-out starts 2 - which?", "Close-out starts from 3 months prior, and runs until DB lock.", "Applied - Close-out is now 3 months long and Conduct ends the day before it. This is the opposite of the v0.3 default, which had shortened Close-out instead; corrected."],
+    ["Q-23", "Calculation", "Which DB lock does Close-out end at?", "With an interim lock, split into 'Close-out (interim)' and 'Close-out (final)'. The stretches before and after 'Close-out (interim)' are both Conduct.", "Applied, and the largest change in v0.4: 'Conduct' can now occur twice in one project. ProjectPeriod gains period_seq; REQ-CAL-11 added; the clinical-trial period set grows to five names."],
+    ["Q-24", "Data model", "Which is the eighth standard milestone?", "'Protocol (v1)'.", "Applied - milestone list now holds eight."],
+    ["Q-25", "Data model", "How do 'Others' projects get their period dates?", "'Others' projects don't have milestone mapping.", "Applied - confirms the v0.3 assumption; their periods are entered by hand. Assumption A-10 confirmed."],
+    ["Q-26", "Calculation", "What selects a project's weight?", "Clinical phase, where project_type is 'Clinical Trial'.", "Applied - PeriodWeightStandard re-keyed from project_category to clinical_phase. clinical_phase now drives the simulation, so V-19 makes a missing phase an error."],
+]
+r = table(ws, r, ["ID", "Topic", "Question (short)", "Your answer", "How it was applied in v0.4"],
+          round3, [8, 15, 34, 62, 52], wrap_cols=(3, 4, 5))
 
 r = section(ws, r, "Answered at the v0.2 review  [round 2]")
 round2 = [
@@ -1026,17 +1077,10 @@ answered = [
 r = table(ws, r, ["ID", "Topic", "Question (short)", "Your answer", "How it was applied in v0.2"],
           answered, [8, 15, 34, 62, 52], wrap_cols=(3, 4, 5))
 
-r = section(ws, r, "Open - raised by the round-2 answers")
-r = note(ws, r, "Q-21 to Q-23 all come from one place: the Q-16 mapping, applied literally, leaves three stretches of a "
-                "project with no period and therefore no weight. v0.3 adopts a reading that closes each gap so the "
-                "plan stays buildable - these ask whether that reading is right.")
+r = section(ws, r, "Open - raised by the round-3 answers")
 qs = [
-    ["Q-21", "Calculation", "The mapping defines Start-up, Conduct and Close-out, but not 'Before-Start-up' - so the months from project start until one month before CTA submission have no period. v0.3 assumes Before-Start-up covers exactly that stretch. Correct, or should the project simply not start until Start-up?", "2", ""],
-    ["Q-22", "Calculation", "Conduct is said to run 'up to 3 months prior' to the DB lock, but Close-out starts '2 months prior' - leaving one month belonging to neither. v0.3 ends Conduct the day before Close-out begins, making Close-out two months long. Alternatively Close-out could start 3 months prior and run three months. Which?", "2", ""],
-    ["Q-23", "Calculation", "Close-out is said to end at 'DB lock', but where a trial has both an interim and a final lock it is not clear which. Ending at the interim lock would leave everything between interim and final with no period - 6 months in the test case. v0.3 ends Close-out at the project's LAST DB lock. Correct, or does a separate period cover interim-to-final?", "2", ""],
-    ["Q-24", "Data model", "The milestone answer says 'Standard milestones (8)' but names seven: CTA submission, First SIV, LPI, interim DB lock cut-off, interim DB lock, final DB lock cut-off, final DB lock. Which is the eighth? (FPI, dropped from the earlier list, would be the obvious candidate.)", "2", ""],
-    ["Q-25", "Data model", "'Others' projects use Planning / Develop / Close, but carry none of the clinical milestones the derivation needs. v0.3 has their period dates entered by hand. Is that right, or should they derive from something - project start and end split by a fixed ratio, say?", "2", ""],
-    ["Q-26", "Calculation", "Low priority - the design already covers both readings. When you said project weight is given by 'category of project', did you mean project_type (Clinical Trial vs Others) or project_category (the product name)? Filling only the '*' rows of PeriodWeightStandard gives the first; naming products gives the second.", "2", ""],
+    ["Q-27", "Naming", "Where a trial has no interim DB lock it has only one close-out. Should that period still be called 'Close-out (final)', or plain 'Close-out'? v0.4 uses 'Close-out (final)' throughout so one name always means one thing and the weight lookup needs no special case - at the cost of a slightly odd label on a trial that has no interim stage.", "2", ""],
+    ["Q-28", "Calculation", "Q-26 settled that a clinical trial's weights come from its clinical phase. 'Others' projects have no phase - so what selects THEIR period weights? v0.4 gives them a single standard set (the '*' rows), meaning every 'Others' project shares one set of weights for Planning / Develop / Close. Is that enough, or do they need distinguishing by something?", "2", ""],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Topic", "Question", "Needed by step", "Your answer"],
@@ -1045,8 +1089,8 @@ for rr in range(r_start + 1, r_start + 1 + len(qs)):
     c = ws.cell(row=rr, column=5)
     c.fill = INPUT_FILL
     c.border = BOX
-r = note(ws, r, "None of these blocks Step 2 - each affects one row of one table, and the engine reads that table as "
-                "data. They do need settling before the calculation can be trusted against a real project.")
+r = note(ws, r, "Both are cosmetic-to-small: Q-27 changes a label, Q-28 changes how many rows you fill in one "
+                "reference table. Neither blocks the Step 2 specification.")
 
 # ---- 12 Review log --------------------------------------------------------
 ws, r = sheet(wb, "12_Review_Log", "Review log and approval",
@@ -1072,12 +1116,21 @@ log = [
 
     ["16", "Q-13 answer (round 2)", "'No example file provided from me. Close this.'", "Accepted.", "Blocker cleared. WBS task 1.5 removed; assumption A-11 records that the schema here is taken as matching the existing one.", "Closed"],
     ["17", "Q-14 answer", "outsourcing_type has three values.", "Accepted.", "REQ-PRJ-04 and the Project sheet corrected.", "Closed"],
-    ["18", "Q-15 answer", "Milestone list replaced - First SIV in, FPI out, DB lock cut-off and DB lock split interim/final.", "Accepted, with one query.", "Milestone list replaced throughout. The answer says eight and names seven; queried at Q-24 rather than guessed.", "Open"],
-    ["19", "Q-16 answer", "Milestone-to-period mapping given for Start-up, Conduct and Close-out.", "Accepted in substance; three gaps found.", "Worked the mapping through a test project: it leaves 59 days before Start-up, 30 days between Conduct and Close-out, and 183 days after the interim DB lock with no period at all. A no-gap reading is adopted on sheet 05 and the three points raised as Q-21..Q-23. REQ-CAL-10 and risk R-11 added so any residual gap is reported rather than silent.", "Open"],
+    ["18", "Q-15 answer", "Milestone list replaced - First SIV in, FPI out, DB lock cut-off and DB lock split interim/final.", "Accepted, with one query.", "Milestone list replaced throughout. The count query was answered at Q-24 - 'Protocol (v1)' is the eighth. See item 27.", "Closed"],
+    ["19", "Q-16 answer", "Milestone-to-period mapping given for Start-up, Conduct and Close-out.", "Accepted in substance; three gaps found.", "Worked the mapping through a test project: it leaves 59 days before Start-up, 30 days between Conduct and Close-out, and 183 days after the interim DB lock with no period at all. A no-gap reading was adopted and the three points raised as Q-21..Q-23, all answered at round 3 - see items 24..26. REQ-CAL-10 and risk R-11 added so any residual gap is reported rather than silent.", "Closed"],
     ["20", "Q-17 answer", "'Actual numbers to be filled into the source file (excel).'", "Accepted - this closes the question rather than deferring it.", "The plan fixes where the values live, not what they are, which is what REQ-CAL-06 required all along. R-10 downgraded from High/High to Medium/Medium. Engine correctness is proven against the worked example; realism against your data at WBS 4.9.", "Closed"],
-    ["21", "Q-18 answer", "'Others' projects use Planning / Develop / Close.", "Accepted.", "REQ-PRJ-12 added; ProjectPeriod and PeriodWeightStandard keyed by project_type; V-15 rejects a period from the wrong set. Raises Q-25 - those periods have no milestones to derive from.", "Open"],
+    ["21", "Q-18 answer", "'Others' projects use Planning / Develop / Close.", "Accepted.", "REQ-PRJ-12 added; ProjectPeriod and PeriodWeightStandard keyed by project_type; V-15 rejects a period from the wrong set. Q-25 confirmed at round 3 that 'Others' periods are entered by hand.", "Closed"],
     ["22", "Q-19 answer", "system_prepared_by can be dropped.", "Accepted.", "Column removed from the Project sheet.", "Closed"],
     ["23", "Q-20 answer", "Every field editable; validation rules prevent inconsistency.", "Accepted, with the mechanism made explicit.", "REQ-IMP-09 widened to all fields; REQ-IMP-10 and V-17 added for cascading identifier edits and refused deletes; decision C-09; risk R-12. Cascading is what makes an editable identifier safe - blocking the edit would have made it read-only in all but name.", "Closed"],
+
+    ["24", "Q-21 answer (round 3)", "Before-Start-up runs from project start to one month before CTA submission.", "Accepted - confirms the v0.3 reading.", "Sequence 1 of the derivation on sheet 05, unchanged.", "Closed"],
+    ["25", "Q-22 answer", "Close-out starts 3 months prior to DB lock and runs until DB lock.", "Accepted - and it reverses the v0.3 default.", "v0.3 had closed the one-month gap by shortening Close-out to two months. Your answer closes it the other way: Close-out is three months and Conduct ends the day before it. Corrected on sheet 05.", "Closed"],
+    ["26", "Q-23 answer", "With an interim DB lock, split into Close-out (interim) and Close-out (final); the stretches either side of Close-out (interim) are both Conduct.", "Accepted. The structural change of v0.4.", "A period name is no longer unique within a project - Conduct now occurs twice. ProjectPeriod gains period_seq; REQ-CAL-11 added; V-18 enforces sequence uniqueness; the clinical-trial period set grows from four names to five. Derivation re-verified contiguous.", "Closed"],
+    ["27", "Q-24 answer", "The eighth standard milestone is 'Protocol (v1)'.", "Accepted.", "Milestone list now holds eight. Only CTA submission and the DB locks are boundaries; the other six are markers.", "Closed"],
+    ["28", "Q-25 answer", "'Others' projects have no milestone mapping.", "Accepted.", "Confirms the v0.3 assumption. A-10 moves from 'to confirm' to confirmed; their three periods are entered by hand.", "Closed"],
+    ["29", "Q-26 answer", "A clinical trial's weight relies on clinical_phase.", "Accepted, with one consequence worth noting.", "PeriodWeightStandard re-keyed from project_category to clinical_phase. clinical_phase stops being descriptive and starts driving the simulation, so V-19 makes a missing phase an error rather than the warning it was under V-10. Raises Q-28: 'Others' projects have no phase.", "Closed"],
+    ["30", "Sheet 05 - derivation", "Not reviewer input - a check made while applying the answers.", "Five timelines tested.", "The revised mapping was run against the normal case plus four degenerate ones: interim and final locks a month apart, no interim lock, CTA submission before project start, and a trial too short to have a Conduct phase. All five come out contiguous. Rules recorded as REQ-CAL-12 and decision C-11, and the omission cases documented on sheet 05.", "Closed"],
+    ["31", "-", "Naming and 'Others' weighting.", "Two small points left open.", "Raised as Q-27 (label for a close-out with no interim stage) and Q-28 (what selects weights for 'Others' projects). Neither blocks Step 2.", "Open"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Sheet / source", "Reviewer input", "Response", "Action taken in v0.2", "Status"],

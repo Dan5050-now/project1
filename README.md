@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **Draft v0.3 issued for review** (two review rounds incorporated) |
+| 1 | Development plan | **Draft v0.4 issued for review** (three review rounds incorporated) |
 | 2 | Programming specification | Not started (starts after Gate 1) |
 | 3 | Prototype UI design | Not started |
 | 4 | Code generation | Not started |
@@ -30,11 +30,11 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v0.3.xlsx` — **current.** 13 sheets: scope,
-  requirement register (61 requirements), data model, resource calculation logic,
+- `docs/PRAP_Development_Plan_v0.4.xlsx` — **current.** 13 sheets: scope,
+  requirement register (63 requirements), data model, resource calculation logic,
   dashboard design, architecture, work breakdown, version-control rules, risks,
   open questions, review log.
-- `docs/PRAP_Development_Plan_v0.2.xlsx`, `_v0.1.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v0.3.xlsx`, `_v0.2.xlsx`, `_v0.1.xlsx` — superseded.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 
 ## Why the documents are generated from scripts
@@ -64,8 +64,11 @@ Requires `openpyxl`.
 - **Over-allocation** above 1.50 FTE in a month; **under-allocation** below 0.80 FTE
   sustained three or more consecutive months (Q-08).
 - **Period sets differ by project type**: Clinical Trial uses Before-Start-up /
-  Start-up / Conduct / Close-out, derived from milestone dates; Others uses
-  Planning / Develop / Close, entered directly (Q-16, Q-18).
+  Start-up / Conduct / Close-out (interim) / Close-out (final), derived from
+  milestone dates; Others uses Planning / Develop / Close, entered directly.
+- **`Conduct` can occur twice** in one project, split by an interim DB lock, so a
+  period name is not unique within a project (Q-23).
+- **Period weights are selected by clinical phase** for clinical trials (Q-26).
 - **Every field is editable**, with identifier edits cascading to referencing rows
   rather than being blocked (Q-20).
 - **Imported data is editable in the application**, with edits carried into the
@@ -73,9 +76,10 @@ Requires `openpyxl`.
 
 ## Next action
 
-Answer `11_Open_Questions` Q-21 to Q-26 in `docs/PRAP_Development_Plan_v0.3.xlsx`.
-Nothing blocks Step 2 any more — Q-13 and Q-17 both closed in round 2.
+Two small questions remain — Q-27 (what to call a close-out on a trial with no
+interim stage) and Q-28 (what selects period weights for `Others` projects).
+Neither blocks the Step 2 specification.
 
-Q-21 to Q-23 all come from one finding: the supplied milestone-to-period mapping,
-applied literally, leaves three stretches of a project with no period and therefore
-no weight. v0.3 adopts a no-gap reading; those three ask whether it is right.
+The period model is settled and verified: the derivation was run against five
+timelines, including four degenerate ones, and produces contiguous periods with no
+gap or overlap in every case.
