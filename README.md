@@ -8,8 +8,8 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **Draft v0.4 issued for review** (three review rounds incorporated) |
-| 2 | Programming specification | Not started (starts after Gate 1) |
+| 1 | Development plan | **v1.0 FINAL — issued for Gate 1 approval** (four review rounds, all 28 questions closed) |
+| 2 | Programming specification | Ready to start on Gate 1 approval |
 | 3 | Prototype UI design | Not started |
 | 4 | Code generation | Not started |
 | 5 | Finalisation | Not started |
@@ -30,11 +30,11 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v0.4.xlsx` — **current.** 13 sheets: scope,
-  requirement register (63 requirements), data model, resource calculation logic,
-  dashboard design, architecture, work breakdown, version-control rules, risks,
-  open questions, review log.
-- `docs/PRAP_Development_Plan_v0.3.xlsx`, `_v0.2.xlsx`, `_v0.1.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v1.0.xlsx` — **current, final Step 1 baseline.**
+  13 sheets: scope, requirement register (63 requirements), data model, resource
+  calculation logic, dashboard design, architecture, work breakdown,
+  version-control rules, risks, questions and answers, review log.
+- `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 
 ## Why the documents are generated from scripts
@@ -68,7 +68,8 @@ Requires `openpyxl`.
   milestone dates; Others uses Planning / Develop / Close, entered directly.
 - **`Conduct` can occur twice** in one project, split by an interim DB lock, so a
   period name is not unique within a project (Q-23).
-- **Period weights are selected by clinical phase** for clinical trials (Q-26).
+- **Period weights are selected by clinical phase** for clinical trials (Q-26);
+  `Others` projects are hand-entered throughout — dates and weights alike (Q-28).
 - **Every field is editable**, with identifier edits cascading to referencing rows
   rather than being blocked (Q-20).
 - **Imported data is editable in the application**, with edits carried into the
@@ -76,10 +77,14 @@ Requires `openpyxl`.
 
 ## Next action
 
-Two small questions remain — Q-27 (what to call a close-out on a trial with no
-interim stage) and Q-28 (what selects period weights for `Others` projects).
-Neither blocks the Step 2 specification.
+**Record Gate 1 approval** on sheet `12_Review_Log` of
+`docs/PRAP_Development_Plan_v1.0.xlsx`.
 
-The period model is settled and verified: the derivation was run against five
-timelines, including four degenerate ones, and produces contiguous periods with no
-gap or overlap in every case.
+Approving baselines the 63 requirements as the contract for Steps 2–5, and
+confirms the six engineering decisions C-06 to C-11 that were proposed during
+review but never explicitly answered. Step 2 — the programming specification —
+begins once the gate is recorded.
+
+All 28 review questions are closed. The period model is verified: the derivation
+was run against five timelines, including four degenerate ones, and produces
+contiguous periods with no gap or overlap in every case.
