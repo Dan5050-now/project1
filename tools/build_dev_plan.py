@@ -18,7 +18,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 DOC_VERSION = "1.0"
-DOC_STATUS = "FINAL - all review questions closed, issued for Gate 1 approval"
+DOC_STATUS = "APPROVED BASELINE - Gate 1 passed 2026-08-01"
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -163,6 +163,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Reviewer", "Requester - four review rounds: v0.11, v0.2, v0.3, v0.4 reviewed"),
+    ("Approved by", "Dan, 2026-08-01 - Gate 1 passed"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
     ("Supersedes", "v0.4 (2026-07-31)"),
@@ -287,7 +288,7 @@ rows = [
      "'Close-out (final)'. 'Others' projects need no distinguishing and take manual weights as well as manual "
      "dates, so PeriodWeightStandard becomes a clinical-trial reference table only. All 28 review questions "
      "closed; no open items. Issued for Gate 1 approval.",
-     "Final - for approval"],
+     "APPROVED 2026-08-01 by Dan"],
 ]
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary of change", "Status"],
           rows, [10, 12, 15, 14, 92, 16], wrap_cols=(5,))
@@ -901,9 +902,10 @@ wbs = [
     ["1", "1.7", "Incorporate round 3; verify the derivation against degenerate timelines.", "PRAP_Development_Plan_v0.4.xlsx", "Complete - issued for review"],
     ["1", "1.8", "Answer Q-27 and Q-28.", "v0.4_reviewed mark-up", "Complete"],
     ["1", "1.9", "Final plan issue.", "PRAP_Development_Plan_v1.0.xlsx", "Complete - issued for review"],
-    ["1", "G1", "GATE 1 - development plan approved. Approval also confirms decisions C-06..C-11.", "Approval recorded on 12_Review_Log", "Pending you"],
+    ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
-    ["2", "2.1", "Fix the source workbook schema: exact sheet names, column headers, types, value lists.", "Specification sheet 'Data schema'", "Not started"],
+    ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template_v1.0.xlsx + _Dummy_v1.0.xlsx", "Complete - issued for review"],
+    ["2", "2.1", "Fix the source workbook schema: exact sheet names, column headers, types, value lists.", "Specification sheet 'Data schema'", "In progress"],
     ["2", "2.2", "Specify the calculation engine as pseudocode plus the worked example as an acceptance test.", "Specification sheet 'Calculation'", "Not started"],
     ["2", "2.3", "Specify period derivation per project type, and the over/under-allocation detection.", "Specification sheet 'Calculation'", "Not started"],
     ["2", "2.4", "Specify import validation rules V-01..V-19 and the findings report.", "Specification sheet 'Validation'", "Not started"],
@@ -988,7 +990,7 @@ align = [
     ["v0.2", "-", "-", "1 (draft)", "2026-07-31", "Reviewer answers incorporated; single-workbook schema defined"],
     ["v0.3", "-", "-", "1 (draft)", "2026-07-31", "Round 2 incorporated; type-specific period sets; milestone list replaced"],
     ["v0.4", "-", "-", "1 (draft)", "2026-07-31", "Round 3 incorporated; period model settled and verified"],
-    ["v1.0", "-", "-", "1", DOC_DATE, "FINAL Step 1 baseline. All 28 review questions closed."],
+    ["v1.0", "-", "-", "1", DOC_DATE, "Step 1 baseline. APPROVED 2026-08-01 by Dan (Gate 1)."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1181,13 +1183,16 @@ disp = [
 r = table(ws, r, ["Measure", "Count"], disp, [30, 12])
 
 r = section(ws, r, "Approval - Gate 1")
-appr = [["PRAP Development Plan v1.0", "", "", "Approved / Approved with comments / Not approved"]]
+appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
+         "APPROVED. Finalise plan v1.0 and proceed to Step 2, beginning with generation of the workbook "
+         "template and a dummy data file for review."]]
 r_start2 = r
-r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 26, 16, 46], wrap_cols=(4,))
-for cc in (2, 3, 4):
-    ws.cell(row=r_start2 + 1, column=cc).fill = INPUT_FILL
-r = note(ws, r, "Step 2 begins only once this gate is recorded as approved. Approving this document baselines the 63 "
-                "requirements on sheet 03 as the contract for Steps 2-5, and confirms decisions C-06 to C-11 on sheet 05.")
+r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 16, 14, 88], wrap_cols=(4,))
+for cc in (1, 2, 3, 4):
+    ws.cell(row=r_start2 + 1, column=cc).fill = NEW_FILL
+r = note(ws, r, "GATE 1 PASSED. The 63 requirements on sheet 03 are baselined as the contract for Steps 2-5, and "
+                "decisions C-06 to C-11 on sheet 05 are confirmed. Any change to them now requires a new approval "
+                "and a version increment, per the rules on sheet 09.")
 
 wb.save(OUT)
 print(f"Written: {OUT}")

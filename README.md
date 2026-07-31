@@ -8,8 +8,8 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v1.0 FINAL — issued for Gate 1 approval** (four review rounds, all 28 questions closed) |
-| 2 | Programming specification | Ready to start on Gate 1 approval |
+| 1 | Development plan | **v1.0 APPROVED** — Gate 1 passed 2026-08-01 (Dan) |
+| 2 | Programming specification | **In progress** — source workbook template + dummy data issued for review |
 | 3 | Prototype UI design | Not started |
 | 4 | Code generation | Not started |
 | 5 | Finalisation | Not started |
@@ -36,6 +36,21 @@ output/       Exported results and test evidence   (from Step 5)
   version-control rules, risks, questions and answers, review log.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
+- `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
+  specification to settle.
+
+### Step 2 deliverables (for review)
+
+- `templates/PRAP_SourceData_Template_v1.0.xlsx` — blank workbook: 10 sheets, headers,
+  value lists, dropdowns, one example row per sheet, colour-coded README.
+- `templates/PRAP_SourceData_Dummy_v1.0.xlsx` — the same structure populated with
+  7 projects, 12 people and 30 assignments, built to exercise every rule.
+
+Validate either with:
+
+```bash
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.0.xlsx
+```
 
 ## Why the documents are generated from scripts
 
@@ -77,14 +92,10 @@ Requires `openpyxl`.
 
 ## Next action
 
-**Record Gate 1 approval** on sheet `12_Review_Log` of
-`docs/PRAP_Development_Plan_v1.0.xlsx`.
+Review the two workbooks in `templates/`. Then settle **S2-01** in
+`docs/STEP2_OPEN_POINTS.md`: the under-allocation threshold is an absolute 0.80 FTE,
+so a part-time person recorded at 0.60 capacity is flagged permanently and cannot
+ever clear it. Making both thresholds relative to `capacity_fte` fixes it and changes
+nothing for full-time staff.
 
-Approving baselines the 63 requirements as the contract for Steps 2–5, and
-confirms the six engineering decisions C-06 to C-11 that were proposed during
-review but never explicitly answered. Step 2 — the programming specification —
-begins once the gate is recorded.
-
-All 28 review questions are closed. The period model is verified: the derivation
-was run against five timelines, including four degenerate ones, and produces
-contiguous periods with no gap or overlap in every case.
+The rest of the programming specification follows once the schema is confirmed.
