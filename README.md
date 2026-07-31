@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **Draft v0.2 issued for review** (v0.1 reviewed, answers incorporated) |
+| 1 | Development plan | **Draft v0.3 issued for review** (two review rounds incorporated) |
 | 2 | Programming specification | Not started (starts after Gate 1) |
 | 3 | Prototype UI design | Not started |
 | 4 | Code generation | Not started |
@@ -30,13 +30,12 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v0.2.xlsx` — **current.** 13 sheets: scope,
-  requirement register (58 requirements), data model, resource calculation logic,
+- `docs/PRAP_Development_Plan_v0.3.xlsx` — **current.** 13 sheets: scope,
+  requirement register (61 requirements), data model, resource calculation logic,
   dashboard design, architecture, work breakdown, version-control rules, risks,
   open questions, review log.
-- `docs/PRAP_Development_Plan_v0.1.xlsx` — first issue, superseded.
-- `docs/review/PRAP_Development_Plan_v0.11_reviewed.xlsx` — reviewer mark-up of
-  v0.1, kept unedited so the review trail is auditable.
+- `docs/PRAP_Development_Plan_v0.2.xlsx`, `_v0.1.xlsx` — superseded.
+- `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 
 ## Why the documents are generated from scripts
 
@@ -64,15 +63,19 @@ Requires `openpyxl`.
   in FTE where 1.00 FTE = 160 h/month (Q-01, Q-08).
 - **Over-allocation** above 1.50 FTE in a month; **under-allocation** below 0.80 FTE
   sustained three or more consecutive months (Q-08).
+- **Period sets differ by project type**: Clinical Trial uses Before-Start-up /
+  Start-up / Conduct / Close-out, derived from milestone dates; Others uses
+  Planning / Develop / Close, entered directly (Q-16, Q-18).
+- **Every field is editable**, with identifier edits cascading to referencing rows
+  rather than being blocked (Q-20).
 - **Imported data is editable in the application**, with edits carried into the
   export (REQ-IMP-07).
 
 ## Next action
 
-Answer `11_Open_Questions` Q-13 to Q-20 in `docs/PRAP_Development_Plan_v0.2.xlsx`.
-Two of them block real progress:
+Answer `11_Open_Questions` Q-21 to Q-26 in `docs/PRAP_Development_Plan_v0.3.xlsx`.
+Nothing blocks Step 2 any more — Q-13 and Q-17 both closed in round 2.
 
-- **Q-13** — the `13_Templete_example` sheet referenced in the Q-10 answer is not
-  present in the returned workbook.
-- **Q-17** — the period weights and role factors themselves, without which the
-  engine can be built but its output cannot be validated.
+Q-21 to Q-23 all come from one finding: the supplied milestone-to-period mapping,
+applied literally, leaves three stretches of a project with no period and therefore
+no weight. v0.3 adopts a no-gap reading; those three ask whether it is right.
