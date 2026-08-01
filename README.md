@@ -49,14 +49,18 @@ output/       Exported results and test evidence   (from Step 5)
 - `templates/PRAP_SourceData_Template_v1.2.xlsx` — blank workbook: 10 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README. Every sheet
   carries at least one free-text note column (schema version 2).
-- `templates/PRAP_SourceData_Dummy_v1.2.xlsx` — the same structure populated with
-  7 projects, 12 people and 30 assignments, built to exercise every rule including
-  repeated `Inspection` milestones and the seventh period.
+- `templates/PRAP_SourceData_Dummy_v1.3.xlsx` — the same structure populated with
+  **50 clinical trials, 12 `Others` projects and 20 people** (289 assignments, 372
+  milestones, 308 periods across 73 months). Generated deterministically, so it
+  rebuilds identically. 30 trials carry an interim DB lock and so show two `Conduct`
+  stretches; 12 carry the seventh period from a post-lock `Inspection`.
+
+The template stays at v1.2 — its structure did not change, only the dataset.
 
 Validate either with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.2.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.3.xlsx
 ```
 
 ## Why the documents are generated from scripts

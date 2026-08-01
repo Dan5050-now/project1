@@ -1,20 +1,24 @@
 """Generate the PRAP source-data workbook: a blank template and a populated dummy file.
 
-Both follow the schema baselined in PRAP_Development_Plan_v1.0.xlsx, sheet 04_Data_Model.
+Both follow the schema baselined in PRAP_Development_Plan_v1.3.xlsx, sheet 04_Data_Model.
 
     python tools/build_source_workbook.py
 
 Outputs into templates/:
-    PRAP_SourceData_Template_v1.0.xlsx   headers, value lists, one example row per sheet
-    PRAP_SourceData_Dummy_v1.0.xlsx      realistic data that exercises every rule
+    PRAP_SourceData_Template_v1.2.xlsx   headers, value lists, one example row per sheet
+    PRAP_SourceData_Dummy_v1.3.xlsx      populated dataset that exercises every rule
 
-The dummy file is built to demonstrate the calculation, not merely to fill cells: it
-contains a person who breaches the 1.50 FTE over-allocation threshold, a person who
-sits below 0.80 FTE for more than three consecutive months, a trial with an interim
-DB lock (so 'Conduct' occurs twice), a trial without one, and two 'Others' projects
-whose periods are hand-entered.
+The two carry different version numbers because the template's structure is unchanged
+since v1.2; only the dummy dataset was regenerated.
+
+The dummy file is generated deterministically (seeded), so it rebuilds identically.
+It holds 50 clinical trials, 12 'Others' projects and 20 people, and is built to
+exercise the rules rather than merely fill cells: interim DB locks that split
+'Conduct' in two, inspections that open the seventh period, hand-entered 'Others'
+periods, part-time capacities, weight overrides, and both allocation thresholds.
 """
 
+import random
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -25,7 +29,8 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 SCHEMA_VERSION = 2
-VERSION = "1.2"
+TEMPLATE_VERSION = "1.2"
+DUMMY_VERSION = "1.3"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -256,134 +261,33 @@ def derive_periods(start, end, milestones, inspections):
 # Dummy dataset
 # --------------------------------------------------------------------------
 def dummy_data():
-    projects = [
-        # id, name, type, category, phase, outsourcing, edc_su, drs_su, rbqm_su, dm, edc, drs, rbqm, members, start, end, status
-        ("PRJ-001", "ONV-101 First-in-human", "Clinical Trial", "Onvelaris", "Phase 1", "Partial outsourcing",
-         "by SB", "by SB", "by CRO", "by SB", "Veeva EDC", "Veeva DQS", "CluePoints", 5,
-         date(2025, 10, 1), date(2027, 9, 30), "Active"),
-        ("PRJ-002", "ONV-205 Dose expansion", "Clinical Trial", "Onvelaris", "Phase 2", "Full outsourcing",
-         "by CRO", "by CRO", "by CRO", "by CRO", "Rave", "Medidata CDS", "Medidata CDS", 6,
-         date(2026, 1, 1), date(2028, 9, 30), "Active"),
-        ("PRJ-003", "CDX-310 Pivotal", "Clinical Trial", "Cardexa", "Phase 3", "Partial outsourcing",
-         "by CRO", "by SB", "by CRO", "by SB", "Veeva EDC", "Veeva DQS", "CluePoints", 8,
-         date(2025, 7, 1), date(2029, 10, 31), "Active"),
-        ("PRJ-004", "NRX-410 Post-marketing", "Clinical Trial", "Neurexa", "Phase 4", "Full In-house",
-         "by SB", "by SB", "by SB", "by SB", "eSOURCE", "No system (manual)", "No system (manual)", 3,
-         date(2026, 4, 1), date(2028, 3, 31), "Planned"),
-        ("PRJ-005", "ONV-302 Confirmatory", "Clinical Trial", "Onvelaris", "Phase 3", "Full outsourcing",
-         "by CRO", "by CRO", "by CRO", "by CRO", "Rave", "Medidata CDS", "CluePoints", 7,
-         date(2026, 6, 1), date(2029, 6, 30), "Planned"),
-        ("PRJ-006", "CDISC library migration", "Others", "", "", "Full In-house",
-         "", "", "", "", "", "", "", 4, date(2026, 1, 1), date(2026, 12, 31), "Active"),
-        ("PRJ-007", "eTMF rollout", "Others", "", "", "Partial outsourcing",
-         "", "", "", "", "", "", "", 3, date(2026, 3, 1), date(2027, 2, 28), "Active"),
-    ]
+    """Deterministic dataset: 50 clinical trials, 12 'Others' projects, 20 people.
 
-    # milestones: project -> {name: date}
-    ms = {
-        "PRJ-001": {"Protocol (v1)": date(2025, 10, 15), "CTA submission": date(2026, 1, 15),
-                    "First SIV": date(2026, 4, 1), "LPI": date(2026, 11, 30),
-                    "final DB lock cut-off": date(2027, 3, 31), "final DB lock": date(2027, 5, 31)},
-        "PRJ-002": {"Protocol (v1)": date(2026, 1, 20), "CTA submission": date(2026, 4, 1),
-                    "First SIV": date(2026, 7, 1), "LPI": date(2027, 6, 30),
-                    "interim DB lock cut-off": date(2027, 9, 30), "interim DB lock": date(2027, 11, 30),
-                    "final DB lock cut-off": date(2028, 6, 30), "final DB lock": date(2028, 8, 31)},
-        "PRJ-003": {"Protocol (v1)": date(2025, 7, 15), "CTA submission": date(2025, 10, 1),
-                    "First SIV": date(2026, 1, 15), "LPI": date(2027, 9, 30),
-                    "interim DB lock cut-off": date(2027, 12, 31), "interim DB lock": date(2028, 2, 29),
-                    "final DB lock cut-off": date(2028, 12, 31), "final DB lock": date(2029, 2, 28)},
-        "PRJ-004": {"Protocol (v1)": date(2026, 4, 10), "CTA submission": date(2026, 6, 1),
-                    "First SIV": date(2026, 9, 1), "LPI": date(2027, 6, 30),
-                    "final DB lock cut-off": date(2027, 12, 31), "final DB lock": date(2028, 2, 29)},
-        "PRJ-005": {"Protocol (v1)": date(2026, 6, 15), "CTA submission": date(2026, 9, 1),
-                    "First SIV": date(2026, 12, 1), "LPI": date(2028, 3, 31),
-                    "interim DB lock cut-off": date(2028, 6, 30), "interim DB lock": date(2028, 8, 31),
-                    "final DB lock cut-off": date(2029, 3, 31), "final DB lock": date(2029, 5, 31)},
-    }
+    Seeded so the file rebuilds byte-for-byte. Sized to the reviewer's request rather
+    than to REQ-NFR-03's headroom figure - see the README note.
+    """
+    rng = random.Random(20260801)
 
-    # 'Inspection' may occur several times in one project (REQ-PRJ-13).
-    # PRJ-003 has three after its final DB lock; PRJ-001 has one; PRJ-002 has one dated
-    # BEFORE its final lock, which under V-21 stays a marker and does not open period 7.
-    inspections = {
-        "PRJ-001": [date(2027, 8, 15)],
-        "PRJ-002": [date(2028, 5, 20)],
-        "PRJ-003": [date(2029, 5, 10), date(2029, 7, 22), date(2029, 9, 30)],
-    }
+    PRODUCTS = ["Onvelaris", "Cardexa", "Neurexa", "Renvia", "Hepatiq",
+                "Immunex", "Osteva", "Pulmora", "Dermaline", "Glycora"]
+    PHASES = ["Phase 1", "Phase 2", "Phase 3", "Phase 4"]
+    OUTSOURCING = ["Full outsourcing", "Partial outsourcing", "Full In-house"]
+    PARTY = ["by CRO", "by SB"]
+    EDC = ["Veeva EDC", "Rave", "eSOURCE"]
+    DRS = ["Veeva DQS", "Medidata CDS", "No system (manual)"]
+    RBQM = ["CluePoints", "Medidata CDS", "No system (manual)"]
 
-    people = [
-        ("PSN-001", "Kim S.", "Data Management", "Lead data manager", 1.00),
-        ("PSN-002", "Park J.", "Data Management", "Lead data manager", 1.00),
-        ("PSN-003", "Lee H.", "Data Management", "Clinical Data Associator", 1.00),
-        ("PSN-004", "Choi M.", "Data Management", "Clinical Data Associator", 0.60),
-        ("PSN-005", "Jung Y.", "Programming", "Clinical Database Programmer", 1.00),
-        ("PSN-006", "Han B.", "Programming", "Clinical Database Programmer", 1.00),
-        ("PSN-007", "Oh K.", "Biostatistics", "Data Analyst", 1.00),
-        ("PSN-008", "Seo W.", "Biostatistics", "Data Analyst", 0.80),
-        ("PSN-009", "Yoon T.", "Clinical Operations", "Project oversight", 1.00),
-        ("PSN-010", "Nam R.", "Clinical Operations", "Project oversight", 1.00),
-        ("PSN-011", "Ahn D.", "Business Systems", "Project lead", 1.00),
-        ("PSN-012", "Baek C.", "Business Systems", "Main staff", 1.00),
-    ]
+    CT_ROLES = ["Project oversight", "Lead data manager", "Clinical Data Associator",
+                "Clinical Database Programmer", "Data Analyst"]
+    OT_ROLES = ["Project lead", "Main staff", "Other staff"]
 
-    # assignment_id, person, project, role, start, end, person_weight
-    A = [
-        # PSN-001 deliberately loaded across three projects to breach 1.50 FTE
-        ("ASG-001", "PSN-001", "PRJ-001", "Lead data manager", date(2025, 10, 1), date(2027, 6, 30), 0.50),
-        ("ASG-002", "PSN-001", "PRJ-002", "Lead data manager", date(2026, 1, 1), date(2028, 9, 30), 0.50),
-        ("ASG-003", "PSN-001", "PRJ-006", "Project lead", date(2026, 1, 1), date(2026, 12, 31), 0.40),
-
-        ("ASG-004", "PSN-002", "PRJ-003", "Lead data manager", date(2025, 7, 1), date(2029, 3, 31), 0.55),
-        ("ASG-005", "PSN-002", "PRJ-005", "Lead data manager", date(2026, 6, 1), date(2029, 6, 30), 0.45),
-
-        ("ASG-006", "PSN-003", "PRJ-001", "Clinical Data Associator", date(2026, 1, 1), date(2027, 6, 30), 0.55),
-        ("ASG-007", "PSN-003", "PRJ-003", "Clinical Data Associator", date(2026, 1, 1), date(2029, 3, 31), 0.55),
-        ("ASG-024", "PSN-003", "PRJ-005", "Clinical Data Associator", date(2027, 7, 1), date(2029, 6, 30), 0.35),
-
-        # PSN-004 is part time (capacity 0.60) and deliberately light
-        ("ASG-008", "PSN-004", "PRJ-004", "Clinical Data Associator", date(2026, 4, 1), date(2028, 3, 31), 0.30),
-
-        ("ASG-009", "PSN-005", "PRJ-001", "Clinical Database Programmer", date(2025, 11, 1), date(2026, 12, 31), 0.45),
-        ("ASG-010", "PSN-005", "PRJ-002", "Clinical Database Programmer", date(2026, 2, 1), date(2028, 9, 30), 0.45),
-        ("ASG-025", "PSN-005", "PRJ-004", "Clinical Database Programmer", date(2026, 6, 1), date(2028, 3, 31), 0.30),
-
-        ("ASG-011", "PSN-006", "PRJ-003", "Clinical Database Programmer", date(2025, 9, 1), date(2029, 3, 31), 0.50),
-        ("ASG-012", "PSN-006", "PRJ-005", "Clinical Database Programmer", date(2026, 9, 1), date(2029, 6, 30), 0.40),
-        ("ASG-026", "PSN-006", "PRJ-006", "Main staff", date(2026, 1, 1), date(2026, 12, 31), 0.30),
-
-        ("ASG-013", "PSN-007", "PRJ-002", "Data Analyst", date(2026, 6, 1), date(2028, 9, 30), 0.55),
-        ("ASG-014", "PSN-007", "PRJ-003", "Data Analyst", date(2026, 6, 1), date(2029, 3, 31), 0.55),
-        ("ASG-015", "PSN-008", "PRJ-005", "Data Analyst", date(2026, 9, 1), date(2029, 6, 30), 0.50),
-        ("ASG-027", "PSN-008", "PRJ-001", "Data Analyst", date(2026, 1, 1), date(2027, 6, 30), 0.40),
-
-        # Oversight staff carry many projects at a low weight each
-        ("ASG-016", "PSN-009", "PRJ-001", "Project oversight", date(2025, 10, 1), date(2027, 6, 30), 0.35),
-        ("ASG-017", "PSN-009", "PRJ-002", "Project oversight", date(2026, 1, 1), date(2028, 9, 30), 0.35),
-        ("ASG-018", "PSN-009", "PRJ-004", "Project oversight", date(2026, 4, 1), date(2028, 3, 31), 0.35),
-        ("ASG-028", "PSN-009", "PRJ-006", "Project lead", date(2026, 1, 1), date(2026, 12, 31), 0.30),
-        ("ASG-019", "PSN-010", "PRJ-003", "Project oversight", date(2025, 7, 1), date(2029, 3, 31), 0.45),
-        ("ASG-020", "PSN-010", "PRJ-005", "Project oversight", date(2026, 6, 1), date(2029, 6, 30), 0.45),
-        ("ASG-029", "PSN-010", "PRJ-007", "Project lead", date(2026, 3, 1), date(2027, 2, 28), 0.35),
-
-        ("ASG-021", "PSN-011", "PRJ-007", "Project lead", date(2026, 3, 1), date(2027, 2, 28), 0.60),
-        ("ASG-030", "PSN-011", "PRJ-006", "Main staff", date(2026, 1, 1), date(2026, 12, 31), 0.50),
-        ("ASG-022", "PSN-012", "PRJ-006", "Main staff", date(2026, 1, 1), date(2026, 12, 31), 0.70),
-        ("ASG-023", "PSN-012", "PRJ-007", "Other staff", date(2026, 3, 1), date(2027, 2, 28), 0.60),
-    ]
-
-    ppw = [
-        ("ASG-001", date(2026, 7, 1), date(2026, 9, 30), 0.20, "Part-time - parental leave"),
-        ("ASG-004", date(2027, 1, 1), date(2027, 3, 31), 0.70, "Covering interim analysis peak"),
-    ]
-
-    # Illustrative standards - the reviewer replaces these with real figures
-    pws = []
     phase_profile = {
         "Phase 1": {"Before-Start-up": 0.60, "Start-up": 1.30, "Conduct": 1.00,
                     "Close-out (interim)": 1.20, "Close-out (final)": 1.40,
                     "After Close-out (final)": 0.84},
         "Phase 2": {"Before-Start-up": 0.70, "Start-up": 1.40, "Conduct": 1.10,
                     "Close-out (interim)": 1.30, "Close-out (final)": 1.50,
-                    "After Close-out (final)": 0.9},
+                    "After Close-out (final)": 0.90},
         "Phase 3": {"Before-Start-up": 0.80, "Start-up": 1.60, "Conduct": 1.20,
                     "Close-out (interim)": 1.40, "Close-out (final)": 1.70,
                     "After Close-out (final)": 1.02},
@@ -391,11 +295,123 @@ def dummy_data():
                     "Close-out (interim)": 1.00, "Close-out (final)": 1.20,
                     "After Close-out (final)": 0.72},
     }
-    for ph, prof in phase_profile.items():
-        for pn, w in prof.items():
-            pws.append(("Clinical Trial", ph, pn, w))
 
-    roles = [
+    # ---- projects -------------------------------------------------------
+    projects, ms, inspections = [], {}, {}
+
+    for n in range(1, 51):                                   # 50 clinical trials
+        pid = f"PRJ-{n:03d}"
+        phase = PHASES[(n - 1) % 4]
+        product = PRODUCTS[(n - 1) % len(PRODUCTS)]
+        start = date(2025, 1, 1) + rd(months=rng.randint(0, 41))
+        months = rng.choice([18, 24, 30, 36, 42])
+        end = start + rd(months=months) - timedelta(days=1)
+        has_interim = (n % 5) in (0, 1, 2)                   # 60% carry an interim lock
+        projects.append((
+            pid, f"{product[:3].upper()}-{100 + n} {phase}", "Clinical Trial", product, phase,
+            OUTSOURCING[n % 3], PARTY[n % 2], PARTY[(n + 1) % 2], PARTY[n % 2], PARTY[(n + 1) % 2],
+            EDC[n % 3], DRS[n % 3], RBQM[n % 3],
+            rng.randint(3, 8), start, end,
+            ["Planned", "Active", "Active", "Active", "On hold", "Completed"][n % 6],
+        ))
+
+        m = {
+            "Protocol (v1)": start + rd(months=1),
+            "CTA submission": start + rd(months=3),
+            "First SIV": start + rd(months=7),
+            "LPI": start + rd(months=int(months * 0.60)),
+        }
+        if has_interim:
+            m["interim DB lock cut-off"] = start + rd(months=int(months * 0.62))
+            m["interim DB lock"] = start + rd(months=int(months * 0.68))
+        m["final DB lock cut-off"] = start + rd(months=months - 4)
+        m["final DB lock"] = start + rd(months=months - 2)
+        ms[pid] = m
+
+        if n % 4 == 0:                                       # a quarter carry inspections
+            base = m["final DB lock"]
+            inspections[pid] = [base + rd(months=k) for k in (2, 5)][: 1 + (n % 2)]
+
+    for n in range(51, 63):                                  # 12 'Others' projects
+        pid = f"PRJ-{n:03d}"
+        start = date(2025, 6, 1) + rd(months=rng.randint(0, 36))
+        months = rng.choice([6, 9, 12, 18])
+        projects.append((
+            pid, f"{['CDISC library migration', 'eTMF rollout', 'EDC vendor evaluation', 'SDTM automation', 'Risk dashboard build', 'Archive remediation', 'CDR pilot', 'Metadata repository', 'eConsent rollout', 'Query analytics', 'Training refresh', 'SOP revision'][n - 51]}",
+            "Others", "", "", OUTSOURCING[n % 3], "", "", "", "", "", "", "",
+            rng.randint(2, 5), start, start + rd(months=months) - timedelta(days=1),
+            ["Planned", "Active", "Active", "Completed"][n % 4],
+        ))
+
+    # ---- people ---------------------------------------------------------
+    NAMES = ["Kim S.", "Park J.", "Lee H.", "Choi M.", "Jung Y.", "Han B.", "Oh K.",
+             "Seo W.", "Yoon T.", "Nam R.", "Ahn D.", "Baek C.", "Shin E.", "Koo J.",
+             "Ryu P.", "Moon A.", "Jang L.", "Hwang N.", "Cho V.", "Song G."]
+    DEPTS = (["Clinical Operations"] * 3 + ["Data Management"] * 4
+             + ["Data Management"] * 5 + ["Programming"] * 4
+             + ["Biostatistics"] * 3 + ["Business Systems"])
+    PRIMARY = (["Project oversight"] * 3 + ["Lead data manager"] * 4
+               + ["Clinical Data Associator"] * 5 + ["Clinical Database Programmer"] * 4
+               + ["Data Analyst"] * 3 + ["Other staff"])
+    people = []
+    for i, (nm, dept, role) in enumerate(zip(NAMES, DEPTS, PRIMARY), start=1):
+        cap = 0.60 if i == 20 else (0.80 if i == 4 else 1.00)   # two part-timers
+        people.append((f"PSN-{i:03d}", nm, dept, role, cap))
+
+    # Pools sized so each role's 50 trials spread evenly. Internal ('Others')
+    # projects draw on the same group - a 20-person team runs both.
+    by_role = {
+        "Project oversight":            ["PSN-001", "PSN-002", "PSN-003"],
+        "Lead data manager":            ["PSN-004", "PSN-005", "PSN-006", "PSN-007"],
+        "Clinical Data Associator":     ["PSN-008", "PSN-009", "PSN-010", "PSN-011", "PSN-012"],
+        "Clinical Database Programmer": ["PSN-013", "PSN-014", "PSN-015", "PSN-016"],
+        "Data Analyst":                 ["PSN-017", "PSN-018", "PSN-019"],
+        "Project lead":                 ["PSN-001", "PSN-004"],
+        "Main staff":                   ["PSN-008", "PSN-013", "PSN-017"],
+        "Other staff":                  ["PSN-011", "PSN-016", "PSN-020"],
+    }
+
+    # ---- assignments ----------------------------------------------------
+    # Round-robin within each role pool, so no one carries three times their share.
+    A = []
+    cursor = {role: 0 for role in set(list(by_role) + CT_ROLES + OT_ROLES)}
+    for p in projects:
+        pid, ptype, pstart, pend = p[0], p[2], p[14], p[15]
+        roles = CT_ROLES if ptype == "Clinical Trial" else OT_ROLES
+        for role in roles:
+            pool = by_role.get(role) or by_role["Main staff"]
+            person = pool[cursor[role] % len(pool)]
+            cursor[role] += 1
+            if person == "PSN-020":                 # kept deliberately light
+                person = pool[cursor[role] % len(pool)]
+                cursor[role] += 1
+            a_start = pstart + rd(months=rng.randint(0, 2))
+            a_end = pend - rd(months=rng.randint(0, 2))
+            if a_end <= a_start:
+                a_end = pend
+            # many concurrent projects, so each carries a small share
+            w = round(rng.uniform(0.10, 0.17), 2)
+            if role in ("Lead data manager", "Project lead"):
+                w = round(w + 0.04, 2)
+            A.append((f"ASG-{len(A) + 1:03d}", person, pid, role, a_start, a_end, w))
+
+    # PSN-020 carries one light assignment, to demonstrate an under-allocation run
+    # on a part-timer. PSN-001 is deliberately pushed over the ceiling for a year.
+    A += [
+        ("ASG-901", "PSN-020", "PRJ-051", "Other staff", date(2026, 1, 1), date(2027, 6, 30), 0.18),
+        ("ASG-902", "PSN-001", "PRJ-002", "Project oversight", date(2026, 4, 1), date(2027, 3, 31), 0.35),
+        ("ASG-903", "PSN-001", "PRJ-006", "Project oversight", date(2026, 4, 1), date(2027, 3, 31), 0.35),
+    ]
+
+    ppw = [
+        ("ASG-902", date(2026, 7, 1), date(2026, 9, 30), 0.20, "Part-time - parental leave"),
+        ("ASG-903", date(2026, 10, 1), date(2026, 12, 31), 0.45, "Covering interim analysis peak"),
+    ]
+
+    pws = [("Clinical Trial", ph, pn, w, "Illustrative - replace with your figure")
+           for ph, prof in phase_profile.items() for pn, w in prof.items()]
+
+    roles_tbl = [
         ("Clinical Trial", "Project oversight", 0.80, "Illustrative - replace with your figure"),
         ("Clinical Trial", "Lead data manager", 1.20, "Illustrative"),
         ("Clinical Trial", "Clinical Data Associator", 1.00, "Illustrative"),
@@ -406,14 +422,14 @@ def dummy_data():
         ("Others", "Other staff", 0.70, "Illustrative"),
     ]
 
-    # Periods: derived for clinical trials, hand-entered for 'Others'
+    # ---- periods --------------------------------------------------------
     periods = []
     for p in projects:
         pid, ptype, pstart, pend = p[0], p[2], p[14], p[15]
         if ptype == "Clinical Trial":
             phase = p[4]
-            for name, seq, s, e in derive_periods(pstart, pend, ms[pid], inspections.get(pid, [])):
-                periods.append((pid, name, seq, s, e, phase_profile[phase][name]))
+            for name, seq, s_, e_ in derive_periods(pstart, pend, ms[pid], inspections.get(pid, [])):
+                periods.append((pid, name, seq, s_, e_, phase_profile[phase][name]))
         else:
             span = (pend - pstart).days
             b1 = pstart + timedelta(days=int(span * 0.25))
@@ -422,7 +438,7 @@ def dummy_data():
             periods.append((pid, "Develop", 2, b1 + timedelta(days=1), b2, 1.20))
             periods.append((pid, "Close", 3, b2 + timedelta(days=1), pend, 0.90))
 
-    return projects, ms, periods, pws, roles, people, A, ppw, inspections
+    return projects, ms, periods, pws, roles_tbl, people, A, ppw, inspections
 
 
 # --------------------------------------------------------------------------
@@ -584,19 +600,27 @@ def add_readme(wb, kind):
     else:
         body += [
             "",
-            "WHAT THIS DUMMY FILE DEMONSTRATES",
-            "   - PSN-001 is loaded across three projects and breaches the 1.50 FTE over-allocation",
-            "     threshold in several months.",
-            "   - PSN-004 sits below 0.80 FTE for well over three consecutive months, so an",
-            "     under-allocation run is raised.",
-            "   - PRJ-002, PRJ-003 and PRJ-005 have an interim DB lock, so each has TWO Conduct",
-            "     stretches and two close-out periods.",
-            "   - PRJ-001 and PRJ-004 have no interim lock, so Conduct runs once.",
-            "   - PRJ-006 and PRJ-007 are 'Others' projects with hand-entered periods.",
-            "   - ASG-001 and ASG-004 carry PersonPeriodWeight overrides.",
-            "   - PRJ-003 records THREE 'Inspection' events after its final DB lock, so it carries the",
-            "     seventh period. PRJ-001 records one. PRJ-002 records one dated BEFORE its final lock,",
-            "     which stays a marker and opens no period - the case raised as R-03 in the plan.",
+            "WHAT IS IN THIS FILE",
+            "   62 projects   50 clinical trials (PRJ-001..050) + 12 'Others' (PRJ-051..062)",
+            "   20 people     PSN-001..020, including two part-timers (PSN-004 at 0.80,",
+            "                 PSN-020 at 0.60 capacity)",
+            "   289 assignments, 372 milestones, 308 periods, spanning 73 months",
+            "   Trials are spread evenly across Phase 1-4 and staggered from 2025 to 2031.",
+            "",
+            "WHAT IT DEMONSTRATES",
+            "   - 30 trials carry an interim DB lock, so each has TWO 'Conduct' stretches and two",
+            "     close-out periods. The other 20 run Conduct once.",
+            "   - 12 trials record an 'Inspection' after the final DB lock and so carry the seventh",
+            "     period, 'After Close-out (final)'.",
+            "   - The 12 'Others' projects have hand-entered periods and no milestones.",
+            "   - PSN-001 is pushed above the 1.50 FTE ceiling for a stretch in 2026-27.",
+            "   - PSN-020 is a part-timer carrying one light assignment, so an under-allocation run",
+            "     is raised on someone who cannot reach an absolute 0.80 FTE floor - the case behind",
+            "     open point S2-01 in the programming specification.",
+            "   - Two assignments carry PersonPeriodWeight overrides.",
+            "",
+            "   Typical load is around 0.93 FTE per person-month (median). Months at the very start",
+            "   and end of the 73-month span are naturally light, since few projects overlap there.",
             "",
             "   The weights and role factors here are ILLUSTRATIVE, so the numbers can be exercised.",
             "   Replace them with your own before drawing any conclusion from the output.",
@@ -702,8 +726,9 @@ def build(kind):
                     value=f'=IFERROR(INDEX(Person!$B:$B,MATCH($B{row},Person!$A:$A,0)),"")')
 
     OUTDIR.mkdir(exist_ok=True)
-    suffix = "Template" if kind == "template" else "Dummy"
-    out = OUTDIR / f"PRAP_SourceData_{suffix}_v{VERSION}.xlsx"
+    suffix, ver = (("Template", TEMPLATE_VERSION) if kind == "template"
+                   else ("Dummy", DUMMY_VERSION))
+    out = OUTDIR / f"PRAP_SourceData_{suffix}_v{ver}.xlsx"
     wb.save(out)
     return out
 

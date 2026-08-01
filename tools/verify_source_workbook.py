@@ -4,7 +4,7 @@ Implements enough of the calculation engine to prove the data is coherent and th
 the dummy file demonstrates what its README claims. Doubles as a reference
 implementation for the Step 4 calculation layer.
 
-    python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.2.xlsx
+    python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.3.xlsx
 """
 
 import calendar
@@ -245,4 +245,4 @@ def main(path):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else
-                  "templates/PRAP_SourceData_Dummy_v1.2.xlsx"))
+                  "templates/PRAP_SourceData_Dummy_v1.3.xlsx"))

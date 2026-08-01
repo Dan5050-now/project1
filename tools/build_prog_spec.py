@@ -186,7 +186,7 @@ r = section(ws, r, "Source documents")
 src = [
     [PLAN, "FINAL development plan, approved by Dan 2026-08-01. 65 requirements, 21 validation rules, 11 decisions, source schema version 2.", "Governs this document"],
     ["templates/PRAP_SourceData_Template_v1.2.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
-    ["templates/PRAP_SourceData_Dummy_v1.2.xlsx", "Populated dataset exercising every rule.", "The acceptance data for sheet 05"],
+    ["templates/PRAP_SourceData_Dummy_v1.3.xlsx", "50 clinical trials, 12 'Others' projects, 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
     ["docs/STEP2_OPEN_POINTS.md", "Points raised while building the template.", "Carried into sheet 10"],
 ]
@@ -463,9 +463,10 @@ ex = [
 ]
 r = table(ws, r, ["Element", "Value", "Note"], ex, [22, 62, 44], wrap_cols=(2, 3))
 r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workbook.py against "
-                "PRAP_SourceData_Dummy_v1.2.xlsx must give no errors, one V-21 warning on PRJ-002, "
-                "38 over-allocated person-months and 14 under-allocation runs. Those numbers are the "
-                "regression baseline for Step 4.")
+                "PRAP_SourceData_Dummy_v1.3.xlsx must give no errors and no warnings, across 62 projects, "
+                "20 people, 289 assignments and 308 periods spanning 73 months. Every period set must be "
+                "contiguous, 30 trials must show two 'Conduct' stretches, and 12 must carry the seventh "
+                "period. Those figures are the regression baseline for Step 4.")
 
 # ---- 06 UI ----------------------------------------------------------------
 ws, r = sheet(wb, "06_UI_Spec", "User interface",
@@ -624,6 +625,8 @@ op = [
      "This draft shows them as separate bands on the timeline graph but sums them in the tables.", ""],
     ["S2-05", "Calculation", "A month with zero load breaks an under-allocation run rather than continuing it - somebody with no assignments at all is not 'under-allocated', they are unassigned.",
      "Specified that way on sheet 05. Say so if a gap should instead continue the run.", ""],
+    ["S2-06", "Non-functional", "The dummy dataset now holds 62 projects and 289 assignments, above REQ-NFR-03's headroom figure of 50 projects and 500 assignments. The requirement's working-volume figure (20 projects, 30 people) is well below what the dataset represents.",
+     "Treated as a deliberate stress fixture, not a change to REQ-NFR-03. If 50+ trials is the real working volume rather than an upper bound, the requirement should be re-baselined at Step 4 rather than left understating it.", ""],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Topic", "Question", "What this draft assumes", "Your answer"],
