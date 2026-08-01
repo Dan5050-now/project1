@@ -2,12 +2,13 @@
 
 DESIGN ONLY. There is no parsing, no calculation and no import/export behind this
 page: the figures are a snapshot computed here, in Python, and baked into the markup.
-The only JavaScript is tab switching. The point is to review layout, components and
+The only JavaScript is tab switching, row expansion and the hover tooltip. The point is
+to review layout, components and
 information hierarchy before any application code is written (plan sheet 08, task 3.1).
 
     python tools/build_prototype.py
 
-Output: app/PRAP_Prototype_v0.3.html
+Output: app/PRAP_Prototype_v0.4.html
 """
 
 import calendar
@@ -19,9 +20,9 @@ from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.5.xlsx"
-OUT = ROOT / "app" / "PRAP_Prototype_v0.3.html"
+OUT = ROOT / "app" / "PRAP_Prototype_v0.4.html"
 
-APP_VERSION = "prototype v0.3"
+APP_VERSION = "prototype v0.4"
 SCHEMA_EXPECTED = 3
 WIN_FROM, WIN_TO = (2027, 1), (2027, 12)      # the 12 months the mock-up shows
 
@@ -72,7 +73,10 @@ def snapshot():
     MS = defaultdict(list)
     for r in rows(wb["Milestone"]):
         MS[r["project_id"]].append(r)
-    RF = {(r["project_type"], r["role_name"]): r["role_factor"] for r in rows(wb["RoleFactor"])}
+    RF_ROWS = list(rows(wb["RoleFactor"]))
+    RF = {(r["project_type"], r["role_name"]): r["role_factor"] for r in RF_ROWS}
+    PWS_ROWS = list(rows(wb["PeriodWeightStandard"]))
+    LIST_ROWS = list(rows(wb["Lists"]))
     CT = {"NewDrug CT", "Biosimilar CT"}
     TYPE_RANK = {"NewDrug CT": 0, "Biosimilar CT": 1, "Others": 2}
     PSN = {r["person_id"]: r for r in rows(wb["Person"])}
@@ -83,6 +87,7 @@ def snapshot():
     CFG = {r["parameter"]: r["value"] for r in rows(wb["Config"])}
 
     grid = list(months(WIN_FROM, WIN_TO))
+    gridset = set(grid)
 
     def pweight(pid, y, m):
         for s in PER.get(pid, []):
@@ -99,20 +104,28 @@ def snapshot():
     proj_m = defaultdict(float)
     pers_m = defaultdict(float)
     cell_m = defaultdict(float)        # (project, person, role, y, m) -> FTE
+    # The window aggregates above cover the 12 months on screen. The Gantt spans whole
+    # projects, most of which start before the window and end after it, so its tooltip
+    # needs a load figure that exists outside the window too (O-10).
+    proj_all = defaultdict(float)      # (project, y, m) -> FTE, full project span
+    who = defaultdict(set)             # (project, y, m) -> {(person_id, role)}
     for a in ASG:
         pr = P.get(a["project_id"])
         if not pr or a["person_id"] not in PSN:
             continue
         s, e = d(a["assign_start_date"]), d(a["assign_end_date"]) or d(pr["end_date"])
         rf = RF[(pr["project_type"], a["role_name"])]
-        for (y, m) in grid:
+        for (y, m) in months((s.year, s.month), (e.year, e.month)):
             cov = coverage(y, m, s, e)
             if cov <= 0:
                 continue
             v = pweight(a["project_id"], y, m) * rf * wweight(a, y, m) * cov
-            proj_m[(a["project_id"], y, m)] += v
-            pers_m[(a["person_id"], y, m)] += v
-            cell_m[(a["project_id"], a["person_id"], a["role_name"], y, m)] += v
+            proj_all[(a["project_id"], y, m)] += v
+            if (y, m) in gridset:
+                proj_m[(a["project_id"], y, m)] += v
+                pers_m[(a["person_id"], y, m)] += v
+                cell_m[(a["project_id"], a["person_id"], a["role_name"], y, m)] += v
+                who[(a["project_id"], y, m)].add((a["person_id"], a["role_name"]))
 
     tot = defaultdict(float)
     for (pid, y, m), v in proj_m.items():
@@ -121,7 +134,8 @@ def snapshot():
 
     return dict(P=P, PER=PER, MS=MS, PSN=PSN, ASG=ASG, PPW=PPW, CFG=CFG, CT=CT,
                 TYPE_RANK=TYPE_RANK, grid=grid, proj_m=proj_m, pers_m=pers_m,
-                cell_m=cell_m, top=top, tot=tot)
+                cell_m=cell_m, top=top, tot=tot, proj_all=proj_all, who=who,
+                RF_ROWS=RF_ROWS, PWS_ROWS=PWS_ROWS, LIST_ROWS=LIST_ROWS)
 
 
 S = snapshot()
@@ -203,6 +217,56 @@ def proj_colour(i):
     return _mix(BASE7[i % 7], STEPS[(i // 7) % len(STEPS)])
 
 
+# P-01 / S-01: every row in every editable section carries an insert control, and a
+# new row lands directly below the row whose button was pressed - so a row is added
+# where the user is looking, not appended to the bottom of a 62-row table.
+#
+# It leads the row rather than trailing it. The project table is 23 columns wide and
+# scrolls; a trailing control would sit off-screen and need a horizontal scroll every
+# time. Leading, it reads as a row-action gutter and is always in view.
+INS_TD = ('<td class="ins"><button class="btn tiny" '
+          'title="Insert a new row directly below this one">+ row</button></td>')
+
+
+def att(t):
+    """Escape for an HTML attribute - esc() plus the quote that would close it."""
+    return esc(t).replace('"', "&quot;")
+
+
+# O-10: the Gantt now colours bands by PERIOD NAME rather than by weight, which
+# overturns D-06. Your example mapping is followed: grey before start-up, red at
+# start-up, green through conduct, orange at close-out, dark grey after.
+#
+# One deliberate departure. Red beside green is the pair that red-green colour
+# blindness collapses, and D-04 - which you accepted - makes "never colour alone"
+# an accessibility floor for this UI. So the red is shifted a little toward orange,
+# every band wide enough carries its name as text, and the tooltip names the period
+# outright. Hue speeds recognition here; it is never the only carrier.
+PERIOD_HUE = {
+    "Before-Start-up":        "#adaca6",   # grey, light
+    "Start-up":               "#d9472f",   # red, shifted toward orange
+    "Conduct":                "#1baf7a",   # green
+    "Close-out (interim)":    "#f2b53d",   # orange, light - the interim stop
+    "Close-out (final)":      "#d97e0a",   # orange, deep - the final one
+    "After Close-out (final)": "#6f6f68",  # grey, dark - still legible on a dark surface
+    "Planning":               "#adaca6",   # 'Others' set, same semantics
+    "Develop":                "#1baf7a",
+    "Close":                  "#eda100",
+}
+
+
+def band_fill(name, w, wmax):
+    """Hue carries the period; lightness within that hue carries the weight.
+
+    The lightness range is deliberately narrow. Widen it and the weight steps start
+    competing with the hue for the reader's attention, which is exactly the confusion
+    that moving colour onto the period name was meant to remove.
+    """
+    base = PERIOD_HUE.get(name, "#adaca6")
+    f = 1.14 - 0.24 * (min(w, wmax) / wmax if wmax else 0)
+    return _mix(base, f)
+
+
 def seq_step(v, vmax):
     if v <= 0 or vmax <= 0:
         return None
@@ -251,11 +315,26 @@ def chart_stacked():
             if v <= 0.004:
                 continue
             h = v * scale
-            out.append(f'<rect x="{x:.1f}" y="{base - h:.1f}" width="{bw - 8:.1f}" '
-                       f'height="{max(0.6, h):.1f}" fill="{colour[pid]}">'
-                       f'<title>{esc(S["P"][pid]["project_name"])} '
-                       f'({esc(S["P"][pid]["project_type"])}) — '
-                       f'{GRID[i][0]}-{GRID[i][1]:02d}: {v:.2f} FTE</title></rect>')
+            # O-06: the legend is gone, so the tooltip is now the only thing that
+            # names a band. It therefore has to carry everything the legend did and
+            # the detail the legend never could - who is actually on the project
+            # that month, which is the question a stack of 62 bands invites.
+            crew = sorted(S["who"].get((pid, y, m), ()))
+            crew_html = "<br>".join(
+                f'&#183; {esc(S["PSN"][ps]["person_name"])} '
+                f'<span class="tr">{esc(role)}</span>' for ps, role in crew[:8])
+            if len(crew) > 8:
+                crew_html += f"<br>&#183; and {len(crew) - 8} more"
+            tip = (f'<b>{esc(S["P"][pid]["project_name"])}</b> '
+                   f'<span class="tr">{esc(S["P"][pid]["project_type"])}</span><br>'
+                   f'{calendar.month_abbr[m]} {y} &#183; <b>{v:.2f} FTE</b> '
+                   f'({v * HOURS:.0f} h)<br>'
+                   f'<span class="th">{len(crew)} '
+                   f'{"person" if len(crew) == 1 else "people"} this month</span><br>'
+                   f'{crew_html or "&#183; nobody assigned"}')
+            out.append(f'<rect class="band" x="{x:.1f}" y="{base - h:.1f}" width="{bw - 8:.1f}" '
+                       f'height="{max(0.6, h):.1f}" fill="{colour[pid]}" '
+                       f'data-tip="{att(tip)}"></rect>')
             base -= h
         out.append(f'<text class="ax" x="{x + (bw - 8) / 2:.1f}" y="{H - pad_b + 16}" '
                    f'text-anchor="middle">{calendar.month_abbr[m]}</text>')
@@ -263,13 +342,9 @@ def chart_stacked():
     out.append(f'<line class="base" x1="{pad_l}" y1="{H - pad_b}" x2="{W - 8}" y2="{H - pad_b}"/>')
     out.append("</svg>")
 
-    leg = ['<div class="legendbox"><ul class="legend proj">']
-    for pid in active:
-        leg.append(f'<li><span class="sw" style="background:{colour[pid]}"></span>'
-                   f'{esc(S["P"][pid]["project_name"])}'
-                   f'<span class="lv">{S["tot"][pid]:.1f}</span></li>')
-    leg.append("</ul></div>")
-    return "".join(out) + "".join(leg)
+    # O-06: no legend. With 62 bands it was a list nobody could scan against the
+    # chart anyway; identity now comes from hovering the band itself.
+    return "".join(out)
 
 
 def chart_people():
@@ -324,48 +399,102 @@ def chart_people():
     return "".join(out)
 
 
+def gantt_months(pid, s, e):
+    """Mean monthly FTE this project draws over one period's months (O-10)."""
+    vals = [S["proj_all"].get((pid, y, m), 0.0)
+            for (y, m) in months((s.year, s.month), (e.year, e.month))]
+    return (sum(vals) / len(vals)) if vals else 0.0
+
+
 def chart_gantt():
-    """Timeline for 12 projects: period bands shaded by weight, milestone markers."""
+    """Timeline per project: bands coloured by period name, milestones as markers.
+
+    Colour is by period name, not by weight (O-10, overturning D-06). Weight survives
+    as a lightness step within each hue, and exactly as before in the tooltip - so
+    nothing that drove the simulation stopped being visible, it just stopped owning
+    the hue.
+    """
     pids = S["top"] + [p for p in list(S["P"])[:60] if p not in S["top"]][:5]
     pids = pids[:12]
     lo = min(d(S["P"][p]["start_date"]) for p in pids)
     hi = max(d(S["P"][p]["end_date"]) for p in pids)
     span = (hi - lo).days or 1
-    W, rowh, pad_l, pad_t = 980, 26, 150, 26
+    W, rowh, pad_l, pad_t = 1180, 38, 210, 30
     H = pad_t + rowh * len(pids) + 30
+    inner = W - pad_l - 14
     wmax = max((s["weight"] or 0) for p in pids for s in S["PER"][p]) or 1
 
-    out = [f'<svg viewBox="0 0 {W} {H}" class="chart" role="img" '
-           f'aria-label="Project timeline: period bands shaded by weight, with milestone markers">']
+    def x_of(day):
+        return pad_l + (day - lo).days / span * inner
+
+    out = [f'<svg viewBox="0 0 {W} {H}" class="chart" style="min-width:{W}px" role="img" '
+           f'aria-label="Project timeline: one row per project, bands coloured by period, '
+           f'milestones marked">']
     yr = lo.year
     while yr <= hi.year:
-        x = pad_l + (date(yr, 1, 1) - lo).days / span * (W - pad_l - 14)
+        x = x_of(date(yr, 1, 1))
         if x >= pad_l:
             out.append(f'<line class="grid" x1="{x:.1f}" y1="{pad_t - 8}" x2="{x:.1f}" y2="{H - 22}"/>')
             out.append(f'<text class="ax" x="{x:.1f}" y="{pad_t - 12}" text-anchor="middle">{yr}</text>')
         yr += 1
+
     for i, p in enumerate(pids):
+        pr = S["P"][p]
         y = pad_t + i * rowh
-        out.append(f'<text class="rowlab" x="{pad_l - 10}" y="{y + 15}" text-anchor="end">'
-                   f'{esc(S["P"][p]["project_name"][:22])}</text>')
+        ps, pe = d(pr["start_date"]), d(pr["end_date"])
+        nmon = (pe.year - ps.year) * 12 + (pe.month - ps.month) + 1
+        # O-10.1: the duration sits under the project name, so the row says how long
+        # the project runs without the reader measuring the bar against the axis.
+        out.append(f'<text class="rowlab" x="{pad_l - 12}" y="{y + 14}" text-anchor="end">'
+                   f'{esc(pr["project_name"][:26])}</text>')
+        out.append(f'<text class="rowsub" x="{pad_l - 12}" y="{y + 27}" text-anchor="end">'
+                   f'{ps} &#8594; {pe} &middot; {nmon} months</text>')
+
         for s in sorted(S["PER"][p], key=lambda r: r["period_seq"]):
-            x0 = pad_l + (d(s["period_start"]) - lo).days / span * (W - pad_l - 14)
-            x1 = pad_l + (d(s["period_end"]) - lo).days / span * (W - pad_l - 14)
-            step = SEQ[3 + min(7, int((s["weight"] / wmax) * 7))]
-            out.append(f'<rect x="{x0:.1f}" y="{y + 4}" width="{max(1.5, x1 - x0 - 2):.1f}" '
-                       f'height="{rowh - 10}" fill="{step}" rx="2">'
-                       f'<title>{esc(period_label(p, s))} · weight {s["weight"]:.2f} · '
-                       f'{d(s["period_start"])} to {d(s["period_end"])}</title></rect>')
+            bs, be = d(s["period_start"]), d(s["period_end"])
+            x0, x1 = x_of(bs), x_of(be)
+            w = max(1.5, x1 - x0 - 2)
+            lab = period_label(p, s)
+            fte = gantt_months(p, bs, be)
+            tip = (f'<b>{esc(pr["project_name"])}</b><br>{esc(lab)}<br>'
+                   f'{bs} to {be}<br>period weight {s["weight"]:.2f}<br>'
+                   f'<b>{fte:.2f} FTE per month</b> on average across this period')
+            out.append(f'<rect class="band" x="{x0:.1f}" y="{y + 13}" width="{w:.1f}" '
+                       f'height="{rowh - 20}" fill="{band_fill(s["period_name"], s["weight"], wmax)}" '
+                       f'rx="2" data-tip="{att(tip)}"><title>{esc(lab)} &#183; '
+                       f'{s["weight"]:.2f} &#183; {fte:.2f} FTE/month</title></rect>')
+            # Colour never carries the meaning on its own (D-04): where the band is
+            # wide enough to hold it, the period names itself.
+            # Only label a band that can actually hold the label. Text that overruns
+            # its band reads as belonging to the next one along.
+            if w > len(lab) * 5.7 + 12:
+                out.append(f'<text class="bandlab" x="{x0 + w / 2:.1f}" y="{y + rowh / 2 + 5:.1f}" '
+                           f'text-anchor="middle">{esc(lab)}</text>')
+
+        # O-10.3: 'Inspection' is a milestone like any other, so it takes the same
+        # marker. One shape for one kind of thing.
         for ms in S["MS"][p]:
-            x = pad_l + (d(ms["milestone_date"]) - lo).days / span * (W - pad_l - 14)
-            cls = "ms insp" if ms["milestone_name"] == "Inspection" else "ms"
-            out.append(f'<circle class="{cls}" cx="{x:.1f}" cy="{y + rowh / 2 - 1:.1f}" r="3.2">'
-                       f'<title>{esc(ms["milestone_name"])} · {d(ms["milestone_date"])}</title></circle>')
+            x = x_of(d(ms["milestone_date"]))
+            tip = (f'<b>{esc(pr["project_name"])}</b><br>{esc(ms["milestone_name"])}<br>'
+                   f'{d(ms["milestone_date"])}')
+            cy = y + 1
+            out.append(f'<polygon class="ms" points="{x - 5:.1f},{cy:.1f} {x + 5:.1f},{cy:.1f} '
+                       f'{x:.1f},{cy + 9:.1f}" data-tip="{att(tip)}">'
+                       f'<title>{esc(ms["milestone_name"])} &#183; {d(ms["milestone_date"])}</title>'
+                       f'</polygon>')
     out.append("</svg>")
-    leg = ('<ul class="legend"><li><span class="sw ramp"></span>period weight, light = lower</li>'
-           '<li><span class="sw dot"></span>milestone</li>'
-           '<li><span class="sw dot insp"></span>inspection</li></ul>')
-    return "".join(out) + leg
+
+    seen, leg = [], ['<ul class="legend">']
+    for nm in ["Before-Start-up", "Start-up", "Conduct", "Close-out (interim)",
+               "Close-out (final)", "After Close-out (final)"]:
+        if nm in seen:
+            continue
+        seen.append(nm)
+        leg.append(f'<li><span class="sw" style="background:{PERIOD_HUE[nm]}"></span>{esc(nm)}</li>')
+    leg.append('<li><span class="sw tri"></span>milestone</li>')
+    leg.append('<li class="hint">darker band = higher period weight</li>')
+    leg.append("</ul>")
+    return "".join(out) + "".join(leg)
 
 
 # ---------------------------------------------------------------- tables
@@ -525,23 +654,23 @@ def project_tab():
     cols = ["project_id", "project_name", "project_type", "project_category", "clinical_phase",
             "outsourcing_type", "EDC_setup", "EDC_system", "planned_member_count",
             "start_date", "end_date", "status"]
-    head = "".join(f"<th>{c}</th>" for c in cols)
+    head = '<th class="ins">insert</th>' + "".join(f"<th>{c}</th>" for c in cols)
     body = []
     for qid in S["top"][:9]:
         q = S["P"][qid]
         sel = ' class="sel"' if qid == pid else ""
         tds = "".join(f'<td contenteditable="false">{esc(d(q[c]) if "date" in c else (q[c] or "—"))}</td>'
                       for c in cols)
-        body.append(f"<tr{sel}>{tds}</tr>")
+        body.append(f"<tr{sel}>{INS_TD}{tds}</tr>")
     tbl = (f'<div class="scrollx"><table class="data-t"><thead><tr>{head}</tr></thead>'
            f'<tbody>{"".join(body)}</tbody></table></div>')
 
     mrows = "".join(
-        f'<tr><td>{esc(m["milestone_name"])}</td><td>{d(m["milestone_date"])}</td>'
+        f'<tr>{INS_TD}<td>{esc(m["milestone_name"])}</td><td>{d(m["milestone_date"])}</td>'
         f'<td>{m["milestone_seq"]}</td><td class="muted">{esc(m.get("note_1") or "—")}</td></tr>'
         for m in sorted(S["MS"][pid], key=lambda r: d(r["milestone_date"])))
     prows = "".join(
-        f'<tr><td>{p["period_seq"]}</td><td>{esc(period_label(pid, p))}</td>'
+        f'<tr>{INS_TD}<td>{p["period_seq"]}</td><td>{esc(period_label(pid, p))}</td>'
         f'<td>{d(p["period_start"])}</td><td>{d(p["period_end"])}</td>'
         f'<td>{p["weight"]:.2f}</td><td class="muted">{esc(p.get("note_1") or "—")}</td></tr>'
         for p in sorted(S["PER"][pid], key=lambda r: r["period_seq"]))
@@ -552,22 +681,23 @@ def person_tab():
     pid = "PSN-001"
     per = S["PSN"][pid]
     cols = ["person_id", "person_name", "department", "primary_role", "capacity_fte"]
-    head = "".join(f"<th>{c}</th>" for c in cols)
+    head = '<th class="ins">insert</th>' + "".join(f"<th>{c}</th>" for c in cols)
     body = []
     for qid, q in list(S["PSN"].items())[:9]:
         sel = ' class="sel"' if qid == pid else ""
-        body.append(f"<tr{sel}>" + "".join(f"<td>{esc(q[c] if q[c] is not None else '—')}</td>"
-                                           for c in cols) + "</tr>")
+        body.append(f"<tr{sel}>" + INS_TD
+                    + "".join(f"<td>{esc(q[c] if q[c] is not None else '—')}</td>" for c in cols)
+                    + "</tr>")
     tbl = (f'<div class="scrollx"><table class="data-t"><thead><tr>{head}</tr></thead>'
            f'<tbody>{"".join(body)}</tbody></table></div>')
     arows = "".join(
-        f'<tr><td>{esc(a["assignment_id"])}</td>'
+        f'<tr>{INS_TD}<td>{esc(a["assignment_id"])}</td>'
         f'<td>{esc(S["P"][a["project_id"]]["project_name"])}</td>'
         f'<td>{esc(a["role_name"])}</td><td>{d(a["assign_start_date"])}</td>'
         f'<td>{d(a["assign_end_date"])}</td><td>{a["person_weight"]:.2f}</td></tr>'
         for a in S["ASG"] if a["person_id"] == pid)
     orows = "".join(
-        f'<tr><td>{esc(k)}</td><td>{d(w["period_start"])}</td><td>{d(w["period_end"])}</td>'
+        f'<tr>{INS_TD}<td>{esc(k)}</td><td>{d(w["period_start"])}</td><td>{d(w["period_end"])}</td>'
         f'<td>{w["weight_override"]:.2f}</td><td class="muted">{esc(w["reason"])}</td></tr>'
         for k, ws_ in S["PPW"].items() for w in ws_)
 
@@ -598,8 +728,68 @@ def person_tab():
     return tbl, arows, orows, per, pid, "".join(strip)
 
 
+def general_tab():
+    """G-07: the fourth tab - the standards the whole simulation is multiplied by.
+
+    PeriodWeightStandard and RoleFactor were reachable only by opening the workbook,
+    yet every figure on the Overall tab is their product. Config sits here too, so
+    the thresholds that colour the tables are visible next to what they mean (O-04).
+    """
+    # 48 flat rows read as a list; the same 48 as a matrix read as a standard, which
+    # is what they are. Phase down the side, period across.
+    pws = S["PWS_ROWS"]
+    periods = []
+    for r in pws:
+        if r["period_name"] not in periods:
+            periods.append(r["period_name"])
+    keys = []
+    for r in pws:
+        k = (r["project_type"], r["clinical_phase"])
+        if k not in keys:
+            keys.append(k)
+    grid_w = {(r["project_type"], r["clinical_phase"], r["period_name"]): r["weight"] for r in pws}
+    wmax = max(r["weight"] for r in pws) or 1
+    head = "".join(f"<th>{esc(p)}</th>" for p in periods)
+    body = []
+    for (ty, ph) in sorted(keys, key=lambda k: (S["TYPE_RANK"].get(k[0], 9), str(k[1]))):
+        tds = []
+        for p in periods:
+            v = grid_w.get((ty, ph, p))
+            if v is None:
+                tds.append('<td class="c z">&middot;</td>')
+            else:
+                tds.append(f'<td class="c c{seq_step(v, wmax)}">{v:.2f}</td>')
+        body.append(f'<tr><th class="rh"><span class="nm">{esc(ph)}</span>'
+                    f'<span class="sub">{esc(ty)}</span></th>{"".join(tds)}</tr>')
+    pws_tbl = (f'<table class="grid-t"><thead><tr><th class="rh">Phase</th>{head}</tr></thead>'
+               f'<tbody>{"".join(body)}</tbody></table>')
+
+    rf = sorted(S["RF_ROWS"], key=lambda r: (S["TYPE_RANK"].get(r["project_type"], 9),
+                                             -float(r["role_factor"])))
+    rf_rows = "".join(
+        f'<tr><td>{esc(r["project_type"])}</td><td>{esc(r["role_name"])}</td>'
+        f'<td class="num">{float(r["role_factor"]):.2f}</td>'
+        f'<td class="muted">{esc(r.get("role_note") or "—")}</td></tr>' for r in rf)
+
+    cfg_rows = "".join(
+        f'<tr><td>{esc(r["parameter"])}</td><td class="num" contenteditable="false">{esc(r["value"])}</td>'
+        f'<td class="muted">{esc(r.get("note") or "—")}</td>'
+        f'<td class="ins"><button class="btn tiny">+ row</button></td></tr>'
+        for r in rows(load_workbook(DUMMY)["Config"]))
+
+    lst = defaultdict(list)
+    for r in S["LIST_ROWS"]:
+        lst[r["list_name"]].append(str(r["value"]))
+    list_rows = "".join(
+        f'<tr>{INS_TD}<td>{esc(k)}</td><td class="vals">{esc(", ".join(v))}</td>'
+        f'<td class="num">{len(v)}</td></tr>' for k, v in lst.items())
+
+    return pws_tbl, rf_rows, cfg_rows, list_rows
+
+
 PTBL, MROWS, PROWS, PROJ, PPID = project_tab()
 STBL, AROWS, OROWS, PERS, SPID, STRIP = person_tab()
+PWSTBL, RFROWS, CFGROWS, LISTROWS = general_tab()
 
 # ---------------------------------------------------------------- page
 CSS = """
@@ -648,8 +838,11 @@ h1{font-size:17px;margin:0;font-weight:650}
 .banner{display:flex;gap:10px;align-items:center;margin:12px 0;padding:9px 12px;
  border-radius:8px;background:var(--underbg);border:1px solid var(--ring);font-size:13px}
 .banner .lk{margin-left:auto;color:var(--accent);text-decoration:underline}
-.dirty{display:flex;gap:8px;align-items:center;margin:10px 0;font-size:13px;color:var(--ink2)}
+.dirty{margin:10px 0;font-size:13px;color:var(--ink2);line-height:1.55}
+.dirty .dot-w{margin-right:6px;vertical-align:0}
+.dirty .ok{color:var(--good);font-weight:600}
 .dot-w{width:8px;height:8px;border-radius:50%;background:var(--warn);display:inline-block}
+.file .tz{color:var(--muted)}
 nav{display:flex;gap:2px;margin:14px 0 0;border-bottom:1px solid var(--ring)}
 nav button{border:0;background:none;color:var(--ink2);padding:9px 15px;font-size:13.5px;
  cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
@@ -676,7 +869,12 @@ section[hidden]{display:none}
 .base{stroke:var(--base);stroke-width:1}
 .ax{fill:var(--muted);font-size:10px}
 .ax.tiny{font-size:8px}.ax.yr{font-size:9px}
-.rowlab{fill:var(--ink2);font-size:11px}
+.rowlab{fill:var(--ink);font-size:11.5px;font-weight:600}
+.rowsub{fill:var(--muted);font-size:9.5px;font-variant-numeric:tabular-nums}
+.bandlab{fill:#fff;font-size:9.5px;font-weight:600;pointer-events:none;
+ paint-order:stroke;stroke:rgba(0,0,0,.30);stroke-width:2.4px}
+.band{cursor:pointer}
+.band:hover{stroke:var(--ink);stroke-width:1.4}
 .bar{fill:var(--s1)}.bar.over{fill:var(--crit)}.bar.under{fill:var(--warn)}
 .flag{font-size:9.5px;font-weight:600}
 .flag.over{fill:var(--crit)}.flag.under{fill:var(--underink)}
@@ -686,14 +884,31 @@ section[hidden]{display:none}
 .thlab{font-size:9.5px;font-weight:600}
 .thbg{fill:var(--surface);opacity:.85}.thlab.th-over{fill:var(--crit);stroke:none}
 .thlab.th-under{fill:var(--underink);stroke:none}
-.ms{fill:var(--ink2)}.ms.insp{fill:var(--s2)}
+.ms{fill:var(--ink);stroke:var(--surface);stroke-width:1.2;cursor:pointer}
+.ms:hover{fill:var(--accent)}
 .legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 0 0;padding:0;
  font-size:11.5px;color:var(--ink2)}
 .legend .sw{width:11px;height:11px;border-radius:2px;display:inline-block;
  margin-right:6px;vertical-align:-1px}
 .legend .sw.ramp{background:linear-gradient(90deg,#86b6ef,#184f95);width:34px}
 .legend .sw.dot{border-radius:50%;background:var(--ink2);width:9px;height:9px}
-.legend .sw.dot.insp{background:var(--s2)}
+.legend .sw.tri{width:0;height:0;border-radius:0;border-left:6px solid transparent;
+ border-right:6px solid transparent;border-top:9px solid var(--ink);background:none}
+.legend .hint{color:var(--muted);font-style:italic}
+/* O-06 / O-10: a real hover pop-up, not the native SVG title. The native tooltip
+   cannot show a list of people, and waits half a second before appearing. */
+.tip{position:fixed;z-index:50;max-width:320px;pointer-events:none;
+ background:var(--surface);color:var(--ink);border:1px solid var(--base);
+ border-radius:8px;padding:8px 10px;font-size:11.5px;line-height:1.5;
+ box-shadow:0 6px 22px rgba(0,0,0,.18)}
+.tip b{font-weight:650}
+.tip .tr{color:var(--muted);font-size:10.5px}
+.tip .th{color:var(--ink2);font-weight:600;font-size:10.5px;
+ display:inline-block;margin-top:2px}
+.btn.tiny{font-size:10.5px;padding:1px 7px;border-radius:6px;line-height:1.6}
+td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.vals{white-space:normal;color:var(--ink2)}
 .scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{border-collapse:collapse;width:100%;font-size:12px}
 .grid-t th,.grid-t td{border:1px solid var(--grid);padding:4px 7px;text-align:right;
@@ -719,10 +934,13 @@ tr.grand th,tr.grand td{border-top:2px solid var(--base);font-weight:650;backgro
 .data-t tr.sel td{background:color-mix(in srgb,var(--accent) 11%,transparent)}
 .muted{color:var(--muted)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+/* A grid track defaults to min-content:auto, so a wide table stretches the track
+   instead of scrolling inside it. This is what keeps the panel on the page. */
+.two>*{min-width:0}
 @media(max-width:820px){.two{grid-template-columns:1fr}}
 .note{font-size:11.5px;color:var(--muted);margin-top:9px}
 .filterbar{background:var(--surface);border-color:var(--accent)}
-.filterbar .scope{font-weight:400;font-size:11px;color:var(--muted);
+.scope{font-weight:400;font-size:11px;color:var(--muted);
  border:1px solid var(--ring);border-radius:9px;padding:1px 7px;margin-left:6px}
 .btn.reset{border-color:var(--accent);color:var(--accent)}
 .scrollx>.chart,.scrollx>.strip{display:block}
@@ -780,6 +998,32 @@ document.querySelectorAll('tr.parent').forEach(function(tr){
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
   });
 });
+// O-06 / O-10: hover pop-up. Follows the cursor and flips before it runs off the
+// right or bottom edge, so a band at the far end of a scrolled chart is still readable.
+(function(){
+  var tip = document.getElementById('tip');
+  function place(e){
+    var pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = e.clientX + pad, y = e.clientY + pad;
+    if (x + w > window.innerWidth - 8)  { x = e.clientX - w - pad; }
+    if (y + h > window.innerHeight - 8) { y = e.clientY - h - pad; }
+    tip.style.left = Math.max(8, x) + 'px';
+    tip.style.top  = Math.max(8, y) + 'px';
+  }
+  document.addEventListener('mouseover', function(e){
+    var el = e.target.closest('[data-tip]');
+    if (!el) return;
+    tip.innerHTML = el.dataset.tip;
+    tip.hidden = false;
+    place(e);
+  });
+  document.addEventListener('mousemove', function(e){
+    if (!tip.hidden) place(e);
+  });
+  document.addEventListener('mouseout', function(e){
+    if (e.target.closest('[data-tip]')) tip.hidden = true;
+  });
+})();
 document.querySelectorAll('nav button').forEach(function(b){
   b.addEventListener('click',function(){
     document.querySelectorAll('nav button').forEach(function(x){x.setAttribute('aria-selected','false');});
@@ -793,7 +1037,7 @@ document.querySelectorAll('nav button').forEach(function(b){
 
 html = f"""<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PRAP — UI prototype v0.1</title>
+<title>PRAP — UI prototype v0.4</title>
 <style>{CSS}</style>
 <div class="proto">PROTOTYPE — layout and components only. Figures are a fixed snapshot;
 nothing on this page loads, calculates or exports.</div>
@@ -801,7 +1045,8 @@ nothing on this page loads, calculates or exports.</div>
 <header>
   <h1>Project Resource Assignment Program</h1>
   <span class="vers">{APP_VERSION} · expects source schema v{SCHEMA_EXPECTED}</span>
-  <span class="file">PRAP_SourceData_Dummy_v1.3.xlsx · loaded 2026-08-01 09:14</span>
+  <span class="file">PRAP_SourceData_Dummy_v1.5.xlsx · loaded 2026-08-01 09:14
+    <span class="tz">(GMT+9, KST)</span></span>
   <button class="btn">Load workbook</button>
   <button class="btn primary">Export</button>
 </header>
@@ -810,8 +1055,10 @@ nothing on this page loads, calculates or exports.</div>
   PRJ-002 — an Inspection on or before the final DB lock is treated as a marker (V-21).
   <a class="lk" href="#">Open full report</a></div>
 
-<div class="dirty"><span class="dot-w"></span> 3 unsaved edits — export to write them back
-  to the workbook.</div>
+<div class="dirty"><span class="dot-w"></span> <strong>3 unsaved edits</strong> ·
+  <span class="ok">all 3 pass validation</span> — export writes every validated edit back
+  to the workbook. An edit that fails a rule is rejected at entry and never reaches
+  the model, so nothing invalid can be exported.</div>
 
 <div class="panel filterbar">
   <h2>Horizon and filters <span class="scope">applies to every tab</span></h2>
@@ -823,11 +1070,13 @@ nothing on this page loads, calculates or exports.</div>
     <div class="ctl"><label>&nbsp;</label><button class="btn">Expand to all projects</button></div>
     <div class="ctl"><label>Project type</label><select><option>All</option>
       <option>NewDrug CT</option><option>Biosimilar CT</option><option>Others</option></select></div>
+    <div class="ctl"><label>Clinical phase</label><select><option>All</option>
+      <option>Phase 1</option><option>Phase 2</option><option>Phase 3</option>
+      <option>Phase 4</option></select></div>
     <div class="ctl"><label>Project</label><select><option>All (62)</option></select></div>
     <div class="ctl"><label>Person</label><select><option>All (20)</option></select></div>
     <div class="ctl"><label>Role</label><select><option>All (13)</option></select></div>
     <div class="ctl"><label>Department</label><select><option>All (5)</option></select></div>
-    <div class="ctl"><label>Unit</label><select><option>FTE</option><option>Hours</option></select></div>
     <div class="ctl"><label>&nbsp;</label><button class="btn reset">Reset filters</button></div>
   </div>
 </div>
@@ -836,9 +1085,22 @@ nothing on this page loads, calculates or exports.</div>
   <button role="tab" aria-selected="true" data-tab="t-overall">Overall</button>
   <button role="tab" aria-selected="false" data-tab="t-proj">Source data (project)</button>
   <button role="tab" aria-selected="false" data-tab="t-pers">Source data (person)</button>
+  <button role="tab" aria-selected="false" data-tab="t-gen">General assumptions</button>
 </nav>
 
 <section class="tab" id="t-overall">
+
+  <div class="panel">
+    <h2>Project timeline</h2>
+    <p class="cap">One row per project, with its start, end and length under the name.
+      Bands are coloured by period — grey before start-up, red through start-up, green
+      through conduct, orange at close-out, dark grey after — and shaded darker as the
+      period weight rises. Trials with an interim DB lock show two Conduct stretches,
+      numbered <em>Conduct (1)</em> and <em>Conduct (2)</em>. <strong>Hover any band</strong>
+      for its dates, weight and the FTE per month the project draws across it; hover a
+      marker for the milestone.</p>
+    <div class="scrollx">{chart_gantt()}</div>
+  </div>
 
   {tiles()}
 
@@ -846,8 +1108,9 @@ nothing on this page loads, calculates or exports.</div>
     <h2>Monthly demand by project</h2>
     <p class="cap">One band per project, ordered by total resource with the largest on
       the baseline. Every “Others” project is grey; trials take the extended colour set.
-      Scroll the legend for the full list — with this many projects, identity comes from
-      the legend order and the tooltip, not from hue alone.</p>
+      <strong>Hover any band</strong> for the project, its FTE that month and who is on it —
+      with 62 projects that is where identity lives now, not in a legend nobody could scan
+      against the chart.</p>
     <div class="scrollx">{chart_stacked()}</div>
   </div>
 
@@ -876,20 +1139,15 @@ nothing on this page loads, calculates or exports.</div>
       months, not per month — the run is what matters, a single quiet month is not.</p>
   </div>
 
-  <div class="panel">
-    <h2>Project timeline</h2>
-    <p class="cap">Period bands shaded by weight. Trials with an interim DB lock show two
-      Conduct stretches, numbered <em>Conduct (1)</em> and <em>Conduct (2)</em> in the
-      tooltip and the period table; a post-lock Inspection opens the final band.</p>
-    <div class="scrollx">{chart_gantt()}</div>
-  </div>
 </section>
 
 <section class="tab" id="t-proj" hidden>
   <div class="panel">
     <h2>Projects</h2>
     <p class="cap">All 23 columns, sortable and filterable. Every field is editable;
-      changing an identifier cascades to the rows that reference it.</p>
+      changing an identifier cascades to the rows that reference it.
+      <strong>+ row</strong> inserts a new row directly below the one you press it on,
+      in this and every other section.</p>
     {PTBL}
     <p class="note">Showing 9 of 62 rows in this mock-up, with the selected row tinted. The real table lists all 62, sorted and filtered.</p>
   </div>
@@ -897,16 +1155,16 @@ nothing on this page loads, calculates or exports.</div>
     <div class="panel">
       <h2>Milestones — {esc(PROJ['project_name'])}</h2>
       <p class="cap">Only CTA submission and the DB locks set period boundaries.</p>
-      <table class="data-t"><thead><tr><th>milestone</th><th>date</th><th>seq</th>
-        <th>note_1</th></tr></thead><tbody>{MROWS}</tbody></table>
+      <table class="data-t"><thead><tr><th class="ins">insert</th><th>milestone</th><th>date</th>
+        <th>seq</th><th>note_1</th></tr></thead><tbody>{MROWS}</tbody></table>
     </div>
     <div class="panel">
       <h2>Periods — {esc(PROJ['project_name'])}</h2>
       <p class="cap">Derived from the milestones above. A period name that occurs more
         than once carries its occurrence number.
         <button class="btn">Recompute periods</button></p>
-      <table class="data-t"><thead><tr><th>seq</th><th>period</th><th>start</th><th>end</th>
-        <th>weight</th><th>note_1</th></tr></thead><tbody>{PROWS}</tbody></table>
+      <table class="data-t"><thead><tr><th class="ins">insert</th><th>seq</th><th>period</th><th>start</th>
+        <th>end</th><th>weight</th><th>note_1</th></tr></thead><tbody>{PROWS}</tbody></table>
     </div>
   </div>
 </section>
@@ -914,7 +1172,8 @@ nothing on this page loads, calculates or exports.</div>
 <section class="tab" id="t-pers" hidden>
   <div class="panel">
     <h2>People</h2>
-    <p class="cap">Editable, same rules as the project table.</p>
+    <p class="cap">Editable, same rules as the project table — including <strong>+ row</strong>
+      on every row, which inserts directly below it.</p>
     {STBL}
     <p class="note">Showing 9 of 20 rows in this mock-up.</p>
   </div>
@@ -927,18 +1186,66 @@ nothing on this page loads, calculates or exports.</div>
   <div class="two">
     <div class="panel">
       <h2>Assignments — {SPID}</h2>
-      <table class="data-t"><thead><tr><th>id</th><th>project</th><th>role</th>
-        <th>start</th><th>end</th><th>weight</th></tr></thead><tbody>{AROWS}</tbody></table>
+      <table class="data-t"><thead><tr><th class="ins">insert</th><th>id</th><th>project</th><th>role</th>
+        <th>start</th><th>end</th><th>weight</th></tr></thead>
+        <tbody>{AROWS}</tbody></table>
     </div>
     <div class="panel">
       <h2>Weight overrides</h2>
       <p class="cap">Replaces person_weight for the window it covers.</p>
-      <table class="data-t"><thead><tr><th>assignment</th><th>start</th><th>end</th>
-        <th>override</th><th>reason</th></tr></thead><tbody>{OROWS}</tbody></table>
+      <table class="data-t"><thead><tr><th class="ins">insert</th><th>assignment</th><th>start</th><th>end</th>
+        <th>override</th><th>reason</th></tr></thead>
+        <tbody>{OROWS}</tbody></table>
+    </div>
+  </div>
+</section>
+
+<section class="tab" id="t-gen" hidden>
+  <div class="panel">
+    <h2>Standard period weights <span class="scope">PeriodWeightStandard</span></h2>
+    <p class="cap">The weight every clinical trial period is multiplied by, selected by
+      the project's type and clinical phase. Shown as a matrix rather than 48 rows,
+      because it is a standard and standards are read across, not down. The shading follows
+      the same ramp as the Overall tables, so a heavier weight reads as a stronger cell.
+      <strong>Others</strong> projects do not appear here — their weights are entered by
+      hand on each project.</p>
+    <div class="scrollx">{PWSTBL}</div>
+  </div>
+
+  <div class="panel">
+    <h2>Role factors <span class="scope">RoleFactor</span></h2>
+    <p class="cap">What one person in this role costs the project per month before their
+      own weight and the period weight are applied. Keyed on project type, so the same
+      role can weigh differently on a new-drug trial and a biosimilar.</p>
+    <div class="scrollx"><table class="data-t"><thead><tr><th class="ins">insert</th><th>project_type</th>
+      <th>role_name</th><th>role_factor</th><th>role_note</th></tr></thead><tbody>{RFROWS}</tbody></table></div>
+  </div>
+
+  <div class="two">
+    <div class="panel">
+      <h2>Configuration <span class="scope">Config</span></h2>
+      <p class="cap">The thresholds and settings the whole page reads. Both allocation
+        thresholds are absolute — they are not scaled by anyone's capacity.</p>
+      <table class="data-t"><thead><tr><th class="ins">insert</th><th>parameter</th><th>value</th><th>note</th></tr></thead><tbody>{CFGROWS}</tbody></table>
+      <p class="note">The display unit lives here rather than in the filter bar: it is a
+        setting, not a filter, and it changes how every figure is written rather than
+        which figures are shown.</p>
+      <div class="controls">
+        <div class="ctl"><label>Display unit</label><select><option>FTE</option>
+          <option>Hours</option></select></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Value lists <span class="scope">Lists</span></h2>
+      <p class="cap">What each list-typed column will accept. A value outside its list is
+        kept and reported (V-11), never silently dropped.</p>
+      <div class="scrollx"><table class="data-t"><thead><tr><th>list_name</th>
+        <th>values</th><th>n</th></tr></thead><tbody>{LISTROWS}</tbody></table></div>
     </div>
   </div>
 </section>
 </div>
+<div id="tip" class="tip" hidden></div>
 <script>{JS}</script>
 """
 

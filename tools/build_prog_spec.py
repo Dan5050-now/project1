@@ -14,10 +14,10 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "0.4"
-DOC_STATUS = "Draft for review - all six v0.3 open points answered and applied"
+DOC_VERSION = "0.5"
+DOC_STATUS = "Draft for review - component-list review outcome applied"
 DOC_DATE = "2026-08-01"
-PLAN = "PRAP_Development_Plan_v1.5.xlsx"
+PLAN = "PRAP_Development_Plan_v1.6.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
 
@@ -116,7 +116,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Governing document", f"{PLAN} - changes R-06, R-07 and R-08 against the v1.3 baseline, awaiting signature"),
+    ("Governing document", f"{PLAN} - changes R-05..R-09 against the v1.3 baseline, awaiting signature"),
     ("Schema version specified", "3"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
@@ -135,7 +135,7 @@ r = section(ws, r, "What this document is")
 r = lines(ws, r, [
     "The plan says WHAT the application must do. This says HOW, in enough detail that the code can be written",
     "from it and checked against it. Every section cites the REQ-IDs it implements, and sheet 09 shows the",
-    "reverse: each of the 67 requirements mapped to the section that satisfies it.",
+    "reverse: each of the 69 requirements mapped to the section that satisfies it.",
     "",
     "Two things make this specification unusual, and both are deliberate:",
     "",
@@ -157,17 +157,26 @@ guide = [
     ("03_Data_Schema", "The parse contract: every sheet, column, type and coercion rule."),
     ("04_Validation", "V-01..V-22 with trigger, severity and the exact message shown."),
     ("05_Calculation", "Period derivation, the load formula, aggregation and the two thresholds."),
-    ("06_UI_Spec", "The three tabs, their components, filters and states."),
+    ("06_UI_Spec", "The four tabs, their components, filters and states."),
     ("07_Editing_IO", "Edit buffer, dirty state, cascading identifier edits, import and export."),
     ("08_Versioning", "Schema compatibility check and version display."),
-    ("09_Traceability", "All 67 requirements mapped to the section that implements them."),
-    ("10_Open_Points", "The six points raised at the v0.3 review, with the answers given and what changed."),
+    ("09_Traceability", "All 69 requirements mapped to the section that implements them."),
+    ("10_Open_Points", "The six points raised at the v0.3 review, with the answers given and what changed. None open."),
 ]
 r = table(ws, r, ["Sheet", "Contents"], guide, [24, 86], wrap_cols=(2,))
 
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
-rows = [["0.4", DOC_DATE, "Claude Code", "Dan",
+rows = [["0.5", DOC_DATE, "Claude Code", "Dan",
+         "Component-list v0.3 review applied (plan change R-09). Sheet 06 gains a fourth tab, "
+         "'General assumptions', carrying PeriodWeightStandard, RoleFactor, Config and Lists "
+         "(REQ-DSH-11) - and the FTE/hours unit moves there, since it is a setting rather than a "
+         "filter. The filter set gains clinical phase. Row insertion is specified: a new row lands "
+         "immediately below the row acted on (REQ-IMP-11). The load stamp carries its time zone. The "
+         "timeline is specified as coloured by period name with weight as a lightness step, which "
+         "supersedes design decision D-06 on the reviewer's own instruction. Tooltip content specified "
+         "for the demand chart and the timeline. Written against plan v1.6.", "Draft"],
+        ["0.4", DOC_DATE, "Claude Code", "Dan",
          "Answers to the six open points applied. S2-01 and S2-05: both thresholds stay ABSOLUTE, with the "
          "under-allocation floor moved 0.80 -> 0.60; the relative-threshold proposal is withdrawn and V-22 added "
          "to catch a capacity below the floor. S2-04: repeated period names are numbered on screen, 'Conduct (1)' "
@@ -197,7 +206,7 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 
 r = section(ws, r, "Source documents")
 src = [
-    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-08 awaiting signature. 67 requirements, 22 validation rules, 11 decisions, source schema version 3.", "Governs this document"],
+    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-09 awaiting signature. 69 requirements, 22 validation rules, 11 decisions, source schema version 3.", "Governs this document"],
     ["templates/PRAP_SourceData_Template_v1.4.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
     ["templates/PRAP_SourceData_Dummy_v1.5.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
@@ -489,14 +498,16 @@ r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workb
 
 # ---- 06 UI ----------------------------------------------------------------
 ws, r = sheet(wb, "06_UI_Spec", "User interface",
-              "Behaviour and content. Layout, colour and typography are fixed at Step 3.")
+              "Behaviour and content. Layout and typography are fixed at Step 3. Colour is fixed there too, "
+              "with one exception now settled here: on the timeline, colour carries the period name, so it "
+              "is meaning rather than styling.")
 
 r = section(ws, r, "Global")
 glob = [
-    ["Header", "Application name, application version, expected schema version, loaded file name and load time.", "REQ-VC-02, REQ-IMP-05"],
-    ["Tab bar", "Overall | Source data (project) | Source data (person). Tab state survives a re-import.", "REQ-DSH-01..04"],
+    ["Header", "Application name, application version, expected schema version, loaded file name, and the load time WITH ITS TIME ZONE - offset and abbreviation both, e.g. '2026-08-01 09:14 (GMT+9, KST)'. A bare timestamp is ambiguous to a reader in another country.", "REQ-VC-02, REQ-IMP-05"],
+    ["Tab bar", "Overall | Source data (project) | Source data (person) | General assumptions. Tab state survives a re-import.", "REQ-DSH-01..04, REQ-DSH-11"],
     ["Findings banner", "Appears when the last load or edit produced findings; opens the full report on click.", "REQ-IMP-02"],
-    ["Unsaved-edit counter", "Always visible once any edit exists. Warns before unload or a new import.", "REQ-IMP-08"],
+    ["Unsaved-edit counter", "Always visible once any edit exists, and states the validation standing of those edits - 'n unsaved edits, all n pass validation'. Warns before unload or a new import. An edit that fails a rule is rejected at entry and never enters the buffer, so everything counted here is exportable.", "REQ-IMP-08, REQ-IMP-09"],
     ["Empty state", "With nothing loaded, every tab shows the same load panel plus a template download link.", "REQ-IMP-03"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], glob, [24, 90, 20], wrap_cols=(2,))
@@ -504,13 +515,13 @@ r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], glob, [24, 90, 20], wrap_
 r = section(ws, r, "Tab 1 - Overall")
 ov = [
     ["Horizon control", "From/to month. Defaults to 24 months from the current month. One control expands it to span every project's dates.", "REQ-CAL-01, REQ-DSH-07"],
-    ["Filters", "project type (NewDrug CT / Biosimilar CT / Others), project, person, role, department. Multi-select, combined with AND. GLOBAL: one setting drives every tab, not just the Overall tab.", "REQ-DSH-05"],
-    ["Unit toggle", "FTE or hours, seeded from config.capacity_unit.", "REQ-CAL-08"],
+    ["Filters", "project type (NewDrug CT / Biosimilar CT / Others), CLINICAL PHASE, project, person, role, department. Multi-select, combined with AND. GLOBAL: one setting drives every tab, not just the Overall tab. Clinical phase sits immediately right of project type, so the two type-ish controls read as a pair.", "REQ-DSH-05"],
+    ["Unit toggle", "FTE or hours, seeded from config.capacity_unit. NOT in the filter bar: it changes how every figure is written, not which figures are shown, so it is a setting and lives on the assumptions tab.", "REQ-CAL-08, REQ-DSH-11"],
     ["Table A - by project", "Rows projects, columns months, cells FTE. Row and column totals. A project row expands to its people.", "REQ-DSH-01"],
     ["Table B - by person", "Rows people, columns months, cells FTE summed across projects. Over-allocated cells red, under-allocation runs amber. A person row expands to their projects.", "REQ-DSH-01, REQ-DSH-08"],
-    ["Graph 1", "Stacked bar: total monthly demand, ONE BAND PER PROJECT, ordered by total resource with the largest on the baseline. 'Others' projects are grey; trials take the extended colour set.", "REQ-DSH-02"],
+    ["Graph 1", "Stacked bar: total monthly demand, ONE BAND PER PROJECT, ordered by total resource with the largest on the baseline. 'Others' projects are grey; trials take the extended colour set. NO LEGEND - a list of 62 entries cannot be matched against the chart. Identity comes from the hover pop-up, which carries project name and type, that month's FTE and its hour equivalent, the headcount, and every person on the project that month with their role.", "REQ-DSH-02"],
     ["Graph 2", "Monthly FTE per person, with reference lines at the two thresholds - one pair of lines, since both are absolute. Above the bar budget it shows a ranked subset with the rest rolled into one 'others' band, and says which it is showing.", "REQ-DSH-02, REQ-DSH-08, REQ-DSH-09"],
-    ["Graph 3", "Timeline per project across the horizon: period bands shaded by weight, milestone markers, repeated 'Inspection' markers shown individually.", "REQ-DSH-02, REQ-PRJ-05"],
+    ["Graph 3", "Timeline per project - the FIRST panel on the tab, above the summary tiles. Each row carries the project name with its start, end and length beneath. Bands are coloured BY PERIOD NAME (see the colour rule below), with the period weight as a lightness step inside each hue. Milestones are inverted triangles in a lane above the bands; 'Inspection' takes the same marker as every other milestone. The hover pop-up gives the period, its dates, its weight and the FTE per month the project draws across it.", "REQ-DSH-02, REQ-PRJ-05, REQ-DSH-10"],
     ["Summary tiles", "Active projects; people assigned; total FTE in the horizon; over-allocated person-months; under-allocation runs.", "REQ-DSH-08"],
     ["Reset filters", "Clears every filter and restores the default 24-month horizon in one action.", "REQ-DSH-05"],
     ["Scroll regions", "Every chart and table sits in its own horizontal scroll region, so wide content scrolls inside the panel and the page body never scrolls sideways.", "REQ-NFR-02"],
@@ -523,6 +534,31 @@ ov = [
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], ov, [24, 90, 20], wrap_cols=(2,))
 r = note(ws, r, "Both tables are the same numbers aggregated differently, so they must always reconcile: the grand "
                 "total of table A equals that of table B. Worth asserting in code, not just hoping.")
+
+r = section(ws, r, "Timeline colour rule   [O-10, supersedes design decision D-06]")
+r = lines(ws, r, [
+    "Hue carries the PERIOD NAME. Weight carries a lightness step inside that hue, over a deliberately",
+    "narrow range so it never competes with the hue for the reader's attention.",
+])
+colour = [
+    ["Before-Start-up", "grey, light", "Not started. The two greys bracket the active work."],
+    ["Start-up", "red, shifted toward orange", "Requested as red. Shifted because red beside green is the pair red-green colour blindness collapses, and REQ-DSH-08's principle - never colour alone - applies here too."],
+    ["Conduct", "green", "The long middle of a trial."],
+    ["Close-out (interim)", "orange, light", "Split from the final close-out: a trial with an interim DB lock shows both in one row, and a single shared orange read as one interrupted band."],
+    ["Close-out (final)", "orange, deep", "As above."],
+    ["After Close-out (final)", "grey, dark", "Both greys are chosen to stay legible on the dark surface as well as the light one."],
+    ["Planning / Develop / Close", "grey / green / orange", "The 'Others' period set, mapped to the same semantics."],
+]
+r = table(ws, r, ["Period", "Hue", "Why"], colour, [26, 26, 82], wrap_cols=(3,))
+r = lines(ws, r, [
+    "Colour is never the only carrier. A band wide enough to hold its name shows it as text, the pop-up",
+    "names the period outright, and a repeated name carries its number (REQ-DSH-10).",
+])
+r = note(ws, r, "This overturns D-06, which shaded bands by weight on the grounds that weight is what drives "
+                "the simulation. The reviewer accepted D-06 and then asked for the opposite in O-10. O-10 is "
+                "the more specific instruction, so it governs - and D-06's point is preserved by keeping "
+                "weight as the lightness step and exact in the pop-up.")
+r += 1
 
 r = section(ws, r, "Rendering at the target volume   [S2-06, REQ-DSH-09, REQ-NFR-03]")
 r = lines(ws, r, [
@@ -566,6 +602,24 @@ t3 = [
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t3, [24, 90, 20], wrap_cols=(2,))
 
+r = section(ws, r, "Tab 4 - General assumptions   [REQ-DSH-11, added at the component-list review]")
+r = lines(ws, r, [
+    "Every figure on the Overall tab is the product of the standard period weight, the role factor and the",
+    "person's own weight. Two of those three lived only in the workbook, so a reader who wanted to know why",
+    "a number was what it is had to leave the application. This tab is the fix.",
+])
+t4 = [
+    ["Standard period weights", "PeriodWeightStandard as a MATRIX - project type and clinical phase down the side, period name across, cells shaded on the same ramp as the Overall tables. It is a standard, and a standard is read across; 48 flat rows read as a list. 'Others' projects are absent by design - their weights are hand-entered per project (Q-28).", "REQ-DSH-11"],
+    ["Role factors", "RoleFactor in full: project type, role, factor, note. Keyed on type, so the same role can weigh differently on a NewDrug and a Biosimilar trial.", "REQ-DSH-11"],
+    ["Configuration", "Config in full, with each parameter's note. The display-unit control sits here, with a line saying why it is not in the filter bar.", "REQ-DSH-11, REQ-CAL-08"],
+    ["Value lists", "Lists, one row per list, showing every accepted value and the count. Answers 'what may I type here' without opening the workbook. A value outside its list is kept and reported by V-11, never dropped.", "REQ-DSH-11"],
+    ["Editing", "The role-factor and config tables are editable and insertable like any other table, and an edit here recalculates everything - these are the multipliers.", "REQ-IMP-07, REQ-IMP-11"],
+]
+r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t4, [24, 90, 20], wrap_cols=(2,))
+r = note(ws, r, "This tab is read-mostly but not read-only. A role factor is exactly the kind of figure a "
+                "planner wants to try a different value for, and locking it would send them back to the "
+                "workbook - which is what the tab exists to avoid.")
+
 # ---- 07 Editing and IO ----------------------------------------------------
 ws, r = sheet(wb, "07_Editing_IO", "Editing, import and export")
 
@@ -586,6 +640,31 @@ edit = [
     ["Editing a weight, date or assignment recalculates immediately.", "The dashboard must never show numbers that disagree with the data on screen."],
 ]
 r = table(ws, r, ["Rule", "Basis"], edit, [76, 56], wrap_cols=(1, 2))
+
+r = section(ws, r, "Inserting a row   [REQ-IMP-11, added at the component-list review]")
+r = code(ws, r, [
+    "  every editable table shows an insert control on EVERY row, not once per table",
+    "  the control LEADS the row: at the end of a 23-column table it scrolls out of view",
+    "  on press:",
+    "      create a blank row of that sheet's shape",
+    "      position it IMMEDIATELY BELOW the row the control was pressed on",
+    "      pre-fill the parent key where the table is a child of a selection",
+    "          (a period inserted under project PRJ-003 gets project_id = PRJ-003)",
+    "      leave every other field empty and focus the first editable cell",
+    "      mark the row unsaved; it joins the edit count like any other change",
+    "  validation runs on entry, exactly as for an edit (REQ-IMP-09):",
+    "      a blank row is INCOMPLETE, not invalid - it is not reported until a field is filled",
+    "      a row still missing its identifier when export is pressed blocks the export, naming it",
+])
+r = lines(ws, r, [
+    "Position matters and is worth stating. Appending to the bottom of a 62-row table means the user has to",
+    "find the new row and then move it; inserting where they are looking means they can just type. The stored",
+    "order follows the display order, so the export carries the row where the user put it.",
+])
+r = note(ws, r, "Deleting stays asymmetric with inserting, as it already is with editing: a row can be created "
+                "freely because an empty row references nothing, while a row that is referenced cannot be "
+                "deleted at all (V-17). Creation is cheap to undo; deletion is not.")
+r += 1
 
 r = section(ws, r, "Cascading identifier edits   [REQ-IMP-10, V-17]")
 r = code(ws, r, [

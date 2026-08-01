@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.5"
+DOC_VERSION = "1.6"
 DOC_STATUS = "Change against approved baseline v1.3 - issued for approval"
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -204,9 +204,9 @@ r = lines(ws, r, [
     "lock are therefore treated as markers inside the existing periods, and only later inspection activity",
     "opens period 7. Raised as R-03 and CONFIRMED by the reviewer at the v1.1 review.",
     "",
-    "v1.3 was approved by Dan on 2026-08-01 and remains the baseline. This issue carries four changes against",
-    "it - R-05 from the Step 3 review, and R-06 to R-08 from the specification v0.3 review - and needs its own",
-    "approval before it supersedes v1.3.",
+    "v1.3 was approved by Dan on 2026-08-01 and remains the baseline. This issue carries five changes against",
+    "it - R-05 from the Step 3 review, R-06 to R-08 from the specification v0.3 review, and R-09 from the",
+    "component-list v0.3 review - and needs its own approval before it supersedes v1.3.",
     "",
     "v1.3 carries change R-04: every sheet of the source workbook now holds at least one free-text note",
     "column. Four sheets had none - Milestone, ProjectPeriod, PeriodWeightStandard and Lists - and each gains",
@@ -353,9 +353,29 @@ rows = [
      "version steps from 1 to 2. No calculation, validation or UI behaviour changes. Issued FINAL: this is "
      "the last planned issue of the development plan.",
      "APPROVED 2026-08-01 by Dan - FINAL"],
+    ["1.4", DOC_DATE, "Claude Code", "Pending",
+     "Change against the v1.3 baseline (R-05), from the Step 3 prototype review: project_type splits into "
+     "'NewDrug CT' and 'Biosimilar CT'. REQ-PRJ-01 and REQ-PRJ-02 reworded; RoleFactor and "
+     "PeriodWeightStandard keyed on the type; source schema version steps 2 to 3.",
+     "Superseded by v1.5"],
+    ["1.5", DOC_DATE, "Claude Code", "Pending",
+     "Changes R-06, R-07 and R-08 against the v1.3 baseline, from the specification v0.3 review. "
+     "REQ-NFR-03 re-baselined to 100 projects and 1,000 people and raised to Must; both allocation "
+     "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
+     "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
+     "Superseded by v1.6"],
+    [f"{MARK_NEW}1.6", DOC_DATE, "Claude Code", "Pending",
+     "Change R-09 against the v1.3 baseline, from the component-list v0.3 review. Nine components changed; "
+     "two needed requirements the plan did not have. REQ-DSH-11 added - the standing assumptions get their "
+     "own tab. REQ-IMP-11 added - a row can be inserted, positioned below the row acted on. REQ-DSH-05 "
+     "reworded for the clinical-phase filter and to stop implying the display unit is a filter; REQ-IMP-05 "
+     "reworded for the time zone. Sheet 06 now describes four tabs. Design decision D-06 is superseded by "
+     "the reviewer's own O-10, which asks for the opposite. Version history rows for v1.4 and v1.5 added "
+     "above - they were issued without one, which REQ-VC-04 requires.",
+     "Issued for approval"],
 ]
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary of change", "Status"],
-          rows, [10, 12, 15, 14, 92, 16], wrap_cols=(5,))
+          rows, [10, 12, 15, 14, 92, 16], wrap_cols=(5,), mark_col=1)
 r = note(ws, r, "The reviewer's file was named v0.11. Under the numbering rule on sheet 09 that reads as a draft "
                 "increment of v0.1, so it is logged above as review input and this incorporating draft is v0.2.")
 
@@ -476,23 +496,25 @@ reqs = [
     ["REQ-DSH-02", "Dashboard", "Tab 'Overall' shows appropriate graphs of the same simulation.", "Must", "Requester", "3,4"],
     ["REQ-DSH-03", "Dashboard", "Tab 'Source data (project)' shows project information as a table.", "Must", "Requester", "3,4"],
     ["REQ-DSH-04", "Dashboard", "Tab 'Source data (person)' shows person information as a table.", "Must", "Requester", "3,4"],
-    ["REQ-DSH-05", "Dashboard", "Tables can be filtered by date horizon, project type, project, person and role.", "Should", "Derived", "3,4"],
+    [f"{MARK_CHG}REQ-DSH-05", "Dashboard", "One filter set drives every tab: date horizon, project type, clinical phase, project, person, role and department, with a single action to clear them all. The display unit is a setting, not a filter - it changes how figures are written, not which are shown.", "Should", "Derived / O-03", "3,4"],
     ["REQ-DSH-06", "Dashboard", "Any table on screen can be exported to Excel.", "Should", "Derived", "4"],
     [f"{MARK_NEW}REQ-DSH-07", "Dashboard", "The horizon control offers 24 months by default and a one-click expansion to cover the latest project end date across all projects.", "Must", "Q-11", "3,4"],
     [f"{MARK_NEW}REQ-DSH-08", "Dashboard", "Over-allocated and under-allocated person-months are distinguishable at a glance, and both are counted in the summary tiles.", "Must", "Q-08", "3,4"],
     [f"{MARK_NEW}REQ-DSH-09", "Dashboard", "At the target volume a table taller than the viewport renders only the visible rows, and the per-person chart shows an aggregate or a ranked subset rather than one bar per person. A thousand bars is not a chart.", "Must", "S2-06", "3,4"],
     [f"{MARK_NEW}REQ-DSH-10", "Dashboard", "Where a period name occurs more than once in a project, each occurrence is distinguishable on screen - shown as the period name with its sequence, e.g. 'Conduct (1)' and 'Conduct (2)'.", "Must", "S2-04", "3,4"],
+    [f"{MARK_NEW}REQ-DSH-11", "Dashboard", "The standing assumptions the simulation multiplies by - standard period weights, role factors, configuration and value lists - are presented on their own tab, so a reader can see what every figure was derived from without opening the workbook.", "Must", "G-07", "3,4"],
 
     [f"{MARK_CHG}REQ-IMP-01", "Import/Export", "The user loads the source workbook through a file picker or drag-and-drop, chosen because a local HTML page cannot open a file from disk unaided.", "Must", "Decision D-01", "4"],
     ["REQ-IMP-02", "Import/Export", "Loading validates the workbook and reports every problem found - missing sheet, missing column, bad date, unknown project reference - without stopping at the first one.", "Must", "Derived", "4"],
     [f"{MARK_CHG}REQ-IMP-03", "Import/Export", "A blank source workbook template with correct sheet names, headers, value lists and one example row is delivered with the application.", "Must", "Derived", "4"],
     ["REQ-IMP-04", "Import/Export", "The user can export current data back to .xlsx, preserving the template layout so the export can be re-imported.", "Must", "Derived", "4"],
-    ["REQ-IMP-05", "Import/Export", "The application records which file was loaded, and when, and shows it on screen.", "Should", "Derived", "4"],
+    [f"{MARK_CHG}REQ-IMP-05", "Import/Export", "The application records which file was loaded and when, and shows it on screen with its time zone - a bare timestamp is ambiguous to anyone reading it from another country.", "Should", "Derived / G-02", "4"],
     ["REQ-IMP-06", "Import/Export", "Loaded data may be cached in the browser so re-opening the page does not force a re-import; the cache never replaces the workbook as the record.", "Could", "Derived", "4"],
     [f"{MARK_NEW}REQ-IMP-07", "Import/Export", "After import, the application lets the user update the data on screen, and those updates are carried into the file produced on export.", "Must", "Reviewer v0.11", "4"],
     [f"{MARK_NEW}REQ-IMP-08", "Import/Export", "Unsaved edits are visible as such, and the user is warned before any action that would discard them (closing the page, loading another file).", "Must", "Derived from REQ-IMP-07", "4"],
     [f"{MARK_CHG}REQ-IMP-09", "Import/Export", "Every field is editable, including identifiers. An on-screen edit is re-validated against the same rules as an imported value, so editing cannot introduce data the import would have rejected.", "Must", "Q-20", "4"],
     [f"{MARK_NEW}REQ-IMP-10", "Import/Export", "Editing an identifier that other sheets reference cascades to every referencing row, after showing how many rows will change. Deleting a referenced row is refused, naming what still points at it.", "Must", "Q-20", "4"],
+    [f"{MARK_NEW}REQ-IMP-11", "Import/Export", "A new row can be inserted into any editable table, positioned immediately below the row the user acts on rather than appended at the end, and validated on entry like any other edit.", "Must", "P-01, S-01", "4"],
 
     ["REQ-VC-01", "Version control", "Development plan, programming specification and output files are version-controlled together and their versions are cross-referenced.", "Must", "Requester", "1-5"],
     ["REQ-VC-02", "Version control", "The application displays its own version, and the version of the source data schema it expects.", "Must", "Requester", "4"],
@@ -863,11 +885,12 @@ r = legend(ws, r)
 
 # ---- 06 Dashboard ---------------------------------------------------------
 ws, r = sheet(wb, "06_Dashboard_Design", "Dashboard design",
-              "Three tabs as specified. Detailed layout is fixed at the Step 3 UI review.")
+              "Four tabs: the three specified, plus 'General assumptions' added at the component-list "
+              "review (R-09). Detailed layout is fixed at the Step 3 UI review.")
 
 r = section(ws, r, "Tab 1 - Overall")
 overall = [
-    [f"{MARK_CHG}Control bar", "Horizon (default 24 months, one click to expand to the latest project end date), project type, project, person, role, department. Plus 'Load workbook', 'Export', unit toggle FTE/hours, and the loaded-file name and time.", "REQ-DSH-05, REQ-DSH-07"],
+    [f"{MARK_CHG}Control bar", "Horizon (default 24 months, one click to expand to the latest project end date), project type, clinical phase, project, person, role, department, and one action to reset them all. Plus 'Load workbook', 'Export', and the loaded-file name and time with its time zone. The FTE/hours unit is NOT here - it is a setting, and it lives on the assumptions tab.", "REQ-DSH-05, REQ-DSH-07, REQ-IMP-05"],
     ["Table A - resource by project", "Rows = project, columns = months, cells = monthly FTE. Row and column totals. Expanding a project reveals its assigned people.", "REQ-DSH-01"],
     [f"{MARK_CHG}Table B - resource by person", "Rows = person, columns = months, cells = FTE summed across projects. Over-allocated cells red, under-allocated runs amber. Expanding a person reveals their projects.", "REQ-DSH-01, REQ-DSH-08"],
     ["Graph 1 - stacked area or bar, by project", "Total monthly demand, one band per project. Shows how demand builds and where the peaks land.", "REQ-DSH-02"],
@@ -998,7 +1021,8 @@ wbs = [
     ["1", "G1c", "Plan v1.3 approved by Dan, 2026-08-01.", "Approval recorded on 12_Review_Log", "Complete"],
     ["1", "1.16", "Apply change R-05 (project_type split).", "PRAP_Development_Plan_v1.4.xlsx", "Complete - issued for review"],
     ["1", "1.17", "Apply the specification-review answers (R-06, R-07, R-08).", "PRAP_Development_Plan_v1.5.xlsx", "Complete - issued for review"],
-    ["1", "1.18", "Approve plan v1.5.", "Approval on 12_Review_Log", "Pending you"],
+    ["1", "1.18", "Apply the component-list review outcome (R-09).", "PRAP_Development_Plan_v1.6.xlsx", "Complete - issued for review"],
+    ["1", "1.19", "Approve plan v1.6.", "Approval on 12_Review_Log", "Pending you"],
     ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
     ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template + _Dummy v1.1", "Complete - issued for review"],
@@ -1092,7 +1116,8 @@ align = [
     ["v1.2", "-", "-", "1", "2026-08-01", "APPROVED 2026-08-01 by Dan. Baseline until v1.3 is approved."],
     ["v1.3", "v0.2", "-", "2", "2026-08-01", "R-04: note column on every source sheet. APPROVED 2026-08-01 by Dan."],
     ["v1.4", "v0.3", "prototype v0.2", "3", "2026-08-01", "R-05: project_type split. Superseded."],
-    ["v1.5", "v0.4", "prototype v0.3", "3", DOC_DATE, "R-05..R-08. Awaiting approval."],
+    ["v1.5", "v0.4", "prototype v0.3", "3", "2026-08-01", "R-05..R-08. Superseded."],
+    ["v1.6", "v0.5", "prototype v0.4", "3", DOC_DATE, "R-05..R-09. Awaiting approval."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1218,11 +1243,16 @@ r = table(ws, r, ["ID", "Topic", "Question (short)", "Your answer", "How it was 
 
 r = section(ws, r, "Change requests against the approved v1.0 baseline")
 r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change rather than absorbed silently. "
-                "All three are applied and confirmed; the change needs its approval signature on sheet 12.")
+                "All are applied and confirmed; the change needs its approval signature on sheet 12. "
+                "Note that this register and the risk register on sheet 10 both number their entries R-nn. "
+                "They are separate ID spaces - change R-07 is the threshold answer, risk R-07 is the "
+                "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
+                "and cross-references already given against these IDs.")
 chg = [
     ["R-01", "Data model", "Add 'Inspection' as a standard milestone.", "Applied. Milestone list grows to ten. Unlike the others, 'Inspection' MAY REPEAT within one project, so REQ-PRJ-13 and V-20 were added and V-14's uniqueness check now exempts it.", "Applied"],
     ["R-02", "Calculation", "Sheet 05 derivation edits: Before-Start-up ends at 'Protocol (v1)'; Start-up begins the day after it and ends at 'First SIV' (or 'FPI'); a seventh period 'After Close-out (final)' spans the Inspection dates.", "Applied. Clinical period set grows to six names; REQ-PRJ-12 and REQ-CAL-09 reworded; REQ-CAL-13 added for the milestone-beats-offset rule; 'FPI' restored to the milestone list as the First SIV fallback.", "Applied"],
     ["R-03", "Calculation", "Not requested - found while applying R-02.", "Period 7 was defined as earliest to latest 'Inspection'. Where an inspection is dated on or before the final DB lock, that makes period 7 start before period 6 and overlap Conduct. Only inspections AFTER the final DB lock open period 7; earlier ones stay markers, reported by V-21. CONFIRMED by the reviewer at the v1.1 review.", "CONFIRMED"],
+    ["R-09", "UI", "Nine components changed at the component-list v0.3 review: a fourth tab for the standing assumptions, insert-row on every editable table, clinical-phase filter, the unit toggle demoted from filter to setting, the demand-chart legend replaced by a hover pop-up, four timeline changes, a time zone on the load stamp, and the edit counter stating its validation standing.", "Applied. Seven were satisfiable by design alone. Two were not: nothing in the plan required the assumptions to be reachable in the application, and nothing said a row could be created at all - so REQ-DSH-11 and REQ-IMP-11 were added. REQ-DSH-05 and REQ-IMP-05 reworded. One conflict surfaced: O-10 asks the timeline to be coloured by period name, which contradicts accepted decision D-06 (shade by weight). O-10 is the more specific instruction, so D-06 is superseded and weight becomes a lightness step within each period hue.", "Applied"],
     ["R-08", "UI", "The two 'Conduct' stretches of a project must be distinguishable on screen (S2-04).", "Applied as REQ-DSH-10. A display rule, not a data change: period_name stays 'Conduct' in the workbook and the screen shows it with its sequence, 'Conduct (1)' and 'Conduct (2)'. Changing the stored name would have broken the weight lookup and V-15.", "Applied"],
     ["R-07", "Calculation", "Thresholds stay ABSOLUTE, not relative to capacity_fte (S2-01), and the under-allocation floor moves to 0.60 FTE (S2-05).", "Applied. Taken together these resolve the defect S2-01 was raised about: at a 0.60 floor every capacity in the data can clear it - 1.00 needs 60% utilisation, 0.80 needs 75%, 0.60 needs 100%. The risk only returns for a capacity BELOW the floor, so V-22 warns on exactly that. REQ-CAL-04 and REQ-CAL-07 reworded; Config default 0.80 -> 0.60.", "Applied"],
     ["R-06", "Non-functional", "Re-baseline REQ-NFR-03 to 100 projects and 1,000 people (S2-06).", "Applied, and it is the most consequential answer in this round. At that volume the person table is 1,000 rows x 60 months = 60,000 cells, and the per-person chart would be 1,000 bars at roughly 1.2px each. Neither survives a naive build, so virtualisation and aggregation become requirements (REQ-DSH-09) rather than optimisations. Priority raised from Should to Must.", "Applied"],
@@ -1322,10 +1352,11 @@ appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
         ["PRAP Development Plan v1.3", "Dan", "2026-08-01",
          "APPROVED - FINAL. Change R-04 accepted; this issue supersedes v1.2 and closes the development "
          "plan. Step 1 is complete."],
-        ["PRAP Development Plan v1.5", "", "",
+        ["PRAP Development Plan v1.6", "", "",
          "Pending your signature. Changes R-05 (project_type split, schema 2 -> 3), R-06 (volume "
-         "re-baselined to 100 projects / 1,000 people), R-07 (absolute thresholds, floor 0.60) and "
-         "R-08 (repeated period names distinguishable on screen)."]]
+         "re-baselined to 100 projects / 1,000 people), R-07 (absolute thresholds, floor 0.60), "
+         "R-08 (repeated period names distinguishable on screen) and R-09 (component-list review: "
+         "assumptions tab and insert-row become REQ-DSH-11 and REQ-IMP-11)."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 16, 14, 88], wrap_cols=(4,))
 for cc in (1, 2, 3, 4):
