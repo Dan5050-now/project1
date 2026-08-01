@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.1"
-DOC_STATUS = "Change against approved baseline v1.0 - issued for approval"
+DOC_VERSION = "1.2"
+DOC_STATUS = "Change against approved baseline v1.0 - R-03 confirmed, ready for approval"
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -166,7 +166,7 @@ cover = [
     ("Baseline", "v1.0, approved by Dan 2026-08-01 (Gate 1)"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
-    ("Supersedes", "v1.0 (2026-07-31) - which remains the approved baseline until v1.1 is approved"),
+    ("Supersedes", "v1.1 (draft, never approved). v1.0 remains the approved baseline until this issue is approved"),
 ]
 r = 4
 for k, v in cover:
@@ -200,9 +200,13 @@ r = lines(ws, r, [
     "",
     "The revised derivation was tested against seven timelines and is contiguous in all of them. One case",
     "needed a rule that was not in the mark-up: an inspection dated BEFORE the final DB lock. Taken",
-    "literally it makes the seventh period start before the sixth. v1.1 treats inspections on or before the",
-    "final DB lock as markers inside the existing periods, so only later inspection activity opens period 7.",
-    "Raised as R-03 on sheet 11.",
+    "literally it makes the seventh period start before the sixth. Inspections on or before the final DB",
+    "lock are therefore treated as markers inside the existing periods, and only later inspection activity",
+    "opens period 7. Raised as R-03 and CONFIRMED by the reviewer at the v1.1 review.",
+    "",
+    "Nothing in this document is open. Five review rounds produced 28 questions and 3 change requests; all",
+    "31 are answered and applied. The only outstanding item is the approval signature on sheet 12 for this",
+    "change against the v1.0 baseline.",
 ])
 r += 1
 r = section(ws, r, "The plan in one page")
@@ -314,6 +318,15 @@ rows = [
      "project; 'FPI' restored as the fallback for 'First SIV'; seventh period 'After Close-out (final)' added, "
      "taking the clinical period set to six names; Before-Start-up, Start-up start and Start-up end now prefer "
      "a recorded milestone. Derivation re-verified contiguous against seven timelines. Needs its own approval.",
+     "Superseded by v1.2"],
+    ["1.11", DOC_DATE, "Requester", "Requester",
+     "Reviewed v1.1 and confirmed R-03 - inspections dated on or before the final DB lock stay markers and do "
+     "not open the seventh period. No other change requested.",
+     "Review input"],
+    ["1.2", DOC_DATE, "Claude Code", "Pending",
+     "R-03 confirmed and closed. No content change beyond recording it: the derivation, requirements and "
+     "validation rules are as issued at v1.1. Every question and change request raised across five review "
+     "rounds is now settled, and the only outstanding item is the approval signature for this change.",
      "For approval"],
 ]
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary of change", "Status"],
@@ -943,8 +956,10 @@ wbs = [
     ["1", "1.7", "Incorporate round 3; verify the derivation against degenerate timelines.", "PRAP_Development_Plan_v0.4.xlsx", "Complete - issued for review"],
     ["1", "1.8", "Answer Q-27 and Q-28.", "v0.4_reviewed mark-up", "Complete"],
     ["1", "1.9", "Final plan issue.", "PRAP_Development_Plan_v1.0.xlsx", "Complete"],
-    ["1", "1.10", "Apply the post-approval change request (Inspection milestone, seventh period).", "PRAP_Development_Plan_v1.1.xlsx", "Complete - issued for review"],
-    ["1", "1.11", "Answer R-03 and approve plan v1.1 as a change against the v1.0 baseline.", "Approval on 12_Review_Log", "Pending you"],
+    ["1", "1.10", "Apply the post-approval change request (Inspection milestone, seventh period).", "PRAP_Development_Plan_v1.1.xlsx", "Complete"],
+    ["1", "1.11", "Confirm R-03.", "v1.1_reviewed mark-up", "Complete"],
+    ["1", "1.12", "Record R-03 as closed and re-issue for approval.", "PRAP_Development_Plan_v1.2.xlsx", "Complete - issued for review"],
+    ["1", "1.13", "Approve plan v1.2 as a change against the v1.0 baseline.", "Approval on 12_Review_Log", "Pending you"],
     ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
     ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template + _Dummy v1.1", "Complete - issued for review"],
@@ -1034,7 +1049,8 @@ align = [
     ["v0.3", "-", "-", "1 (draft)", "2026-07-31", "Round 2 incorporated; type-specific period sets; milestone list replaced"],
     ["v0.4", "-", "-", "1 (draft)", "2026-07-31", "Round 3 incorporated; period model settled and verified"],
     ["v1.0", "-", "-", "1", "2026-07-31", "Step 1 baseline. APPROVED 2026-08-01 by Dan (Gate 1)."],
-    ["v1.1", "-", "-", "1", DOC_DATE, "Change against baseline: Inspection milestone, seventh period. Awaiting approval."],
+    ["v1.1", "-", "-", "1", "2026-08-01", "Change against baseline: Inspection milestone, seventh period. Superseded."],
+    ["v1.2", "-", "-", "1", DOC_DATE, "R-03 confirmed. Awaiting the approval signature."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1160,18 +1176,18 @@ r = table(ws, r, ["ID", "Topic", "Question (short)", "Your answer", "How it was 
 
 r = section(ws, r, "Change requests against the approved v1.0 baseline")
 r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change rather than absorbed silently. "
-                "v1.1 carries them and needs its own approval on sheet 12.")
+                "All three are applied and confirmed; the change needs its approval signature on sheet 12.")
 chg = [
     ["R-01", "Data model", "Add 'Inspection' as a standard milestone.", "Applied. Milestone list grows to ten. Unlike the others, 'Inspection' MAY REPEAT within one project, so REQ-PRJ-13 and V-20 were added and V-14's uniqueness check now exempts it.", "Applied"],
     ["R-02", "Calculation", "Sheet 05 derivation edits: Before-Start-up ends at 'Protocol (v1)'; Start-up begins the day after it and ends at 'First SIV' (or 'FPI'); a seventh period 'After Close-out (final)' spans the Inspection dates.", "Applied. Clinical period set grows to six names; REQ-PRJ-12 and REQ-CAL-09 reworded; REQ-CAL-13 added for the milestone-beats-offset rule; 'FPI' restored to the milestone list as the First SIV fallback.", "Applied"],
-    ["R-03", "Calculation", "Not requested - found while applying R-02.", "The mark-up defines period 7 as running from the earliest to the latest 'Inspection' date. Where an inspection is dated on or before the final DB lock, that makes period 7 start before period 6 and overlap Conduct. v1.1 counts only inspections AFTER the final DB lock as opening period 7, treating earlier ones as markers. Reported by V-21. Please confirm.", "Confirm"],
+    ["R-03", "Calculation", "Not requested - found while applying R-02.", "Period 7 was defined as earliest to latest 'Inspection'. Where an inspection is dated on or before the final DB lock, that makes period 7 start before period 6 and overlap Conduct. Only inspections AFTER the final DB lock open period 7; earlier ones stay markers, reported by V-21. CONFIRMED by the reviewer at the v1.1 review.", "CONFIRMED"],
 ]
 r_start = r
-r = table(ws, r, ["ID", "Topic", "Change requested", "How it was applied in v1.1", "Status"],
+r = table(ws, r, ["ID", "Topic", "Change requested", "How it was applied", "Status"],
           chg, [8, 14, 62, 66, 12], wrap_cols=(3, 4), mark_col=1)
-ws.cell(row=r_start + 3, column=5).fill = INPUT_FILL
-r = note(ws, r, "R-03 is the only point needing an answer. It affects one rule in one table; the engine reads that "
-                "table as data, so correcting it later is cheap.")
+for rr in range(r_start + 1, r_start + 1 + len(chg)):
+    ws.cell(row=rr, column=5).fill = NEW_FILL
+r = note(ws, r, "All three are settled. Nothing on this sheet is open.")
 r += 1
 r = note(ws, r, "Six engineering decisions - C-06 to C-11 on sheet 05 - were proposed during the review rounds and "
                 "never explicitly answered. Gate 1 approval of v1.0 confirmed them.")
@@ -1223,8 +1239,10 @@ log = [
     ["35", "Gate 1", "Plan v1.0 approved by Dan, 2026-08-01, with direction to proceed to Step 2 starting from the workbook template and a dummy data file.", "Recorded.", "v1.0 is the approved baseline. Step 2 opened; template and dummy workbook issued for review as WBS task 2.0.", "Closed"],
     ["36", "11_Open_Questions (post-approval)", "Add 'Inspection' as a standard milestone.", "Accepted as change R-01.", "Milestone list grows to ten. 'Inspection' may repeat within a project, which no other milestone does - REQ-PRJ-13 and V-20 added, V-14 relaxed accordingly. Uniqueness is now on (project, name, date) rather than on name.", "Closed"],
     ["37", "05_Resource_Logic (post-approval)", "Derivation edits: Before-Start-up ends at 'Protocol (v1)'; Start-up starts the day after it and ends at 'First SIV' or 'FPI'; new seventh period 'After Close-out (final)' spanning the Inspection dates.", "Accepted as change R-02.", "Derivation table rewritten. Clinical period set 5 -> 6 names. REQ-CAL-13 added: where a boundary has both a milestone and an offset definition, the recorded milestone wins. 'FPI' restored to the milestone list - it had been dropped at Q-15, so this reverses that.", "Closed"],
-    ["38", "05_Resource_Logic", "Not reviewer input - found while applying R-02.", "One case in the mark-up does not resolve.", "Period 7 is defined as earliest to latest 'Inspection'. An inspection dated on or before the final DB lock therefore makes period 7 start before period 6 and overlap Conduct. v1.1 counts only inspections after the final DB lock, treating earlier ones as markers (V-21). Verified contiguous across seven timelines. Raised as R-03 for confirmation.", "Open"],
-    ["39", "Version control", "v1.0 is an approved baseline.", "Changes cannot be absorbed silently.", "Per the rules on sheet 09, a change against a baseline takes the next point release and needs its own approval. This issue is v1.1 and the approval block on sheet 12 now holds both v1.0 and v1.1.", "Closed"],
+    ["38", "05_Resource_Logic", "Not reviewer input - found while applying R-02.", "One case in the mark-up does not resolve.", "Period 7 is defined as earliest to latest 'Inspection'. An inspection dated on or before the final DB lock therefore makes period 7 start before period 6 and overlap Conduct. v1.1 counts only inspections after the final DB lock, treating earlier ones as markers (V-21). Verified contiguous across seven timelines. Raised as R-03 - see item 40.", "Closed"],
+    ["39", "Version control", "v1.0 is an approved baseline.", "Changes cannot be absorbed silently.", "Per the rules on sheet 09, a change against a baseline takes the next point release and needs its own approval. The approval block on sheet 12 holds v1.0 (signed) and this change (awaiting signature).", "Closed"],
+    ["40", "11_Open_Questions (v1.1 review)", "R-03 confirmed: an inspection on or before the final DB lock stays a marker and does not open the seventh period.", "Accepted - no content change needed.", "R-03 closed. The derivation, requirements and validation rules stand exactly as issued at v1.1; v1.2 records the confirmation and re-issues for signature. V-21 continues to report the case so it is visible rather than silent.", "Closed"],
+    ["41", "-", "Status of the document as a whole.", "Nothing open.", "Across five review rounds: 28 questions and 3 change requests, all answered and applied. 65 requirements, 21 validation rules, 11 engineering decisions. The only outstanding item is the approval signature for the change against the v1.0 baseline.", "Closed"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Sheet / source", "Reviewer input", "Response", "Action taken in v0.2", "Status"],
@@ -1246,8 +1264,9 @@ r = section(ws, r, "Approval - Gate 1")
 appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
          "APPROVED. Finalise plan v1.0 and proceed to Step 2, beginning with generation of the workbook "
          "template and a dummy data file for review."],
-        ["PRAP Development Plan v1.1", "", "",
-         "Pending. Change against the v1.0 baseline: R-01 and R-02 applied, R-03 needs an answer (sheet 11)."]]
+        ["PRAP Development Plan v1.2", "", "",
+         "Pending your signature. Change against the v1.0 baseline: R-01, R-02 and R-03 all applied and "
+         "confirmed. Nothing outstanding in the document itself."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 16, 14, 88], wrap_cols=(4,))
 for cc in (1, 2, 3, 4):

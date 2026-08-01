@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v1.0 APPROVED** (Gate 1, 2026-08-01) · **v1.1 change pending approval** |
+| 1 | Development plan | **v1.0 APPROVED** (Gate 1, 2026-08-01) · **v1.2 change awaiting signature** |
 | 2 | Programming specification | **In progress** — source workbook template + dummy data issued for review |
 | 3 | Prototype UI design | Not started |
 | 4 | Code generation | Not started |
@@ -30,11 +30,12 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v1.1.xlsx` — **current.** A change against the v1.0
+- `docs/PRAP_Development_Plan_v1.2.xlsx` — **current.** A change against the v1.0
   baseline: `Inspection` milestone, seventh period, milestone-beats-offset boundaries.
-  65 requirements. Needs its own approval before it supersedes v1.0.
+  65 requirements, nothing open. Needs the approval signature before it supersedes v1.0.
+- `docs/PRAP_Development_Plan_v1.1.xlsx` — same change, before R-03 was confirmed.
 - `docs/PRAP_Development_Plan_v1.0.xlsx` — **the approved baseline** (Gate 1,
-  2026-08-01). Remains in force until v1.1 is approved.
+  2026-08-01). Remains in force until v1.2 is signed off.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -81,12 +82,14 @@ Requires `openpyxl`.
 - **Over-allocation** above 1.50 FTE in a month; **under-allocation** below 0.80 FTE
   sustained three or more consecutive months (Q-08).
 - **Period sets differ by project type**: Clinical Trial uses Before-Start-up /
-  Start-up / Conduct / Close-out (interim) / Close-out (final), derived from
-  milestone dates; Others uses Planning / Develop / Close, entered directly.
+  Start-up / Conduct / Close-out (interim) / Close-out (final) / After Close-out
+  (final), derived from milestone dates; Others uses Planning / Develop / Close,
+  entered directly.
 - **`Conduct` can occur twice** in one project, split by an interim DB lock, so a
   period name is not unique within a project (Q-23).
 - **`Inspection` may be recorded several times** per project, and opens a seventh
-  period where it follows the final DB lock (R-01, R-02 — pending approval in v1.1).
+  period where it follows the final DB lock. An inspection dated on or before the
+  final DB lock stays a marker (R-01, R-02, R-03 — confirmed).
 - **Period weights are selected by clinical phase** for clinical trials (Q-26);
   `Others` projects are hand-entered throughout — dates and weights alike (Q-28).
 - **Every field is editable**, with identifier edits cascading to referencing rows
@@ -96,12 +99,12 @@ Requires `openpyxl`.
 
 ## Next action
 
-Two decisions, then the specification proceeds:
-
-1. **Approve plan v1.1** (sheet 12) and answer **R-03** (sheet 11) — where an
-   `Inspection` is dated on or before the final DB lock, v1.1 treats it as a marker
-   rather than letting it open the seventh period, because the literal reading makes
-   period 7 start before period 6.
+1. **Sign off plan v1.2** (sheet 12) — the change against the v1.0 baseline. Nothing
+   in the document is open; only the signature is missing.
 2. **Settle S2-01** in `docs/STEP2_OPEN_POINTS.md` — the under-allocation threshold is
    an absolute 0.80 FTE, so a part-timer at 0.60 capacity is flagged permanently and
-   can never clear it.
+   can never clear it. Recommended fix: make both thresholds relative to `capacity_fte`,
+   which changes nothing for full-time staff.
+
+Then the programming specification. The source workbooks stay at v1.1 — the schema is
+unchanged by v1.2, so they remain valid.
