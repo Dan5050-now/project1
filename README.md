@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | v1.2 approved 2026-08-01 · **v1.3 change awaiting signature** |
+| 1 | Development plan | **COMPLETE** — v1.3 approved FINAL by Dan, 2026-08-01 |
 | 2 | Programming specification | **v0.2 draft issued for review** |
 | 3 | Prototype UI design | Not started |
 | 4 | Code generation | Not started |
@@ -30,12 +30,10 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v1.3.xlsx` — **current.** Change R-04 against the v1.2
-  baseline: a free-text note column on every source sheet; schema version steps to 2.
-  Awaiting signature.
-- `docs/PRAP_Development_Plan_v1.2.xlsx` — **the approved baseline** (Dan, 2026-08-01);
-  65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v1.3.xlsx` — **FINAL.** Approved by Dan, 2026-08-01.
+  65 requirements, 21 validation rules, 11 engineering decisions, source schema
+  version 2. Step 1 is complete and the plan is closed.
+- `docs/PRAP_Development_Plan_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -112,5 +110,5 @@ absolute 0.80 FTE, so a part-timer at 0.60 capacity is flagged permanently and c
 never clear it. The draft specifies both thresholds as relative to `capacity_fte`,
 which changes nothing for full-time staff.
 
-Also pending: **sign off plan v1.3**, the note-column change. It adds columns and
-changes no behaviour — the dummy dataset produces identical figures before and after.
+The development plan is closed, so this is the only decision outstanding across the
+whole project.

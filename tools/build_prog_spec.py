@@ -116,7 +116,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Governing document", f"{PLAN} - change against the v1.2 baseline, awaiting approval"),
+    ("Governing document", f"{PLAN} - FINAL, approved by Dan 2026-08-01"),
     ("Schema version specified", "2"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
@@ -184,7 +184,7 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 
 r = section(ws, r, "Source documents")
 src = [
-    [PLAN, "Approved baseline, Dan 2026-08-01. 65 requirements, 21 validation rules, 11 decisions.", "Governs this document"],
+    [PLAN, "FINAL development plan, approved by Dan 2026-08-01. 65 requirements, 21 validation rules, 11 decisions, source schema version 2.", "Governs this document"],
     ["templates/PRAP_SourceData_Template_v1.2.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
     ["templates/PRAP_SourceData_Dummy_v1.2.xlsx", "Populated dataset exercising every rule.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],

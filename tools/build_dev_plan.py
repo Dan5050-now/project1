@@ -18,7 +18,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 DOC_VERSION = "1.3"
-DOC_STATUS = "Change against approved baseline v1.2 - issued for approval"
+DOC_STATUS = "FINAL - approved baseline. Step 1 closed."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -157,16 +157,16 @@ ws["A2"].font = Font(name=FONT, size=14, color=NAVY)
 
 cover = [
     ("Document ID", "PRAP-PLAN-001"),
-    ("Document type", "Development plan (Step 1 deliverable) - change against the v1.2 baseline"),
+    ("Document type", "Development plan (Step 1 deliverable) - FINAL"),
     ("Version", f"v{DOC_VERSION}"),
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Reviewer", "Requester - four review rounds: v0.11, v0.2, v0.3, v0.4 reviewed"),
-    ("Baseline", "v1.2, approved by Dan 2026-08-01"),
+    ("Approved by", "Dan, 2026-08-01 - final issue"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
-    ("Supersedes", "v1.2 once approved; v1.2 remains the baseline until then"),
+    ("Supersedes", "v1.2 (approved 2026-08-01) and all earlier issues"),
 ]
 r = 4
 for k, v in cover:
@@ -204,17 +204,27 @@ r = lines(ws, r, [
     "lock are therefore treated as markers inside the existing periods, and only later inspection activity",
     "opens period 7. Raised as R-03 and CONFIRMED by the reviewer at the v1.1 review.",
     "",
-    "v1.2 was approved by Dan on 2026-08-01 and remains the baseline. This issue, v1.3, carries one further",
-    "change requested during Step 2 and needs its own approval before it supersedes v1.2.",
+    "APPROVED FINAL by Dan on 2026-08-01. This is the last issue of the development plan; Step 1 is complete",
+    "and work proceeds under the programming specification.",
     "",
-    "R-04: every sheet of the source workbook now carries at least one free-text note column. Four sheets",
-    "had none - Milestone, ProjectPeriod, PeriodWeightStandard and Lists - and each gains note_1. The other",
-    "six already had one: Project and Person carry note_1..note_5, Assignment note_1..note_3, RoleFactor",
-    "role_note, PersonPeriodWeight reason, and Config note.",
+    "v1.3 carries change R-04: every sheet of the source workbook now holds at least one free-text note",
+    "column. Four sheets had none - Milestone, ProjectPeriod, PeriodWeightStandard and Lists - and each gains",
+    "note_1. The other six already had one: Project and Person carry note_1..note_5, Assignment",
+    "note_1..note_3, RoleFactor role_note, PersonPeriodWeight reason, and Config note.",
     "",
     "Because columns change, the source schema version steps from 1 to 2. Nothing else moves: notes are",
     "carried through import and export unchanged and are never read by the calculation, so re-running the",
-    "dummy dataset gives byte-identical figures to v1.2.",
+    "dummy dataset gives identical figures to v1.2.",
+    "",
+    "WHAT THIS PLAN NOW FIXES",
+    "  65 requirements (sheet 03) as the contract for Steps 2-5",
+    "  21 validation rules (sheet 04) applied on import and on every on-screen edit",
+    "  11 engineering decisions, C-01 to C-11 (sheet 05), all confirmed",
+    "  a source schema of 10 sheets at version 2 (sheet 04)",
+    "  the five-step build with a review gate at the end of each (sheet 08)",
+    "",
+    "Nothing in this document is open. Six review rounds produced 28 questions and 4 change requests; all 32",
+    "are answered and applied, and the review log on sheet 12 carries no open item.",
 ])
 r += 1
 r = section(ws, r, "The plan in one page")
@@ -339,8 +349,9 @@ rows = [
     ["1.3", DOC_DATE, "Claude Code", "Pending",
      "Change against the v1.2 baseline (R-04): a free-text note column added to every source sheet that "
      "lacked one - Milestone, ProjectPeriod, PeriodWeightStandard and Lists each gain note_1. Source schema "
-     "version steps from 1 to 2. No calculation, validation or UI behaviour changes.",
-     "For approval"],
+     "version steps from 1 to 2. No calculation, validation or UI behaviour changes. Issued FINAL: this is "
+     "the last planned issue of the development plan.",
+     "APPROVED 2026-08-01 by Dan - FINAL"],
 ]
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary of change", "Status"],
           rows, [10, 12, 15, 14, 92, 16], wrap_cols=(5,))
@@ -979,7 +990,8 @@ wbs = [
     ["1", "1.13", "Approve plan v1.2 as a change against the v1.0 baseline.", "Approval on 12_Review_Log", "Complete"],
     ["1", "G1b", "GATE 1 RE-CONFIRMED - plan v1.2 approved by Dan, 2026-08-01. Step 1 closed.", "Approval recorded on 12_Review_Log", "Complete"],
     ["1", "1.14", "Apply change R-04 (note column on every source sheet).", "PRAP_Development_Plan_v1.3.xlsx", "Complete - issued for review"],
-    ["1", "1.15", "Approve plan v1.3.", "Approval on 12_Review_Log", "Pending you"],
+    ["1", "1.15", "Approve plan v1.3 as final.", "Approval on 12_Review_Log", "Complete"],
+    ["1", "G1c", "STEP 1 COMPLETE - plan v1.3 approved FINAL by Dan, 2026-08-01.", "Approval recorded on 12_Review_Log", "Complete"],
     ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
     ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template + _Dummy v1.1", "Complete - issued for review"],
@@ -1071,7 +1083,7 @@ align = [
     ["v1.0", "-", "-", "1", "2026-07-31", "Step 1 baseline. APPROVED 2026-08-01 by Dan (Gate 1)."],
     ["v1.1", "-", "-", "1", "2026-08-01", "Change against baseline: Inspection milestone, seventh period. Superseded."],
     ["v1.2", "-", "-", "1", "2026-08-01", "APPROVED 2026-08-01 by Dan. Baseline until v1.3 is approved."],
-    ["v1.3", "v0.2", "-", "2", DOC_DATE, "R-04: note column on every source sheet. Awaiting approval."],
+    ["v1.3", "v0.2", "-", "2", DOC_DATE, "R-04: note column on every source sheet. APPROVED FINAL 2026-08-01 by Dan."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1209,7 +1221,7 @@ r = table(ws, r, ["ID", "Topic", "Change requested", "How it was applied", "Stat
           chg, [8, 14, 62, 66, 12], wrap_cols=(3, 4), mark_col=1)
 for rr in range(r_start + 1, r_start + 1 + len(chg)):
     ws.cell(row=rr, column=5).fill = NEW_FILL
-r = note(ws, r, "All three are settled. Nothing on this sheet is open.")
+r = note(ws, r, "All four are settled. Nothing on this sheet is open, and the plan is final.")
 r += 1
 r = note(ws, r, "Six engineering decisions - C-06 to C-11 on sheet 05 - were proposed during the review rounds and "
                 "never explicitly answered. Gate 1 approval of v1.0 confirmed them.")
@@ -1266,7 +1278,8 @@ log = [
     ["40", "11_Open_Questions (v1.1 review)", "R-03 confirmed: an inspection on or before the final DB lock stays a marker and does not open the seventh period.", "Accepted - no content change needed.", "R-03 closed. The derivation, requirements and validation rules stand exactly as issued at v1.1; v1.2 records the confirmation and re-issues for signature. V-21 continues to report the case so it is visible rather than silent.", "Closed"],
     ["41", "-", "Status of the document as a whole.", "Nothing open.", "Across five review rounds: 28 questions and 3 change requests, all answered and applied. 65 requirements, 21 validation rules, 11 engineering decisions.", "Closed"],
     ["42", "Gate 1", "Plan v1.2 approved by Dan, 2026-08-01, with direction to continue Step 2.", "Recorded.", "v1.2 became the baseline and Step 1 closed. Programming specification v0.1 issued.", "Closed"],
-    ["43", "Step 2 request", "Add at least one note column to every sheet of the source workbook.", "Accepted as change R-04.", "Four sheets gain note_1. Source schema version steps 1 -> 2, so the data model on sheet 04 and the specification's parse contract both change and this issue needs its own approval. Template and dummy workbooks regenerated at v1.2 and re-verified: identical calculation results, confirming the note columns are inert.", "Closed"],
+    ["43", "Step 2 request", "Add at least one note column to every sheet of the source workbook.", "Accepted as change R-04.", "Four sheets gain note_1. Source schema version steps 1 -> 2, so the data model on sheet 04 and the specification's parse contract both change. Template and dummy workbooks regenerated at v1.2 and re-verified: identical calculation results, confirming the note columns are inert.", "Closed"],
+    ["44", "Approval", "Plan v1.3 approved FINAL by Dan, 2026-08-01.", "Recorded.", "Step 1 is complete. The plan is closed at 65 requirements, 21 validation rules, 11 decisions and a version-2 source schema. Work proceeds under PRAP_Programming_Specification_v0.2.xlsx, whose sheet 10 carries the one decision still outstanding (S2-01) - a specification matter, not a plan matter.", "Closed"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Sheet / source", "Reviewer input", "Response", "Action taken in v0.2", "Status"],
@@ -1291,20 +1304,21 @@ appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
         ["PRAP Development Plan v1.2", "Dan", "2026-08-01",
          "APPROVED. Finalise plan v1.2 and continue Step 2. This issue supersedes v1.0 as the baseline; "
          "R-01, R-02 and R-03 are part of it."],
-        ["PRAP Development Plan v1.3", "", "",
-         "Pending your signature. Change R-04: a note column on every source sheet; source schema version "
-         "steps 1 -> 2. No behaviour change."]]
+        ["PRAP Development Plan v1.3", "Dan", "2026-08-01",
+         "APPROVED - FINAL. Change R-04 accepted; this issue supersedes v1.2 and closes the development "
+         "plan. Step 1 is complete."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 16, 14, 88], wrap_cols=(4,))
 for cc in (1, 2, 3, 4):
     ws.cell(row=r_start2 + 1, column=cc).fill = NEW_FILL
 for cc in (1, 2, 3, 4):
     ws.cell(row=r_start2 + 2, column=cc).fill = NEW_FILL
-for cc in (2, 3):
-    ws.cell(row=r_start2 + 3, column=cc).fill = INPUT_FILL
-r = note(ws, r, "v1.2 is the approved baseline: the 65 requirements on sheet 03 are the contract for Steps 2-5, and "
-                "decisions C-01 to C-11 on sheet 05 are confirmed. v1.3 is a change against it and needs the third "
-                "signature above. Step 2 continues meanwhile - R-04 adds columns and changes no behaviour.")
+for cc in (1, 2, 3, 4):
+    ws.cell(row=r_start2 + 3, column=cc).fill = NEW_FILL
+r = note(ws, r, "STEP 1 COMPLETE. v1.3 is the final development plan: the 65 requirements on sheet 03 are the "
+                "contract for Steps 2-5, decisions C-01 to C-11 on sheet 05 are confirmed, and the source schema "
+                "is version 2. The plan is closed; further change would need a new approval and a version "
+                "increment, but none is expected. Work now proceeds under the programming specification.")
 
 wb.save(OUT)
 print(f"Written: {OUT}")
