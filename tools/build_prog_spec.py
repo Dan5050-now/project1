@@ -14,10 +14,10 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "0.1"
+DOC_VERSION = "0.2"
 DOC_STATUS = "Draft for review"
 DOC_DATE = "2026-08-01"
-PLAN = "PRAP_Development_Plan_v1.2.xlsx"
+PLAN = "PRAP_Development_Plan_v1.3.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
 
@@ -116,8 +116,8 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Governing document", f"{PLAN} - approved baseline, Dan 2026-08-01"),
-    ("Schema version specified", "1"),
+    ("Governing document", f"{PLAN} - change against the v1.2 baseline, awaiting approval"),
+    ("Schema version specified", "2"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -140,7 +140,7 @@ r = lines(ws, r, [
     "Two things make this specification unusual, and both are deliberate:",
     "",
     "  - The data schema is not described in prose. It already exists as a working file,",
-    "    templates/PRAP_SourceData_Template_v1.1.xlsx, and sheet 03 documents the parse contract against it.",
+    "    templates/PRAP_SourceData_Template_v1.2.xlsx, and sheet 03 documents the parse contract against it.",
     "  - The calculation and validation logic already has a reference implementation in",
     "    tools/verify_source_workbook.py, which runs against the dummy data. Sheet 05 gives the pseudocode;",
     "    that script is the executable check that the pseudocode is right.",
@@ -167,7 +167,11 @@ r = table(ws, r, ["Sheet", "Contents"], guide, [24, 86], wrap_cols=(2,))
 
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
-rows = [["0.1", DOC_DATE, "Claude Code", "-",
+rows = [["0.2", DOC_DATE, "Claude Code", "-",
+         "Parse contract updated for change R-04: a free-text note column on every sheet, and source schema "
+         "version 2. Column counts on the sheet-index table adjusted. No change to validation, calculation, "
+         "UI or IO behaviour.", "Draft"],
+        ["0.1", "2026-08-01", "Claude Code", "-",
          "First draft. Written against development plan v1.2 (approved baseline). Data schema documented from "
          "the delivered template; calculation and validation cross-checked against the reference implementation "
          "in tools/verify_source_workbook.py and the dummy dataset.", "Draft"]]
@@ -181,8 +185,8 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 r = section(ws, r, "Source documents")
 src = [
     [PLAN, "Approved baseline, Dan 2026-08-01. 65 requirements, 21 validation rules, 11 decisions.", "Governs this document"],
-    ["templates/PRAP_SourceData_Template_v1.1.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
-    ["templates/PRAP_SourceData_Dummy_v1.1.xlsx", "Populated dataset exercising every rule.", "The acceptance data for sheet 05"],
+    ["templates/PRAP_SourceData_Template_v1.2.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
+    ["templates/PRAP_SourceData_Dummy_v1.2.xlsx", "Populated dataset exercising every rule.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
     ["docs/STEP2_OPEN_POINTS.md", "Points raised while building the template.", "Carried into sheet 10"],
 ]
@@ -210,7 +214,7 @@ r = table(ws, r, ["Deferred", "Why"], defer, [56, 76], wrap_cols=(1, 2))
 
 # ---- 03 Data schema -------------------------------------------------------
 ws, r = sheet(wb, "03_Data_Schema", "Data schema - the parse contract",
-              "Documents templates/PRAP_SourceData_Template_v1.1.xlsx. Sheet and column names are matched "
+              "Documents templates/PRAP_SourceData_Template_v1.2.xlsx. Sheet and column names are matched "
               "exactly and case-sensitively.")
 
 r = section(ws, r, "Reading the workbook")
@@ -238,14 +242,14 @@ r = table(ws, r, ["Type", "Coercion", "Why it matters"], types, [12, 62, 66], wr
 r = section(ws, r, "Sheets and keys")
 sheets = [
     ["Project", "project_id", "-", "23", "Master."],
-    ["Milestone", "project_id + milestone_name + milestone_date", "Project", "5", "milestone_name is NOT unique alone - 'Inspection' repeats (REQ-PRJ-13)."],
-    ["ProjectPeriod", "project_id + period_seq", "Project", "6", "period_name is NOT unique alone - 'Conduct' occurs twice (REQ-CAL-11)."],
-    ["PeriodWeightStandard", "clinical_phase + period_name", "-", "4", "Clinical trials only. 'Others' take manual weights (Q-28)."],
+    ["Milestone", "project_id + milestone_name + milestone_date", "Project", "6", "milestone_name is NOT unique alone - 'Inspection' repeats (REQ-PRJ-13)."],
+    ["ProjectPeriod", "project_id + period_seq", "Project", "7", "period_name is NOT unique alone - 'Conduct' occurs twice (REQ-CAL-11)."],
+    ["PeriodWeightStandard", "clinical_phase + period_name", "-", "5", "Clinical trials only. 'Others' take manual weights (Q-28)."],
     ["RoleFactor", "project_type + role_name", "-", "4", "Roles are type-specific (Q-03)."],
     ["Person", "person_id", "-", "12", "Master."],
     ["Assignment", "assignment_id", "Person, Project, RoleFactor", "11", "One row per person + project + role."],
     ["PersonPeriodWeight", "assignment_id + period_start", "Assignment", "5", "Optional. Overrides person_weight for its window."],
-    ["Lists", "list_name + value", "-", "2", "Value lists, long format. Each list occupies a contiguous block."],
+    ["Lists", "list_name + value", "-", "3", "Value lists, long format. Each list occupies a contiguous block."],
     ["Config", "parameter", "-", "3", "Thresholds and settings."],
 ]
 r = table(ws, r, ["Sheet", "Key", "References", "Cols", "Note"], sheets, [22, 40, 26, 7, 45], wrap_cols=(2, 5))
@@ -258,9 +262,27 @@ der = [
 ]
 r = table(ws, r, ["Column", "On import", "Reason"], der, [30, 44, 66], wrap_cols=(2, 3))
 
+r = section(ws, r, "Free-text note columns   [R-04]")
+r = lines(ws, r, [
+    "Every sheet carries at least one. They are parsed as Text, carried through export unchanged, and never",
+    "read by the calculation - so a note can hold anything without affecting a single figure.",
+])
+r += 1
+notes_tbl = [
+    ["Project", "note_1 .. note_5"], ["Milestone", "note_1"],
+    ["ProjectPeriod", "note_1"], ["PeriodWeightStandard", "note_1"],
+    ["RoleFactor", "role_note"], ["Person", "note_1 .. note_5"],
+    ["Assignment", "note_1 .. note_3"], ["PersonPeriodWeight", "reason"],
+    ["Lists", "note_1"], ["Config", "note"],
+]
+r = table(ws, r, ["Sheet", "Note column(s)"], notes_tbl, [26, 34])
+r = note(ws, r, "A note column that is absent is not an error - it is optional on every sheet. An import must not "
+                "fail because someone deleted a column they were not using.")
+r += 1
+
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "1", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "2", "Compared with the version this application expects (sheet 08)."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
     ["over_allocation_fte", "Decimal", "1.50", "See sheet 05 and open point S2-01."],
     ["under_allocation_fte", "Decimal", "0.80", "See sheet 05 and open point S2-01."],
@@ -441,7 +463,7 @@ ex = [
 ]
 r = table(ws, r, ["Element", "Value", "Note"], ex, [22, 62, 44], wrap_cols=(2, 3))
 r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workbook.py against "
-                "PRAP_SourceData_Dummy_v1.1.xlsx must give no errors, one V-21 warning on PRJ-002, "
+                "PRAP_SourceData_Dummy_v1.2.xlsx must give no errors, one V-21 warning on PRJ-002, "
                 "38 over-allocated person-months and 14 under-allocation runs. Those numbers are the "
                 "regression baseline for Step 4.")
 
@@ -545,7 +567,7 @@ r = table(ws, r, ["Behaviour", "Reason"], exp, [76, 56], wrap_cols=(1, 2))
 ws, r = sheet(wb, "08_Versioning", "Versioning and compatibility")
 ver = [
     ["Application version", "Constant in the HTML, shown in the header and footer.", "REQ-VC-02"],
-    ["Expected schema version", "Constant in the HTML. Currently 1.", "REQ-VC-02"],
+    ["Expected schema version", "Constant in the HTML. Currently 2.", "REQ-VC-02"],
     ["Check on load", "Compare Config.schema_version with the expected value.", "REQ-VC-03"],
     ["Equal", "Proceed silently.", "REQ-VC-03"],
     ["File older", "Proceed; warn that columns added since may be missing.", "REQ-VC-03"],

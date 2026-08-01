@@ -24,8 +24,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 1
-VERSION = "1.1"
+SCHEMA_VERSION = 2
+VERSION = "1.2"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -114,6 +114,7 @@ SHEETS = {
         ("milestone_name", "From the standard list of ten. 'Inspection' may appear on several rows.", ""),
         ("milestone_date", "Planned date.", ""),
         ("milestone_seq", "Display order on the timeline.", ""),
+        ("note_1", "Free text. e.g. why a date moved, or which inspection body.", ""),
     ],
     "ProjectPeriod": [
         ("project_id", "Foreign key to Project.", "key"),
@@ -122,12 +123,14 @@ SHEETS = {
         ("period_start", "Inclusive.", ""),
         ("period_end", "Inclusive. Periods must not overlap or leave a gap.", ""),
         ("weight", "Effort multiplier. Clinical trial: seeded from PeriodWeightStandard. Others: type it.", ""),
+        ("note_1", "Free text. e.g. why a derived date was overridden by hand.", ""),
     ],
     "PeriodWeightStandard": [
         ("project_type", "'Clinical Trial'. 'Others' projects take manual weights instead.", ""),
         ("clinical_phase", "The phase this standard applies to.", "key"),
         ("period_name", "One of the five clinical periods.", "key"),
         ("weight", "YOU SUPPLY. Default multiplier for this phase and period.", "fill"),
+        ("note_1", "Free text. e.g. the basis for this weight.", ""),
     ],
     "RoleFactor": [
         ("project_type", "Which type's role list this row belongs to.", "key"),
@@ -167,6 +170,7 @@ SHEETS = {
     "Lists": [
         ("list_name", "Which list this value belongs to.", "key"),
         ("value", "A permitted value. Add a row inside the block to extend a list.", ""),
+        ("note_1", "Free text. e.g. when a value was added, or what it means.", ""),
     ],
     "Config": [
         ("parameter", "Setting name.", "key"),
@@ -521,6 +525,21 @@ def add_readme(wb, kind):
         "   Lists                 permitted values for every dropdown.",
         "   Config                thresholds and settings.",
         "",
+        "FREE-TEXT NOTES",
+        "   Every sheet carries at least one free-text column, so anything worth recording has a home:",
+        "      Project               note_1 .. note_5",
+        "      Milestone             note_1",
+        "      ProjectPeriod         note_1",
+        "      PeriodWeightStandard  note_1",
+        "      RoleFactor            role_note",
+        "      Person                note_1 .. note_5",
+        "      Assignment            note_1 .. note_3",
+        "      PersonPeriodWeight    reason",
+        "      Lists                 note_1",
+        "      Config                note",
+        "   Nothing in a note column affects the calculation. They are carried through import and export",
+        "   unchanged, so they survive a round trip.",
+        "",
         "HOW THE CALCULATION USES THIS",
         "   monthly load = project period weight  x  role factor  x  person weight  x  month coverage",
         "   The result is FTE, where 1.00 FTE = 160 hours per month.",
@@ -603,21 +622,25 @@ def build(kind):
     r = 2
     for name, values in LISTS:
         for v in values:
-            list_rows.append((name, v))
+            list_rows.append((name, v, None))
         list_ranges[name] = f"Lists!$B${r}:$B${r + len(values) - 1}"
         r += len(values)
 
     if kind == "dummy":
         projects, ms, periods, pws, roles, people, A, ppw, inspections = dummy_data()
+        P = {p[0]: p[2] for p in projects}
         proj_rows = [list(p[:16]) + [None] + [p[16]] + [None] * 5 for p in projects]
         mile_rows = []
         for pid, mm in ms.items():
             events = sorted(mm.items(), key=lambda kv: kv[1])
             events += [("Inspection", x) for x in inspections.get(pid, [])]
             for seq, (nm, dt) in enumerate(sorted(events, key=lambda kv: kv[1]), start=1):
-                mile_rows.append([pid, None, nm, dt, seq])
-        period_rows = [list(x) for x in periods]
-        pws_rows = [list(x) for x in pws]
+                mile_rows.append([pid, None, nm, dt, seq,
+                                  "Regulatory inspection" if nm == "Inspection" else None])
+        period_rows = [list(x) + [("Derived from milestones" if P[x[0]] == "Clinical Trial"
+                                   else "Entered by hand - no milestone mapping")]
+                       for x in periods]
+        pws_rows = [list(x) + ["Illustrative - replace with your figure"] for x in pws]
         role_rows = [list(x) for x in roles]
         person_rows = [list(p) + [None, None] + [None] * 5 for p in people]
         asg_rows = [[a[0], a[1], None, a[2], a[3], a[4], a[5], a[6], None, None, None] for a in A]
@@ -632,9 +655,9 @@ def build(kind):
                         "Partial outsourcing", "by SB", "by SB", "by CRO", "by SB", "Veeva EDC",
                         "Veeva DQS", "CluePoints", 5, date(2025, 10, 1), date(2027, 6, 30), None,
                         "Active", "example row - delete before use", None, None, None, None],
-            "Milestone": ["PRJ-001", None, "CTA submission", date(2026, 1, 15), 2],
-            "ProjectPeriod": ["PRJ-001", "Start-up", 2, date(2025, 12, 15), date(2026, 4, 14), 1.30],
-            "PeriodWeightStandard": ["Clinical Trial", "Phase 1", "Start-up", None],
+            "Milestone": ["PRJ-001", None, "CTA submission", date(2026, 1, 15), 2, "example row - delete before use"],
+            "ProjectPeriod": ["PRJ-001", "Start-up", 2, date(2025, 12, 15), date(2026, 4, 14), 1.30, "example row - delete before use"],
+            "PeriodWeightStandard": ["Clinical Trial", "Phase 1", "Start-up", None, "example row - delete before use"],
             "RoleFactor": ["Clinical Trial", "Lead data manager", None, "example row - delete before use"],
             "Person": ["PSN-001", "Kim S.", "Data Management", "Lead data manager", 1.00,
                        None, None, "example row - delete before use", None, None, None, None],

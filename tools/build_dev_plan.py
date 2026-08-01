@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.2"
-DOC_STATUS = "APPROVED BASELINE - approved by Dan 2026-08-01, supersedes v1.0"
+DOC_VERSION = "1.3"
+DOC_STATUS = "Change against approved baseline v1.2 - issued for approval"
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -157,16 +157,16 @@ ws["A2"].font = Font(name=FONT, size=14, color=NAVY)
 
 cover = [
     ("Document ID", "PRAP-PLAN-001"),
-    ("Document type", "Development plan (Step 1 deliverable) - approved baseline"),
+    ("Document type", "Development plan (Step 1 deliverable) - change against the v1.2 baseline"),
     ("Version", f"v{DOC_VERSION}"),
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Reviewer", "Requester - four review rounds: v0.11, v0.2, v0.3, v0.4 reviewed"),
-    ("Approved by", "Dan, 2026-08-01 - this issue is now the baseline"),
+    ("Baseline", "v1.2, approved by Dan 2026-08-01"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
-    ("Supersedes", "v1.0 (approved 2026-08-01) and v1.1 (draft)"),
+    ("Supersedes", "v1.2 once approved; v1.2 remains the baseline until then"),
 ]
 r = 4
 for k, v in cover:
@@ -204,8 +204,17 @@ r = lines(ws, r, [
     "lock are therefore treated as markers inside the existing periods, and only later inspection activity",
     "opens period 7. Raised as R-03 and CONFIRMED by the reviewer at the v1.1 review.",
     "",
-    "APPROVED by Dan on 2026-08-01. This issue is the baseline, superseding v1.0. Five review rounds",
-    "produced 28 questions and 3 change requests; all 31 are answered and applied, and Step 1 is closed.",
+    "v1.2 was approved by Dan on 2026-08-01 and remains the baseline. This issue, v1.3, carries one further",
+    "change requested during Step 2 and needs its own approval before it supersedes v1.2.",
+    "",
+    "R-04: every sheet of the source workbook now carries at least one free-text note column. Four sheets",
+    "had none - Milestone, ProjectPeriod, PeriodWeightStandard and Lists - and each gains note_1. The other",
+    "six already had one: Project and Person carry note_1..note_5, Assignment note_1..note_3, RoleFactor",
+    "role_note, PersonPeriodWeight reason, and Config note.",
+    "",
+    "Because columns change, the source schema version steps from 1 to 2. Nothing else moves: notes are",
+    "carried through import and export unchanged and are never read by the calculation, so re-running the",
+    "dummy dataset gives byte-identical figures to v1.2.",
 ])
 r += 1
 r = section(ws, r, "The plan in one page")
@@ -326,7 +335,12 @@ rows = [
      "R-03 confirmed and closed. No content change beyond recording it: the derivation, requirements and "
      "validation rules are as issued at v1.1. Every question and change request raised across five review "
      "rounds is now settled.",
-     "APPROVED 2026-08-01 by Dan - baseline"],
+     "APPROVED 2026-08-01 by Dan - superseded by v1.3 once approved"],
+    ["1.3", DOC_DATE, "Claude Code", "Pending",
+     "Change against the v1.2 baseline (R-04): a free-text note column added to every source sheet that "
+     "lacked one - Milestone, ProjectPeriod, PeriodWeightStandard and Lists each gain note_1. Source schema "
+     "version steps from 1 to 2. No calculation, validation or UI behaviour changes.",
+     "For approval"],
 ]
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary of change", "Status"],
           rows, [10, 12, 15, 14, 92, 16], wrap_cols=(5,))
@@ -555,6 +569,7 @@ mile = [
     [f"{MARK_CHG}milestone_name", "List", "Yes", "Standard list (10) at v1.1: 'Protocol (v1)', 'CTA submission', 'FPI', 'First SIV', 'LPI', 'interim DB lock cut-off', 'interim DB lock', 'final DB lock cut-off', 'final DB lock', 'Inspection'. FPI returns as the fallback for First SIV; Inspection is new and MAY REPEAT within a project. Held in Lists, not fixed in code.", "REQ-PRJ-05, REQ-PRJ-13"],
     ["milestone_date", "Date", "Yes", "Planned date.", "REQ-PRJ-05"],
     ["milestone_seq", "Integer", "No", "Display order on the timeline.", "REQ-PRJ-05"],
+    [f"{MARK_NEW}note_1", "Text", "No", "Free extension column.", "REQ-PRJ-07"],
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
           mile, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
@@ -568,6 +583,7 @@ pp = [
     [f"{MARK_CHG}period_start", "Date", "Yes", "Inclusive. For Clinical Trial, computed from milestones (sheet 05) and then editable. For Others, entered directly.", "REQ-CAL-09"],
     [f"{MARK_CHG}period_end", "Date", "Yes", "Inclusive. Periods for one project must not overlap and must leave no gap (REQ-CAL-10).", "REQ-CAL-09"],
     [f"{MARK_CHG}weight", "Decimal", "Yes", "Effort multiplier for this period. For a clinical trial, seeded from PeriodWeightStandard by clinical phase and then editable. For 'Others', entered by hand (Q-28). Values are data (Q-17), not fixed in this plan.", "REQ-PRJ-06"],
+    [f"{MARK_NEW}note_1", "Text", "No", "Free extension column, e.g. why a derived date was overridden.", "REQ-PRJ-07"],
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
           pp, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
@@ -585,6 +601,7 @@ pws = [
     [f"{MARK_CHG}clinical_phase", "List", "Yes", "The phase the standard applies to. This is the key that selects a clinical trial's weights.", "Q-26"],
     ["period_name", "List", "Yes", "A period from that type's set.", "Q-04, Q-18"],
     [f"{MARK_CHG}weight", "Decimal", "Yes", "Default multiplier. You fill these in the source workbook (Q-17); the plan fixes only where they live.", "Q-01"],
+    [f"{MARK_NEW}note_1", "Text", "No", "Free extension column, e.g. the basis for the weight.", "Q-01"],
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "Basis"],
           pws, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
@@ -648,7 +665,7 @@ r = note(ws, r, "Changed at Q-01. The answer named exactly three factors, so a f
 
 r = section(ws, r, "Sheet: Config")
 cfg = [
-    ["schema_version", "Version of this workbook structure; checked on import.", "1", "REQ-VC-02"],
+    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 2 at v1.3.", "2", "REQ-VC-02"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],
     [f"{MARK_NEW}over_allocation_fte", "Person-month total above this is over-allocated.", "1.50", "REQ-CAL-04"],
     [f"{MARK_NEW}under_allocation_fte", "Person-month total below this counts toward an under-allocated run.", "0.80", "REQ-CAL-07"],
@@ -663,7 +680,8 @@ r = section(ws, r, "Sheet: Lists   [new]")
 r = lines(ws, r, [
     "Two columns - list_name, value - holding every data-driven dropdown: outsourcing_type, clinical_phase,",
     "milestone_name, period_name, EDC_system, DataReviewSystem, RBQM_system, setup_party, project_status.",
-    "Adding a permitted value is a data edit, never a code change (REQ-CAL-06).",
+    "Adding a permitted value is a data edit, never a code change (REQ-CAL-06). A third column, note_1,",
+    "carries free text about a value - when it was added, or what it means.",
 ])
 r += 1
 
@@ -960,6 +978,8 @@ wbs = [
     ["1", "1.12", "Record R-03 as closed and re-issue for approval.", "PRAP_Development_Plan_v1.2.xlsx", "Complete - issued for review"],
     ["1", "1.13", "Approve plan v1.2 as a change against the v1.0 baseline.", "Approval on 12_Review_Log", "Complete"],
     ["1", "G1b", "GATE 1 RE-CONFIRMED - plan v1.2 approved by Dan, 2026-08-01. Step 1 closed.", "Approval recorded on 12_Review_Log", "Complete"],
+    ["1", "1.14", "Apply change R-04 (note column on every source sheet).", "PRAP_Development_Plan_v1.3.xlsx", "Complete - issued for review"],
+    ["1", "1.15", "Approve plan v1.3.", "Approval on 12_Review_Log", "Pending you"],
     ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
     ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template + _Dummy v1.1", "Complete - issued for review"],
@@ -1050,7 +1070,8 @@ align = [
     ["v0.4", "-", "-", "1 (draft)", "2026-07-31", "Round 3 incorporated; period model settled and verified"],
     ["v1.0", "-", "-", "1", "2026-07-31", "Step 1 baseline. APPROVED 2026-08-01 by Dan (Gate 1)."],
     ["v1.1", "-", "-", "1", "2026-08-01", "Change against baseline: Inspection milestone, seventh period. Superseded."],
-    ["v1.2", "-", "-", "1", DOC_DATE, "APPROVED 2026-08-01 by Dan. Current baseline. Step 1 closed."],
+    ["v1.2", "-", "-", "1", "2026-08-01", "APPROVED 2026-08-01 by Dan. Baseline until v1.3 is approved."],
+    ["v1.3", "v0.2", "-", "2", DOC_DATE, "R-04: note column on every source sheet. Awaiting approval."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1181,6 +1202,7 @@ chg = [
     ["R-01", "Data model", "Add 'Inspection' as a standard milestone.", "Applied. Milestone list grows to ten. Unlike the others, 'Inspection' MAY REPEAT within one project, so REQ-PRJ-13 and V-20 were added and V-14's uniqueness check now exempts it.", "Applied"],
     ["R-02", "Calculation", "Sheet 05 derivation edits: Before-Start-up ends at 'Protocol (v1)'; Start-up begins the day after it and ends at 'First SIV' (or 'FPI'); a seventh period 'After Close-out (final)' spans the Inspection dates.", "Applied. Clinical period set grows to six names; REQ-PRJ-12 and REQ-CAL-09 reworded; REQ-CAL-13 added for the milestone-beats-offset rule; 'FPI' restored to the milestone list as the First SIV fallback.", "Applied"],
     ["R-03", "Calculation", "Not requested - found while applying R-02.", "Period 7 was defined as earliest to latest 'Inspection'. Where an inspection is dated on or before the final DB lock, that makes period 7 start before period 6 and overlap Conduct. Only inspections AFTER the final DB lock open period 7; earlier ones stay markers, reported by V-21. CONFIRMED by the reviewer at the v1.1 review.", "CONFIRMED"],
+    ["R-04", "Data model", "Add at least one free-text note column to every sheet of the source workbook.", "Applied. Four sheets had none and each gains note_1: Milestone, ProjectPeriod, PeriodWeightStandard, Lists. Six already had one. Source schema version steps 1 -> 2. Note columns are carried through import and export unchanged and never read by the calculation, so the dummy dataset produces identical figures.", "Applied"],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Topic", "Change requested", "How it was applied", "Status"],
@@ -1242,7 +1264,9 @@ log = [
     ["38", "05_Resource_Logic", "Not reviewer input - found while applying R-02.", "One case in the mark-up does not resolve.", "Period 7 is defined as earliest to latest 'Inspection'. An inspection dated on or before the final DB lock therefore makes period 7 start before period 6 and overlap Conduct. v1.1 counts only inspections after the final DB lock, treating earlier ones as markers (V-21). Verified contiguous across seven timelines. Raised as R-03 - see item 40.", "Closed"],
     ["39", "Version control", "v1.0 is an approved baseline.", "Changes cannot be absorbed silently.", "Per the rules on sheet 09, a change against a baseline takes the next point release and needs its own approval. The approval block on sheet 12 holds v1.0 (signed) and this change (awaiting signature).", "Closed"],
     ["40", "11_Open_Questions (v1.1 review)", "R-03 confirmed: an inspection on or before the final DB lock stays a marker and does not open the seventh period.", "Accepted - no content change needed.", "R-03 closed. The derivation, requirements and validation rules stand exactly as issued at v1.1; v1.2 records the confirmation and re-issues for signature. V-21 continues to report the case so it is visible rather than silent.", "Closed"],
-    ["41", "-", "Status of the document as a whole.", "Nothing open.", "Across five review rounds: 28 questions and 3 change requests, all answered and applied. 65 requirements, 21 validation rules, 11 engineering decisions. The only outstanding item is the approval signature for the change against the v1.0 baseline.", "Closed"],
+    ["41", "-", "Status of the document as a whole.", "Nothing open.", "Across five review rounds: 28 questions and 3 change requests, all answered and applied. 65 requirements, 21 validation rules, 11 engineering decisions.", "Closed"],
+    ["42", "Gate 1", "Plan v1.2 approved by Dan, 2026-08-01, with direction to continue Step 2.", "Recorded.", "v1.2 became the baseline and Step 1 closed. Programming specification v0.1 issued.", "Closed"],
+    ["43", "Step 2 request", "Add at least one note column to every sheet of the source workbook.", "Accepted as change R-04.", "Four sheets gain note_1. Source schema version steps 1 -> 2, so the data model on sheet 04 and the specification's parse contract both change and this issue needs its own approval. Template and dummy workbooks regenerated at v1.2 and re-verified: identical calculation results, confirming the note columns are inert.", "Closed"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Sheet / source", "Reviewer input", "Response", "Action taken in v0.2", "Status"],
@@ -1266,16 +1290,21 @@ appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
          "template and a dummy data file for review."],
         ["PRAP Development Plan v1.2", "Dan", "2026-08-01",
          "APPROVED. Finalise plan v1.2 and continue Step 2. This issue supersedes v1.0 as the baseline; "
-         "R-01, R-02 and R-03 are part of it."]]
+         "R-01, R-02 and R-03 are part of it."],
+        ["PRAP Development Plan v1.3", "", "",
+         "Pending your signature. Change R-04: a note column on every source sheet; source schema version "
+         "steps 1 -> 2. No behaviour change."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 16, 14, 88], wrap_cols=(4,))
 for cc in (1, 2, 3, 4):
     ws.cell(row=r_start2 + 1, column=cc).fill = NEW_FILL
 for cc in (1, 2, 3, 4):
     ws.cell(row=r_start2 + 2, column=cc).fill = NEW_FILL
-r = note(ws, r, "STEP 1 CLOSED. v1.2 is the approved baseline: the 65 requirements on sheet 03 are the contract for "
-                "Steps 2-5, and decisions C-01 to C-11 on sheet 05 are confirmed. Any further change takes the next "
-                "point release and its own approval, per the rules on sheet 09.")
+for cc in (2, 3):
+    ws.cell(row=r_start2 + 3, column=cc).fill = INPUT_FILL
+r = note(ws, r, "v1.2 is the approved baseline: the 65 requirements on sheet 03 are the contract for Steps 2-5, and "
+                "decisions C-01 to C-11 on sheet 05 are confirmed. v1.3 is a change against it and needs the third "
+                "signature above. Step 2 continues meanwhile - R-04 adds columns and changes no behaviour.")
 
 wb.save(OUT)
 print(f"Written: {OUT}")
