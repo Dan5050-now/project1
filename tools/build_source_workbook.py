@@ -25,7 +25,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 SCHEMA_VERSION = 1
-VERSION = "1.0"
+VERSION = "1.1"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -59,11 +59,12 @@ LISTS = [
     ("DataReviewSystem", ["Veeva DQS", "Medidata CDS", "No system (manual)"]),
     ("RBQM_system", ["CluePoints", "Medidata CDS", "No system (manual)"]),
     ("project_status", ["Planned", "Active", "On hold", "Completed"]),
-    ("milestone_name", ["Protocol (v1)", "CTA submission", "First SIV", "LPI",
+    ("milestone_name", ["Protocol (v1)", "CTA submission", "FPI", "First SIV", "LPI",
                         "interim DB lock cut-off", "interim DB lock",
-                        "final DB lock cut-off", "final DB lock"]),
+                        "final DB lock cut-off", "final DB lock", "Inspection"]),
     ("period_name_clinical", ["Before-Start-up", "Start-up", "Conduct",
-                              "Close-out (interim)", "Close-out (final)"]),
+                              "Close-out (interim)", "Close-out (final)",
+                              "After Close-out (final)"]),
     ("period_name_others", ["Planning", "Develop", "Close"]),
     ("role_clinical", ["Project oversight", "Lead data manager", "Clinical Data Associator",
                        "Clinical Database Programmer", "Data Analyst"]),
@@ -110,7 +111,7 @@ SHEETS = {
     "Milestone": [
         ("project_id", "Foreign key to Project.", "key"),
         ("project_name", "DERIVED - looked up from Project, do not type.", "calc"),
-        ("milestone_name", "From the standard list of eight.", ""),
+        ("milestone_name", "From the standard list of ten. 'Inspection' may appear on several rows.", ""),
         ("milestone_date", "Planned date.", ""),
         ("milestone_seq", "Display order on the timeline.", ""),
     ],
@@ -201,27 +202,36 @@ DROPDOWNS = {
 # --------------------------------------------------------------------------
 # Period derivation - the algorithm baselined on plan sheet 05
 # --------------------------------------------------------------------------
-def derive_periods(start, end, milestones):
-    """Return [(period_name, seq, start, end)] for a clinical trial.
+def derive_periods(start, end, milestones, inspections):
+    """Return [(period_name, seq, start, end)] for a clinical trial - plan v1.1 sheet 05.
 
-    Boundaries apply in sequence order, a later one winning; any period squeezed
-    to zero or negative length is omitted (REQ-CAL-12, decision C-11).
+    A recorded milestone beats the month-offset fallback (REQ-CAL-13). Boundaries apply
+    in sequence order, a later one winning; a period squeezed to nothing is omitted
+    (REQ-CAL-12, decision C-11).
     """
+    protocol = milestones.get("Protocol (v1)")
     cta = milestones.get("CTA submission")
+    siv = milestones.get("First SIV") or milestones.get("FPI")
     idbl = milestones.get("interim DB lock")
     fdbl = milestones.get("final DB lock") or idbl
     if not cta or not fdbl:
         return []
 
-    out = []
-    su_s = cta - rd(months=1)
-    su_e = su_s + rd(months=4) - timedelta(days=1)
-    if su_s > start:
-        out.append(("Before-Start-up", su_s - timedelta(days=1), start))
-    su_s = max(su_s, start)
+    su_s = max((protocol + timedelta(days=1)) if protocol else (cta - rd(months=1)), start)
+    su_e = siv if siv and siv >= su_s else (su_s + rd(months=4) - timedelta(days=1))
 
-    segs = [("Start-up", su_s, su_e)]
+    # Period 7 opens only on inspection activity AFTER the final DB lock (V-21, R-03).
+    later = [x for x in inspections if x > fdbl]
+    p7_s = min(later) if later else None
+    p7_e = max(max(later), end) if later else None
+
     cof_s = fdbl - rd(months=3)
+    cof_e = (p7_s - timedelta(days=1)) if p7_s else max(fdbl, end)
+
+    segs = []
+    if su_s > start:
+        segs.append(("Before-Start-up", start, su_s - timedelta(days=1)))
+    segs.append(("Start-up", su_s, su_e))
     if idbl and idbl < fdbl:
         coi_s = idbl - rd(months=3)
         segs.append(("Conduct", su_e + timedelta(days=1), coi_s - timedelta(days=1)))
@@ -230,14 +240,11 @@ def derive_periods(start, end, milestones):
         segs.append(("Conduct", idbl + timedelta(days=1), cof_s - timedelta(days=1)))
     else:
         segs.append(("Conduct", su_e + timedelta(days=1), cof_s - timedelta(days=1)))
-    segs.append(("Close-out (final)", cof_s, max(fdbl, end)))
+    segs.append(("Close-out (final)", cof_s, cof_e))
+    if p7_s:
+        segs.append(("After Close-out (final)", p7_s, p7_e))
 
-    rows = []
-    if out:
-        rows.append(("Before-Start-up", start, su_s - timedelta(days=1)))
-    for name, s, e in segs:
-        if e >= s:
-            rows.append((name, s, e))
+    rows = [(n, s, e) for n, s, e in segs if e >= s]
     return [(n, i + 1, s, e) for i, (n, s, e) in enumerate(rows)]
 
 
@@ -249,13 +256,13 @@ def dummy_data():
         # id, name, type, category, phase, outsourcing, edc_su, drs_su, rbqm_su, dm, edc, drs, rbqm, members, start, end, status
         ("PRJ-001", "ONV-101 First-in-human", "Clinical Trial", "Onvelaris", "Phase 1", "Partial outsourcing",
          "by SB", "by SB", "by CRO", "by SB", "Veeva EDC", "Veeva DQS", "CluePoints", 5,
-         date(2025, 10, 1), date(2027, 6, 30), "Active"),
+         date(2025, 10, 1), date(2027, 9, 30), "Active"),
         ("PRJ-002", "ONV-205 Dose expansion", "Clinical Trial", "Onvelaris", "Phase 2", "Full outsourcing",
          "by CRO", "by CRO", "by CRO", "by CRO", "Rave", "Medidata CDS", "Medidata CDS", 6,
          date(2026, 1, 1), date(2028, 9, 30), "Active"),
         ("PRJ-003", "CDX-310 Pivotal", "Clinical Trial", "Cardexa", "Phase 3", "Partial outsourcing",
          "by CRO", "by SB", "by CRO", "by SB", "Veeva EDC", "Veeva DQS", "CluePoints", 8,
-         date(2025, 7, 1), date(2029, 3, 31), "Active"),
+         date(2025, 7, 1), date(2029, 10, 31), "Active"),
         ("PRJ-004", "NRX-410 Post-marketing", "Clinical Trial", "Neurexa", "Phase 4", "Full In-house",
          "by SB", "by SB", "by SB", "by SB", "eSOURCE", "No system (manual)", "No system (manual)", 3,
          date(2026, 4, 1), date(2028, 3, 31), "Planned"),
@@ -288,6 +295,15 @@ def dummy_data():
                     "First SIV": date(2026, 12, 1), "LPI": date(2028, 3, 31),
                     "interim DB lock cut-off": date(2028, 6, 30), "interim DB lock": date(2028, 8, 31),
                     "final DB lock cut-off": date(2029, 3, 31), "final DB lock": date(2029, 5, 31)},
+    }
+
+    # 'Inspection' may occur several times in one project (REQ-PRJ-13).
+    # PRJ-003 has three after its final DB lock; PRJ-001 has one; PRJ-002 has one dated
+    # BEFORE its final lock, which under V-21 stays a marker and does not open period 7.
+    inspections = {
+        "PRJ-001": [date(2027, 8, 15)],
+        "PRJ-002": [date(2028, 5, 20)],
+        "PRJ-003": [date(2029, 5, 10), date(2029, 7, 22), date(2029, 9, 30)],
     }
 
     people = [
@@ -359,13 +375,17 @@ def dummy_data():
     pws = []
     phase_profile = {
         "Phase 1": {"Before-Start-up": 0.60, "Start-up": 1.30, "Conduct": 1.00,
-                    "Close-out (interim)": 1.20, "Close-out (final)": 1.40},
+                    "Close-out (interim)": 1.20, "Close-out (final)": 1.40,
+                    "After Close-out (final)": 0.84},
         "Phase 2": {"Before-Start-up": 0.70, "Start-up": 1.40, "Conduct": 1.10,
-                    "Close-out (interim)": 1.30, "Close-out (final)": 1.50},
+                    "Close-out (interim)": 1.30, "Close-out (final)": 1.50,
+                    "After Close-out (final)": 0.9},
         "Phase 3": {"Before-Start-up": 0.80, "Start-up": 1.60, "Conduct": 1.20,
-                    "Close-out (interim)": 1.40, "Close-out (final)": 1.70},
+                    "Close-out (interim)": 1.40, "Close-out (final)": 1.70,
+                    "After Close-out (final)": 1.02},
         "Phase 4": {"Before-Start-up": 0.50, "Start-up": 1.10, "Conduct": 0.90,
-                    "Close-out (interim)": 1.00, "Close-out (final)": 1.20},
+                    "Close-out (interim)": 1.00, "Close-out (final)": 1.20,
+                    "After Close-out (final)": 0.72},
     }
     for ph, prof in phase_profile.items():
         for pn, w in prof.items():
@@ -388,7 +408,7 @@ def dummy_data():
         pid, ptype, pstart, pend = p[0], p[2], p[14], p[15]
         if ptype == "Clinical Trial":
             phase = p[4]
-            for name, seq, s, e in derive_periods(pstart, pend, ms[pid]):
+            for name, seq, s, e in derive_periods(pstart, pend, ms[pid], inspections.get(pid, [])):
                 periods.append((pid, name, seq, s, e, phase_profile[phase][name]))
         else:
             span = (pend - pstart).days
@@ -398,7 +418,7 @@ def dummy_data():
             periods.append((pid, "Develop", 2, b1 + timedelta(days=1), b2, 1.20))
             periods.append((pid, "Close", 3, b2 + timedelta(days=1), pend, 0.90))
 
-    return projects, ms, periods, pws, roles, people, A, ppw
+    return projects, ms, periods, pws, roles, people, A, ppw, inspections
 
 
 # --------------------------------------------------------------------------
@@ -515,8 +535,17 @@ def add_readme(wb, kind):
         "      Close-out (interim)  three months before the interim DB lock, to that lock",
         "      Conduct  (again)     from the interim DB lock to the day before Close-out (final)",
         "      Close-out (final)    three months before the final DB lock, to that lock",
+        "      After Close-out (final)  the inspection activity that follows the final DB lock",
+        "",
+        "   Where 'Protocol (v1)' is recorded, Before-Start-up ends on it and Start-up begins the day after.",
+        "   Where 'First SIV' (or 'FPI') is recorded, Start-up ends on it instead of running a fixed four",
+        "   months. A recorded milestone always beats the month-offset fallback.",
+        "",
         "   'Conduct' therefore appears TWICE where a trial has an interim DB lock. period_seq keeps",
         "   the two apart. A period squeezed to nothing by a tight timeline is simply omitted.",
+        "",
+        "   'Inspection' is the one milestone that may be recorded SEVERAL TIMES for a project. Only",
+        "   inspections dated AFTER the final DB lock open the last period; an earlier one stays a marker.",
         "",
         "   'Others' projects have no milestones. Their period dates and weights are both typed in.",
         "",
@@ -546,6 +575,9 @@ def add_readme(wb, kind):
             "   - PRJ-001 and PRJ-004 have no interim lock, so Conduct runs once.",
             "   - PRJ-006 and PRJ-007 are 'Others' projects with hand-entered periods.",
             "   - ASG-001 and ASG-004 carry PersonPeriodWeight overrides.",
+            "   - PRJ-003 records THREE 'Inspection' events after its final DB lock, so it carries the",
+            "     seventh period. PRJ-001 records one. PRJ-002 records one dated BEFORE its final lock,",
+            "     which stays a marker and opens no period - the case raised as R-03 in the plan.",
             "",
             "   The weights and role factors here are ILLUSTRATIVE, so the numbers can be exercised.",
             "   Replace them with your own before drawing any conclusion from the output.",
@@ -576,12 +608,14 @@ def build(kind):
         r += len(values)
 
     if kind == "dummy":
-        projects, ms, periods, pws, roles, people, A, ppw = dummy_data()
+        projects, ms, periods, pws, roles, people, A, ppw, inspections = dummy_data()
         proj_rows = [list(p[:16]) + [None] + [p[16]] + [None] * 5 for p in projects]
         mile_rows = []
         for pid, mm in ms.items():
-            for seq, (nm, d) in enumerate(sorted(mm.items(), key=lambda kv: kv[1]), start=1):
-                mile_rows.append([pid, None, nm, d, seq])
+            events = sorted(mm.items(), key=lambda kv: kv[1])
+            events += [("Inspection", x) for x in inspections.get(pid, [])]
+            for seq, (nm, dt) in enumerate(sorted(events, key=lambda kv: kv[1]), start=1):
+                mile_rows.append([pid, None, nm, dt, seq])
         period_rows = [list(x) for x in periods]
         pws_rows = [list(x) for x in pws]
         role_rows = [list(x) for x in roles]

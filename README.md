@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v1.0 APPROVED** — Gate 1 passed 2026-08-01 (Dan) |
+| 1 | Development plan | **v1.0 APPROVED** (Gate 1, 2026-08-01) · **v1.1 change pending approval** |
 | 2 | Programming specification | **In progress** — source workbook template + dummy data issued for review |
 | 3 | Prototype UI design | Not started |
 | 4 | Code generation | Not started |
@@ -30,10 +30,11 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v1.0.xlsx` — **current, final Step 1 baseline.**
-  13 sheets: scope, requirement register (63 requirements), data model, resource
-  calculation logic, dashboard design, architecture, work breakdown,
-  version-control rules, risks, questions and answers, review log.
+- `docs/PRAP_Development_Plan_v1.1.xlsx` — **current.** A change against the v1.0
+  baseline: `Inspection` milestone, seventh period, milestone-beats-offset boundaries.
+  65 requirements. Needs its own approval before it supersedes v1.0.
+- `docs/PRAP_Development_Plan_v1.0.xlsx` — **the approved baseline** (Gate 1,
+  2026-08-01). Remains in force until v1.1 is approved.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -41,15 +42,16 @@ output/       Exported results and test evidence   (from Step 5)
 
 ### Step 2 deliverables (for review)
 
-- `templates/PRAP_SourceData_Template_v1.0.xlsx` — blank workbook: 10 sheets, headers,
+- `templates/PRAP_SourceData_Template_v1.1.xlsx` — blank workbook: 10 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README.
-- `templates/PRAP_SourceData_Dummy_v1.0.xlsx` — the same structure populated with
-  7 projects, 12 people and 30 assignments, built to exercise every rule.
+- `templates/PRAP_SourceData_Dummy_v1.1.xlsx` — the same structure populated with
+  7 projects, 12 people and 30 assignments, built to exercise every rule including
+  repeated `Inspection` milestones and the seventh period.
 
 Validate either with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.0.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.1.xlsx
 ```
 
 ## Why the documents are generated from scripts
@@ -83,6 +85,8 @@ Requires `openpyxl`.
   milestone dates; Others uses Planning / Develop / Close, entered directly.
 - **`Conduct` can occur twice** in one project, split by an interim DB lock, so a
   period name is not unique within a project (Q-23).
+- **`Inspection` may be recorded several times** per project, and opens a seventh
+  period where it follows the final DB lock (R-01, R-02 — pending approval in v1.1).
 - **Period weights are selected by clinical phase** for clinical trials (Q-26);
   `Others` projects are hand-entered throughout — dates and weights alike (Q-28).
 - **Every field is editable**, with identifier edits cascading to referencing rows
@@ -92,10 +96,12 @@ Requires `openpyxl`.
 
 ## Next action
 
-Review the two workbooks in `templates/`. Then settle **S2-01** in
-`docs/STEP2_OPEN_POINTS.md`: the under-allocation threshold is an absolute 0.80 FTE,
-so a part-time person recorded at 0.60 capacity is flagged permanently and cannot
-ever clear it. Making both thresholds relative to `capacity_fte` fixes it and changes
-nothing for full-time staff.
+Two decisions, then the specification proceeds:
 
-The rest of the programming specification follows once the schema is confirmed.
+1. **Approve plan v1.1** (sheet 12) and answer **R-03** (sheet 11) — where an
+   `Inspection` is dated on or before the final DB lock, v1.1 treats it as a marker
+   rather than letting it open the seventh period, because the literal reading makes
+   period 7 start before period 6.
+2. **Settle S2-01** in `docs/STEP2_OPEN_POINTS.md` — the under-allocation threshold is
+   an absolute 0.80 FTE, so a part-timer at 0.60 capacity is flagged permanently and
+   can never clear it.

@@ -4,7 +4,7 @@ Implements enough of the calculation engine to prove the data is coherent and th
 the dummy file demonstrates what its README claims. Doubles as a reference
 implementation for the Step 4 calculation layer.
 
-    python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.0.xlsx
+    python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.1.xlsx
 """
 
 import calendar
@@ -16,7 +16,8 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 CLINICAL_PERIODS = ["Before-Start-up", "Start-up", "Conduct",
-                    "Close-out (interim)", "Close-out (final)"]
+                    "Close-out (interim)", "Close-out (final)",
+                    "After Close-out (final)"]
 OTHER_PERIODS = ["Planning", "Develop", "Close"]
 
 
@@ -51,9 +52,11 @@ def coverage(y, m, s, e):
 def main(path):
     wb = load_workbook(path, data_only=False)
     P = {r["project_id"]: r for r in rows(wb["Project"])}
-    MS = defaultdict(dict)
+    # A milestone name may repeat within a project ('Inspection'), so this maps
+    # name -> list of dates rather than name -> date (REQ-PRJ-13).
+    MS = defaultdict(lambda: defaultdict(list))
     for r in rows(wb["Milestone"]):
-        MS[r["project_id"]][r["milestone_name"]] = d(r["milestone_date"])
+        MS[r["project_id"]][r["milestone_name"]].append(d(r["milestone_date"]))
     PER = defaultdict(list)
     for r in rows(wb["ProjectPeriod"]):
         PER[r["project_id"]].append(r)
@@ -135,9 +138,19 @@ def main(path):
             if v and v not in LISTS[lname]:
                 warnings.append(f"V-11 {pid}: '{v}' not in list {lname}")
     for pid, mm in MS.items():
-        for nm in mm:
+        for nm, dates in mm.items():
             if nm not in LISTS["milestone_name"]:
                 warnings.append(f"V-11 {pid}: milestone '{nm}' not in the standard list")
+            # V-20: only 'Inspection' is expected to repeat
+            if nm != "Inspection" and len(dates) > 1:
+                warnings.append(f"V-20 {pid}: milestone '{nm}' recorded {len(dates)} times")
+        # V-21: an inspection on or before the final DB lock stays a marker
+        fdbl = (mm.get("final DB lock") or mm.get("interim DB lock") or [None])[0]
+        if fdbl:
+            early = [x for x in mm.get("Inspection", []) if x <= fdbl]
+            if early:
+                warnings.append(f"V-21 {pid}: {len(early)} Inspection date(s) on or before the "
+                                f"final DB lock - treated as markers, not opening period 7")
 
     # ---- monthly simulation ----
     def period_weight(pid, y, m):
@@ -232,4 +245,4 @@ def main(path):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else
-                  "templates/PRAP_SourceData_Dummy_v1.0.xlsx"))
+                  "templates/PRAP_SourceData_Dummy_v1.1.xlsx"))
