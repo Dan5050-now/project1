@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.4"
+DOC_VERSION = "1.5"
 DOC_STATUS = "Change against approved baseline v1.3 - issued for approval"
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -166,7 +166,7 @@ cover = [
     ("Baseline", "v1.3, approved by Dan 2026-08-01"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
-    ("Supersedes", "v1.3 once approved; v1.3 remains the baseline until then"),
+    ("Supersedes", "v1.4 (draft) and, once approved, v1.3. v1.3 remains the baseline until then"),
 ]
 r = 4
 for k, v in cover:
@@ -204,8 +204,9 @@ r = lines(ws, r, [
     "lock are therefore treated as markers inside the existing periods, and only later inspection activity",
     "opens period 7. Raised as R-03 and CONFIRMED by the reviewer at the v1.1 review.",
     "",
-    "APPROVED FINAL by Dan on 2026-08-01. This is the last issue of the development plan; Step 1 is complete",
-    "and work proceeds under the programming specification.",
+    "v1.3 was approved by Dan on 2026-08-01 and remains the baseline. This issue carries four changes against",
+    "it - R-05 from the Step 3 review, and R-06 to R-08 from the specification v0.3 review - and needs its own",
+    "approval before it supersedes v1.3.",
     "",
     "v1.3 carries change R-04: every sheet of the source workbook now holds at least one free-text note",
     "column. Four sheets had none - Milestone, ProjectPeriod, PeriodWeightStandard and Lists - and each gains",
@@ -460,10 +461,10 @@ reqs = [
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x role factor x person weight x fraction of the month covered. There is no separate base allocation.", "Must", "Q-01", "2,4"],
     ["REQ-CAL-03", "Calculation", "Project monthly load is the sum of its assignments; person monthly load is the sum across all their projects.", "Must", "Requester", "4"],
-    [f"{MARK_CHG}REQ-CAL-04", "Calculation", "A person-month whose total exceeds the over-allocation threshold (default 1.50 FTE) is flagged as over-allocated.", "Must", "Q-08", "4"],
+    [f"{MARK_CHG}REQ-CAL-04", "Calculation", "A person-month whose total exceeds the over-allocation threshold (default 1.50 FTE) is flagged as over-allocated. The threshold is absolute, not scaled by capacity (S2-01).", "Must", "Q-08, S2-01", "4"],
     [f"{MARK_CHG}REQ-CAL-05", "Calculation", "A partial first or last month is pro-rated by calendar days worked, not counted as a whole month.", "Must", "Q-02", "4"],
     ["REQ-CAL-06", "Calculation", "All weights, factors and thresholds are data, held in the source workbook, never hardcoded in the program.", "Must", "Derived", "4"],
-    [f"{MARK_NEW}REQ-CAL-07", "Calculation", "A person whose monthly total stays below the under-allocation threshold (default 0.80 FTE) for three or more consecutive months is flagged as under-allocated, with the run's start and length reported.", "Must", "Q-08", "4"],
+    [f"{MARK_CHG}REQ-CAL-07", "Calculation", "A person whose monthly total stays below the under-allocation threshold (default 0.60 FTE) for three or more consecutive months is flagged as under-allocated, with the run's start and length reported. The threshold is absolute, not scaled by capacity.", "Must", "Q-08, S2-01, S2-05", "4"],
     [f"{MARK_NEW}REQ-CAL-08", "Calculation", "Load is expressed in FTE, where 1.00 FTE = 160 hours per month (8 h/day x 5 days/week x 20 days/month). Hours are shown alongside FTE where useful.", "Must", "Q-08", "4"],
     [f"{MARK_CHG}REQ-CAL-09", "Calculation", "For a clinical trial of either type, period boundaries are computed from milestone dates plus fixed month offsets (sheet 05), so a timeline change re-shapes the periods without re-typing them. For 'Others', periods are entered directly - those projects have no milestone mapping.", "Must", "Q-16, Q-22, Q-23, Q-25", "2,4"],
     [f"{MARK_NEW}REQ-CAL-10", "Calculation", "Every month of a project's timeline falls in exactly one period. A month left uncovered by the derivation is reported and carries weight 1.00 rather than being dropped from the simulation.", "Must", "Derived from Q-16", "2,4"],
@@ -479,6 +480,8 @@ reqs = [
     ["REQ-DSH-06", "Dashboard", "Any table on screen can be exported to Excel.", "Should", "Derived", "4"],
     [f"{MARK_NEW}REQ-DSH-07", "Dashboard", "The horizon control offers 24 months by default and a one-click expansion to cover the latest project end date across all projects.", "Must", "Q-11", "3,4"],
     [f"{MARK_NEW}REQ-DSH-08", "Dashboard", "Over-allocated and under-allocated person-months are distinguishable at a glance, and both are counted in the summary tiles.", "Must", "Q-08", "3,4"],
+    [f"{MARK_NEW}REQ-DSH-09", "Dashboard", "At the target volume a table taller than the viewport renders only the visible rows, and the per-person chart shows an aggregate or a ranked subset rather than one bar per person. A thousand bars is not a chart.", "Must", "S2-06", "3,4"],
+    [f"{MARK_NEW}REQ-DSH-10", "Dashboard", "Where a period name occurs more than once in a project, each occurrence is distinguishable on screen - shown as the period name with its sequence, e.g. 'Conduct (1)' and 'Conduct (2)'.", "Must", "S2-04", "3,4"],
 
     [f"{MARK_CHG}REQ-IMP-01", "Import/Export", "The user loads the source workbook through a file picker or drag-and-drop, chosen because a local HTML page cannot open a file from disk unaided.", "Must", "Decision D-01", "4"],
     ["REQ-IMP-02", "Import/Export", "Loading validates the workbook and reports every problem found - missing sheet, missing column, bad date, unknown project reference - without stopping at the first one.", "Must", "Derived", "4"],
@@ -498,7 +501,7 @@ reqs = [
 
     ["REQ-NFR-01", "Non-functional", "The application is built so later requirements can be added without restructuring: parsing, calculation and presentation are separated.", "Must", "Requester", "4"],
     ["REQ-NFR-02", "Non-functional", "Works in Microsoft Edge and Google Chrome on Windows 10/11, offline.", "Must", "Q-05", "4"],
-    [f"{MARK_CHG}REQ-NFR-03", "Non-functional", "Handles the working data volume - 20 projects, 30 people - with headroom to 50 projects, 100 people, 500 assignments and a 60-month horizon, redrawing in under about 1 second.", "Should", "Q-06", "4"],
+    [f"{MARK_CHG}REQ-NFR-03", "Non-functional", "Handles 100 projects and 1,000 people, with the assignments that implies (order 8,000) over a 60-month horizon. Tables of that height are virtualised and the per-person chart aggregates rather than drawing a bar each - see REQ-DSH-09.", "Must", "S2-06", "4"],
     ["REQ-NFR-04", "Non-functional", "No data leaves the PC: no network calls, no external CDN, no telemetry.", "Must", "Derived", "4"],
     ["REQ-NFR-05", "Non-functional", "Dates are handled unambiguously (ISO yyyy-mm-dd internally) regardless of Windows regional settings.", "Must", "Derived", "4"],
 ]
@@ -679,7 +682,7 @@ cfg = [
     [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4.", "3", "REQ-VC-02"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],
     [f"{MARK_NEW}over_allocation_fte", "Person-month total above this is over-allocated.", "1.50", "REQ-CAL-04"],
-    [f"{MARK_NEW}under_allocation_fte", "Person-month total below this counts toward an under-allocated run.", "0.80", "REQ-CAL-07"],
+    [f"{MARK_CHG}under_allocation_fte", "Person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity.", "0.60", "REQ-CAL-07"],
     [f"{MARK_NEW}under_allocation_min_months", "Consecutive months below the threshold before flagging.", "3", "REQ-CAL-07"],
     [f"{MARK_CHG}default_horizon_months", "Months shown on opening.", "24", "REQ-CAL-01"],
     [f"{MARK_CHG}capacity_unit", "Display unit: 'FTE' or 'percent'.", "FTE", "REQ-CAL-08"],
@@ -714,10 +717,11 @@ rules = [
     [f"{MARK_CHG}V-14", "A milestone date falls inside its project's start..end window, and the boundary milestones appear in chronological order. Repeated 'Inspection' rows are exempt from the uniqueness part of this check.", "Error for period-defining milestones - the derivation cannot run. Warning for markers."],
     [f"{MARK_NEW}V-15", "A period_name belongs to the period set of its project's type.", "Error - a 'Planning' period on a clinical trial is a category mistake, not a typo."],
     [f"{MARK_NEW}V-16", "A clinical trial carries the milestones the derivation needs: CTA submission, and at least one DB lock.", "Error - without them no period boundary can be computed."],
-    [f"{MARK_NEW}V-18", "period_seq is unique within a project and orders the periods by date.", "Error - the two Conduct stretches cannot be told apart otherwise."],
+    [f"{MARK_CHG}V-18", "Within a project, (period_name, period_start) is unique and period_seq orders the periods by date.", "Error - the natural key tells the two Conduct stretches apart; the sequence makes their order deterministic."],
     [f"{MARK_CHG}V-19", "A clinical trial carries a clinical_phase, and PeriodWeightStandard has rows for that phase. Not applied to 'Others' projects, whose weights are entered directly.", "Error - since Q-26 the phase selects the weights, so a missing phase leaves the project unweighted."],
     [f"{MARK_NEW}V-20", "A milestone other than 'Inspection' appears at most once per project.", "Warning - repeats are allowed but usually a data-entry slip outside Inspection."],
     [f"{MARK_NEW}V-21", "'Inspection' dates on or before the final DB lock are treated as markers, not as the start of period 7.", "Information - listed so the reader can see why an early inspection did not open a period."],
+    [f"{MARK_NEW}V-22", "No person carries a capacity_fte below the under-allocation floor.", "Warning - such a person can never clear the floor however fully they are booked, so the flag would be permanent and meaningless."],
     [f"{MARK_NEW}V-17", "On editing an identifier, every referencing row is updated; on deleting a row, nothing may still reference it.", "Cascade after confirmation / deletion refused (REQ-IMP-10)."],
 ]
 r = table(ws, r, ["ID", "Rule", "On failure"], rules, [9, 84, 60], wrap_cols=(2, 3), mark_col=1)
@@ -993,7 +997,8 @@ wbs = [
     ["1", "1.15", "Approve plan v1.3 as final.", "Approval on 12_Review_Log", "Complete"],
     ["1", "G1c", "Plan v1.3 approved by Dan, 2026-08-01.", "Approval recorded on 12_Review_Log", "Complete"],
     ["1", "1.16", "Apply change R-05 (project_type split).", "PRAP_Development_Plan_v1.4.xlsx", "Complete - issued for review"],
-    ["1", "1.17", "Approve plan v1.4.", "Approval on 12_Review_Log", "Pending you"],
+    ["1", "1.17", "Apply the specification-review answers (R-06, R-07, R-08).", "PRAP_Development_Plan_v1.5.xlsx", "Complete - issued for review"],
+    ["1", "1.18", "Approve plan v1.5.", "Approval on 12_Review_Log", "Pending you"],
     ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
     ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template + _Dummy v1.1", "Complete - issued for review"],
@@ -1086,7 +1091,8 @@ align = [
     ["v1.1", "-", "-", "1", "2026-08-01", "Change against baseline: Inspection milestone, seventh period. Superseded."],
     ["v1.2", "-", "-", "1", "2026-08-01", "APPROVED 2026-08-01 by Dan. Baseline until v1.3 is approved."],
     ["v1.3", "v0.2", "-", "2", "2026-08-01", "R-04: note column on every source sheet. APPROVED 2026-08-01 by Dan."],
-    ["v1.4", "v0.3", "prototype v0.2", "3", DOC_DATE, "R-05: project_type split. Awaiting approval."],
+    ["v1.4", "v0.3", "prototype v0.2", "3", "2026-08-01", "R-05: project_type split. Superseded."],
+    ["v1.5", "v0.4", "prototype v0.3", "3", DOC_DATE, "R-05..R-08. Awaiting approval."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1217,6 +1223,9 @@ chg = [
     ["R-01", "Data model", "Add 'Inspection' as a standard milestone.", "Applied. Milestone list grows to ten. Unlike the others, 'Inspection' MAY REPEAT within one project, so REQ-PRJ-13 and V-20 were added and V-14's uniqueness check now exempts it.", "Applied"],
     ["R-02", "Calculation", "Sheet 05 derivation edits: Before-Start-up ends at 'Protocol (v1)'; Start-up begins the day after it and ends at 'First SIV' (or 'FPI'); a seventh period 'After Close-out (final)' spans the Inspection dates.", "Applied. Clinical period set grows to six names; REQ-PRJ-12 and REQ-CAL-09 reworded; REQ-CAL-13 added for the milestone-beats-offset rule; 'FPI' restored to the milestone list as the First SIV fallback.", "Applied"],
     ["R-03", "Calculation", "Not requested - found while applying R-02.", "Period 7 was defined as earliest to latest 'Inspection'. Where an inspection is dated on or before the final DB lock, that makes period 7 start before period 6 and overlap Conduct. Only inspections AFTER the final DB lock open period 7; earlier ones stay markers, reported by V-21. CONFIRMED by the reviewer at the v1.1 review.", "CONFIRMED"],
+    ["R-08", "UI", "The two 'Conduct' stretches of a project must be distinguishable on screen (S2-04).", "Applied as REQ-DSH-10. A display rule, not a data change: period_name stays 'Conduct' in the workbook and the screen shows it with its sequence, 'Conduct (1)' and 'Conduct (2)'. Changing the stored name would have broken the weight lookup and V-15.", "Applied"],
+    ["R-07", "Calculation", "Thresholds stay ABSOLUTE, not relative to capacity_fte (S2-01), and the under-allocation floor moves to 0.60 FTE (S2-05).", "Applied. Taken together these resolve the defect S2-01 was raised about: at a 0.60 floor every capacity in the data can clear it - 1.00 needs 60% utilisation, 0.80 needs 75%, 0.60 needs 100%. The risk only returns for a capacity BELOW the floor, so V-22 warns on exactly that. REQ-CAL-04 and REQ-CAL-07 reworded; Config default 0.80 -> 0.60.", "Applied"],
+    ["R-06", "Non-functional", "Re-baseline REQ-NFR-03 to 100 projects and 1,000 people (S2-06).", "Applied, and it is the most consequential answer in this round. At that volume the person table is 1,000 rows x 60 months = 60,000 cells, and the per-person chart would be 1,000 bars at roughly 1.2px each. Neither survives a naive build, so virtualisation and aggregation become requirements (REQ-DSH-09) rather than optimisations. Priority raised from Should to Must.", "Applied"],
     ["R-05", "Data model", "Split project_type: 'Clinical Trial' becomes 'NewDrug CT' and 'Biosimilar CT'; every clinical trial is one or the other.", "Applied. REQ-PRJ-01 and REQ-PRJ-02 reworded. Both new types share the clinical period set and the same derivation - they differ in weights, not shape. RoleFactor and PeriodWeightStandard are now keyed on the type, so the split can carry real differences rather than being only a label. Schema 2 -> 3. All outputs regenerated.", "Applied"],
     ["R-04", "Data model", "Add at least one free-text note column to every sheet of the source workbook.", "Applied. Four sheets had none and each gains note_1: Milestone, ProjectPeriod, PeriodWeightStandard, Lists. Six already had one. Source schema version steps 1 -> 2. Note columns are carried through import and export unchanged and never read by the calculation, so the dummy dataset produces identical figures.", "Applied"],
 ]
@@ -1283,6 +1292,8 @@ log = [
     ["41", "-", "Status of the document as a whole.", "Nothing open.", "Across five review rounds: 28 questions and 3 change requests, all answered and applied. 65 requirements, 21 validation rules, 11 engineering decisions.", "Closed"],
     ["42", "Gate 1", "Plan v1.2 approved by Dan, 2026-08-01, with direction to continue Step 2.", "Recorded.", "v1.2 became the baseline and Step 1 closed. Programming specification v0.1 issued.", "Closed"],
     ["43", "Step 2 request", "Add at least one note column to every sheet of the source workbook.", "Accepted as change R-04.", "Four sheets gain note_1. Source schema version steps 1 -> 2, so the data model on sheet 04 and the specification's parse contract both change. Template and dummy workbooks regenerated at v1.2 and re-verified: identical calculation results, confirming the note columns are inert.", "Closed"],
+    ["45", "Specification v0.3 review", "Six open points answered (S2-01 to S2-06).", "Accepted; three change the plan.", "S2-02 and S2-03 confirmed the draft with no change. S2-01 + S2-05 became R-07, S2-04 became R-08, S2-06 became R-06. The two calculation answers interact usefully: keeping thresholds absolute would have left the part-timer defect in place, but moving the floor to 0.60 removes it for every capacity in the data.", "Closed"],
+    ["46", "Specification 03_Data_Schema!B26", "ProjectPeriod key changed from project_id + period_seq to project_id + period_name + period_start.", "Accepted.", "A natural key rather than a surrogate, and it disambiguates the two Conduct stretches just as well since their start dates differ. period_seq stays as the ordering column, and V-18 now checks both: the natural key for uniqueness, the sequence for deterministic ordering.", "Closed"],
     ["44", "Approval", "Plan v1.3 approved FINAL by Dan, 2026-08-01.", "Recorded.", "Step 1 is complete. The plan is closed at 65 requirements, 21 validation rules, 11 decisions and a version-2 source schema. Work proceeds under PRAP_Programming_Specification_v0.2.xlsx, whose sheet 10 carries the one decision still outstanding (S2-01) - a specification matter, not a plan matter.", "Closed"],
 ]
 r_start = r
@@ -1311,9 +1322,10 @@ appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
         ["PRAP Development Plan v1.3", "Dan", "2026-08-01",
          "APPROVED - FINAL. Change R-04 accepted; this issue supersedes v1.2 and closes the development "
          "plan. Step 1 is complete."],
-        ["PRAP Development Plan v1.4", "", "",
-         "Pending your signature. Change R-05: project_type split into NewDrug CT and Biosimilar CT; "
-         "source schema version steps 2 -> 3."]]
+        ["PRAP Development Plan v1.5", "", "",
+         "Pending your signature. Changes R-05 (project_type split, schema 2 -> 3), R-06 (volume "
+         "re-baselined to 100 projects / 1,000 people), R-07 (absolute thresholds, floor 0.60) and "
+         "R-08 (repeated period names distinguishable on screen)."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 16, 14, 88], wrap_cols=(4,))
 for cc in (1, 2, 3, 4):

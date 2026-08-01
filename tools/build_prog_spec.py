@@ -14,10 +14,10 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "0.3"
-DOC_STATUS = "Draft for review"
+DOC_VERSION = "0.4"
+DOC_STATUS = "Draft for review - all six v0.3 open points answered and applied"
 DOC_DATE = "2026-08-01"
-PLAN = "PRAP_Development_Plan_v1.4.xlsx"
+PLAN = "PRAP_Development_Plan_v1.5.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
 
@@ -116,7 +116,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Governing document", f"{PLAN} - change R-05 against the v1.3 baseline, awaiting approval"),
+    ("Governing document", f"{PLAN} - changes R-06, R-07 and R-08 against the v1.3 baseline, awaiting signature"),
     ("Schema version specified", "3"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
@@ -135,12 +135,12 @@ r = section(ws, r, "What this document is")
 r = lines(ws, r, [
     "The plan says WHAT the application must do. This says HOW, in enough detail that the code can be written",
     "from it and checked against it. Every section cites the REQ-IDs it implements, and sheet 09 shows the",
-    "reverse: each of the 65 approved requirements mapped to the section that satisfies it.",
+    "reverse: each of the 67 requirements mapped to the section that satisfies it.",
     "",
     "Two things make this specification unusual, and both are deliberate:",
     "",
     "  - The data schema is not described in prose. It already exists as a working file,",
-    "    templates/PRAP_SourceData_Template_v1.3.xlsx, and sheet 03 documents the parse contract against it.",
+    "    templates/PRAP_SourceData_Template_v1.4.xlsx, and sheet 03 documents the parse contract against it.",
     "  - The calculation and validation logic already has a reference implementation in",
     "    tools/verify_source_workbook.py, which runs against the dummy data. Sheet 05 gives the pseudocode;",
     "    that script is the executable check that the pseudocode is right.",
@@ -155,19 +155,27 @@ guide = [
     ("01_Version_History", "Change log."),
     ("02_Scope", "What is specified here, what is deferred to Step 3, and the source documents."),
     ("03_Data_Schema", "The parse contract: every sheet, column, type and coercion rule."),
-    ("04_Validation", "V-01..V-21 with trigger, severity and the exact message shown."),
+    ("04_Validation", "V-01..V-22 with trigger, severity and the exact message shown."),
     ("05_Calculation", "Period derivation, the load formula, aggregation and the two thresholds."),
     ("06_UI_Spec", "The three tabs, their components, filters and states."),
     ("07_Editing_IO", "Edit buffer, dirty state, cascading identifier edits, import and export."),
     ("08_Versioning", "Schema compatibility check and version display."),
-    ("09_Traceability", "All 65 requirements mapped to the section that implements them."),
-    ("10_Open_Points", "Decisions still needed, and assumptions made in their absence."),
+    ("09_Traceability", "All 67 requirements mapped to the section that implements them."),
+    ("10_Open_Points", "The six points raised at the v0.3 review, with the answers given and what changed."),
 ]
 r = table(ws, r, ["Sheet", "Contents"], guide, [24, 86], wrap_cols=(2,))
 
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
-rows = [["0.3", DOC_DATE, "Claude Code", "-",
+rows = [["0.4", DOC_DATE, "Claude Code", "Dan",
+         "Answers to the six open points applied. S2-01 and S2-05: both thresholds stay ABSOLUTE, with the "
+         "under-allocation floor moved 0.80 -> 0.60; the relative-threshold proposal is withdrawn and V-22 added "
+         "to catch a capacity below the floor. S2-04: repeated period names are numbered on screen, 'Conduct (1)' "
+         "and 'Conduct (2)' (REQ-DSH-10). S2-06: target volume re-baselined to 100 projects and 1,000 people, "
+         "which makes table virtualisation and chart aggregation requirements rather than optimisations "
+         "(REQ-DSH-09). S2-02 and S2-03 confirmed as drafted. ProjectPeriod is keyed on project_id + "
+         "period_name + period_start. Written against plan v1.5.", "Draft"],
+        ["0.3", DOC_DATE, "Claude Code", "-",
          "Change R-05: project_type split into 'NewDrug CT' and 'Biosimilar CT'. Parse contract, keys and "
          "schema version updated; RoleFactor and PeriodWeightStandard are now keyed on the type. Sheet 06 "
          "gains the UI changes requested at the Step 3 review: a global filter bar with Reset, per-project "
@@ -189,9 +197,9 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 
 r = section(ws, r, "Source documents")
 src = [
-    [PLAN, "FINAL development plan, approved by Dan 2026-08-01. 65 requirements, 21 validation rules, 11 decisions, source schema version 2.", "Governs this document"],
-    ["templates/PRAP_SourceData_Template_v1.2.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
-    ["templates/PRAP_SourceData_Dummy_v1.4.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
+    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-08 awaiting signature. 67 requirements, 22 validation rules, 11 decisions, source schema version 3.", "Governs this document"],
+    ["templates/PRAP_SourceData_Template_v1.4.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
+    ["templates/PRAP_SourceData_Dummy_v1.5.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
     ["docs/STEP2_OPEN_POINTS.md", "Points raised while building the template.", "Carried into sheet 10"],
 ]
@@ -219,7 +227,7 @@ r = table(ws, r, ["Deferred", "Why"], defer, [56, 76], wrap_cols=(1, 2))
 
 # ---- 03 Data schema -------------------------------------------------------
 ws, r = sheet(wb, "03_Data_Schema", "Data schema - the parse contract",
-              "Documents templates/PRAP_SourceData_Template_v1.2.xlsx. Sheet and column names are matched "
+              "Documents templates/PRAP_SourceData_Template_v1.4.xlsx. Sheet and column names are matched "
               "exactly and case-sensitively.")
 
 r = section(ws, r, "Reading the workbook")
@@ -248,7 +256,7 @@ r = section(ws, r, "Sheets and keys")
 sheets = [
     ["Project", "project_id", "-", "23", "Master."],
     ["Milestone", "project_id + milestone_name + milestone_date", "Project", "6", "milestone_name is NOT unique alone - 'Inspection' repeats (REQ-PRJ-13)."],
-    ["ProjectPeriod", "project_id + period_seq", "Project", "7", "period_name is NOT unique alone - 'Conduct' occurs twice (REQ-CAL-11)."],
+    ["ProjectPeriod", "project_id + period_name + period_start", "Project", "7", "A natural key: period_name alone is not unique, since 'Conduct' occurs twice, but the two differ in start date. period_seq orders them (V-18)."],
     ["PeriodWeightStandard", "project_type + clinical_phase + period_name", "-", "5", "Both trial types, keyed separately (R-05). 'Others' take manual weights (Q-28)."],
     ["RoleFactor", "project_type + role_name", "-", "4", "Keyed on all three types, so NewDrug and Biosimilar can carry different factors (R-05)."],
     ["Person", "person_id", "-", "12", "Master."],
@@ -289,8 +297,8 @@ r = section(ws, r, "Config parameters")
 cfg = [
     ["schema_version", "Integer", "3", "Compared with the version this application expects (sheet 08)."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
-    ["over_allocation_fte", "Decimal", "1.50", "See sheet 05 and open point S2-01."],
-    ["under_allocation_fte", "Decimal", "0.80", "See sheet 05 and open point S2-01."],
+    ["over_allocation_fte", "Decimal", "1.50", "Absolute, not scaled by capacity_fte (S2-01). See sheet 05."],
+    ["under_allocation_fte", "Decimal", "0.60", "Absolute, not scaled by capacity_fte. Moved from 0.80 at S2-05. See sheet 05."],
     ["under_allocation_min_months", "Integer", "3", "Consecutive months before a run is flagged."],
     ["default_horizon_months", "Integer", "24", "Months shown on opening."],
     ["capacity_unit", "List", "FTE", "'FTE' or 'percent'."],
@@ -318,7 +326,7 @@ rules = [
     ["V-00", "Fatal", "A required sheet or column is absent.", "Sheet 'Assignment' not found. The workbook must contain all 10 sheets - download the template to compare."],
     ["V-01", "Error", "Assignment.project_id not found in Project.", "Assignment ASG-014 refers to project PRJ-099, which does not exist."],
     ["V-02", "Error", "Assignment.person_id not found in Person.", "Assignment ASG-014 refers to person PSN-099, which does not exist."],
-    ["V-03", "Error", "Assignment.role_name not in RoleFactor for that project's type.", "Assignment ASG-014: role 'Main staff' is not valid for a Clinical Trial. Valid roles for this type: ..."],
+    ["V-03", "Error", "Assignment.role_name not in RoleFactor for that project's type.", "Assignment ASG-014: role 'Main staff' is not valid for a project of type 'NewDrug CT'. Valid roles for this type: ..."],
     ["V-04", "Warning", "project_category empty on either clinical trial type.", "Project PRJ-003 is a clinical trial with no product category."],
     ["V-05", "Error", "An end date precedes its start date.", "Project PRJ-003: end_date 2026-01-01 is before start_date 2026-06-01."],
     ["V-06", "Error", "Two periods of one project, or two windows of one assignment, overlap.", "Project PRJ-003: periods 3 and 4 overlap between 2027-06-01 and 2027-06-30."],
@@ -333,10 +341,11 @@ rules = [
     ["V-15", "Error", "A period_name not in the set for that project's type.", "Project PRJ-006 is type 'Others' but has a period named 'Conduct'. Valid: Planning, Develop, Close."],
     ["V-16", "Error", "A clinical trial lacking CTA submission or any DB lock.", "Project PRJ-007 has no DB lock milestone, so its periods cannot be derived. Enter them manually or add the milestone."],
     ["V-17", "Error", "An edit would orphan a reference (see sheet 07).", "PSN-001 cannot be deleted: 3 assignments still refer to it."],
-    ["V-18", "Error", "period_seq duplicated within a project.", "Project PRJ-003: period_seq 3 appears twice; the two 'Conduct' stretches cannot be told apart."],
+    ["V-18", "Error", "Within a project, (period_name, period_start) is not unique, or period_seq is duplicated.", "Project PRJ-003: two periods named 'Conduct' both start on 2027-04-01, so they cannot be told apart. period_seq must also be unique - it fixes their order."],
     ["V-19", "Error", "A clinical trial with no clinical_phase, or no PeriodWeightStandard rows for its phase.", "Project PRJ-005 is Phase 3, but PeriodWeightStandard has no Phase 3 rows. Its periods cannot be weighted."],
     ["V-20", "Warning", "A milestone other than 'Inspection' recorded more than once.", "Project PRJ-002 records 'CTA submission' twice. Only 'Inspection' is expected to repeat."],
     ["V-21", "Information", "An 'Inspection' dated on or before the final DB lock.", "Project PRJ-002: 1 inspection on or before the final DB lock is treated as a marker and does not open the final period."],
+    ["V-22", "Warning", "Person.capacity_fte is below config.under_allocation_fte.", "PSN-018: capacity 0.50 FTE is below the under-allocation floor of 0.60, so this person can never clear it however fully they are booked. Lower the floor or raise the capacity."],
 ]
 r = table(ws, r, ["ID", "Severity", "Trigger", "Message shown to the user"],
           rules, [8, 15, 56, 76], wrap_cols=(3, 4))
@@ -422,25 +431,30 @@ agg = [
     ["person_month[s][m]", "sum of load over all assignments held by person s", "Overall tab, table B and the person graph"],
     ["cell[s][p][m]", "the individual load", "Drill-down under a person or project row"],
     ["headcount[p][m]", "count of assignments with load > 0", "Compared with planned_member_count"],
-    ["over[s][m]", "true where person_month > over_threshold(s)", "Red cell, counted in the summary tiles"],
-    ["under_runs[s]", "maximal runs of >= min_months consecutive months where 0 < person_month < under_threshold(s)", "Amber across the run, counted once per run"],
+    ["over[s][m]", "true where person_month > config.over_allocation_fte - the same figure for everyone", "Red cell, counted in the summary tiles"],
+    ["under_runs[s]", "maximal runs of >= min_months consecutive months where 0 < person_month < config.under_allocation_fte", "Amber across the run, counted once per run"],
 ]
 r = table(ws, r, ["Output", "Definition", "Where it surfaces"], agg, [24, 76, 40], wrap_cols=(2, 3))
 
-r = section(ws, r, "Thresholds   [S2-01 - decision pending]")
+r = section(ws, r, "Thresholds   [settled at S2-01 and S2-05]")
 r = lines(ws, r, [
-    "The plan sets an absolute over_allocation_fte of 1.50 and under_allocation_fte of 0.80, while Person",
-    "carries capacity_fte. A part-timer at 0.60 capacity can never reach 0.80, so is flagged permanently.",
-    "This draft therefore specifies the thresholds as RELATIVE to capacity, which leaves a full-time person's",
-    "behaviour identical:",
+    "Both thresholds are ABSOLUTE. They are not scaled by capacity_fte.",
 ])
 r = code(ws, r, [
-    "  over_threshold(s)  = config.over_allocation_fte  x person(s).capacity_fte",
-    "  under_threshold(s) = config.under_allocation_fte x person(s).capacity_fte",
-    "  capacity_fte missing or zero -> treat as 1.00",
+    "  over  when  person_month > config.over_allocation_fte    (1.50)",
+    "  under when  person_month < config.under_allocation_fte   (0.60)",
 ])
-r = note(ws, r, "If S2-01 is decided the other way, delete the multiplication - nothing else changes. "
-                "The assumption is recorded on sheet 10.")
+r = lines(ws, r, [
+    "The v0.3 draft proposed scaling both by capacity, because a part-timer at 0.60 could never reach an",
+    "absolute 0.80 floor and so was flagged permanently. The review kept the thresholds absolute but moved",
+    "the floor to 0.60, which resolves the same defect a different way - every capacity in the data can now",
+    "clear it:",
+])
+r = table(ws, r, ["capacity_fte", "utilisation needed to clear the 0.60 floor"],
+          [["1.00", "60%"], ["0.80", "75%"], ["0.60", "100%"]], [16, 46])
+r = note(ws, r, "The risk returns only for a capacity BELOW the floor, which V-22 warns about on import. "
+                "Nothing else in the calculation depends on capacity_fte, so it is now used for display "
+                "and for that one check rather than in the arithmetic.")
 r += 1
 
 r = section(ws, r, "Under-allocation runs")
@@ -468,7 +482,7 @@ ex = [
 ]
 r = table(ws, r, ["Element", "Value", "Note"], ex, [22, 62, 44], wrap_cols=(2, 3))
 r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workbook.py against "
-                "PRAP_SourceData_Dummy_v1.4.xlsx must give no errors and no warnings, across 62 projects, "
+                "PRAP_SourceData_Dummy_v1.5.xlsx must give no errors and no warnings, across 62 projects, "
                 "20 people, 289 assignments and 308 periods spanning 73 months. Every period set must be "
                 "contiguous, 30 trials must show two 'Conduct' stretches, and 12 must carry the seventh "
                 "period. Those figures are the regression baseline for Step 4.")
@@ -495,7 +509,7 @@ ov = [
     ["Table A - by project", "Rows projects, columns months, cells FTE. Row and column totals. A project row expands to its people.", "REQ-DSH-01"],
     ["Table B - by person", "Rows people, columns months, cells FTE summed across projects. Over-allocated cells red, under-allocation runs amber. A person row expands to their projects.", "REQ-DSH-01, REQ-DSH-08"],
     ["Graph 1", "Stacked bar: total monthly demand, ONE BAND PER PROJECT, ordered by total resource with the largest on the baseline. 'Others' projects are grey; trials take the extended colour set.", "REQ-DSH-02"],
-    ["Graph 2", "Grouped bar: monthly FTE per person, with reference lines at each person's over and under thresholds.", "REQ-DSH-02, REQ-DSH-08"],
+    ["Graph 2", "Monthly FTE per person, with reference lines at the two thresholds - one pair of lines, since both are absolute. Above the bar budget it shows a ranked subset with the rest rolled into one 'others' band, and says which it is showing.", "REQ-DSH-02, REQ-DSH-08, REQ-DSH-09"],
     ["Graph 3", "Timeline per project across the horizon: period bands shaded by weight, milestone markers, repeated 'Inspection' markers shown individually.", "REQ-DSH-02, REQ-PRJ-05"],
     ["Summary tiles", "Active projects; people assigned; total FTE in the horizon; over-allocated person-months; under-allocation runs.", "REQ-DSH-08"],
     ["Reset filters", "Clears every filter and restores the default 24-month horizon in one action.", "REQ-DSH-05"],
@@ -503,16 +517,40 @@ ov = [
     ["Row expansion - project", "Clicking a project name reveals one row per person and role on it, each with its own monthly figures. Clicking again collapses.", "REQ-DSH-01"],
     ["Row expansion - person", "Clicking a person name reveals one row per project and role they hold, ordered NewDrug CT, Biosimilar CT, Others, then earliest project first.", "REQ-DSH-01"],
     ["Type and phase pills", "Project type and clinical phase shown as labelled pills. The text carries the meaning; the colour only speeds recognition.", "REQ-PRJ-01, REQ-PRJ-09"],
+    ["Repeated period labels", "A period name occurring more than once in a project is labelled with its occurrence number - 'Conduct (1)', 'Conduct (2)' - everywhere it is named: timeline bands, tooltips, the period sub-table and any export. A name occurring once is never numbered.", "REQ-DSH-10"],
+    ["Row virtualisation", "Both tables render only the rows inside the viewport plus a small overscan, with row height fixed so the scrollbar stays truthful. Sorting, filtering and totals run over the whole model, never over the rendered slice.", "REQ-DSH-09, REQ-NFR-03"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], ov, [24, 90, 20], wrap_cols=(2,))
 r = note(ws, r, "Both tables are the same numbers aggregated differently, so they must always reconcile: the grand "
                 "total of table A equals that of table B. Worth asserting in code, not just hoping.")
 
+r = section(ws, r, "Rendering at the target volume   [S2-06, REQ-DSH-09, REQ-NFR-03]")
+r = lines(ws, r, [
+    "REQ-NFR-03 now reads 100 projects and 1,000 people over a 60-month horizon. That is a different rendering",
+    "problem from the 62 projects the prototype was drawn against, and it changes two components from",
+    "'could be optimised later' to 'cannot be built the obvious way':",
+])
+scale = [
+    ["Person table", "1,000 rows x 60 months = 60,000 cells, plus the same again on expansion.",
+     "Virtualise: render the visible window plus overscan. A 60,000-node table is seconds of layout on every filter change."],
+    ["Person chart", "1,000 bars across a 1,200px panel is 1.2px each - narrower than the gap between them.",
+     "Aggregate. Show a ranked subset (default: the 20 most loaded) with the remainder as one band, and name what is shown."],
+    ["Project chart", "100 stacked bands per month, against 8 hues that can be told apart.",
+     "Unchanged from decision D-11: identity comes from legend order and tooltip, not hue. The band order is already by total resource."],
+    ["Calculation", "100 x 1,000 x 60 is bounded by assignments, order 8,000, so about 480,000 month-rows worst case.",
+     "Compute once per import or edit into typed arrays keyed by month index; never recompute inside a render."],
+]
+r = table(ws, r, ["Component", "What the volume implies", "What the specification requires"],
+          scale, [20, 54, 60], wrap_cols=(2, 3))
+r = note(ws, r, "The working figure in REQ-NFR-03 is an upper bound to design against, not the expected daily "
+                "dataset. The point is that nothing in the design may assume the small case - a table that is "
+                "fast at 20 rows and unusable at 1,000 fails the requirement.")
+
 r = section(ws, r, "Tab 2 - Source data (project)")
 t2 = [
     ["Project table", "All 23 Project columns, sortable and filterable, total_period_months recomputed. Editable.", "REQ-DSH-03, REQ-IMP-07"],
     ["Milestone sub-table", "Milestones of the selected project in date order. 'Inspection' may appear several times.", "REQ-PRJ-05, REQ-PRJ-13"],
-    ["Period sub-table", "Derived periods with seq, dates and weight. Shows whether each date was derived or hand-set.", "REQ-PRJ-06, REQ-CAL-09"],
+    ["Period sub-table", "Derived periods with seq, dates and weight, in seq order. A repeated period name is numbered - 'Conduct (1)', 'Conduct (2)'. Shows whether each date was derived or hand-set.", "REQ-PRJ-06, REQ-CAL-09, REQ-DSH-10"],
     ["Recompute periods", "Re-derives from current milestones, warning that hand-set dates will be replaced.", "decision C-10"],
     ["Export", "Visible table to .xlsx.", "REQ-DSH-06"],
 ]
@@ -523,7 +561,7 @@ t3 = [
     ["Person table", "All 12 Person columns, sortable and filterable. Editable.", "REQ-DSH-04, REQ-IMP-07"],
     ["Assignment sub-table", "The selected person's assignments: project, role, dates, person_weight.", "REQ-PSN-02, REQ-PSN-03"],
     ["Override sub-table", "PersonPeriodWeight windows for the selected assignment.", "REQ-PSN-05"],
-    ["Utilisation strip", "The person's monthly FTE across the horizon with both thresholds marked.", "REQ-DSH-08"],
+    ["Utilisation strip", "The person's monthly FTE across the horizon with both absolute thresholds marked, and capacity_fte shown alongside for context.", "REQ-DSH-08"],
     ["Export", "Visible table to .xlsx.", "REQ-DSH-06"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t3, [24, 90, 20], wrap_cols=(2,))
@@ -621,31 +659,49 @@ r = note(ws, r, f"{len(trace)} requirements, all mapped. Regenerated from the pl
                 f"added there appears here automatically rather than being remembered.")
 
 # ---- 10 Open points -------------------------------------------------------
-ws, r = sheet(wb, "10_Open_Points", "Open points",
-              "Decisions still needed. Each says what this draft assumes in the meantime, "
-              "so nothing is blocked. Please answer in the YELLOW cells.")
+ws, r = sheet(wb, "10_Open_Points", "Open points - all answered at the v0.3 review",
+              "The six points raised in v0.3, the answer given on 2026-08-01, and what changed in this "
+              "document as a result. No point remains open.")
 op = [
-    ["S2-01", "Calculation", "The under-allocation threshold is an absolute 0.80 FTE while Person.capacity_fte allows a part-timer at 0.60, who can therefore never clear it and is flagged permanently. Should both thresholds be relative to capacity_fte?",
-     "This draft specifies them as RELATIVE (sheet 05). A full-time person behaves identically; only part-timers change.", ""],
-    ["S2-02", "Data model", "period_name and role_name cannot carry an Excel dropdown, because the valid list depends on the project's type.",
-     "Enforced at import and edit by V-15 and V-03 instead. No action needed unless you want dependent dropdowns building.", ""],
-    ["S2-03", "Data model", "Adding a value to a list means inserting a row inside that list's block on the Lists sheet, since dropdowns bind to a contiguous range.",
-     "Documented in the template README. One list per column would be more robust but is a schema change.", ""],
-    ["S2-04", "UI", "Should the two 'Conduct' stretches of one project be distinguishable on screen, or shown as one Conduct total?",
-     "This draft shows them as separate bands on the timeline graph but sums them in the tables.", ""],
-    ["S2-05", "Calculation", "A month with zero load breaks an under-allocation run rather than continuing it - somebody with no assignments at all is not 'under-allocated', they are unassigned.",
-     "Specified that way on sheet 05. Say so if a gap should instead continue the run.", ""],
-    ["S2-06", "Non-functional", "The dummy dataset now holds 62 projects and 289 assignments, above REQ-NFR-03's headroom figure of 50 projects and 500 assignments. The requirement's working-volume figure (20 projects, 30 people) is well below what the dataset represents.",
-     "Treated as a deliberate stress fixture, not a change to REQ-NFR-03. If 50+ trials is the real working volume rather than an upper bound, the requirement should be re-baselined at Step 4 rather than left understating it.", ""],
+    ["S2-01", "Calculation",
+     "The under-allocation threshold is an absolute 0.80 FTE while Person.capacity_fte allows a part-timer at 0.60, who can therefore never clear it and is flagged permanently. Should both thresholds be relative to capacity_fte?",
+     "No, both thresholds (alerting over work-load, and under work-load) not to be relative to capacity_fte.",
+     "Answered - draft overturned. The relative-threshold proposal is withdrawn; sheet 05 now specifies both thresholds as absolute, and capacity_fte no longer appears in the arithmetic. The part-timer defect this point raised is instead resolved by S2-05, and V-22 (new) warns on import about the one case that remains - a capacity below the floor. Plan change R-07.",
+     "Closed"],
+    ["S2-02", "Data model",
+     "period_name and role_name cannot carry an Excel dropdown, because the valid list depends on the project's type.",
+     "No need to carry out the dropdown list to period_name and role_name.",
+     "Answered - draft confirmed. No dependent dropdowns are built. V-15 and V-03 remain the enforcement, at import and at edit. No change to this document.",
+     "Closed"],
+    ["S2-03", "Data model",
+     "Adding a value to a list means inserting a row inside that list's block on the Lists sheet, since dropdowns bind to a contiguous range.",
+     "Keep current setting.",
+     "Answered - draft confirmed. The Lists sheet keeps its long format with contiguous blocks, documented in the template README. No change to this document.",
+     "Closed"],
+    ["S2-04", "UI",
+     "Should the two 'Conduct' stretches of one project be distinguishable on screen, or shown as one Conduct total?",
+     "The two 'Conduct' stretches needs to be distinguishable on screen.",
+     "Answered - draft extended. They were already separate bands on the timeline but summed in the tables, which is not 'distinguishable'. Sheet 06 now numbers any repeated period name wherever it is named - 'Conduct (1)', 'Conduct (2)' - in bands, tooltips, the period sub-table and exports. New REQ-DSH-10; plan change R-08.",
+     "Closed"],
+    ["S2-05", "Calculation",
+     "A month with zero load breaks an under-allocation run rather than continuing it - somebody with no assignments at all is not 'under-allocated', they are unassigned.",
+     "The person who has under 0.6 FTE should be considered an under-allocated person.",
+     "Answered - the zero-breaks-the-run rule stands as drafted, and the floor moves from 0.80 to 0.60 FTE in Config and in the template and dummy workbooks. At 0.60 every capacity in the data can clear the floor (1.00 needs 60% utilisation, 0.80 needs 75%, 0.60 needs 100%), which is what settles S2-01. Plan change R-07.",
+     "Closed"],
+    ["S2-06", "Non-functional",
+     "The dummy dataset now holds 62 projects and 289 assignments, above REQ-NFR-03's headroom figure of 50 projects and 500 assignments. The requirement's working-volume figure (20 projects, 30 people) is well below what the dataset represents.",
+     "Change the requirement: 100 projects, 1,000 people.",
+     "Answered - requirement re-baselined, and raised from Should to Must. REQ-NFR-03 now reads 100 projects and 1,000 people over 60 months (order 8,000 assignments). At that volume the person table is 60,000 cells and the person chart 1,000 bars, so virtualisation and chart aggregation stop being optimisations - see the new section on sheet 06 and REQ-DSH-09. Plan change R-06.",
+     "Closed"],
 ]
-r_start = r
-r = table(ws, r, ["ID", "Topic", "Question", "What this draft assumes", "Your answer"],
-          op, [8, 14, 62, 52, 36], wrap_cols=(3, 4, 5))
-for rr in range(r_start + 1, r_start + 1 + len(op)):
-    c = ws.cell(row=rr, column=5)
-    c.fill, c.border = INPUT_FILL, BOX
-r = note(ws, r, "None of these blocks Step 3. Each changes a single rule that the application reads as data or "
-                "applies in one place.")
+r = table(ws, r, ["ID", "Topic", "Question as raised in v0.3", "Answer (Dan, 2026-08-01)", "What changed in v0.4", "State"],
+          op, [8, 14, 56, 42, 62, 9], wrap_cols=(3, 4, 5))
+r = note(ws, r, "Two of the six were confirmed as drafted, three changed a rule the application reads as data, and "
+                "one (S2-06) changed what the design has to survive. Only the last has architectural weight, which "
+                "is why it produced a requirement rather than a configuration value.")
+r += 1
+r = note(ws, r, "Nothing in this document is now waiting on an answer. What it is waiting on is signature of plan "
+                "v1.5, which carries the three changes these answers produced.")
 
 wb.save(OUT)
 print(f"Written: {OUT}  ({len(trace)} requirements traced)")

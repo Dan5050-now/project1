@@ -186,6 +186,15 @@ def main(path):
             load[(a["person_id"], y, m)] += v
             horizon.add((y, m))
 
+    # V-22: an absolute floor is only meaningful if everyone can reach it
+    _floor = float(CFG["under_allocation_fte"])
+    for sid, per in PSN.items():
+        cap = per.get("capacity_fte")
+        if cap is not None and float(cap) < _floor:
+            warnings.append(f"V-22 {sid}: capacity {float(cap):.2f} FTE is below the "
+                            f"under-allocation floor of {_floor:.2f}, so this person can never "
+                            f"clear it however fully they are booked")
+
     over_fte = float(CFG["over_allocation_fte"])
     under_fte = float(CFG["under_allocation_fte"])
     min_months = int(CFG["under_allocation_min_months"])

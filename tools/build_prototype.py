@@ -7,7 +7,7 @@ information hierarchy before any application code is written (plan sheet 08, tas
 
     python tools/build_prototype.py
 
-Output: app/PRAP_Prototype_v0.1.html
+Output: app/PRAP_Prototype_v0.3.html
 """
 
 import calendar
@@ -18,10 +18,10 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.4.xlsx"
-OUT = ROOT / "app" / "PRAP_Prototype_v0.2.html"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.5.xlsx"
+OUT = ROOT / "app" / "PRAP_Prototype_v0.3.html"
 
-APP_VERSION = "prototype v0.2"
+APP_VERSION = "prototype v0.3"
 SCHEMA_EXPECTED = 3
 WIN_FROM, WIN_TO = (2027, 1), (2027, 12)      # the 12 months the mock-up shows
 
@@ -138,6 +138,26 @@ CT = None  # set after snapshot
 
 def is_ct(pid):
     return S["P"][pid]["project_type"] in S["CT"]
+
+
+# REQ-DSH-10: 'Conduct' occurs twice in a trial with an interim DB lock, so the bare
+# name is ambiguous wherever it is shown. Number the occurrences - but only when there
+# is more than one, since 'Start-up (1)' would be noise.
+_PLABEL = {}
+for _pid, _segs in S["PER"].items():
+    _segs = sorted(_segs, key=lambda r: r["period_seq"])
+    _n = defaultdict(int)
+    for _s in _segs:
+        _n[_s["period_name"]] += 1
+    _seen = defaultdict(int)
+    for _s in _segs:
+        _nm = _s["period_name"]
+        _seen[_nm] += 1
+        _PLABEL[(_pid, _s["period_seq"])] = (f"{_nm} ({_seen[_nm]})" if _n[_nm] > 1 else _nm)
+
+
+def period_label(pid, seg):
+    return _PLABEL[(pid, seg["period_seq"])]
 
 
 def prank(pid):
@@ -334,7 +354,7 @@ def chart_gantt():
             step = SEQ[3 + min(7, int((s["weight"] / wmax) * 7))]
             out.append(f'<rect x="{x0:.1f}" y="{y + 4}" width="{max(1.5, x1 - x0 - 2):.1f}" '
                        f'height="{rowh - 10}" fill="{step}" rx="2">'
-                       f'<title>{esc(s["period_name"])} · weight {s["weight"]:.2f} · '
+                       f'<title>{esc(period_label(p, s))} · weight {s["weight"]:.2f} · '
                        f'{d(s["period_start"])} to {d(s["period_end"])}</title></rect>')
         for ms in S["MS"][p]:
             x = pad_l + (d(ms["milestone_date"]) - lo).days / span * (W - pad_l - 14)
@@ -493,7 +513,14 @@ def tiles():
 
 # ---------------------------------------------------------------- source tabs
 def project_tab():
-    pid = S["top"][0]
+    # Prefer an example that actually exercises REQ-DSH-10: a caption promising numbered
+    # period names against a project that has none leaves the reviewer nothing to check.
+    # The pick stays inside the nine rows listed above, so the sub-tables still describe
+    # a project the reader can see.
+    listed = S["top"][:9]
+    pid = next((q for q in listed
+                if len({s["period_name"] for s in S["PER"][q]}) < len(S["PER"][q])),
+               listed[0])
     pr = S["P"][pid]
     cols = ["project_id", "project_name", "project_type", "project_category", "clinical_phase",
             "outsourcing_type", "EDC_setup", "EDC_system", "planned_member_count",
@@ -514,7 +541,7 @@ def project_tab():
         f'<td>{m["milestone_seq"]}</td><td class="muted">{esc(m.get("note_1") or "—")}</td></tr>'
         for m in sorted(S["MS"][pid], key=lambda r: d(r["milestone_date"])))
     prows = "".join(
-        f'<tr><td>{p["period_seq"]}</td><td>{esc(p["period_name"])}</td>'
+        f'<tr><td>{p["period_seq"]}</td><td>{esc(period_label(pid, p))}</td>'
         f'<td>{d(p["period_start"])}</td><td>{d(p["period_end"])}</td>'
         f'<td>{p["weight"]:.2f}</td><td class="muted">{esc(p.get("note_1") or "—")}</td></tr>'
         for p in sorted(S["PER"][pid], key=lambda r: r["period_seq"]))
@@ -834,8 +861,8 @@ nothing on this page loads, calculates or exports.</div>
 
   <div class="panel">
     <h2>Mean load per person</h2>
-    <p class="cap">Averaged over the window, against each threshold. Bars that breach are
-      labelled with their value, so the flag never rests on colour alone.</p>
+    <p class="cap">Averaged over the window, against the two absolute thresholds. Bars that
+      breach are labelled with their value, so the flag never rests on colour alone.</p>
     <div class="scrollx">{chart_people()}</div>
   </div>
 
@@ -852,7 +879,8 @@ nothing on this page loads, calculates or exports.</div>
   <div class="panel">
     <h2>Project timeline</h2>
     <p class="cap">Period bands shaded by weight. Trials with an interim DB lock show two
-      Conduct stretches; a post-lock Inspection opens the final band.</p>
+      Conduct stretches, numbered <em>Conduct (1)</em> and <em>Conduct (2)</em> in the
+      tooltip and the period table; a post-lock Inspection opens the final band.</p>
     <div class="scrollx">{chart_gantt()}</div>
   </div>
 </section>
@@ -874,7 +902,8 @@ nothing on this page loads, calculates or exports.</div>
     </div>
     <div class="panel">
       <h2>Periods — {esc(PROJ['project_name'])}</h2>
-      <p class="cap">Derived from the milestones above.
+      <p class="cap">Derived from the milestones above. A period name that occurs more
+        than once carries its occurrence number.
         <button class="btn">Recompute periods</button></p>
       <table class="data-t"><thead><tr><th>seq</th><th>period</th><th>start</th><th>end</th>
         <th>weight</th><th>note_1</th></tr></thead><tbody>{PROWS}</tbody></table>
@@ -891,7 +920,8 @@ nothing on this page loads, calculates or exports.</div>
   </div>
   <div class="panel">
     <h2>Utilisation — {esc(PERS['person_name'])} ({SPID})</h2>
-    <p class="cap">Monthly load across the window. Dashed lines are this person\u2019s ceiling and floor.</p>
+    <p class="cap">Monthly load across the window. Dashed lines are the ceiling and floor \u2014
+      the same two figures for everyone, since both thresholds are absolute.</p>
     <div class="scrollx">{STRIP}</div>
   </div>
   <div class="two">

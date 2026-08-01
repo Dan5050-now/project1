@@ -29,8 +29,8 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 SCHEMA_VERSION = 3
-TEMPLATE_VERSION = "1.3"
-DUMMY_VERSION = "1.4"
+TEMPLATE_VERSION = "1.4"
+DUMMY_VERSION = "1.5"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -79,8 +79,8 @@ LISTS = [
 CONFIG = [
     ("schema_version", SCHEMA_VERSION, "Structure version of this workbook. The application warns on a mismatch."),
     ("fte_hours_per_month", 160, "Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month."),
-    ("over_allocation_fte", 1.50, "A person-month total above this is flagged as over-allocated."),
-    ("under_allocation_fte", 0.80, "A person-month total below this counts toward an under-allocated run."),
+    ("over_allocation_fte", 1.50, "A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01)."),
+    ("under_allocation_fte", 0.60, "A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01)."),
     ("under_allocation_min_months", 3, "Consecutive months below the threshold before a run is flagged."),
     ("default_horizon_months", 24, "Months shown when the dashboard opens."),
     ("capacity_unit", "FTE", "Display unit: 'FTE' or 'percent'."),
@@ -619,9 +619,9 @@ def add_readme(wb, kind):
             "     period, 'After Close-out (final)'.",
             "   - The 12 'Others' projects have hand-entered periods and no milestones.",
             "   - PSN-001 is pushed above the 1.50 FTE ceiling for a stretch in 2026-27.",
-            "   - PSN-020 is a part-timer carrying one light assignment, so an under-allocation run",
-            "     is raised on someone who cannot reach an absolute 0.80 FTE floor - the case behind",
-            "     open point S2-01 in the programming specification.",
+            "   - PSN-020 is a part-timer (0.60 FTE) carrying one light assignment, so an under-allocation run",
+            "     is raised. With the floor now at 0.60 (S2-05) they CAN clear it, but only at full",
+            "     utilisation - V-22 warns if anyone is recorded below the floor and so could never clear it.",
             "   - Two assignments carry PersonPeriodWeight overrides.",
             "",
             "   Typical load is around 0.93 FTE per person-month (median). Months at the very start",

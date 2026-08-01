@@ -14,10 +14,10 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v1.4.xlsx"
-SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v0.3.xlsx"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.3.xlsx"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.4.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v1.5.xlsx"
+SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v0.4.xlsx"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.4.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.5.xlsx"
 
 problems, notes = [], []
 
@@ -135,6 +135,25 @@ for label, path in (("plan", PLAN), ("specification", SPEC),
             elif v.startswith("=") and not v[1:2].isalpha():
                 problems.append(f"{label} {sh}!{c.coordinate}: text starting with '=' will "
                                 f"be read as a formula - {v[:60]}")
+
+# ---- 4c. the spec's Config defaults vs the template's actual values -------
+# The thresholds live in the workbook as data, and the specification quotes them.
+# A threshold changed in one place and not the other is the kind of drift that
+# survives review, because both documents read correctly on their own.
+tpl_cfg = {r[0]: r[1] for r in tpl["Config"].iter_rows(min_row=2, values_only=True) if r[0]}
+sch = spec["03_Data_Schema"]
+for row in sch.iter_rows(values_only=True):
+    name = row[0]
+    if not isinstance(name, str) or name not in tpl_cfg or len(row) < 3:
+        continue
+    documented_default, actual = str(row[2]).strip(), tpl_cfg[name]
+    try:
+        same = float(documented_default) == float(actual)
+    except (TypeError, ValueError):
+        same = documented_default == str(actual).strip()
+    if not same:
+        problems.append(f"specification documents Config.{name} default {documented_default}, "
+                        f"template holds {actual}")
 
 # ---- 5. every requirement in the plan is traced in the specification ------
 plan_reqs = {str(plan["03_Requirements"].cell(r, 1).value).strip()

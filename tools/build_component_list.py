@@ -12,7 +12,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "0.2"
+VERSION = "0.3"
 DATE = "2026-08-01"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
@@ -63,9 +63,9 @@ ws["A1"].font = TITLE_F
 ws["A2"] = "Step 3, task 3.1 — high-level design for review"
 ws["A2"].font = NOTE_F
 meta = [("Version", f"v{VERSION}"), ("Date", DATE), ("Author", "Claude Code"),
-        ("Prototype", "app/PRAP_Prototype_v0.2.html"),
-        ("Governing plan", "PRAP_Development_Plan_v1.4.xlsx (change R-05, awaiting approval)"),
-        ("Specification", "PRAP_Programming_Specification_v0.3.xlsx (draft)")]
+        ("Prototype", "app/PRAP_Prototype_v0.3.html"),
+        ("Governing plan", "PRAP_Development_Plan_v1.5.xlsx (changes R-05..R-08, awaiting signature)"),
+        ("Specification", "PRAP_Programming_Specification_v0.4.xlsx (draft)")]
 r = 4
 for k, v in meta:
     ws.cell(r, 1, k).font = BOLD_F
@@ -102,7 +102,7 @@ ws = wb.create_sheet("01_Components")
 ws.sheet_view.showGridLines = False
 ws["A1"] = "Component list"
 ws["A1"].font = TITLE_F
-ws["A2"] = "36 components across the three tabs. Mark each one in the Decision column."
+ws["A2"] = "38 components across the three tabs. Mark each one in the Decision column."
 ws["A2"].font = NOTE_F
 ws.freeze_panes = "A5"
 
@@ -126,7 +126,7 @@ C = [
     ("O-06", "Overall", "Demand chart", "Stacked monthly demand, ONE BAND PER PROJECT, largest on the baseline. 'Others' grey, trials coloured - see D-01.", "REQ-DSH-02"),
     ("O-07", "Overall", "Resource by project (table)", "Project x month heatmap. Sorted NewDrug CT, Biosimilar CT, Others, then earliest first.", "REQ-DSH-01"),
     ("O-07b", "Overall", "Project row expansion", "Clicking a project name reveals a row per person and role, each with its own monthly figures.", "REQ-DSH-01"),
-    ("O-08", "Overall", "Mean load per person (chart)", "One bar per person against both thresholds; breaching bars labelled.", "REQ-DSH-02, REQ-DSH-08"),
+    ("O-08", "Overall", "Mean load per person (chart)", "One bar per person against both thresholds - one pair of lines, since both are absolute. Above the bar budget it shows a ranked subset and rolls the rest into one band, naming what is shown.", "REQ-DSH-02, REQ-DSH-08, REQ-DSH-09"),
     ("O-09", "Overall", "Resource by person (table)", "Person x month, summed across projects, over/under flagged.", "REQ-DSH-01, REQ-DSH-08"),
     ("O-09b", "Overall", "Person row expansion", "Clicking a person name reveals a row per project and role, in the same type-then-date order.", "REQ-DSH-01"),
     ("O-10", "Overall", "Project timeline (Gantt)", "Period bands shaded by weight, milestone and inspection markers.", "REQ-DSH-02, REQ-PRJ-05"),
@@ -148,6 +148,8 @@ C = [
     ("E-03", "Editing", "Delete guard", "Refuses to delete a row that is still referenced, naming what points at it.", "V-17"),
     ("X-01", "Layout", "Horizontal scroll regions", "Every chart and table scrolls inside its own panel, so the page body never scrolls sideways.", "REQ-NFR-02"),
     ("X-02", "Layout", "Type and phase pills", "Project type and clinical phase as labelled pills; text carries the meaning, colour only speeds recognition.", "REQ-PRJ-01, REQ-PRJ-09"),
+    ("X-03", "Layout", "Numbered repeated periods", "A period name occurring more than once in a project carries its occurrence number wherever it is shown - 'Conduct (1)', 'Conduct (2)' - in timeline bands, tooltips, the period sub-table and exports. A name occurring once is never numbered.", "REQ-DSH-10"),
+    ("X-04", "Layout", "Row virtualisation", "Both Overall tables render only the rows in the viewport plus overscan, at fixed row height so the scrollbar stays truthful. Sorting, filtering and totals always run over the whole model, never the rendered slice.", "REQ-DSH-09, REQ-NFR-03"),
 ]
 rows = [list(c) + ["", ""] for c in C]
 r = table(ws, 4, ["ID", "Area", "Component", "What it does", "REQ-IDs", "Decision", "Your comment"],
@@ -221,6 +223,19 @@ D = [
     ("D-10", "The page is one scrolling column per tab, not a fixed dashboard grid.",
      "It prints, it works on a laptop screen, and it needs no layout engine. A fixed grid would look denser on a "
      "large monitor at the cost of both.", "A fixed multi-pane grid with independent scroll regions."),
+    ("D-14", "At the new target volume the person chart shows the 20 most loaded people, not all 1,000.",
+     "REQ-NFR-03 now reads 1,000 people (S2-06). A thousand bars across a 1,200px panel is 1.2px each - narrower "
+     "than the gap between them, so the chart would render but say nothing. The subset is ranked by load, the "
+     "remainder is drawn as one band, and the chart states which it is showing rather than quietly truncating. "
+     "20 is a starting figure, not a derived one.",
+     "A different cut-off; or only the people who breach a threshold; or a scrollable chart at a fixed bar width."),
+    ("D-15", "Repeated period names are numbered by occurrence, not renamed.",
+     "S2-04 asked for the two 'Conduct' stretches to be distinguishable. Numbering them - 'Conduct (1)', "
+     "'Conduct (2)' - keeps the source data untouched, since the number is derived from period_seq at display "
+     "time. Renaming them in the workbook would break the PeriodWeightStandard lookup, which is keyed on the "
+     "period name.",
+     "Label them by what separates them instead - 'Conduct (pre-interim)' and 'Conduct (post-interim)' - which "
+     "reads better but only works for this one split."),
 ]
 rows = [list(d) + ["", ""] for d in D]
 r = table(ws, 4, ["ID", "Decision", "Why", "The alternative, if you want it", "Decision", "Your comment"],
