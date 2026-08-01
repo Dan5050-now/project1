@@ -18,7 +18,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 DOC_VERSION = "1.2"
-DOC_STATUS = "Change against approved baseline v1.0 - R-03 confirmed, ready for approval"
+DOC_STATUS = "APPROVED BASELINE - approved by Dan 2026-08-01, supersedes v1.0"
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -157,16 +157,16 @@ ws["A2"].font = Font(name=FONT, size=14, color=NAVY)
 
 cover = [
     ("Document ID", "PRAP-PLAN-001"),
-    ("Document type", "Development plan (Step 1 deliverable) - change against the v1.0 baseline"),
+    ("Document type", "Development plan (Step 1 deliverable) - approved baseline"),
     ("Version", f"v{DOC_VERSION}"),
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Reviewer", "Requester - four review rounds: v0.11, v0.2, v0.3, v0.4 reviewed"),
-    ("Baseline", "v1.0, approved by Dan 2026-08-01 (Gate 1)"),
+    ("Approved by", "Dan, 2026-08-01 - this issue is now the baseline"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
-    ("Supersedes", "v1.1 (draft, never approved). v1.0 remains the approved baseline until this issue is approved"),
+    ("Supersedes", "v1.0 (approved 2026-08-01) and v1.1 (draft)"),
 ]
 r = 4
 for k, v in cover:
@@ -204,9 +204,8 @@ r = lines(ws, r, [
     "lock are therefore treated as markers inside the existing periods, and only later inspection activity",
     "opens period 7. Raised as R-03 and CONFIRMED by the reviewer at the v1.1 review.",
     "",
-    "Nothing in this document is open. Five review rounds produced 28 questions and 3 change requests; all",
-    "31 are answered and applied. The only outstanding item is the approval signature on sheet 12 for this",
-    "change against the v1.0 baseline.",
+    "APPROVED by Dan on 2026-08-01. This issue is the baseline, superseding v1.0. Five review rounds",
+    "produced 28 questions and 3 change requests; all 31 are answered and applied, and Step 1 is closed.",
 ])
 r += 1
 r = section(ws, r, "The plan in one page")
@@ -326,8 +325,8 @@ rows = [
     ["1.2", DOC_DATE, "Claude Code", "Pending",
      "R-03 confirmed and closed. No content change beyond recording it: the derivation, requirements and "
      "validation rules are as issued at v1.1. Every question and change request raised across five review "
-     "rounds is now settled, and the only outstanding item is the approval signature for this change.",
-     "For approval"],
+     "rounds is now settled.",
+     "APPROVED 2026-08-01 by Dan - baseline"],
 ]
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary of change", "Status"],
           rows, [10, 12, 15, 14, 92, 16], wrap_cols=(5,))
@@ -959,7 +958,8 @@ wbs = [
     ["1", "1.10", "Apply the post-approval change request (Inspection milestone, seventh period).", "PRAP_Development_Plan_v1.1.xlsx", "Complete"],
     ["1", "1.11", "Confirm R-03.", "v1.1_reviewed mark-up", "Complete"],
     ["1", "1.12", "Record R-03 as closed and re-issue for approval.", "PRAP_Development_Plan_v1.2.xlsx", "Complete - issued for review"],
-    ["1", "1.13", "Approve plan v1.2 as a change against the v1.0 baseline.", "Approval on 12_Review_Log", "Pending you"],
+    ["1", "1.13", "Approve plan v1.2 as a change against the v1.0 baseline.", "Approval on 12_Review_Log", "Complete"],
+    ["1", "G1b", "GATE 1 RE-CONFIRMED - plan v1.2 approved by Dan, 2026-08-01. Step 1 closed.", "Approval recorded on 12_Review_Log", "Complete"],
     ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
     ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template + _Dummy v1.1", "Complete - issued for review"],
@@ -1050,7 +1050,7 @@ align = [
     ["v0.4", "-", "-", "1 (draft)", "2026-07-31", "Round 3 incorporated; period model settled and verified"],
     ["v1.0", "-", "-", "1", "2026-07-31", "Step 1 baseline. APPROVED 2026-08-01 by Dan (Gate 1)."],
     ["v1.1", "-", "-", "1", "2026-08-01", "Change against baseline: Inspection milestone, seventh period. Superseded."],
-    ["v1.2", "-", "-", "1", DOC_DATE, "R-03 confirmed. Awaiting the approval signature."],
+    ["v1.2", "-", "-", "1", DOC_DATE, "APPROVED 2026-08-01 by Dan. Current baseline. Step 1 closed."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1264,19 +1264,18 @@ r = section(ws, r, "Approval - Gate 1")
 appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
          "APPROVED. Finalise plan v1.0 and proceed to Step 2, beginning with generation of the workbook "
          "template and a dummy data file for review."],
-        ["PRAP Development Plan v1.2", "", "",
-         "Pending your signature. Change against the v1.0 baseline: R-01, R-02 and R-03 all applied and "
-         "confirmed. Nothing outstanding in the document itself."]]
+        ["PRAP Development Plan v1.2", "Dan", "2026-08-01",
+         "APPROVED. Finalise plan v1.2 and continue Step 2. This issue supersedes v1.0 as the baseline; "
+         "R-01, R-02 and R-03 are part of it."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 16, 14, 88], wrap_cols=(4,))
 for cc in (1, 2, 3, 4):
     ws.cell(row=r_start2 + 1, column=cc).fill = NEW_FILL
-for cc in (2, 3):
-    ws.cell(row=r_start2 + 2, column=cc).fill = INPUT_FILL
-r = note(ws, r, "GATE 1 PASSED at v1.0: the requirements on sheet 03 are baselined as the contract for Steps 2-5 and "
-                "decisions C-06 to C-11 are confirmed. v1.1 is a change against that baseline and needs the second "
-                "approval above before it supersedes v1.0. Step 2 continues in the meantime - the change affects the "
-                "period derivation and the milestone list, both of which are data the application reads.")
+for cc in (1, 2, 3, 4):
+    ws.cell(row=r_start2 + 2, column=cc).fill = NEW_FILL
+r = note(ws, r, "STEP 1 CLOSED. v1.2 is the approved baseline: the 65 requirements on sheet 03 are the contract for "
+                "Steps 2-5, and decisions C-01 to C-11 on sheet 05 are confirmed. Any further change takes the next "
+                "point release and its own approval, per the rules on sheet 09.")
 
 wb.save(OUT)
 print(f"Written: {OUT}")

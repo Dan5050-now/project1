@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v1.0 APPROVED** (Gate 1, 2026-08-01) · **v1.2 change awaiting signature** |
+| 1 | Development plan | **CLOSED** — v1.2 approved by Dan, 2026-08-01 |
 | 2 | Programming specification | **In progress** — source workbook template + dummy data issued for review |
 | 3 | Prototype UI design | Not started |
 | 4 | Code generation | Not started |
@@ -30,12 +30,10 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v1.2.xlsx` — **current.** A change against the v1.0
-  baseline: `Inspection` milestone, seventh period, milestone-beats-offset boundaries.
-  65 requirements, nothing open. Needs the approval signature before it supersedes v1.0.
-- `docs/PRAP_Development_Plan_v1.1.xlsx` — same change, before R-03 was confirmed.
-- `docs/PRAP_Development_Plan_v1.0.xlsx` — **the approved baseline** (Gate 1,
-  2026-08-01). Remains in force until v1.2 is signed off.
+- `docs/PRAP_Development_Plan_v1.2.xlsx` — **the approved baseline.** Approved by Dan
+  on 2026-08-01; 65 requirements, 21 validation rules, 11 engineering decisions.
+- `docs/PRAP_Development_Plan_v1.1.xlsx`, `_v1.0.xlsx` — superseded (v1.0 was the
+  first approved baseline).
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -99,12 +97,11 @@ Requires `openpyxl`.
 
 ## Next action
 
-1. **Sign off plan v1.2** (sheet 12) — the change against the v1.0 baseline. Nothing
-   in the document is open; only the signature is missing.
-2. **Settle S2-01** in `docs/STEP2_OPEN_POINTS.md` — the under-allocation threshold is
-   an absolute 0.80 FTE, so a part-timer at 0.60 capacity is flagged permanently and
-   can never clear it. Recommended fix: make both thresholds relative to `capacity_fte`,
-   which changes nothing for full-time staff.
+**Settle S2-01** in `docs/STEP2_OPEN_POINTS.md` — the under-allocation threshold is
+an absolute 0.80 FTE, so a part-timer at 0.60 capacity is flagged permanently and can
+never clear it. Recommended fix: make both thresholds relative to `capacity_fte`, which
+changes nothing for full-time staff. The specification is being drafted on that
+assumption.
 
-Then the programming specification. The source workbooks stay at v1.1 — the schema is
-unchanged by v1.2, so they remain valid.
+The source workbooks stay at v1.1 — the schema is unchanged by v1.2, so they remain
+valid.
