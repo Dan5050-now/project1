@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.3"
-DOC_STATUS = "FINAL - approved baseline. Step 1 closed."
+DOC_VERSION = "1.4"
+DOC_STATUS = "Change against approved baseline v1.3 - issued for approval"
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -157,16 +157,16 @@ ws["A2"].font = Font(name=FONT, size=14, color=NAVY)
 
 cover = [
     ("Document ID", "PRAP-PLAN-001"),
-    ("Document type", "Development plan (Step 1 deliverable) - FINAL"),
+    ("Document type", "Development plan (Step 1 deliverable) - change against the v1.3 baseline"),
     ("Version", f"v{DOC_VERSION}"),
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Reviewer", "Requester - four review rounds: v0.11, v0.2, v0.3, v0.4 reviewed"),
-    ("Approved by", "Dan, 2026-08-01 - final issue"),
+    ("Baseline", "v1.3, approved by Dan 2026-08-01"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
-    ("Supersedes", "v1.2 (approved 2026-08-01) and all earlier issues"),
+    ("Supersedes", "v1.3 once approved; v1.3 remains the baseline until then"),
 ]
 r = 4
 for k, v in cover:
@@ -435,8 +435,8 @@ reqs = [
     ["REQ-OUT-04", "Output", "The application reads the source workbook and uses it to drive every table and graph.", "Must", "Requester", "4"],
     ["REQ-OUT-05", "Output", "Plans and specifications are delivered as Excel workbooks.", "Must", "Requester", "1,2"],
 
-    ["REQ-PRJ-01", "Project data", "Each project records a project type, restricted to 'Clinical Trial' or 'Others'.", "Must", "Requester", "2"],
-    ["REQ-PRJ-02", "Project data", "Each project records a project category. Where type = 'Clinical Trial' the category is the product name; the field is optional for 'Others'.", "Must", "Requester", "2"],
+    [f"{MARK_CHG}REQ-PRJ-01", "Project data", "Each project records a project type, restricted to 'NewDrug CT', 'Biosimilar CT' or 'Others'. The first two are clinical trials and every clinical trial is exactly one of them.", "Must", "R-05", "2"],
+    [f"{MARK_CHG}REQ-PRJ-02", "Project data", "Each project records a project category. For either clinical trial type the category is the product name; the field is optional for 'Others'.", "Must", "R-05", "2"],
     ["REQ-PRJ-03", "Project data", "Each project records a project name, unique within the source workbook.", "Must", "Requester", "2"],
     [f"{MARK_CHG}REQ-PRJ-04", "Project data", "Each project records its conditions: outsourcing type ('Full outsourcing' / 'Partial outsourcing' / 'Full In-house') and the number of project members.", "Must", "Q-14", "2"],
     [f"{MARK_CHG}REQ-PRJ-06", "Project data", "Each project carries a resource weight per period. For a clinical trial the weight is seeded from a standard keyed on clinical phase; for 'Others' it is entered by hand.", "Must", "Q-26, Q-28", "2"],
@@ -551,7 +551,7 @@ r = section(ws, r, "Sheet: Project")
 proj = [
     ["project_id", "Text", "Yes", "Unique key, e.g. PRJ-001. Referenced by every other sheet.", "REQ-PRJ-03"],
     ["project_name", "Text", "Yes", "Unique display name.", "REQ-PRJ-03"],
-    ["project_type", "List", "Yes", "'Clinical Trial' or 'Others'.", "REQ-PRJ-01"],
+    [f"{MARK_CHG}project_type", "List", "Yes", "'NewDrug CT', 'Biosimilar CT' or 'Others'. The first two are clinical trials.", "REQ-PRJ-01"],
     ["project_category", "Text", "Conditional", "Product name. Required when project_type = 'Clinical Trial'.", "REQ-PRJ-02"],
     [f"{MARK_NEW}clinical_phase", "List", "Conditional", "'Phase 1' / 'Phase 2' / 'Phase 3' / 'Phase 4'. Required when project_type = 'Clinical Trial'.", "REQ-PRJ-09"],
     [f"{MARK_CHG}outsourcing_type", "List", "Yes", "'Full outsourcing' / 'Partial outsourcing' / 'Full In-house'. Three values, fixed at Q-14.", "REQ-PRJ-04"],
@@ -601,14 +601,14 @@ r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
 
 r = note(ws, r, "Period sets are type-specific (Q-18). The derivation itself is on sheet 05.")
 sets = [
-    ["Clinical Trial", "Before-Start-up, Start-up, Conduct, Close-out (interim), Close-out (final), After Close-out (final)", "Computed from milestones plus month offsets. 'Conduct' may appear twice; 'Close-out (interim)' only with an interim DB lock; 'After Close-out (final)' only where inspection activity follows the final DB lock."],
+    [f"{MARK_CHG}NewDrug CT / Biosimilar CT", "Before-Start-up, Start-up, Conduct, Close-out (interim), Close-out (final), After Close-out (final)", "Both trial types share one period set and one derivation. They differ in their WEIGHTS, not their shape."],
     ["Others", "Planning, Develop, Close", "Entered directly - dates confirmed manual at Q-25, weights at Q-28. 'Others' projects are hand-entered throughout."],
 ]
 r = table(ws, r, ["project_type", "Period set", "How boundaries are set"], sets, [18, 50, 66], wrap_cols=(2, 3))
 
 r = section(ws, r, "Sheet: PeriodWeightStandard")
 pws = [
-    [f"{MARK_CHG}project_type", "List", "Yes", "Always 'Clinical Trial' at v1.0. 'Others' projects take manual weights (Q-28), so they need no standard row. The column stays so a standard set can be added later without a schema change.", "Q-28"],
+    [f"{MARK_CHG}project_type", "List", "Yes", "'NewDrug CT' or 'Biosimilar CT'. Part of the key: a biosimilar trial at a given phase is not the same workload as a new-drug trial at that phase. 'Others' take manual weights (Q-28).", "R-05"],
     [f"{MARK_CHG}clinical_phase", "List", "Yes", "The phase the standard applies to. This is the key that selects a clinical trial's weights.", "Q-26"],
     ["period_name", "List", "Yes", "A period from that type's set.", "Q-04, Q-18"],
     [f"{MARK_CHG}weight", "Decimal", "Yes", "Default multiplier. You fill these in the source workbook (Q-17); the plan fixes only where they live.", "Q-01"],
@@ -624,7 +624,7 @@ r = note(ws, r, "Re-keyed at Q-26: a clinical trial's weights come from its CLIN
 
 r = section(ws, r, "Sheet: RoleFactor")
 rf = [
-    [f"{MARK_NEW}project_type", "List", "Yes", "'Clinical Trial' or 'Others'. Roles differ by type, so the same role name cannot leak across types.", "Q-03"],
+    [f"{MARK_CHG}project_type", "List", "Yes", "'NewDrug CT', 'Biosimilar CT' or 'Others'. Roles are keyed by type, so a factor can differ between the two trial types.", "Q-03, R-05"],
     [f"{MARK_CHG}role_name", "Text", "Yes", "Clinical Trial: 'Project oversight', 'Lead data manager', 'Clinical Data Associator', 'Clinical Database Programmer', 'Data Analyst'. Others: 'Project lead', 'Main staff', 'Other staff'.", "Q-03"],
     [f"{MARK_CHG}role_factor", "Decimal", "Yes", "Relative burden of the role, the same for everyone holding it. Values still to be supplied - see Q-17.", "Q-01"],
     ["role_note", "Text", "No", "Basis for the factor.", "REQ-CAL-06"],
@@ -676,7 +676,7 @@ r = note(ws, r, "Changed at Q-01. The answer named exactly three factors, so a f
 
 r = section(ws, r, "Sheet: Config")
 cfg = [
-    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 2 at v1.3.", "2", "REQ-VC-02"],
+    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4.", "3", "REQ-VC-02"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],
     [f"{MARK_NEW}over_allocation_fte", "Person-month total above this is over-allocated.", "1.50", "REQ-CAL-04"],
     [f"{MARK_NEW}under_allocation_fte", "Person-month total below this counts toward an under-allocated run.", "0.80", "REQ-CAL-07"],
@@ -991,7 +991,9 @@ wbs = [
     ["1", "G1b", "GATE 1 RE-CONFIRMED - plan v1.2 approved by Dan, 2026-08-01. Step 1 closed.", "Approval recorded on 12_Review_Log", "Complete"],
     ["1", "1.14", "Apply change R-04 (note column on every source sheet).", "PRAP_Development_Plan_v1.3.xlsx", "Complete - issued for review"],
     ["1", "1.15", "Approve plan v1.3 as final.", "Approval on 12_Review_Log", "Complete"],
-    ["1", "G1c", "STEP 1 COMPLETE - plan v1.3 approved FINAL by Dan, 2026-08-01.", "Approval recorded on 12_Review_Log", "Complete"],
+    ["1", "G1c", "Plan v1.3 approved by Dan, 2026-08-01.", "Approval recorded on 12_Review_Log", "Complete"],
+    ["1", "1.16", "Apply change R-05 (project_type split).", "PRAP_Development_Plan_v1.4.xlsx", "Complete - issued for review"],
+    ["1", "1.17", "Approve plan v1.4.", "Approval on 12_Review_Log", "Pending you"],
     ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
     ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template + _Dummy v1.1", "Complete - issued for review"],
@@ -1083,7 +1085,8 @@ align = [
     ["v1.0", "-", "-", "1", "2026-07-31", "Step 1 baseline. APPROVED 2026-08-01 by Dan (Gate 1)."],
     ["v1.1", "-", "-", "1", "2026-08-01", "Change against baseline: Inspection milestone, seventh period. Superseded."],
     ["v1.2", "-", "-", "1", "2026-08-01", "APPROVED 2026-08-01 by Dan. Baseline until v1.3 is approved."],
-    ["v1.3", "v0.2", "-", "2", DOC_DATE, "R-04: note column on every source sheet. APPROVED FINAL 2026-08-01 by Dan."],
+    ["v1.3", "v0.2", "-", "2", "2026-08-01", "R-04: note column on every source sheet. APPROVED 2026-08-01 by Dan."],
+    ["v1.4", "v0.3", "prototype v0.2", "3", DOC_DATE, "R-05: project_type split. Awaiting approval."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1214,6 +1217,7 @@ chg = [
     ["R-01", "Data model", "Add 'Inspection' as a standard milestone.", "Applied. Milestone list grows to ten. Unlike the others, 'Inspection' MAY REPEAT within one project, so REQ-PRJ-13 and V-20 were added and V-14's uniqueness check now exempts it.", "Applied"],
     ["R-02", "Calculation", "Sheet 05 derivation edits: Before-Start-up ends at 'Protocol (v1)'; Start-up begins the day after it and ends at 'First SIV' (or 'FPI'); a seventh period 'After Close-out (final)' spans the Inspection dates.", "Applied. Clinical period set grows to six names; REQ-PRJ-12 and REQ-CAL-09 reworded; REQ-CAL-13 added for the milestone-beats-offset rule; 'FPI' restored to the milestone list as the First SIV fallback.", "Applied"],
     ["R-03", "Calculation", "Not requested - found while applying R-02.", "Period 7 was defined as earliest to latest 'Inspection'. Where an inspection is dated on or before the final DB lock, that makes period 7 start before period 6 and overlap Conduct. Only inspections AFTER the final DB lock open period 7; earlier ones stay markers, reported by V-21. CONFIRMED by the reviewer at the v1.1 review.", "CONFIRMED"],
+    ["R-05", "Data model", "Split project_type: 'Clinical Trial' becomes 'NewDrug CT' and 'Biosimilar CT'; every clinical trial is one or the other.", "Applied. REQ-PRJ-01 and REQ-PRJ-02 reworded. Both new types share the clinical period set and the same derivation - they differ in weights, not shape. RoleFactor and PeriodWeightStandard are now keyed on the type, so the split can carry real differences rather than being only a label. Schema 2 -> 3. All outputs regenerated.", "Applied"],
     ["R-04", "Data model", "Add at least one free-text note column to every sheet of the source workbook.", "Applied. Four sheets had none and each gains note_1: Milestone, ProjectPeriod, PeriodWeightStandard, Lists. Six already had one. Source schema version steps 1 -> 2. Note columns are carried through import and export unchanged and never read by the calculation, so the dummy dataset produces identical figures.", "Applied"],
 ]
 r_start = r
@@ -1306,7 +1310,10 @@ appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
          "R-01, R-02 and R-03 are part of it."],
         ["PRAP Development Plan v1.3", "Dan", "2026-08-01",
          "APPROVED - FINAL. Change R-04 accepted; this issue supersedes v1.2 and closes the development "
-         "plan. Step 1 is complete."]]
+         "plan. Step 1 is complete."],
+        ["PRAP Development Plan v1.4", "", "",
+         "Pending your signature. Change R-05: project_type split into NewDrug CT and Biosimilar CT; "
+         "source schema version steps 2 -> 3."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 16, 14, 88], wrap_cols=(4,))
 for cc in (1, 2, 3, 4):
@@ -1315,6 +1322,8 @@ for cc in (1, 2, 3, 4):
     ws.cell(row=r_start2 + 2, column=cc).fill = NEW_FILL
 for cc in (1, 2, 3, 4):
     ws.cell(row=r_start2 + 3, column=cc).fill = NEW_FILL
+for cc in (2, 3):
+    ws.cell(row=r_start2 + 4, column=cc).fill = INPUT_FILL
 r = note(ws, r, "STEP 1 COMPLETE. v1.3 is the final development plan: the 65 requirements on sheet 03 are the "
                 "contract for Steps 2-5, decisions C-01 to C-11 on sheet 05 are confirmed, and the source schema "
                 "is version 2. The plan is closed; further change would need a new approval and a version "

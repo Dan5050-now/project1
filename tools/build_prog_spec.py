@@ -14,10 +14,10 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "0.2"
+DOC_VERSION = "0.3"
 DOC_STATUS = "Draft for review"
 DOC_DATE = "2026-08-01"
-PLAN = "PRAP_Development_Plan_v1.3.xlsx"
+PLAN = "PRAP_Development_Plan_v1.4.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
 
@@ -116,8 +116,8 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Governing document", f"{PLAN} - FINAL, approved by Dan 2026-08-01"),
-    ("Schema version specified", "2"),
+    ("Governing document", f"{PLAN} - change R-05 against the v1.3 baseline, awaiting approval"),
+    ("Schema version specified", "3"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -140,7 +140,7 @@ r = lines(ws, r, [
     "Two things make this specification unusual, and both are deliberate:",
     "",
     "  - The data schema is not described in prose. It already exists as a working file,",
-    "    templates/PRAP_SourceData_Template_v1.2.xlsx, and sheet 03 documents the parse contract against it.",
+    "    templates/PRAP_SourceData_Template_v1.3.xlsx, and sheet 03 documents the parse contract against it.",
     "  - The calculation and validation logic already has a reference implementation in",
     "    tools/verify_source_workbook.py, which runs against the dummy data. Sheet 05 gives the pseudocode;",
     "    that script is the executable check that the pseudocode is right.",
@@ -167,7 +167,12 @@ r = table(ws, r, ["Sheet", "Contents"], guide, [24, 86], wrap_cols=(2,))
 
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
-rows = [["0.2", DOC_DATE, "Claude Code", "-",
+rows = [["0.3", DOC_DATE, "Claude Code", "-",
+         "Change R-05: project_type split into 'NewDrug CT' and 'Biosimilar CT'. Parse contract, keys and "
+         "schema version updated; RoleFactor and PeriodWeightStandard are now keyed on the type. Sheet 06 "
+         "gains the UI changes requested at the Step 3 review: a global filter bar with Reset, per-project "
+         "stacking, horizontal scroll regions, and row expansion on both Overall tables.", "Draft"],
+        ["0.2", "2026-08-01", "Claude Code", "-",
          "Parse contract updated for change R-04: a free-text note column on every sheet, and source schema "
          "version 2. Column counts on the sheet-index table adjusted. No change to validation, calculation, "
          "UI or IO behaviour.", "Draft"],
@@ -186,7 +191,7 @@ r = section(ws, r, "Source documents")
 src = [
     [PLAN, "FINAL development plan, approved by Dan 2026-08-01. 65 requirements, 21 validation rules, 11 decisions, source schema version 2.", "Governs this document"],
     ["templates/PRAP_SourceData_Template_v1.2.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
-    ["templates/PRAP_SourceData_Dummy_v1.3.xlsx", "50 clinical trials, 12 'Others' projects, 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
+    ["templates/PRAP_SourceData_Dummy_v1.4.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
     ["docs/STEP2_OPEN_POINTS.md", "Points raised while building the template.", "Carried into sheet 10"],
 ]
@@ -244,8 +249,8 @@ sheets = [
     ["Project", "project_id", "-", "23", "Master."],
     ["Milestone", "project_id + milestone_name + milestone_date", "Project", "6", "milestone_name is NOT unique alone - 'Inspection' repeats (REQ-PRJ-13)."],
     ["ProjectPeriod", "project_id + period_seq", "Project", "7", "period_name is NOT unique alone - 'Conduct' occurs twice (REQ-CAL-11)."],
-    ["PeriodWeightStandard", "clinical_phase + period_name", "-", "5", "Clinical trials only. 'Others' take manual weights (Q-28)."],
-    ["RoleFactor", "project_type + role_name", "-", "4", "Roles are type-specific (Q-03)."],
+    ["PeriodWeightStandard", "project_type + clinical_phase + period_name", "-", "5", "Both trial types, keyed separately (R-05). 'Others' take manual weights (Q-28)."],
+    ["RoleFactor", "project_type + role_name", "-", "4", "Keyed on all three types, so NewDrug and Biosimilar can carry different factors (R-05)."],
     ["Person", "person_id", "-", "12", "Master."],
     ["Assignment", "assignment_id", "Person, Project, RoleFactor", "11", "One row per person + project + role."],
     ["PersonPeriodWeight", "assignment_id + period_start", "Assignment", "5", "Optional. Overrides person_weight for its window."],
@@ -282,7 +287,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "2", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "3", "Compared with the version this application expects (sheet 08)."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
     ["over_allocation_fte", "Decimal", "1.50", "See sheet 05 and open point S2-01."],
     ["under_allocation_fte", "Decimal", "0.80", "See sheet 05 and open point S2-01."],
@@ -463,7 +468,7 @@ ex = [
 ]
 r = table(ws, r, ["Element", "Value", "Note"], ex, [22, 62, 44], wrap_cols=(2, 3))
 r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workbook.py against "
-                "PRAP_SourceData_Dummy_v1.3.xlsx must give no errors and no warnings, across 62 projects, "
+                "PRAP_SourceData_Dummy_v1.4.xlsx must give no errors and no warnings, across 62 projects, "
                 "20 people, 289 assignments and 308 periods spanning 73 months. Every period set must be "
                 "contiguous, 30 trials must show two 'Conduct' stretches, and 12 must carry the seventh "
                 "period. Those figures are the regression baseline for Step 4.")
@@ -485,14 +490,19 @@ r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], glob, [24, 90, 20], wrap_
 r = section(ws, r, "Tab 1 - Overall")
 ov = [
     ["Horizon control", "From/to month. Defaults to 24 months from the current month. One control expands it to span every project's dates.", "REQ-CAL-01, REQ-DSH-07"],
-    ["Filters", "project type, project, person, role, department. Multi-select, combined with AND. Clearing all restores everything.", "REQ-DSH-05"],
+    ["Filters", "project type (NewDrug CT / Biosimilar CT / Others), project, person, role, department. Multi-select, combined with AND. GLOBAL: one setting drives every tab, not just the Overall tab.", "REQ-DSH-05"],
     ["Unit toggle", "FTE or hours, seeded from config.capacity_unit.", "REQ-CAL-08"],
     ["Table A - by project", "Rows projects, columns months, cells FTE. Row and column totals. A project row expands to its people.", "REQ-DSH-01"],
     ["Table B - by person", "Rows people, columns months, cells FTE summed across projects. Over-allocated cells red, under-allocation runs amber. A person row expands to their projects.", "REQ-DSH-01, REQ-DSH-08"],
-    ["Graph 1", "Stacked area or bar: total monthly demand, one band per project.", "REQ-DSH-02"],
+    ["Graph 1", "Stacked bar: total monthly demand, ONE BAND PER PROJECT, ordered by total resource with the largest on the baseline. 'Others' projects are grey; trials take the extended colour set.", "REQ-DSH-02"],
     ["Graph 2", "Grouped bar: monthly FTE per person, with reference lines at each person's over and under thresholds.", "REQ-DSH-02, REQ-DSH-08"],
     ["Graph 3", "Timeline per project across the horizon: period bands shaded by weight, milestone markers, repeated 'Inspection' markers shown individually.", "REQ-DSH-02, REQ-PRJ-05"],
     ["Summary tiles", "Active projects; people assigned; total FTE in the horizon; over-allocated person-months; under-allocation runs.", "REQ-DSH-08"],
+    ["Reset filters", "Clears every filter and restores the default 24-month horizon in one action.", "REQ-DSH-05"],
+    ["Scroll regions", "Every chart and table sits in its own horizontal scroll region, so wide content scrolls inside the panel and the page body never scrolls sideways.", "REQ-NFR-02"],
+    ["Row expansion - project", "Clicking a project name reveals one row per person and role on it, each with its own monthly figures. Clicking again collapses.", "REQ-DSH-01"],
+    ["Row expansion - person", "Clicking a person name reveals one row per project and role they hold, ordered NewDrug CT, Biosimilar CT, Others, then earliest project first.", "REQ-DSH-01"],
+    ["Type and phase pills", "Project type and clinical phase shown as labelled pills. The text carries the meaning; the colour only speeds recognition.", "REQ-PRJ-01, REQ-PRJ-09"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], ov, [24, 90, 20], wrap_cols=(2,))
 r = note(ws, r, "Both tables are the same numbers aggregated differently, so they must always reconcile: the grand "
@@ -568,7 +578,7 @@ r = table(ws, r, ["Behaviour", "Reason"], exp, [76, 56], wrap_cols=(1, 2))
 ws, r = sheet(wb, "08_Versioning", "Versioning and compatibility")
 ver = [
     ["Application version", "Constant in the HTML, shown in the header and footer.", "REQ-VC-02"],
-    ["Expected schema version", "Constant in the HTML. Currently 2.", "REQ-VC-02"],
+    ["Expected schema version", "Constant in the HTML. Currently 3.", "REQ-VC-02"],
     ["Check on load", "Compare Config.schema_version with the expected value.", "REQ-VC-03"],
     ["Equal", "Proceed silently.", "REQ-VC-03"],
     ["File older", "Proceed; warn that columns added since may be missing.", "REQ-VC-03"],

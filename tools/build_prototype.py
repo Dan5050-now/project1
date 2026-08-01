@@ -18,11 +18,11 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.3.xlsx"
-OUT = ROOT / "app" / "PRAP_Prototype_v0.1.html"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.4.xlsx"
+OUT = ROOT / "app" / "PRAP_Prototype_v0.2.html"
 
-APP_VERSION = "prototype v0.1"
-SCHEMA_EXPECTED = 2
+APP_VERSION = "prototype v0.2"
+SCHEMA_EXPECTED = 3
 WIN_FROM, WIN_TO = (2027, 1), (2027, 12)      # the 12 months the mock-up shows
 
 # ---- design tokens (validated: see dataviz palette reference) --------------
@@ -73,6 +73,8 @@ def snapshot():
     for r in rows(wb["Milestone"]):
         MS[r["project_id"]].append(r)
     RF = {(r["project_type"], r["role_name"]): r["role_factor"] for r in rows(wb["RoleFactor"])}
+    CT = {"NewDrug CT", "Biosimilar CT"}
+    TYPE_RANK = {"NewDrug CT": 0, "Biosimilar CT": 1, "Others": 2}
     PSN = {r["person_id"]: r for r in rows(wb["Person"])}
     ASG = list(rows(wb["Assignment"]))
     PPW = defaultdict(list)
@@ -96,6 +98,7 @@ def snapshot():
 
     proj_m = defaultdict(float)
     pers_m = defaultdict(float)
+    cell_m = defaultdict(float)        # (project, person, role, y, m) -> FTE
     for a in ASG:
         pr = P.get(a["project_id"])
         if not pr or a["person_id"] not in PSN:
@@ -109,14 +112,16 @@ def snapshot():
             v = pweight(a["project_id"], y, m) * rf * wweight(a, y, m) * cov
             proj_m[(a["project_id"], y, m)] += v
             pers_m[(a["person_id"], y, m)] += v
+            cell_m[(a["project_id"], a["person_id"], a["role_name"], y, m)] += v
 
     tot = defaultdict(float)
     for (pid, y, m), v in proj_m.items():
         tot[pid] += v
     top = [pid for pid, _ in sorted(tot.items(), key=lambda kv: -kv[1])[:10]]
 
-    return dict(P=P, PER=PER, MS=MS, PSN=PSN, ASG=ASG, PPW=PPW, CFG=CFG,
-                grid=grid, proj_m=proj_m, pers_m=pers_m, top=top, tot=tot)
+    return dict(P=P, PER=PER, MS=MS, PSN=PSN, ASG=ASG, PPW=PPW, CFG=CFG, CT=CT,
+                TYPE_RANK=TYPE_RANK, grid=grid, proj_m=proj_m, pers_m=pers_m,
+                cell_m=cell_m, top=top, tot=tot)
 
 
 S = snapshot()
@@ -125,6 +130,57 @@ MLAB = [f"{calendar.month_abbr[m]}<br><span class='yr'>{y}</span>" for y, m in G
 OVER = float(S["CFG"]["over_allocation_fte"])
 UNDER = float(S["CFG"]["under_allocation_fte"])
 HOURS = float(S["CFG"]["fte_hours_per_month"])
+
+
+
+CT = None  # set after snapshot
+
+
+def is_ct(pid):
+    return S["P"][pid]["project_type"] in S["CT"]
+
+
+def prank(pid):
+    """Requested order: NewDrug CT, then Biosimilar CT, then Others; earlier first."""
+    pr = S["P"][pid]
+    return (S["TYPE_RANK"].get(pr["project_type"], 9), d(pr["start_date"]), pid)
+
+
+def phase_pill(pid):
+    pr = S["P"][pid]
+    if not is_ct(pid):
+        return ''
+    n = (pr["clinical_phase"] or "").replace("Phase ", "")
+    return f'<span class="ph ph{n}">{esc(pr["clinical_phase"])}</span>'
+
+
+def type_pill(pid):
+    t = S["P"][pid]["project_type"]
+    k = {"NewDrug CT": "nd", "Biosimilar CT": "bs"}.get(t, "ot")
+    return f'<span class="ty {k}">{esc(t)}</span>'
+
+
+def _mix(hex_, f):
+    """Lighten (f>1) or darken (f<1) a hex colour, staying on its own hue."""
+    r, g, b = (int(hex_[i:i + 2], 16) for i in (1, 3, 5))
+    if f >= 1:
+        t = min(1.0, f - 1.0)
+        r, g, b = (int(c + (255 - c) * t) for c in (r, g, b))
+    else:
+        r, g, b = (int(c * f) for c in (r, g, b))
+    return "#%02x%02x%02x" % (max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b)))
+
+
+# The validated set caps at 8 hues. Per-project colour was asked for explicitly, so
+# the palette is EXTENDED systematically: the seven validated hues, each stepped in
+# lightness. Beyond the first seven, hue alone no longer separates reliably - the
+# tooltip, the legend order and the table below carry identity.
+BASE7 = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7"]
+STEPS = [1.0, 0.70, 1.30, 0.85, 1.15, 0.55, 1.45, 0.62]
+
+
+def proj_colour(i):
+    return _mix(BASE7[i % 7], STEPS[(i // 7) % len(STEPS)])
 
 
 def seq_step(v, vmax):
@@ -136,63 +192,63 @@ def seq_step(v, vmax):
 
 # ---------------------------------------------------------------- charts
 def chart_stacked():
-    """Monthly demand by clinical phase, plus 'Others'.
+    """Monthly demand, one band per project.
 
-    Stacking by project is unreadable at 62 projects - the top seven are slivers
-    against a grey mass. Phase is the grouping that both fits eight slots and
-    carries meaning, since phase is what selects a trial's period weights.
+    Bands are ordered by total resource with the LARGEST AT THE BOTTOM, so the
+    heaviest projects sit on the baseline where they are easiest to read. Every
+    'Others' project is grey; clinical trials take the extended colour set.
     """
-    cats = ["Phase 1", "Phase 2", "Phase 3", "Phase 4", "Others"]
-    stacks = []
-    for (y, m) in GRID:
-        acc = {c: 0.0 for c in cats}
-        for pid, pr in S["P"].items():
-            v = S["proj_m"].get((pid, y, m), 0.0)
-            if v <= 0:
-                continue
-            acc["Others" if pr["project_type"] != "Clinical Trial"
-                else (pr["clinical_phase"] or "Others")] += v
-        stacks.append([(c, acc[c]) for c in cats])
+    order = sorted(S["P"], key=lambda pid: (-S["tot"].get(pid, 0.0), pid))
+    active = [pid for pid in order if S["tot"].get(pid, 0.0) > 0.004]
+    colour, ci = {}, 0
+    for pid in active:
+        if S["P"][pid]["project_type"] == "Others":
+            colour[pid] = "var(--other)"
+        else:
+            colour[pid] = proj_colour(ci)
+            ci += 1
 
-    W, H = 980, 260
-    pad_l, pad_b, pad_t = 52, 46, 26
-    cols = len(GRID)
-    bw = (W - pad_l - 12) / cols
-    vmax = max(sum(v for _, v in st) for st in stacks) or 1
+    W, H = 1180, 300
+    pad_l, pad_b, pad_t = 56, 46, 26
+    bw = (W - pad_l - 14) / len(GRID)
+    vmax = max(sum(S["proj_m"].get((pid, y, m), 0.0) for pid in active)
+               for (y, m) in GRID) or 1
     scale = (H - pad_b - pad_t) / (vmax * 1.08)
 
-    out = [f'<svg viewBox="0 0 {W} {H}" class="chart" role="img" '
-           f'aria-label="Monthly resource demand by clinical phase, stacked">']
-    out.append(f'<text class="ax" x="{pad_l - 40}" y="{pad_t - 10}">FTE</text>')
+    out = [f'<svg viewBox="0 0 {W} {H}" class="chart" style="min-width:{W}px" role="img" '
+           f'aria-label="Monthly resource demand, one stacked band per project">']
+    out.append(f'<text class="ax" x="{pad_l - 44}" y="{pad_t - 10}">FTE</text>')
     for k in range(5):
         v = vmax * 1.08 * k / 4
         yy = H - pad_b - v * scale
-        out.append(f'<line class="grid" x1="{pad_l}" y1="{yy:.1f}" x2="{W - 6}" y2="{yy:.1f}"/>')
+        out.append(f'<line class="grid" x1="{pad_l}" y1="{yy:.1f}" x2="{W - 8}" y2="{yy:.1f}"/>')
         out.append(f'<text class="ax" x="{pad_l - 8}" y="{yy + 3:.1f}" text-anchor="end">{v:.0f}</text>')
-    for i, st in enumerate(stacks):
+    for i, (y, m) in enumerate(GRID):
         x = pad_l + i * bw + 3
         base = H - pad_b
-        for j, (cat, v) in enumerate(st):
-            if v <= 0.001:
+        for pid in active:                       # largest first => lowest in the stack
+            v = S["proj_m"].get((pid, y, m), 0.0)
+            if v <= 0.004:
                 continue
             h = v * scale
-            fill = "var(--other)" if cat == "Others" else f"var(--s{j + 1})"
             out.append(f'<rect x="{x:.1f}" y="{base - h:.1f}" width="{bw - 8:.1f}" '
-                       f'height="{max(0, h - 2):.1f}" fill="{fill}" rx="1"><title>'
-                       f'{cat} — {GRID[i][0]}-{GRID[i][1]:02d}: {v:.1f} FTE</title></rect>')
+                       f'height="{max(0.6, h):.1f}" fill="{colour[pid]}">'
+                       f'<title>{esc(S["P"][pid]["project_name"])} '
+                       f'({esc(S["P"][pid]["project_type"])}) — '
+                       f'{GRID[i][0]}-{GRID[i][1]:02d}: {v:.2f} FTE</title></rect>')
             base -= h
-    for i, (y, m) in enumerate(GRID):
-        out.append(f'<text class="ax" x="{pad_l + i * bw + bw / 2 - 3:.1f}" y="{H - pad_b + 16}" '
+        out.append(f'<text class="ax" x="{x + (bw - 8) / 2:.1f}" y="{H - pad_b + 16}" '
                    f'text-anchor="middle">{calendar.month_abbr[m]}</text>')
     out.append(f'<text class="ax yr" x="{pad_l}" y="{H - pad_b + 30}">{GRID[0][0]}</text>')
-    out.append(f'<line class="base" x1="{pad_l}" y1="{H - pad_b}" x2="{W - 6}" y2="{H - pad_b}"/>')
+    out.append(f'<line class="base" x1="{pad_l}" y1="{H - pad_b}" x2="{W - 8}" y2="{H - pad_b}"/>')
     out.append("</svg>")
 
-    leg = ['<ul class="legend">']
-    for j, c in enumerate(cats):
-        sw = "var(--other)" if c == "Others" else f"var(--s{j + 1})"
-        leg.append(f'<li><span class="sw" style="background:{sw}"></span>{c}</li>')
-    leg.append("</ul>")
+    leg = ['<div class="legendbox"><ul class="legend proj">']
+    for pid in active:
+        leg.append(f'<li><span class="sw" style="background:{colour[pid]}"></span>'
+                   f'{esc(S["P"][pid]["project_name"])}'
+                   f'<span class="lv">{S["tot"][pid]:.1f}</span></li>')
+    leg.append("</ul></div>")
     return "".join(out) + "".join(leg)
 
 
@@ -293,66 +349,123 @@ def chart_gantt():
 
 
 # ---------------------------------------------------------------- tables
+def _cells(get, vmax=None, flag=False):
+    tds, tot = [], 0.0
+    for (y, m) in GRID:
+        v = get(y, m)
+        tot += v
+        if flag and v > OVER:
+            tds.append(f'<td class="c over">&#9650; {v:.2f}</td>')
+        elif flag and 0 < v < UNDER:
+            tds.append(f'<td class="c under">&#9660; {v:.2f}</td>')
+        elif v > 0.004:
+            i = seq_step(v, vmax) if vmax else None
+            tds.append(f'<td class="c c{i}">{v:.2f}</td>' if i is not None
+                       else f'<td class="c">{v:.2f}</td>')
+        else:
+            tds.append('<td class="c z">&middot;</td>')
+    return tds, tot
+
+
 def table_projects():
-    # Heat scale from the listed rows only - including the 52-project aggregate
-    # would flatten every row that is actually on screen.
-    vmax = max([S["proj_m"].get((p, y, m), 0.0) for p in S["top"] for (y, m) in GRID] or [1])
+    """Sorted NewDrug CT, Biosimilar CT, Others; earlier project first.
+
+    Clicking a project name expands it to the people and roles on it.
+    """
+    # The requested order puts all 34 NewDrug CT projects first, so a flat top-14
+    # would never reach the other two types and the ordering could not be seen
+    # working. The mock-up therefore samples the head of each type, in order, with
+    # a marker row where rows are skipped. The real table lists all 62.
+    ordered = sorted([p for p in S["P"] if S["tot"].get(p, 0.0) > 0.004], key=prank)
+    listed, breaks, per_type = [], {}, {"NewDrug CT": 6, "Biosimilar CT": 4, "Others": 3}
+    seen = {k: 0 for k in per_type}
+    for pid in ordered:
+        t = S["P"][pid]["project_type"]
+        if seen[t] < per_type[t]:
+            listed.append(pid)
+        seen[t] += 1
+    for t, n in per_type.items():
+        skipped = seen[t] - n
+        if skipped > 0:
+            last = [q for q in listed if S["P"][q]["project_type"] == t][-1]
+            breaks[last] = (t, skipped)
+    vmax = max([S["proj_m"].get((p, y, m), 0.0) for p in listed for (y, m) in GRID] or [1])
     head = "".join(f"<th>{lab}</th>" for lab in MLAB)
     body = []
-    for pid in S["top"]:
-        cells, tot = [], 0.0
-        for (y, m) in GRID:
-            v = S["proj_m"].get((pid, y, m), 0.0)
-            tot += v
-            i = seq_step(v, vmax)
-            sty = f' class="c c{i}"' if i is not None else ' class="c"'
-            cells.append(f"<td{sty}>{v:.2f}</td>" if v > 0.004 else '<td class="c z">·</td>')
-        body.append(f'<tr><th class="rh"><span class="exp">▸</span> '
-                    f'{esc(S["P"][pid]["project_name"])}<span class="sub">{pid}</span></th>'
-                    f'{"".join(cells)}<td class="tot">{tot:.1f}</td></tr>')
-    ocells, otot = [], 0.0
-    for (y, m) in GRID:
-        v = sum(S["proj_m"].get((p, y, m), 0.0) for p in S["P"] if p not in S["top"])
-        otot += v
-        i = seq_step(v, vmax)
-        ocells.append(f'<td class="c agg">{v:.1f}</td>')
-    body.append(f'<tr class="other"><th class="rh">Other '
-                f'<span class="sub">{len(S["P"]) - len(S["top"])} projects</span></th>'
-                f'{"".join(ocells)}<td class="tot">{otot:.1f}</td></tr>')
-    tcells = []
-    gtot = 0.0
-    for (y, m) in GRID:
-        v = sum(S["proj_m"].get((p, y, m), 0.0) for p in S["P"])
-        gtot += v
-        tcells.append(f"<td>{v:.2f}</td>")
-    body.append(f'<tr class="grand"><th class="rh">All projects</th>{"".join(tcells)}'
+    for pid in listed:
+        tds, tot = _cells(lambda y, m, p=pid: S["proj_m"].get((p, y, m), 0.0), vmax)
+        body.append(
+            f'<tr class="parent" data-k="p-{pid}" tabindex="0" role="button" '
+            f'aria-expanded="false"><th class="rh"><span class="exp">&#9656;</span>'
+            f'<span class="nm">{esc(S["P"][pid]["project_name"])}</span> '
+            f'{type_pill(pid)}{phase_pill(pid)}'
+            f'<span class="sub">{pid} &middot; starts {d(S["P"][pid]["start_date"])}</span></th>'
+            f'{"".join(tds)}<td class="tot">{tot:.1f}</td></tr>')
+        det = sorted([a for a in S["ASG"] if a["project_id"] == pid],
+                     key=lambda a: (a["role_name"], a["person_id"]))
+        for a in det:
+            k = (pid, a["person_id"], a["role_name"])
+            if not any(S["cell_m"].get(k + (y, m), 0.0) > 0.004 for (y, m) in GRID):
+                continue
+            dtds, dtot = _cells(lambda y, m, kk=k: S["cell_m"].get(kk + (y, m), 0.0))
+            body.append(
+                f'<tr class="child c-p-{pid}" hidden><th class="rh sub2">'
+                f'&#8627; {esc(S["PSN"][a["person_id"]]["person_name"])}'
+                f'<span class="role">{esc(a["role_name"])}</span></th>'
+                f'{"".join(dtds)}<td class="tot">{dtot:.1f}</td></tr>')
+        if pid in breaks:
+            t, n = breaks[pid]
+            body.append(f'<tr class="skip"><th class="rh">&hellip; {n} more {esc(t)} '
+                        f'project{"s" if n != 1 else ""} in this position</th>'
+                        f'<td class="c" colspan="{len(GRID) + 1}"></td></tr>')
+    rest = [p for p in S["P"] if p not in listed]
+    ocells, _ = _cells(lambda y, m: sum(S["proj_m"].get((p, y, m), 0.0) for p in rest))
+    ocells = [c.replace('class="c c', 'class="c agg c').replace('class="c"', 'class="c agg"')
+              for c in ocells]
+    otot = sum(S["tot"].get(p, 0.0) for p in rest)
+    body.append(f'<tr class="other"><th class="rh">Other <span class="sub">'
+                f'{len(rest)} projects</span></th>{"".join(ocells)}'
+                f'<td class="tot">{otot:.1f}</td></tr>')
+    tcells, gtot = _cells(lambda y, m: sum(S["proj_m"].get((p, y, m), 0.0) for p in S["P"]))
+    body.append(f'<tr class="grand"><th class="rh">All projects</th>'
+                f'{"".join(t.replace(chr(34) + "c z" + chr(34), chr(34) + "z" + chr(34)) for t in tcells)}'
                 f'<td class="tot">{gtot:.1f}</td></tr>')
     return (f'<table class="grid-t"><thead><tr><th class="rh">Project</th>{head}'
             f'<th class="tot">Total</th></tr></thead><tbody>{"".join(body)}</tbody></table>')
 
 
 def table_people():
+    """Clicking a person expands to their projects and roles.
+
+    The detail rows carry the same order as the project table: NewDrug CT,
+    Biosimilar CT, Others, then earlier project first.
+    """
     head = "".join(f"<th>{lab}</th>" for lab in MLAB)
     body = []
-    for p in sorted(S["PSN"]):
-        cells, tot = [], 0.0
-        for (y, m) in GRID:
-            v = S["pers_m"].get((p, y, m), 0.0)
-            tot += v
-            if v > OVER:
-                cells.append(f'<td class="c over" title="over the ceiling">▲ {v:.2f}</td>')
-            elif 0 < v < UNDER:
-                cells.append(f'<td class="c under" title="below the floor">▼ {v:.2f}</td>')
-            elif v > 0.004:
-                cells.append(f'<td class="c">{v:.2f}</td>')
-            else:
-                cells.append('<td class="c z">·</td>')
-        cap = S["PSN"][p].get("capacity_fte") or 1.0
+    for sid in sorted(S["PSN"]):
+        tds, tot = _cells(lambda y, m, p=sid: S["pers_m"].get((p, y, m), 0.0), flag=True)
+        cap = S["PSN"][sid].get("capacity_fte") or 1.0
         pt = ' <span class="pt">part-time</span>' if cap < 1 else ""
-        body.append(f'<tr><th class="rh"><span class="exp">▸</span> '
-                    f'{esc(S["PSN"][p]["person_name"])}{pt}<span class="sub">{p} · '
-                    f'{cap:.2f} FTE</span></th>{"".join(cells)}'
-                    f'<td class="tot">{tot / len(GRID):.2f}</td></tr>')
+        body.append(
+            f'<tr class="parent" data-k="s-{sid}" tabindex="0" role="button" '
+            f'aria-expanded="false"><th class="rh"><span class="exp">&#9656;</span>'
+            f'<span class="nm">{esc(S["PSN"][sid]["person_name"])}</span>{pt}'
+            f'<span class="sub">{sid} &middot; {cap:.2f} FTE &middot; '
+            f'{esc(S["PSN"][sid]["department"])}</span></th>'
+            f'{"".join(tds)}<td class="tot">{tot / len(GRID):.2f}</td></tr>')
+        det = sorted([a for a in S["ASG"] if a["person_id"] == sid],
+                     key=lambda a: prank(a["project_id"]))
+        for a in det:
+            k = (a["project_id"], sid, a["role_name"])
+            if not any(S["cell_m"].get(k + (y, m), 0.0) > 0.004 for (y, m) in GRID):
+                continue
+            dtds, dtot = _cells(lambda y, m, kk=k: S["cell_m"].get(kk + (y, m), 0.0))
+            body.append(
+                f'<tr class="child c-s-{sid}" hidden><th class="rh sub2">'
+                f'&#8627; {esc(S["P"][a["project_id"]]["project_name"])} '
+                f'{type_pill(a["project_id"])}{phase_pill(a["project_id"])}'
+                f'<span class="role">{esc(a["role_name"])}</span></th>'
+                f'{"".join(dtds)}<td class="tot">{dtot / len(GRID):.2f}</td></tr>')
     return (f'<table class="grid-t"><thead><tr><th class="rh">Person</th>{head}'
             f'<th class="tot">Mean</th></tr></thead><tbody>{"".join(body)}</tbody></table>')
 
@@ -474,11 +587,23 @@ CSS = """
  --page:#0d0d0d;--surface:#1a1a19;--ink:#fff;--ink2:#c3c2b7;--muted:#898781;
  --grid:#2c2c2a;--base:#383835;--ring:rgba(255,255,255,.10);
  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;
- --other:#5a5a55;--overbg:#3a1e1e;--underbg:#33290f;--underink:#fab219;--accent:#3987e5;}}
+ --other:#5a5a55;--overbg:#3a1e1e;--underbg:#33290f;--underink:#fab219;--accent:#3987e5;}
+ :root:where(:not([data-theme=light])) .ty.nd{background:#16283f;color:#8fbdf0}
+ :root:where(:not([data-theme=light])) .ty.bs{background:#12302a;color:#6fcfae}
+ :root:where(:not([data-theme=light])) .ph1{background:#3a2712;color:#f0b46a}
+ :root:where(:not([data-theme=light])) .ph2{background:#12302a;color:#6fcfae}
+ :root:where(:not([data-theme=light])) .ph3{background:#16283f;color:#8fbdf0}
+ :root:where(:not([data-theme=light])) .ph4{background:#241f3d;color:#b3a6f2}}
 :root[data-theme=dark]{--page:#0d0d0d;--surface:#1a1a19;--ink:#fff;--ink2:#c3c2b7;
  --grid:#2c2c2a;--base:#383835;--ring:rgba(255,255,255,.10);
  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;
  --other:#5a5a55;--overbg:#3a1e1e;--underbg:#33290f;--underink:#fab219;--accent:#3987e5;}
+:root[data-theme=dark] .ty.nd{background:#16283f;color:#8fbdf0}
+:root[data-theme=dark] .ty.bs{background:#12302a;color:#6fcfae}
+:root[data-theme=dark] .ph1{background:#3a2712;color:#f0b46a}
+:root[data-theme=dark] .ph2{background:#12302a;color:#6fcfae}
+:root[data-theme=dark] .ph3{background:#16283f;color:#8fbdf0}
+:root[data-theme=dark] .ph4{background:#241f3d;color:#b3a6f2}
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink);
  font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;}
@@ -569,6 +694,35 @@ tr.grand th,tr.grand td{border-top:2px solid var(--base);font-weight:650;backgro
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:820px){.two{grid-template-columns:1fr}}
 .note{font-size:11.5px;color:var(--muted);margin-top:9px}
+.filterbar{background:var(--surface);border-color:var(--accent)}
+.filterbar .scope{font-weight:400;font-size:11px;color:var(--muted);
+ border:1px solid var(--ring);border-radius:9px;padding:1px 7px;margin-left:6px}
+.btn.reset{border-color:var(--accent);color:var(--accent)}
+.scrollx>.chart,.scrollx>.strip{display:block}
+.legendbox{max-height:118px;overflow-y:auto;margin-top:8px;padding-right:6px;
+ border-top:1px solid var(--ring)}
+.legend.proj{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+ gap:2px 14px;margin:8px 0 2px}
+.legend.proj li{display:flex;align-items:center;gap:0}
+.legend .lv{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums;
+ font-size:10.5px;padding-left:8px}
+.ty{font-size:9.5px;border-radius:9px;padding:1px 6px;margin-left:6px;
+ border:1px solid var(--ring);white-space:nowrap}
+.ty.nd{background:#e7f0fb;color:#184f95}.ty.bs{background:#eaf7f1;color:#0d6b4a}
+.ty.ot{background:var(--page);color:var(--ink2)}
+.ph{font-size:9.5px;border-radius:9px;padding:1px 6px;margin-left:4px;font-weight:600;
+ white-space:nowrap}
+.ph1{color:#8a4b00;background:#fdf0e3}.ph2{color:#0d6b4a;background:#eaf7f1}
+.ph3{color:#184f95;background:#e7f0fb}.ph4{color:#5b3ea8;background:#efeafb}
+tr.parent{cursor:pointer}
+tr.parent:hover th.rh{background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+tr.parent .nm{font-weight:600}
+tr.parent[aria-expanded=true] .exp{transform:rotate(90deg);display:inline-block}
+tr.child th.rh.sub2{font-weight:400;padding-left:20px;color:var(--ink2);font-size:11.5px}
+tr.child .role{color:var(--muted);font-size:10.5px;margin-left:6px}
+tr.child td{background:color-mix(in srgb,var(--accent) 4%,var(--surface))}
+tr.skip th,tr.skip td{background:var(--page);color:var(--muted);font-style:italic;
+ font-size:11px;font-weight:400}
 :root{--h0:#cde2fb;--h1:#b7d3f6;--h2:#9ec5f4;--h3:#86b6ef;--h4:#6da7ec;--h5:#5598e7;
  --h6:#3987e5;--h7:#2a78d6;--h8:#256abf;--h9:#1c5cab;--h10:#184f95;--hink:#0b0b0b;--hink2:#fff;}
 
@@ -588,6 +742,17 @@ tr.grand th,tr.grand td{border-top:2px solid var(--base);font-weight:650;backgro
 """
 
 JS = """
+document.querySelectorAll('tr.parent').forEach(function(tr){
+  function toggle(){
+    var open = tr.getAttribute('aria-expanded') === 'true';
+    tr.setAttribute('aria-expanded', open ? 'false' : 'true');
+    document.querySelectorAll('tr.c-' + tr.dataset.k).forEach(function(c){ c.hidden = open; });
+  }
+  tr.addEventListener('click', toggle);
+  tr.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+});
 document.querySelectorAll('nav button').forEach(function(b){
   b.addEventListener('click',function(){
     document.querySelectorAll('nav button').forEach(function(x){x.setAttribute('aria-selected','false');});
@@ -621,6 +786,25 @@ nothing on this page loads, calculates or exports.</div>
 <div class="dirty"><span class="dot-w"></span> 3 unsaved edits — export to write them back
   to the workbook.</div>
 
+<div class="panel filterbar">
+  <h2>Horizon and filters <span class="scope">applies to every tab</span></h2>
+  <p class="cap">One setting drives the whole page — the charts, both Overall tables and
+    both source-data tabs. Opens on 24 months.</p>
+  <div class="controls">
+    <div class="ctl"><label>From</label><input value="2027-01" size="8"></div>
+    <div class="ctl"><label>To</label><input value="2027-12" size="8"></div>
+    <div class="ctl"><label>&nbsp;</label><button class="btn">Expand to all projects</button></div>
+    <div class="ctl"><label>Project type</label><select><option>All</option>
+      <option>NewDrug CT</option><option>Biosimilar CT</option><option>Others</option></select></div>
+    <div class="ctl"><label>Project</label><select><option>All (62)</option></select></div>
+    <div class="ctl"><label>Person</label><select><option>All (20)</option></select></div>
+    <div class="ctl"><label>Role</label><select><option>All (13)</option></select></div>
+    <div class="ctl"><label>Department</label><select><option>All (5)</option></select></div>
+    <div class="ctl"><label>Unit</label><select><option>FTE</option><option>Hours</option></select></div>
+    <div class="ctl"><label>&nbsp;</label><button class="btn reset">Reset filters</button></div>
+  </div>
+</div>
+
 <nav role="tablist">
   <button role="tab" aria-selected="true" data-tab="t-overall">Overall</button>
   <button role="tab" aria-selected="false" data-tab="t-proj">Source data (project)</button>
@@ -628,36 +812,23 @@ nothing on this page loads, calculates or exports.</div>
 </nav>
 
 <section class="tab" id="t-overall">
-  <div class="panel">
-    <h2>Horizon and filters</h2>
-    <p class="cap">Opens on 24 months; one control widens it to span every project.</p>
-    <div class="controls">
-      <div class="ctl"><label>From</label><input value="2027-01" size="8"></div>
-      <div class="ctl"><label>To</label><input value="2027-12" size="8"></div>
-      <div class="ctl"><label>&nbsp;</label><button class="btn">Expand to all projects</button></div>
-      <div class="ctl"><label>Project type</label><select><option>All</option>
-        <option>Clinical Trial</option><option>Others</option></select></div>
-      <div class="ctl"><label>Project</label><select><option>All (62)</option></select></div>
-      <div class="ctl"><label>Person</label><select><option>All (20)</option></select></div>
-      <div class="ctl"><label>Role</label><select><option>All (8)</option></select></div>
-      <div class="ctl"><label>Department</label><select><option>All (5)</option></select></div>
-      <div class="ctl"><label>Unit</label><select><option>FTE</option><option>Hours</option></select></div>
-    </div>
-  </div>
 
   {tiles()}
 
   <div class="panel">
-    <h2>Monthly demand by clinical phase</h2>
-    <p class="cap">Stacking by project is unreadable at 62 of them, so the split is by
-      phase — which is also what selects a trial's period weights. Non-trial work is
-      “Others”. Totals match the “All projects” row below.</p>
-    {chart_stacked()}
+    <h2>Monthly demand by project</h2>
+    <p class="cap">One band per project, ordered by total resource with the largest on
+      the baseline. Every “Others” project is grey; trials take the extended colour set.
+      Scroll the legend for the full list — with this many projects, identity comes from
+      the legend order and the tooltip, not from hue alone.</p>
+    <div class="scrollx">{chart_stacked()}</div>
   </div>
 
   <div class="panel">
     <h2>Resource by project</h2>
-    <p class="cap">FTE per month. A project row expands to the people on it.</p>
+    <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects
+      first. <strong>Click a project name</strong> to expand it to the people and roles on
+      it, and again to collapse.</p>
     <div class="scrollx">{table_projects()}</div>
   </div>
 
@@ -665,13 +836,14 @@ nothing on this page loads, calculates or exports.</div>
     <h2>Mean load per person</h2>
     <p class="cap">Averaged over the window, against each threshold. Bars that breach are
       labelled with their value, so the flag never rests on colour alone.</p>
-    {chart_people()}
+    <div class="scrollx">{chart_people()}</div>
   </div>
 
   <div class="panel">
     <h2>Resource by person</h2>
     <p class="cap">Summed across every project. ▲ above the ceiling, ▼ below the floor.
-      A person row expands to their projects.</p>
+      <strong>Click a person name</strong> to expand it to their projects and roles, in the
+      same order as the project table.</p>
     <div class="scrollx">{table_people()}</div>
     <p class="note">Under-allocation is reported as a run of three or more consecutive
       months, not per month — the run is what matters, a single quiet month is not.</p>
@@ -681,7 +853,7 @@ nothing on this page loads, calculates or exports.</div>
     <h2>Project timeline</h2>
     <p class="cap">Period bands shaded by weight. Trials with an interim DB lock show two
       Conduct stretches; a post-lock Inspection opens the final band.</p>
-    {chart_gantt()}
+    <div class="scrollx">{chart_gantt()}</div>
   </div>
 </section>
 
@@ -691,7 +863,7 @@ nothing on this page loads, calculates or exports.</div>
     <p class="cap">All 23 columns, sortable and filterable. Every field is editable;
       changing an identifier cascades to the rows that reference it.</p>
     {PTBL}
-    <p class="note">Showing 9 of 62 rows in this mock-up — the busiest projects, with the selected row tinted. The real table lists all 62, sorted and filtered.</p>
+    <p class="note">Showing 9 of 62 rows in this mock-up, with the selected row tinted. The real table lists all 62, sorted and filtered.</p>
   </div>
   <div class="two">
     <div class="panel">
@@ -720,7 +892,7 @@ nothing on this page loads, calculates or exports.</div>
   <div class="panel">
     <h2>Utilisation — {esc(PERS['person_name'])} ({SPID})</h2>
     <p class="cap">Monthly load across the window. Dashed lines are this person\u2019s ceiling and floor.</p>
-    {STRIP}
+    <div class="scrollx">{STRIP}</div>
   </div>
   <div class="two">
     <div class="panel">

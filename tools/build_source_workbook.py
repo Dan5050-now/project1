@@ -28,9 +28,9 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 2
-TEMPLATE_VERSION = "1.2"
-DUMMY_VERSION = "1.3"
+SCHEMA_VERSION = 3
+TEMPLATE_VERSION = "1.3"
+DUMMY_VERSION = "1.4"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -56,7 +56,7 @@ DATE_FMT = "yyyy-mm-dd"
 # Value lists (Lists sheet, long format per the approved data model)
 # --------------------------------------------------------------------------
 LISTS = [
-    ("project_type", ["Clinical Trial", "Others"]),
+    ("project_type", ["NewDrug CT", "Biosimilar CT", "Others"]),
     ("clinical_phase", ["Phase 1", "Phase 2", "Phase 3", "Phase 4"]),
     ("outsourcing_type", ["Full outsourcing", "Partial outsourcing", "Full In-house"]),
     ("setup_party", ["by CRO", "by SB"]),
@@ -94,11 +94,11 @@ SHEETS = {
     "Project": [
         ("project_id", "Unique key, e.g. PRJ-001.", "key"),
         ("project_name", "Unique display name.", "key"),
-        ("project_type", "'Clinical Trial' or 'Others'.", ""),
-        ("project_category", "Product name. Required for a clinical trial.", ""),
-        ("clinical_phase", "Required for a clinical trial - it selects the period weights.", ""),
+        ("project_type", "'NewDrug CT', 'Biosimilar CT' or 'Others'. The first two are clinical trials.", ""),
+        ("project_category", "Product name. Required for either clinical trial type.", ""),
+        ("clinical_phase", "Required for either clinical trial type - with the type it selects the period weights.", ""),
         ("outsourcing_type", "Full / Partial outsourcing, or Full In-house.", ""),
-        ("EDC_setup", "Who sets up EDC. Clinical trial only.", ""),
+        ("EDC_setup", "Who sets up EDC. Clinical trial types only.", ""),
         ("DataReviewSystem_setup", "Who sets up the data review system.", ""),
         ("RBQM_setup", "Who sets up RBQM.", ""),
         ("DM_conduct", "Who reviews the data.", ""),
@@ -127,13 +127,13 @@ SHEETS = {
         ("period_seq", "Orders periods along the timeline. Unique within a project.", "key"),
         ("period_start", "Inclusive.", ""),
         ("period_end", "Inclusive. Periods must not overlap or leave a gap.", ""),
-        ("weight", "Effort multiplier. Clinical trial: seeded from PeriodWeightStandard. Others: type it.", ""),
+        ("weight", "Effort multiplier. Clinical trial types: seeded from PeriodWeightStandard. Others: type it.", ""),
         ("note_1", "Free text. e.g. why a derived date was overridden by hand.", ""),
     ],
     "PeriodWeightStandard": [
-        ("project_type", "'Clinical Trial'. 'Others' projects take manual weights instead.", ""),
+        ("project_type", "'NewDrug CT' or 'Biosimilar CT'. 'Others' projects take manual weights instead.", ""),
         ("clinical_phase", "The phase this standard applies to.", "key"),
-        ("period_name", "One of the five clinical periods.", "key"),
+        ("period_name", "One of the six clinical periods.", "key"),
         ("weight", "YOU SUPPLY. Default multiplier for this phase and period.", "fill"),
         ("note_1", "Free text. e.g. the basis for this weight.", ""),
     ],
@@ -277,6 +277,7 @@ def dummy_data():
     DRS = ["Veeva DQS", "Medidata CDS", "No system (manual)"]
     RBQM = ["CluePoints", "Medidata CDS", "No system (manual)"]
 
+    CT_TYPES = ["NewDrug CT", "Biosimilar CT"]
     CT_ROLES = ["Project oversight", "Lead data manager", "Clinical Data Associator",
                 "Clinical Database Programmer", "Data Analyst"]
     OT_ROLES = ["Project lead", "Main staff", "Other staff"]
@@ -308,7 +309,7 @@ def dummy_data():
         end = start + rd(months=months) - timedelta(days=1)
         has_interim = (n % 5) in (0, 1, 2)                   # 60% carry an interim lock
         projects.append((
-            pid, f"{product[:3].upper()}-{100 + n} {phase}", "Clinical Trial", product, phase,
+            pid, f"{product[:3].upper()}-{100 + n} {phase}", CT_TYPES[n % 3 == 0], product, phase,
             OUTSOURCING[n % 3], PARTY[n % 2], PARTY[(n + 1) % 2], PARTY[n % 2], PARTY[(n + 1) % 2],
             EDC[n % 3], DRS[n % 3], RBQM[n % 3],
             rng.randint(3, 8), start, end,
@@ -377,7 +378,7 @@ def dummy_data():
     cursor = {role: 0 for role in set(list(by_role) + CT_ROLES + OT_ROLES)}
     for p in projects:
         pid, ptype, pstart, pend = p[0], p[2], p[14], p[15]
-        roles = CT_ROLES if ptype == "Clinical Trial" else OT_ROLES
+        roles = OT_ROLES if ptype == "Others" else CT_ROLES
         for role in roles:
             pool = by_role.get(role) or by_role["Main staff"]
             person = pool[cursor[role] % len(pool)]
@@ -408,28 +409,32 @@ def dummy_data():
         ("ASG-903", date(2026, 10, 1), date(2026, 12, 31), 0.45, "Covering interim analysis peak"),
     ]
 
-    pws = [("Clinical Trial", ph, pn, w, "Illustrative - replace with your figure")
-           for ph, prof in phase_profile.items() for pn, w in prof.items()]
+    # Keyed on type as well as phase: a biosimilar trial of a given phase is not the
+    # same workload as a new-drug trial of that phase, and the split exists to say so.
+    pws = []
+    for ct, factor, note in (("NewDrug CT", 1.00, "Illustrative - replace with your figure"),
+                             ("Biosimilar CT", 0.85, "Illustrative - lighter than new-drug at the same phase")):
+        for ph, prof in phase_profile.items():
+            for pn, w in prof.items():
+                pws.append((ct, ph, pn, round(w * factor, 2), note))
 
-    roles_tbl = [
-        ("Clinical Trial", "Project oversight", 0.80, "Illustrative - replace with your figure"),
-        ("Clinical Trial", "Lead data manager", 1.20, "Illustrative"),
-        ("Clinical Trial", "Clinical Data Associator", 1.00, "Illustrative"),
-        ("Clinical Trial", "Clinical Database Programmer", 1.10, "Illustrative"),
-        ("Clinical Trial", "Data Analyst", 0.90, "Illustrative"),
-        ("Others", "Project lead", 1.00, "Illustrative"),
-        ("Others", "Main staff", 0.90, "Illustrative"),
-        ("Others", "Other staff", 0.70, "Illustrative"),
-    ]
+    ct_role_base = [("Project oversight", 0.80), ("Lead data manager", 1.20),
+                    ("Clinical Data Associator", 1.00),
+                    ("Clinical Database Programmer", 1.10), ("Data Analyst", 0.90)]
+    roles_tbl = [(ct, rn, rf, "Illustrative - replace with your figure")
+                 for ct in CT_TYPES for rn, rf in ct_role_base]
+    roles_tbl += [("Others", "Project lead", 1.00, "Illustrative"),
+                  ("Others", "Main staff", 0.90, "Illustrative"),
+                  ("Others", "Other staff", 0.70, "Illustrative")]
 
     # ---- periods --------------------------------------------------------
     periods = []
     for p in projects:
         pid, ptype, pstart, pend = p[0], p[2], p[14], p[15]
-        if ptype == "Clinical Trial":
-            phase = p[4]
+        if ptype != "Others":
+            phase, fac = p[4], (0.85 if ptype == "Biosimilar CT" else 1.00)
             for name, seq, s_, e_ in derive_periods(pstart, pend, ms[pid], inspections.get(pid, [])):
-                periods.append((pid, name, seq, s_, e_, phase_profile[phase][name]))
+                periods.append((pid, name, seq, s_, e_, round(phase_profile[phase][name] * fac, 2)))
         else:
             span = (pend - pstart).days
             b1 = pstart + timedelta(days=int(span * 0.25))
@@ -661,8 +666,8 @@ def build(kind):
             for seq, (nm, dt) in enumerate(sorted(events, key=lambda kv: kv[1]), start=1):
                 mile_rows.append([pid, None, nm, dt, seq,
                                   "Regulatory inspection" if nm == "Inspection" else None])
-        period_rows = [list(x) + [("Derived from milestones" if P[x[0]] == "Clinical Trial"
-                                   else "Entered by hand - no milestone mapping")]
+        period_rows = [list(x) + [("Entered by hand - no milestone mapping"
+                                   if P[x[0]] == "Others" else "Derived from milestones")]
                        for x in periods]
         pws_rows = [list(x) + ["Illustrative - replace with your figure"] for x in pws]
         role_rows = [list(x) for x in roles]
@@ -675,14 +680,14 @@ def build(kind):
         person_rows = asg_rows = ppw_rows = []
         # one example row per sheet (REQ-IMP-03)
         examples = {
-            "Project": ["PRJ-001", "ONV-101 First-in-human", "Clinical Trial", "Onvelaris", "Phase 1",
+            "Project": ["PRJ-001", "ONV-101 First-in-human", "NewDrug CT", "Onvelaris", "Phase 1",
                         "Partial outsourcing", "by SB", "by SB", "by CRO", "by SB", "Veeva EDC",
                         "Veeva DQS", "CluePoints", 5, date(2025, 10, 1), date(2027, 6, 30), None,
                         "Active", "example row - delete before use", None, None, None, None],
             "Milestone": ["PRJ-001", None, "CTA submission", date(2026, 1, 15), 2, "example row - delete before use"],
             "ProjectPeriod": ["PRJ-001", "Start-up", 2, date(2025, 12, 15), date(2026, 4, 14), 1.30, "example row - delete before use"],
-            "PeriodWeightStandard": ["Clinical Trial", "Phase 1", "Start-up", None, "example row - delete before use"],
-            "RoleFactor": ["Clinical Trial", "Lead data manager", None, "example row - delete before use"],
+            "PeriodWeightStandard": ["NewDrug CT", "Phase 1", "Start-up", None, "example row - delete before use"],
+            "RoleFactor": ["NewDrug CT", "Lead data manager", None, "example row - delete before use"],
             "Person": ["PSN-001", "Kim S.", "Data Management", "Lead data manager", 1.00,
                        None, None, "example row - delete before use", None, None, None, None],
             "Assignment": ["ASG-001", "PSN-001", None, "PRJ-001", "Lead data manager",

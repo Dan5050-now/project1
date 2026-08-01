@@ -19,6 +19,7 @@ CLINICAL_PERIODS = ["Before-Start-up", "Start-up", "Conduct",
                     "Close-out (interim)", "Close-out (final)",
                     "After Close-out (final)"]
 OTHER_PERIODS = ["Planning", "Develop", "Close"]
+CLINICAL_TYPES = {"NewDrug CT", "Biosimilar CT"}   # both are clinical trials
 
 
 def rows(ws):
@@ -61,7 +62,8 @@ def main(path):
     for r in rows(wb["ProjectPeriod"]):
         PER[r["project_id"]].append(r)
     RF = {(r["project_type"], r["role_name"]): r["role_factor"] for r in rows(wb["RoleFactor"])}
-    PWS = {(r["clinical_phase"], r["period_name"]): r["weight"] for r in rows(wb["PeriodWeightStandard"])}
+    PWS = {(r["project_type"], r["clinical_phase"], r["period_name"]): r["weight"]
+           for r in rows(wb["PeriodWeightStandard"])}
     PSN = {r["person_id"]: r for r in rows(wb["Person"])}
     ASG = list(rows(wb["Assignment"]))
     PPW = defaultdict(list)
@@ -94,7 +96,8 @@ def main(path):
         if not segs:
             errors.append(f"V-12 {pid}: no periods")
             continue
-        allowed = CLINICAL_PERIODS if proj["project_type"] == "Clinical Trial" else OTHER_PERIODS
+        allowed = (CLINICAL_PERIODS if proj["project_type"] in CLINICAL_TYPES
+                   else OTHER_PERIODS)
         seqs = [s["period_seq"] for s in segs]
         if len(seqs) != len(set(seqs)):
             errors.append(f"V-18 {pid}: duplicate period_seq")
@@ -120,15 +123,16 @@ def main(path):
 
     # ---- weights present (V-19) ----
     for pid, proj in P.items():
-        if proj["project_type"] != "Clinical Trial":
+        if proj["project_type"] not in CLINICAL_TYPES:
             continue
         ph = proj["clinical_phase"]
         if not ph:
             errors.append(f"V-19 {pid}: clinical trial with no clinical_phase")
             continue
         for s in PER.get(pid, []):
-            if (ph, s["period_name"]) not in PWS:
-                errors.append(f"V-19 {pid}: no standard weight for {ph} / {s['period_name']}")
+            if (proj["project_type"], ph, s["period_name"]) not in PWS:
+                errors.append(f"V-19 {pid}: no standard weight for "
+                              f"{proj['project_type']} / {ph} / {s['period_name']}")
 
     # ---- list membership (V-11) ----
     for pid, proj in P.items():

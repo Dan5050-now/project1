@@ -12,7 +12,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "0.1"
+VERSION = "0.2"
 DATE = "2026-08-01"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
@@ -63,9 +63,9 @@ ws["A1"].font = TITLE_F
 ws["A2"] = "Step 3, task 3.1 — high-level design for review"
 ws["A2"].font = NOTE_F
 meta = [("Version", f"v{VERSION}"), ("Date", DATE), ("Author", "Claude Code"),
-        ("Prototype", "app/PRAP_Prototype_v0.1.html"),
-        ("Governing plan", "PRAP_Development_Plan_v1.3.xlsx (FINAL)"),
-        ("Specification", "PRAP_Programming_Specification_v0.2.xlsx (draft)")]
+        ("Prototype", "app/PRAP_Prototype_v0.2.html"),
+        ("Governing plan", "PRAP_Development_Plan_v1.4.xlsx (change R-05, awaiting approval)"),
+        ("Specification", "PRAP_Programming_Specification_v0.3.xlsx (draft)")]
 r = 4
 for k, v in meta:
     ws.cell(r, 1, k).font = BOLD_F
@@ -102,7 +102,7 @@ ws = wb.create_sheet("01_Components")
 ws.sheet_view.showGridLines = False
 ws["A1"] = "Component list"
 ws["A1"].font = TITLE_F
-ws["A2"] = "31 components across the three tabs. Mark each one in the Decision column."
+ws["A2"] = "36 components across the three tabs. Mark each one in the Decision column."
 ws["A2"].font = NOTE_F
 ws.freeze_panes = "A5"
 
@@ -119,13 +119,16 @@ C = [
 
     ("O-01", "Overall", "Horizon control", "From/to month, defaulting to 24 months.", "REQ-CAL-01"),
     ("O-02", "Overall", "Expand to all projects", "One click widens the horizon to the latest project end date.", "REQ-DSH-07"),
-    ("O-03", "Overall", "Filters", "Project type, project, person, role, department. Combined with AND.", "REQ-DSH-05"),
+    ("O-03", "Overall", "Filters (GLOBAL)", "Project type, project, person, role, department. Moved out of the Overall tab: one setting now drives every tab.", "REQ-DSH-05"),
+    ("O-03b", "Overall", "Reset filters", "Clears every filter and restores the 24-month default in one action.", "REQ-DSH-05"),
     ("O-04", "Overall", "Unit toggle", "FTE or hours, seeded from Config.capacity_unit.", "REQ-CAL-08"),
     ("O-05", "Overall", "Summary tiles", "Projects, people, total demand, over-allocated months, under-allocation runs.", "REQ-DSH-08"),
-    ("O-06", "Overall", "Demand chart", "Stacked monthly demand. Split by CLINICAL PHASE, not by project - see D-01.", "REQ-DSH-02"),
-    ("O-07", "Overall", "Resource by project (table)", "Project x month heatmap, row and column totals, expandable rows.", "REQ-DSH-01"),
+    ("O-06", "Overall", "Demand chart", "Stacked monthly demand, ONE BAND PER PROJECT, largest on the baseline. 'Others' grey, trials coloured - see D-01.", "REQ-DSH-02"),
+    ("O-07", "Overall", "Resource by project (table)", "Project x month heatmap. Sorted NewDrug CT, Biosimilar CT, Others, then earliest first.", "REQ-DSH-01"),
+    ("O-07b", "Overall", "Project row expansion", "Clicking a project name reveals a row per person and role, each with its own monthly figures.", "REQ-DSH-01"),
     ("O-08", "Overall", "Mean load per person (chart)", "One bar per person against both thresholds; breaching bars labelled.", "REQ-DSH-02, REQ-DSH-08"),
     ("O-09", "Overall", "Resource by person (table)", "Person x month, summed across projects, over/under flagged.", "REQ-DSH-01, REQ-DSH-08"),
+    ("O-09b", "Overall", "Person row expansion", "Clicking a person name reveals a row per project and role, in the same type-then-date order.", "REQ-DSH-01"),
     ("O-10", "Overall", "Project timeline (Gantt)", "Period bands shaded by weight, milestone and inspection markers.", "REQ-DSH-02, REQ-PRJ-05"),
 
     ("P-01", "Project tab", "Project table", "All 23 columns, sortable, filterable, editable.", "REQ-DSH-03, REQ-IMP-07"),
@@ -143,6 +146,8 @@ C = [
     ("E-01", "Editing", "Inline cell edit", "Every field editable, validated at the point of entry.", "REQ-IMP-09"),
     ("E-02", "Editing", "Cascade confirm", "Changing an identifier states how many rows will follow, then rewrites them.", "REQ-IMP-10, V-17"),
     ("E-03", "Editing", "Delete guard", "Refuses to delete a row that is still referenced, naming what points at it.", "V-17"),
+    ("X-01", "Layout", "Horizontal scroll regions", "Every chart and table scrolls inside its own panel, so the page body never scrolls sideways.", "REQ-NFR-02"),
+    ("X-02", "Layout", "Type and phase pills", "Project type and clinical phase as labelled pills; text carries the meaning, colour only speeds recognition.", "REQ-PRJ-01, REQ-PRJ-09"),
 ]
 rows = [list(c) + ["", ""] for c in C]
 r = table(ws, 4, ["ID", "Area", "Component", "What it does", "REQ-IDs", "Decision", "Your comment"],
@@ -165,11 +170,25 @@ ws["A2"].font = NOTE_F
 ws.freeze_panes = "A5"
 
 D = [
-    ("D-01", "The demand chart stacks by CLINICAL PHASE, not by project.",
-     "At 62 projects a stacked-by-project chart is unreadable: the top seven become slivers against a grey mass of "
-     "the other 55. Phase is a five-category split that fits the palette and carries meaning, since phase is what "
-     "selects a trial's period weights. The per-project numbers are still in the table directly below.",
-     "Stack by project anyway, capped at the top 7; or by product category; or by department."),
+    ("D-01", "SUPERSEDED - the demand chart now stacks by individual project, as you asked.",
+     "v0.1 stacked by clinical phase because 62 project bands cannot be told apart by hue. You asked for per-project "
+     "bands, so that is what v0.2 does: ordered by total resource with the largest on the baseline, 'Others' grey.",
+     "Return to phase stacking, or offer both behind a toggle."),
+    ("D-11", "Beyond seven projects, colour is assigned from an EXTENDED palette, not the validated one.",
+     "The validated set caps at eight hues because past that, colourblind readers - and often anyone - cannot tell "
+     "adjacent bands apart. Per-project colour needs ~50, so the seven validated hues are stepped in lightness to "
+     "generate them. They look various, but hue alone no longer identifies a band: the legend order, the tooltip and "
+     "the table below carry identity. This is a real cost of the request, not a flaw in the build.",
+     "Filter to fewer projects before reading the chart; or colour only the top N and grey the rest."),
+    ("D-12", "The project table samples the head of each type rather than listing a flat top-14.",
+     "Your sort puts all 34 NewDrug CT projects first, so a flat top-14 would never reach Biosimilar CT or Others and "
+     "the ordering could not be seen working. The mock-up shows the first few of each type, in order, with a marker "
+     "row saying how many were skipped. The real table lists all 62.",
+     "Show a flat top-N in strict order; or paginate."),
+    ("D-13", "The global filter bar is not sticky.",
+     "A sticky bar 110px tall covered panel headings as soon as the page scrolled. Making it scroll away avoids that, "
+     "at the cost of scrolling back up to change a filter.",
+     "Make it sticky and collapse it to a single summary line on scroll."),
     ("D-02", "The project table lists the ten busiest projects plus an aggregate row.",
      "62 rows x 12 months does not fit on screen. The real table lists all 62 with sort and filter; the prototype "
      "shows the shape, not the whole.", "Show all 62 with a scroll region instead."),
