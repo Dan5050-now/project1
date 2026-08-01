@@ -1,0 +1,238 @@
+"""Generate the Step 3 UI component list - the thing being reviewed alongside the prototype.
+
+    python tools/build_component_list.py
+
+Output: docs/PRAP_UI_Component_List_v0.1.xlsx
+"""
+
+from pathlib import Path
+
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
+
+VERSION = "0.1"
+DATE = "2026-08-01"
+OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
+
+FONT = "Arial"
+NAVY = "1F3864"
+TITLE_F = Font(name=FONT, size=16, bold=True, color=NAVY)
+H1_F = Font(name=FONT, size=12, bold=True, color=NAVY)
+HDR_F = Font(name=FONT, size=10, bold=True, color="FFFFFF")
+BODY_F = Font(name=FONT, size=10)
+BOLD_F = Font(name=FONT, size=10, bold=True)
+NOTE_F = Font(name=FONT, size=9, italic=True, color="808080")
+HDR_FILL = PatternFill("solid", fgColor="2F5597")
+BAND = PatternFill("solid", fgColor="F2F5FB")
+INPUT = PatternFill("solid", fgColor="FFFF00")
+THIN = Side(style="thin", color="BFBFBF")
+BOX = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+WRAP = Alignment(vertical="top", wrap_text=True)
+WRAPC = Alignment(vertical="top", wrap_text=True, horizontal="center")
+
+
+def table(ws, r0, headers, rows, widths, wrap_cols=(), yellow_col=None):
+    for i, h in enumerate(headers, 1):
+        c = ws.cell(r0, i, h)
+        c.font, c.fill, c.border, c.alignment = HDR_F, HDR_FILL, BOX, WRAPC
+    ws.row_dimensions[r0].height = 28
+    for r, data in enumerate(rows, r0 + 1):
+        for i, v in enumerate(data, 1):
+            c = ws.cell(r, i, v)
+            c.font, c.border = BODY_F, BOX
+            c.alignment = WRAP if i in wrap_cols else Alignment(vertical="top")
+            if yellow_col == i:
+                c.fill = INPUT
+            elif (r - r0) % 2 == 0:
+                c.fill = BAND
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+    return r0 + len(rows) + 2
+
+
+wb = Workbook()
+wb.remove(wb.active)
+
+# ---- cover ---------------------------------------------------------------
+ws = wb.create_sheet("00_Cover")
+ws.sheet_view.showGridLines = False
+ws["A1"] = "PRAP — UI component list"
+ws["A1"].font = TITLE_F
+ws["A2"] = "Step 3, task 3.1 — high-level design for review"
+ws["A2"].font = NOTE_F
+meta = [("Version", f"v{VERSION}"), ("Date", DATE), ("Author", "Claude Code"),
+        ("Prototype", "app/PRAP_Prototype_v0.1.html"),
+        ("Governing plan", "PRAP_Development_Plan_v1.3.xlsx (FINAL)"),
+        ("Specification", "PRAP_Programming_Specification_v0.2.xlsx (draft)")]
+r = 4
+for k, v in meta:
+    ws.cell(r, 1, k).font = BOLD_F
+    ws.cell(r, 2, v).font = BODY_F
+    r += 1
+ws.column_dimensions["A"].width = 22
+ws.column_dimensions["B"].width = 80
+
+r += 1
+ws.cell(r, 1, "How to review this").font = H1_F
+r += 1
+for line in [
+    "The prototype is DESIGN ONLY. Nothing on the page loads, calculates or exports - the figures are a",
+    "fixed snapshot baked into the markup, and the only script is tab switching. That is deliberate: the",
+    "plan has you approve the component design before any application code is written.",
+    "",
+    "Open the prototype, then work down sheet 01. For each component, mark the Decision column:",
+    "   Keep      - as designed",
+    "   Change    - keep the component, change what it does or shows (say what in your comment)",
+    "   Drop      - not needed in v1.0",
+    "   Add       - something missing; add a row at the bottom",
+    "",
+    "Approving this list fixes WHAT each component is and does. Exact layout, spacing, colour and",
+    "typography stay open until task 3.3, so do not spend review time on pixels.",
+    "",
+    "Sheet 02 lists the design decisions taken while building the prototype that you may want to overturn -",
+    "each one is a real choice, not a default.",
+]:
+    ws.cell(r, 1, line).font = BODY_F
+    r += 1
+
+# ---- components ----------------------------------------------------------
+ws = wb.create_sheet("01_Components")
+ws.sheet_view.showGridLines = False
+ws["A1"] = "Component list"
+ws["A1"].font = TITLE_F
+ws["A2"] = "31 components across the three tabs. Mark each one in the Decision column."
+ws["A2"].font = NOTE_F
+ws.freeze_panes = "A5"
+
+C = [
+    # id, area, component, what it does, REQ-IDs
+    ("G-01", "Global", "Header", "Application name, version, expected schema version.", "REQ-VC-02"),
+    ("G-02", "Global", "Loaded-file line", "Which workbook is loaded and when it was read.", "REQ-IMP-05"),
+    ("G-03", "Global", "Load workbook", "File picker / drag-and-drop. Warns first if edits are unsaved.", "REQ-IMP-01, REQ-IMP-08"),
+    ("G-04", "Global", "Export", "Writes all ten sheets back in template layout, edits included.", "REQ-IMP-04, REQ-IMP-07"),
+    ("G-05", "Global", "Findings banner", "Summary of the last import; opens the full report.", "REQ-IMP-02"),
+    ("G-06", "Global", "Unsaved-edit counter", "Always visible once anything is edited.", "REQ-IMP-08"),
+    ("G-07", "Global", "Tab bar", "Overall | Source data (project) | Source data (person).", "REQ-DSH-01..04"),
+    ("G-08", "Global", "Empty state", "With nothing loaded: one load panel and a template download link.", "REQ-IMP-03"),
+
+    ("O-01", "Overall", "Horizon control", "From/to month, defaulting to 24 months.", "REQ-CAL-01"),
+    ("O-02", "Overall", "Expand to all projects", "One click widens the horizon to the latest project end date.", "REQ-DSH-07"),
+    ("O-03", "Overall", "Filters", "Project type, project, person, role, department. Combined with AND.", "REQ-DSH-05"),
+    ("O-04", "Overall", "Unit toggle", "FTE or hours, seeded from Config.capacity_unit.", "REQ-CAL-08"),
+    ("O-05", "Overall", "Summary tiles", "Projects, people, total demand, over-allocated months, under-allocation runs.", "REQ-DSH-08"),
+    ("O-06", "Overall", "Demand chart", "Stacked monthly demand. Split by CLINICAL PHASE, not by project - see D-01.", "REQ-DSH-02"),
+    ("O-07", "Overall", "Resource by project (table)", "Project x month heatmap, row and column totals, expandable rows.", "REQ-DSH-01"),
+    ("O-08", "Overall", "Mean load per person (chart)", "One bar per person against both thresholds; breaching bars labelled.", "REQ-DSH-02, REQ-DSH-08"),
+    ("O-09", "Overall", "Resource by person (table)", "Person x month, summed across projects, over/under flagged.", "REQ-DSH-01, REQ-DSH-08"),
+    ("O-10", "Overall", "Project timeline (Gantt)", "Period bands shaded by weight, milestone and inspection markers.", "REQ-DSH-02, REQ-PRJ-05"),
+
+    ("P-01", "Project tab", "Project table", "All 23 columns, sortable, filterable, editable.", "REQ-DSH-03, REQ-IMP-07"),
+    ("P-02", "Project tab", "Milestone sub-table", "Milestones of the selected project in date order; Inspection may repeat.", "REQ-PRJ-05, REQ-PRJ-13"),
+    ("P-03", "Project tab", "Period sub-table", "Derived periods with seq, dates, weight and note.", "REQ-PRJ-06, REQ-CAL-09"),
+    ("P-04", "Project tab", "Recompute periods", "Re-derives from current milestones; warns before replacing hand-set dates.", "decision C-10"),
+    ("P-05", "Project tab", "Export visible table", "Current table to .xlsx.", "REQ-DSH-06"),
+
+    ("S-01", "Person tab", "Person table", "All 12 columns, sortable, filterable, editable.", "REQ-DSH-04, REQ-IMP-07"),
+    ("S-02", "Person tab", "Utilisation strip", "Selected person's monthly load with both thresholds drawn.", "REQ-DSH-08"),
+    ("S-03", "Person tab", "Assignment sub-table", "Project, role, dates and person weight.", "REQ-PSN-02, REQ-PSN-03"),
+    ("S-04", "Person tab", "Override sub-table", "PersonPeriodWeight windows for the selected assignment.", "REQ-PSN-05"),
+    ("S-05", "Person tab", "Export visible table", "Current table to .xlsx.", "REQ-DSH-06"),
+
+    ("E-01", "Editing", "Inline cell edit", "Every field editable, validated at the point of entry.", "REQ-IMP-09"),
+    ("E-02", "Editing", "Cascade confirm", "Changing an identifier states how many rows will follow, then rewrites them.", "REQ-IMP-10, V-17"),
+    ("E-03", "Editing", "Delete guard", "Refuses to delete a row that is still referenced, naming what points at it.", "V-17"),
+]
+rows = [list(c) + ["", ""] for c in C]
+r = table(ws, 4, ["ID", "Area", "Component", "What it does", "REQ-IDs", "Decision", "Your comment"],
+          rows, [8, 13, 30, 74, 26, 14, 44], wrap_cols=(4, 7), yellow_col=6)
+dv = DataValidation(type="list", formula1='"Keep,Change,Drop"', allow_blank=True)
+ws.add_data_validation(dv)
+dv.add(f"F5:F{4 + len(rows)}")
+for rr in range(5, 5 + len(rows)):
+    ws.cell(rr, 7).fill = INPUT
+r = table(ws, r, ["Count"], [[f"=COUNTA(A5:A{4 + len(rows)})"]], [14])
+ws.cell(r, 1, "Add a row at the bottom for anything missing.").font = NOTE_F
+
+# ---- design decisions ----------------------------------------------------
+ws = wb.create_sheet("02_Design_Decisions")
+ws.sheet_view.showGridLines = False
+ws["A1"] = "Design decisions taken in the prototype"
+ws["A1"].font = TITLE_F
+ws["A2"] = "Each is a real choice with a cost. Overturn any of them here."
+ws["A2"].font = NOTE_F
+ws.freeze_panes = "A5"
+
+D = [
+    ("D-01", "The demand chart stacks by CLINICAL PHASE, not by project.",
+     "At 62 projects a stacked-by-project chart is unreadable: the top seven become slivers against a grey mass of "
+     "the other 55. Phase is a five-category split that fits the palette and carries meaning, since phase is what "
+     "selects a trial's period weights. The per-project numbers are still in the table directly below.",
+     "Stack by project anyway, capped at the top 7; or by product category; or by department."),
+    ("D-02", "The project table lists the ten busiest projects plus an aggregate row.",
+     "62 rows x 12 months does not fit on screen. The real table lists all 62 with sort and filter; the prototype "
+     "shows the shape, not the whole.", "Show all 62 with a scroll region instead."),
+    ("D-03", "Heat shading in the tables is one blue ramp, light to dark.",
+     "Magnitude is a sequential quantity, so it takes one hue. The aggregate row is deliberately NOT shaded - "
+     "including it in the scale would flatten every row actually on screen.",
+     "No shading at all; or shade relative to each person's capacity rather than the global maximum."),
+    ("D-04", "Over- and under-allocation carry an icon and a value, never colour alone.",
+     "Red-green colour blindness affects around 8% of men. A cell that says only 'red' is unreadable to them, and "
+     "unprintable in mono. The arrow and the number carry the meaning; colour only speeds it up.",
+     "None recommended - this one is an accessibility floor rather than a preference."),
+    ("D-05", "Both thresholds are drawn on the person chart and the utilisation strip.",
+     "A ceiling without a floor makes under-use invisible, and under-use is half of what you asked the tool to "
+     "show.", "Draw only the ceiling; or make the floor a toggle."),
+    ("D-06", "The Gantt shades period bands by weight rather than by period name.",
+     "Weight is what drives the simulation. Naming the periods by colour would spend the palette on labels that "
+     "are already in the tooltip and the period sub-table.",
+     "Colour by period name instead, with weight in the tooltip only."),
+    ("D-07", "Editing is inline in the tables, not in a separate form or dialog.",
+     "You asked for every field to be editable. A dialog per row would make bulk correction - the common case "
+     "after a timeline slips - slow enough that people would go back to editing the workbook by hand.",
+     "A row-level edit dialog; or a dedicated edit mode."),
+    ("D-08", "The findings banner persists until dismissed rather than fading.",
+     "A toast that disappears is a finding nobody read. Import findings are the mechanism that stops bad data "
+     "reaching the simulation silently.", "Auto-dismiss after a delay."),
+    ("D-09", "Dark mode is supported, with its own selected colour steps.",
+     "Not a flip of the light palette: the heatmap ramp, the categorical hues and the status inks are each "
+     "re-stepped for the dark surface and validated against it.",
+     "Light mode only, which would remove about 30 lines of CSS."),
+    ("D-10", "The page is one scrolling column per tab, not a fixed dashboard grid.",
+     "It prints, it works on a laptop screen, and it needs no layout engine. A fixed grid would look denser on a "
+     "large monitor at the cost of both.", "A fixed multi-pane grid with independent scroll regions."),
+]
+rows = [list(d) + ["", ""] for d in D]
+r = table(ws, 4, ["ID", "Decision", "Why", "The alternative, if you want it", "Decision", "Your comment"],
+          rows, [8, 46, 76, 50, 14, 40], wrap_cols=(2, 3, 4, 6), yellow_col=5)
+dv2 = DataValidation(type="list", formula1='"Accept,Overturn"', allow_blank=True)
+ws.add_data_validation(dv2)
+dv2.add(f"E5:E{4 + len(rows)}")
+for rr in range(5, 5 + len(rows)):
+    ws.cell(rr, 6).fill = INPUT
+
+# ---- deferred ------------------------------------------------------------
+ws = wb.create_sheet("03_Deferred")
+ws.sheet_view.showGridLines = False
+ws["A1"] = "Deliberately not in the prototype"
+ws["A1"].font = TITLE_F
+ws["A2"] = "So their absence is not read as an oversight."
+ws["A2"].font = NOTE_F
+rows = [
+    ["Any loading, calculation, filtering or export behaviour", "Task 3.1 is design only. The figures shown are a "
+     "fixed snapshot computed in Python and baked into the markup."],
+    ["Exact spacing, type scale and final colour values", "Fixed at task 3.3, once the components are agreed."],
+    ["Hover tooltips beyond the native SVG title", "The full crosshair/tooltip layer is specified but not built "
+     "until code generation."],
+    ["Keyboard shortcuts and full accessibility pass", "Reviewed against the working prototype at task 3.3, where "
+     "they can be tried rather than described."],
+    ["Row expansion (project to people, person to projects)", "Shown as a caret in the row header; the behaviour "
+     "is specified on sheet 06 of the specification."],
+    ["The validation findings report itself", "Specified on sheet 04 of the specification; the banner that opens "
+     "it is in the prototype."],
+]
+r = table(ws, 4, ["Not shown", "Why"], rows, [56, 96], wrap_cols=(1, 2))
+
+wb.save(OUT)
+print(f"Written: {OUT}")

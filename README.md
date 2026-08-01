@@ -10,7 +10,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 |---|---|---|
 | 1 | Development plan | **COMPLETE** — v1.3 approved FINAL by Dan, 2026-08-01 |
 | 2 | Programming specification | **v0.2 draft issued for review** |
-| 3 | Prototype UI design | Not started |
+| 3 | Prototype UI design | **v0.1 prototype + component list issued for review** |
 | 4 | Code generation | Not started |
 | 5 | Finalisation | Not started |
 
@@ -38,6 +38,15 @@ output/       Exported results and test evidence   (from Step 5)
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
   specification to settle.
+
+### Step 3 deliverables (for review)
+
+- `app/PRAP_Prototype_v0.1.html` — the UI prototype. **Design only**: nothing loads,
+  calculates or exports; the figures are a fixed snapshot baked into the markup and
+  the only script is tab switching. Self-contained, offline, light and dark.
+- `docs/PRAP_UI_Component_List_v0.1.xlsx` — 31 components to mark Keep / Change /
+  Drop, plus 10 design decisions to accept or overturn, and what is deliberately
+  deferred.
 
 ### Step 2 deliverables (for review)
 
@@ -107,12 +116,16 @@ Requires `openpyxl`.
 
 ## Next action
 
-Review `docs/PRAP_Programming_Specification_v0.2.xlsx`, in particular sheet
-`10_Open_Points` — five items, each stating what the draft assumes so nothing is
-blocked. **S2-01** is the one that matters: the under-allocation threshold is an
-absolute 0.80 FTE, so a part-timer at 0.60 capacity is flagged permanently and can
-never clear it. The draft specifies both thresholds as relative to `capacity_fte`,
-which changes nothing for full-time staff.
+Open `app/PRAP_Prototype_v0.1.html` in a browser, then work down
+`docs/PRAP_UI_Component_List_v0.1.xlsx`:
 
-The development plan is closed, so this is the only decision outstanding across the
-whole project.
+1. **Sheet 01** — mark each of the 31 components Keep / Change / Drop.
+2. **Sheet 02** — accept or overturn the 10 design decisions. **D-01** is the one
+   worth arguing about: the demand chart stacks by clinical phase rather than by
+   project, because 62 projects cannot be stacked legibly.
+
+Per the plan, code generation starts only after the component list is approved.
+
+Still open from Step 2: **S2-01** in the specification — the under-allocation
+threshold is an absolute 0.80 FTE, so a part-timer at 0.60 capacity is flagged
+permanently. The draft assumes both thresholds are relative to `capacity_fte`.
