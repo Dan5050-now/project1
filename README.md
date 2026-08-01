@@ -9,7 +9,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 | Step | Description | State |
 |---|---|---|
 | 1 | Development plan | **CLOSED** — v1.2 approved by Dan, 2026-08-01 |
-| 2 | Programming specification | **In progress** — source workbook template + dummy data issued for review |
+| 2 | Programming specification | **v0.1 draft issued for review** |
 | 3 | Prototype UI design | Not started |
 | 4 | Code generation | Not started |
 | 5 | Finalisation | Not started |
@@ -40,6 +40,11 @@ output/       Exported results and test evidence   (from Step 5)
   specification to settle.
 
 ### Step 2 deliverables (for review)
+
+- `docs/PRAP_Programming_Specification_v0.1.xlsx` — 11 sheets: parse contract,
+  all 21 validation rules with their exact messages, calculation pseudocode,
+  UI behaviour, editing and IO, versioning, and a traceability matrix covering
+  all 65 approved requirements.
 
 - `templates/PRAP_SourceData_Template_v1.1.xlsx` — blank workbook: 10 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README.
@@ -97,11 +102,12 @@ Requires `openpyxl`.
 
 ## Next action
 
-**Settle S2-01** in `docs/STEP2_OPEN_POINTS.md` — the under-allocation threshold is
-an absolute 0.80 FTE, so a part-timer at 0.60 capacity is flagged permanently and can
-never clear it. Recommended fix: make both thresholds relative to `capacity_fte`, which
-changes nothing for full-time staff. The specification is being drafted on that
-assumption.
+Review `docs/PRAP_Programming_Specification_v0.1.xlsx`, in particular sheet
+`10_Open_Points` — five items, each stating what the draft assumes so nothing is
+blocked. **S2-01** is the one that matters: the under-allocation threshold is an
+absolute 0.80 FTE, so a part-timer at 0.60 capacity is flagged permanently and can
+never clear it. The draft specifies both thresholds as relative to `capacity_fte`,
+which changes nothing for full-time staff.
 
 The source workbooks stay at v1.1 — the schema is unchanged by v1.2, so they remain
 valid.
