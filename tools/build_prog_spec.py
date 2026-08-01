@@ -319,7 +319,7 @@ rules = [
     ["V-01", "Error", "Assignment.project_id not found in Project.", "Assignment ASG-014 refers to project PRJ-099, which does not exist."],
     ["V-02", "Error", "Assignment.person_id not found in Person.", "Assignment ASG-014 refers to person PSN-099, which does not exist."],
     ["V-03", "Error", "Assignment.role_name not in RoleFactor for that project's type.", "Assignment ASG-014: role 'Main staff' is not valid for a Clinical Trial. Valid roles for this type: ..."],
-    ["V-04", "Warning", "project_category empty where project_type = 'Clinical Trial'.", "Project PRJ-003 is a clinical trial with no product category."],
+    ["V-04", "Warning", "project_category empty on either clinical trial type.", "Project PRJ-003 is a clinical trial with no product category."],
     ["V-05", "Error", "An end date precedes its start date.", "Project PRJ-003: end_date 2026-01-01 is before start_date 2026-06-01."],
     ["V-06", "Error", "Two periods of one project, or two windows of one assignment, overlap.", "Project PRJ-003: periods 3 and 4 overlap between 2027-06-01 and 2027-06-30."],
     ["V-07", "Warning", "Assignment dates fall outside the project's own dates.", "Assignment ASG-014 runs to 2029-06-30, after project PRJ-005 ends on 2029-03-31."],
@@ -358,7 +358,7 @@ ws, r = sheet(wb, "05_Calculation", "Calculation",
               "Pure functions: no DOM, no file access (plan sheet 07, layer 5). "
               "tools/verify_source_workbook.py is the reference implementation.")
 
-r = section(ws, r, "Period derivation - 'Clinical Trial'   [REQ-CAL-09, REQ-CAL-12, REQ-CAL-13]")
+r = section(ws, r, "Period derivation - clinical trial, either type   [REQ-CAL-09, REQ-CAL-12, REQ-CAL-13]")
 r = code(ws, r, [
     "  protocol = milestone 'Protocol (v1)'          cta  = milestone 'CTA submission'",
     "  siv      = 'First SIV' else 'FPI'             idbl = 'interim DB lock'",

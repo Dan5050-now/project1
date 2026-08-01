@@ -71,6 +71,16 @@ Validate either with:
 python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.4.xlsx
 ```
 
+And check the documents still describe the artifacts they claim to:
+
+```bash
+python tools/check_consistency.py
+```
+
+That cross-checks 62 documented columns against the template's real headers, the
+schema version across all four files, the `project_type` values, all 65 requirements
+plan-to-specification, and that no build markers were left in a shipped workbook.
+
 ## Why the documents are generated from scripts
 
 The deliverables must be Excel workbooks, but a binary `.xlsx` cannot be reviewed as

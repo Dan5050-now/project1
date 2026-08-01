@@ -443,11 +443,11 @@ reqs = [
     ["REQ-PRJ-05", "Project data", "Each project records a timeline: start date, major milestone dates, and total period.", "Must", "Requester", "2"],
     ["REQ-PRJ-07", "Project data", "The project record accepts further project-related information without a schema change (free/extension columns).", "Should", "Requester", "2"],
     ["REQ-PRJ-08", "Project data", "Total period is derived from start and end dates rather than typed by hand, so it cannot contradict the timeline.", "Should", "Derived", "2"],
-    [f"{MARK_CHG}REQ-PRJ-12", "Project data", "The set of periods a project carries depends on its type: 'Clinical Trial' uses Before-Start-up / Start-up / Conduct / Close-out (interim) / Close-out (final) / After Close-out (final); 'Others' uses Planning / Develop / Close.", "Must", "Q-18, Q-23, R-02", "2"],
+    [f"{MARK_CHG}REQ-PRJ-12", "Project data", "The set of periods a project carries depends on its type: either clinical trial type uses Before-Start-up / Start-up / Conduct / Close-out (interim) / Close-out (final) / After Close-out (final); 'Others' uses Planning / Develop / Close.", "Must", "Q-18, Q-23, R-02", "2"],
     [f"{MARK_NEW}REQ-PRJ-13", "Project data", "A milestone name may occur more than once in one project. 'Inspection' in particular may record several events; the others are expected once.", "Must", "R-01", "2"],
-    [f"{MARK_CHG}REQ-PRJ-09", "Project data", "A 'Clinical Trial' project records its clinical phase (phase 1 / 2 / 3 / 4). The phase determines the project's period weights, so it drives the simulation rather than merely describing the project.", "Must", "Q-26", "2"],
-    [f"{MARK_NEW}REQ-PRJ-10", "Project data", "A 'Clinical Trial' project records who performs each of EDC set-up, data-review-system set-up, RBQM set-up and DM conduct ('by CRO' / 'by SB').", "Must", "Reviewer v0.11", "2"],
-    [f"{MARK_NEW}REQ-PRJ-11", "Project data", "A 'Clinical Trial' project records the EDC system, data review system and RBQM system in use, from data-driven value lists.", "Must", "Reviewer v0.11", "2"],
+    [f"{MARK_CHG}REQ-PRJ-09", "Project data", "A clinical trial of either type records its clinical phase (phase 1 / 2 / 3 / 4). The phase determines the project's period weights, so it drives the simulation rather than merely describing the project.", "Must", "Q-26", "2"],
+    [f"{MARK_NEW}REQ-PRJ-10", "Project data", "A clinical trial of either type records who performs each of EDC set-up, data-review-system set-up, RBQM set-up and DM conduct ('by CRO' / 'by SB').", "Must", "Reviewer v0.11", "2"],
+    [f"{MARK_NEW}REQ-PRJ-11", "Project data", "A clinical trial of either type records the EDC system, data review system and RBQM system in use, from data-driven value lists.", "Must", "Reviewer v0.11", "2"],
 
     ["REQ-PSN-01", "Person data", "Data is managed by person, by project assigned, and by project role assigned.", "Must", "Requester", "2"],
     ["REQ-PSN-02", "Person data", "Each assignment records the project(s) the person is assigned to.", "Must", "Requester", "2"],
@@ -465,7 +465,7 @@ reqs = [
     ["REQ-CAL-06", "Calculation", "All weights, factors and thresholds are data, held in the source workbook, never hardcoded in the program.", "Must", "Derived", "4"],
     [f"{MARK_NEW}REQ-CAL-07", "Calculation", "A person whose monthly total stays below the under-allocation threshold (default 0.80 FTE) for three or more consecutive months is flagged as under-allocated, with the run's start and length reported.", "Must", "Q-08", "4"],
     [f"{MARK_NEW}REQ-CAL-08", "Calculation", "Load is expressed in FTE, where 1.00 FTE = 160 hours per month (8 h/day x 5 days/week x 20 days/month). Hours are shown alongside FTE where useful.", "Must", "Q-08", "4"],
-    [f"{MARK_CHG}REQ-CAL-09", "Calculation", "For a 'Clinical Trial' project, period boundaries are computed from milestone dates plus fixed month offsets (sheet 05), so a timeline change re-shapes the periods without re-typing them. For 'Others', periods are entered directly - those projects have no milestone mapping.", "Must", "Q-16, Q-22, Q-23, Q-25", "2,4"],
+    [f"{MARK_CHG}REQ-CAL-09", "Calculation", "For a clinical trial of either type, period boundaries are computed from milestone dates plus fixed month offsets (sheet 05), so a timeline change re-shapes the periods without re-typing them. For 'Others', periods are entered directly - those projects have no milestone mapping.", "Must", "Q-16, Q-22, Q-23, Q-25", "2,4"],
     [f"{MARK_NEW}REQ-CAL-10", "Calculation", "Every month of a project's timeline falls in exactly one period. A month left uncovered by the derivation is reported and carries weight 1.00 rather than being dropped from the simulation.", "Must", "Derived from Q-16", "2,4"],
     [f"{MARK_NEW}REQ-CAL-11", "Calculation", "A period name may occur more than once in one project: 'Conduct' runs as two separate stretches where an interim DB lock splits it. Each occurrence is its own row with its own dates and a sequence number.", "Must", "Q-23", "2,4"],
     [f"{MARK_NEW}REQ-CAL-13", "Calculation", "Where a period boundary has both a milestone and a month-offset definition, a recorded milestone date wins. The offset is the fallback for a project that does not carry that milestone.", "Must", "R-02", "2,4"],
@@ -552,10 +552,10 @@ proj = [
     ["project_id", "Text", "Yes", "Unique key, e.g. PRJ-001. Referenced by every other sheet.", "REQ-PRJ-03"],
     ["project_name", "Text", "Yes", "Unique display name.", "REQ-PRJ-03"],
     [f"{MARK_CHG}project_type", "List", "Yes", "'NewDrug CT', 'Biosimilar CT' or 'Others'. The first two are clinical trials.", "REQ-PRJ-01"],
-    ["project_category", "Text", "Conditional", "Product name. Required when project_type = 'Clinical Trial'.", "REQ-PRJ-02"],
-    [f"{MARK_NEW}clinical_phase", "List", "Conditional", "'Phase 1' / 'Phase 2' / 'Phase 3' / 'Phase 4'. Required when project_type = 'Clinical Trial'.", "REQ-PRJ-09"],
+    ["project_category", "Text", "Conditional", "Product name. Required for either clinical trial type.", "REQ-PRJ-02"],
+    [f"{MARK_NEW}clinical_phase", "List", "Conditional", "'Phase 1' / 'Phase 2' / 'Phase 3' / 'Phase 4'. Required for either clinical trial type.", "REQ-PRJ-09"],
     [f"{MARK_CHG}outsourcing_type", "List", "Yes", "'Full outsourcing' / 'Partial outsourcing' / 'Full In-house'. Three values, fixed at Q-14.", "REQ-PRJ-04"],
-    [f"{MARK_NEW}EDC_setup", "List", "Conditional", "Who sets up the EDC system. 'by CRO' / 'by SB'. Required when project_type = 'Clinical Trial'.", "REQ-PRJ-10"],
+    [f"{MARK_NEW}EDC_setup", "List", "Conditional", "Who sets up the EDC system. 'by CRO' / 'by SB'. Required for either clinical trial type.", "REQ-PRJ-10"],
     [f"{MARK_NEW}DataReviewSystem_setup", "List", "Conditional", "Who sets up the data review system. 'by CRO' / 'by SB'.", "REQ-PRJ-10"],
     [f"{MARK_NEW}RBQM_setup", "List", "Conditional", "Who sets up the RBQM system. 'by CRO' / 'by SB'.", "REQ-PRJ-10"],
     [f"{MARK_NEW}DM_conduct", "List", "Conditional", "Who reviews the clinical trial data. 'by CRO' / 'by SB'.", "REQ-PRJ-10"],
@@ -604,7 +604,7 @@ sets = [
     [f"{MARK_CHG}NewDrug CT / Biosimilar CT", "Before-Start-up, Start-up, Conduct, Close-out (interim), Close-out (final), After Close-out (final)", "Both trial types share one period set and one derivation. They differ in their WEIGHTS, not their shape."],
     ["Others", "Planning, Develop, Close", "Entered directly - dates confirmed manual at Q-25, weights at Q-28. 'Others' projects are hand-entered throughout."],
 ]
-r = table(ws, r, ["project_type", "Period set", "How boundaries are set"], sets, [18, 50, 66], wrap_cols=(2, 3))
+r = table(ws, r, ["project_type", "Period set", "How boundaries are set"], sets, [18, 50, 66], wrap_cols=(2, 3), mark_col=1)
 
 r = section(ws, r, "Sheet: PeriodWeightStandard")
 pws = [
@@ -701,7 +701,7 @@ rules = [
     ["V-01", "Every Assignment.project_id exists in Project.", "Error - row rejected, reported with its row number."],
     ["V-02", "Every Assignment.person_id exists in Person.", "Error - row rejected."],
     [f"{MARK_CHG}V-03", "Every Assignment.role_name exists in RoleFactor FOR THAT PROJECT'S TYPE.", "Error - row rejected. Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error."],
-    ["V-04", "project_category is present when project_type = 'Clinical Trial'.", "Warning - shown as blank in the dashboard."],
+    ["V-04", "project_category is present for either clinical trial type.", "Warning - shown as blank in the dashboard."],
     ["V-05", "end_date is on or after start_date, for projects, assignments and all weight periods.", "Error - row rejected."],
     ["V-06", "Periods within one project, and within one assignment, do not overlap.", "Error - overlapping pair reported."],
     ["V-07", "Assignment dates fall inside the project's own start and end dates.", "Warning - kept, but listed for review."],
@@ -770,7 +770,7 @@ r = note(ws, r, "Under-allocation needs a rolling window, not a per-month test: 
                 "in a row is a signal. A run is reported once, at its start, rather than as three separate flags.")
 r += 1
 
-r = section(ws, r, "Period derivation for a 'Clinical Trial' project   [v1.1]")
+r = section(ws, r, "Period derivation for a clinical trial - either type   [v1.1]")
 r = lines(ws, r, [
     "Boundaries come from milestone dates plus month offsets, so moving a milestone re-shapes the periods.",
     "Where a boundary has both a milestone and an offset definition, the RECORDED MILESTONE WINS and the",
