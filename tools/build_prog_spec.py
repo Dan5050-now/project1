@@ -14,10 +14,10 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "0.5"
-DOC_STATUS = "Draft for review - component-list review outcome applied"
+DOC_VERSION = "0.6"
+DOC_STATUS = "Draft for review - role factor keyed on phase and period (R-10)"
 DOC_DATE = "2026-08-01"
-PLAN = "PRAP_Development_Plan_v1.6.xlsx"
+PLAN = "PRAP_Development_Plan_v1.7.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
 
@@ -116,8 +116,8 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Governing document", f"{PLAN} - changes R-05..R-09 against the v1.3 baseline, awaiting signature"),
-    ("Schema version specified", "3"),
+    ("Governing document", f"{PLAN} - changes R-05..R-10 against the v1.3 baseline, awaiting signature"),
+    ("Schema version specified", "4"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -140,7 +140,7 @@ r = lines(ws, r, [
     "Two things make this specification unusual, and both are deliberate:",
     "",
     "  - The data schema is not described in prose. It already exists as a working file,",
-    "    templates/PRAP_SourceData_Template_v1.4.xlsx, and sheet 03 documents the parse contract against it.",
+    "    templates/PRAP_SourceData_Template_v1.5.xlsx, and sheet 03 documents the parse contract against it.",
     "  - The calculation and validation logic already has a reference implementation in",
     "    tools/verify_source_workbook.py, which runs against the dummy data. Sheet 05 gives the pseudocode;",
     "    that script is the executable check that the pseudocode is right.",
@@ -155,7 +155,7 @@ guide = [
     ("01_Version_History", "Change log."),
     ("02_Scope", "What is specified here, what is deferred to Step 3, and the source documents."),
     ("03_Data_Schema", "The parse contract: every sheet, column, type and coercion rule."),
-    ("04_Validation", "V-01..V-22 with trigger, severity and the exact message shown."),
+    ("04_Validation", "V-01..V-23 with trigger, severity and the exact message shown."),
     ("05_Calculation", "Period derivation, the load formula, aggregation and the two thresholds."),
     ("06_UI_Spec", "The four tabs, their components, filters and states."),
     ("07_Editing_IO", "Edit buffer, dirty state, cascading identifier edits, import and export."),
@@ -167,7 +167,16 @@ r = table(ws, r, ["Sheet", "Contents"], guide, [24, 86], wrap_cols=(2,))
 
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
-rows = [["0.5", DOC_DATE, "Claude Code", "Dan",
+rows = [["0.6", DOC_DATE, "Claude Code", "Dan",
+         "Plan change R-10 applied: the role factor is keyed on project type, clinical phase, period "
+         "and role rather than type and role alone. Sheet 03 documents the two new RoleFactor columns "
+         "and the four-part key; sheet 05 selects the factor by the period the month falls in; V-03 "
+         "reworded and V-23 added for a factor missing on a period an assignment actually spans. "
+         "Schema version 3 to 4. Sheet 05 also records the double-counting risk this creates, since "
+         "RoleFactor and PeriodWeightStandard now vary over the same three dimensions. Sheet 06 gains "
+         "the scroll-containment rule for every table on the source-data and assumptions tabs. "
+         "Written against plan v1.7.", "Draft"],
+        ["0.5", DOC_DATE, "Claude Code", "Dan",
          "Component-list v0.3 review applied (plan change R-09). Sheet 06 gains a fourth tab, "
          "'General assumptions', carrying PeriodWeightStandard, RoleFactor, Config and Lists "
          "(REQ-DSH-11) - and the FTE/hours unit moves there, since it is a setting rather than a "
@@ -206,9 +215,9 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 
 r = section(ws, r, "Source documents")
 src = [
-    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-09 awaiting signature. 69 requirements, 22 validation rules, 11 decisions, source schema version 3.", "Governs this document"],
-    ["templates/PRAP_SourceData_Template_v1.4.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
-    ["templates/PRAP_SourceData_Dummy_v1.5.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
+    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-10 awaiting signature. 69 requirements, 23 validation rules, 11 decisions, source schema version 4.", "Governs this document"],
+    ["templates/PRAP_SourceData_Template_v1.5.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
+    ["templates/PRAP_SourceData_Dummy_v1.6.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
     ["docs/STEP2_OPEN_POINTS.md", "Points raised while building the template.", "Carried into sheet 10"],
 ]
@@ -236,7 +245,7 @@ r = table(ws, r, ["Deferred", "Why"], defer, [56, 76], wrap_cols=(1, 2))
 
 # ---- 03 Data schema -------------------------------------------------------
 ws, r = sheet(wb, "03_Data_Schema", "Data schema - the parse contract",
-              "Documents templates/PRAP_SourceData_Template_v1.4.xlsx. Sheet and column names are matched "
+              "Documents templates/PRAP_SourceData_Template_v1.5.xlsx. Sheet and column names are matched "
               "exactly and case-sensitively.")
 
 r = section(ws, r, "Reading the workbook")
@@ -267,7 +276,7 @@ sheets = [
     ["Milestone", "project_id + milestone_name + milestone_date", "Project", "6", "milestone_name is NOT unique alone - 'Inspection' repeats (REQ-PRJ-13)."],
     ["ProjectPeriod", "project_id + period_name + period_start", "Project", "7", "A natural key: period_name alone is not unique, since 'Conduct' occurs twice, but the two differ in start date. period_seq orders them (V-18)."],
     ["PeriodWeightStandard", "project_type + clinical_phase + period_name", "-", "5", "Both trial types, keyed separately (R-05). 'Others' take manual weights (Q-28)."],
-    ["RoleFactor", "project_type + role_name", "-", "4", "Keyed on all three types, so NewDrug and Biosimilar can carry different factors (R-05)."],
+    ["RoleFactor", "project_type + clinical_phase + period_name + role_name", "-", "6", "249 rows. Keyed on all four so a role's burden can vary across the life of a project (R-10). clinical_phase is EMPTY on the nine 'Others' rows - the lookup must match null to null, not fall through."],
     ["Person", "person_id", "-", "12", "Master."],
     ["Assignment", "assignment_id", "Person, Project, RoleFactor", "11", "One row per person + project + role."],
     ["PersonPeriodWeight", "assignment_id + period_start", "Assignment", "5", "Optional. Overrides person_weight for its window."],
@@ -304,7 +313,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "3", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "4", "Compared with the version this application expects (sheet 08)."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
     ["over_allocation_fte", "Decimal", "1.50", "Absolute, not scaled by capacity_fte (S2-01). See sheet 05."],
     ["under_allocation_fte", "Decimal", "0.60", "Absolute, not scaled by capacity_fte. Moved from 0.80 at S2-05. See sheet 05."],
@@ -313,6 +322,9 @@ cfg = [
     ["capacity_unit", "List", "FTE", "'FTE' or 'percent'."],
 ]
 r = table(ws, r, ["parameter", "Type", "Default", "Use"], cfg, [30, 12, 12, 86], wrap_cols=(4,))
+r = note(ws, r, "schema_version stepped from 3 to 4 at R-10: RoleFactor gained two columns, and an older "
+                "file's four-column sheet cannot be read as a six-column one. V-09 reports the mismatch.")
+r += 1
 r = note(ws, r, "A missing Config row falls back to the default above and raises a warning. A Config value that fails "
                 "coercion is an error - a threshold read as text would silently disable a flag.")
 
@@ -335,7 +347,7 @@ rules = [
     ["V-00", "Fatal", "A required sheet or column is absent.", "Sheet 'Assignment' not found. The workbook must contain all 10 sheets - download the template to compare."],
     ["V-01", "Error", "Assignment.project_id not found in Project.", "Assignment ASG-014 refers to project PRJ-099, which does not exist."],
     ["V-02", "Error", "Assignment.person_id not found in Person.", "Assignment ASG-014 refers to person PSN-099, which does not exist."],
-    ["V-03", "Error", "Assignment.role_name not in RoleFactor for that project's type.", "Assignment ASG-014: role 'Main staff' is not valid for a project of type 'NewDrug CT'. Valid roles for this type: ..."],
+    ["V-03", "Error", "Assignment.role_name appears nowhere in RoleFactor for that project's type.", "Assignment ASG-014: role 'Main staff' is not valid for a project of type 'NewDrug CT'. Valid roles for this type: ..."],
     ["V-04", "Warning", "project_category empty on either clinical trial type.", "Project PRJ-003 is a clinical trial with no product category."],
     ["V-05", "Error", "An end date precedes its start date.", "Project PRJ-003: end_date 2026-01-01 is before start_date 2026-06-01."],
     ["V-06", "Error", "Two periods of one project, or two windows of one assignment, overlap.", "Project PRJ-003: periods 3 and 4 overlap between 2027-06-01 and 2027-06-30."],
@@ -354,6 +366,7 @@ rules = [
     ["V-19", "Error", "A clinical trial with no clinical_phase, or no PeriodWeightStandard rows for its phase.", "Project PRJ-005 is Phase 3, but PeriodWeightStandard has no Phase 3 rows. Its periods cannot be weighted."],
     ["V-20", "Warning", "A milestone other than 'Inspection' recorded more than once.", "Project PRJ-002 records 'CTA submission' twice. Only 'Inspection' is expected to repeat."],
     ["V-21", "Information", "An 'Inspection' dated on or before the final DB lock.", "Project PRJ-002: 1 inspection on or before the final DB lock is treated as a marker and does not open the final period."],
+    ["V-23", "Error", "No RoleFactor row for a (project_type, clinical_phase, period_name, role_name) that an assignment actually spans.", "No role factor for NewDrug CT / Phase 3 / Conduct / Data Analyst - assignments covering that period would be calculated at factor 1.00. 3 assignments are affected."],
     ["V-22", "Warning", "Person.capacity_fte is below config.under_allocation_fte.", "PSN-018: capacity 0.50 FTE is below the under-allocation floor of 0.60, so this person can never clear it however fully they are booked. Lower the floor or raise the capacity."],
 ]
 r = table(ws, r, ["ID", "Severity", "Trigger", "Message shown to the user"],
@@ -420,12 +433,17 @@ r += 1
 r = section(ws, r, "Monthly load   [REQ-CAL-02, REQ-CAL-05, REQ-CAL-08]")
 r = code(ws, r, [
     "  load(assignment, month) = project_period_weight( project, month )",
-    "                          x role_factor( project.type, assignment.role )",
+    "                          x role_factor( project.type, project.phase,",
+    "                                         period_name( project, month ), assignment.role )",
     "                          x person_weight( assignment, month )",
     "                          x coverage( assignment, month )",
     "",
     "  project_period_weight : weight of the period containing the FIRST DAY of the month  (decision C-08)",
     "                          no period covers it -> 1.00, and raise V-12",
+    "  role_factor           : selected by the SAME period as the weight above, so the two always",
+    "                          agree about which period the month is in  (R-10)",
+    "                          project.phase is NULL for 'Others'; the lookup matches null to null",
+    "                          no row matches -> 1.00, and raise V-23",
     "  person_weight         : PersonPeriodWeight.weight_override if a window covers the",
     "                          first day of the month, else assignment.person_weight",
     "  coverage              : calendar days of the month inside [assign_start, assign_end]",
@@ -433,6 +451,29 @@ r = code(ws, r, [
     "",
     "  result is FTE.  hours = FTE x config.fte_hours_per_month",
 ])
+
+r = section(ws, r, "The two weight tables now overlap   [R-10]")
+r = lines(ws, r, [
+    "PeriodWeightStandard is keyed on (project_type, clinical_phase, period_name).",
+    "RoleFactor is now keyed on (project_type, clinical_phase, period_name, role_name).",
+    "The calculation multiplies them, so the pair is mathematically collapsible into one table.",
+])
+r = table(ws, r, ["Table", "Answers", "Change it when"],
+          [["PeriodWeightStandard", "How busy is the PROJECT in this period?",
+            "The shape of a project changes - e.g. Phase 3 close-out is heavier than assumed. One edit covers every role."],
+           ["RoleFactor", "How much of that falls on THIS role?",
+            "The split between roles changes - e.g. the analyst starts earlier than assumed. Five edits, one per role."]],
+          [26, 52, 76], wrap_cols=(2, 3))
+r = note(ws, r, "The separation is a maintenance convention, not something the arithmetic enforces. Raising a "
+                "project's Conduct load by editing all five RoleFactor rows produces the right answer today "
+                "and double-counts the next time PeriodWeightStandard moves. The application cannot detect "
+                "this - both tables are legitimate inputs - so it belongs in the workbook README and in "
+                "whatever process maintains the file.")
+r += 1
+r = note(ws, r, "If the distinction ever stops being maintained in practice, the honest fix is to collapse the "
+                "two into one table keyed on all four columns, not to keep a separation that exists only on "
+                "paper. That would be a schema change, so it is flagged here rather than done.")
+r += 1
 
 r = section(ws, r, "Aggregation   [REQ-CAL-03, REQ-CAL-04, REQ-CAL-07]")
 agg = [
@@ -491,7 +532,7 @@ ex = [
 ]
 r = table(ws, r, ["Element", "Value", "Note"], ex, [22, 62, 44], wrap_cols=(2, 3))
 r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workbook.py against "
-                "PRAP_SourceData_Dummy_v1.5.xlsx must give no errors and no warnings, across 62 projects, "
+                "PRAP_SourceData_Dummy_v1.6.xlsx must give no errors and no warnings, across 62 projects, "
                 "20 people, 289 assignments and 308 periods spanning 73 months. Every period set must be "
                 "contiguous, 30 trials must show two 'Conduct' stretches, and 12 must carry the seventh "
                 "period. Those figures are the regression baseline for Step 4.")
@@ -524,7 +565,7 @@ ov = [
     ["Graph 3", "Timeline per project - the FIRST panel on the tab, above the summary tiles. Each row carries the project name with its start, end and length beneath. Bands are coloured BY PERIOD NAME (see the colour rule below), with the period weight as a lightness step inside each hue. Milestones are inverted triangles in a lane above the bands; 'Inspection' takes the same marker as every other milestone. The hover pop-up gives the period, its dates, its weight and the FTE per month the project draws across it.", "REQ-DSH-02, REQ-PRJ-05, REQ-DSH-10"],
     ["Summary tiles", "Active projects; people assigned; total FTE in the horizon; over-allocated person-months; under-allocation runs.", "REQ-DSH-08"],
     ["Reset filters", "Clears every filter and restores the default 24-month horizon in one action.", "REQ-DSH-05"],
-    ["Scroll regions", "Every chart and table sits in its own horizontal scroll region, so wide content scrolls inside the panel and the page body never scrolls sideways.", "REQ-NFR-02"],
+    ["Scroll regions", "Every chart and table sits in its own scroll region - horizontal for wide content, and a bounded height with vertical scroll for tall content. Wide or long content scrolls INSIDE its panel; the page body never scrolls sideways, and a long sub-table never pushes the panels below it down the page. A scrolled table keeps its header row visible.", "REQ-NFR-02"],
     ["Row expansion - project", "Clicking a project name reveals one row per person and role on it, each with its own monthly figures. Clicking again collapses.", "REQ-DSH-01"],
     ["Row expansion - person", "Clicking a person name reveals one row per project and role they hold, ordered NewDrug CT, Biosimilar CT, Others, then earliest project first.", "REQ-DSH-01"],
     ["Type and phase pills", "Project type and clinical phase shown as labelled pills. The text carries the meaning; the colour only speeds recognition.", "REQ-PRJ-01, REQ-PRJ-09"],
@@ -609,10 +650,10 @@ r = lines(ws, r, [
     "a number was what it is had to leave the application. This tab is the fix.",
 ])
 t4 = [
+    ["Role factors", "RoleFactor as TWO matrices - clinical trials (type + phase + role down the side, the six periods across) and 'Others' (role down the side, the three periods across). 249 rows flat is unreadable, and reading a role ACROSS the periods is the whole point of keying it that way. Both sit in a bounded scroll region.", "REQ-DSH-11"],
     ["Standard period weights", "PeriodWeightStandard as a MATRIX - project type and clinical phase down the side, period name across, cells shaded on the same ramp as the Overall tables. It is a standard, and a standard is read across; 48 flat rows read as a list. 'Others' projects are absent by design - their weights are hand-entered per project (Q-28).", "REQ-DSH-11"],
-    ["Role factors", "RoleFactor in full: project type, role, factor, note. Keyed on type, so the same role can weigh differently on a NewDrug and a Biosimilar trial.", "REQ-DSH-11"],
     ["Configuration", "Config in full, with each parameter's note. The display-unit control sits here, with a line saying why it is not in the filter bar.", "REQ-DSH-11, REQ-CAL-08"],
-    ["Value lists", "Lists, one row per list, showing every accepted value and the count. Answers 'what may I type here' without opening the workbook. A value outside its list is kept and reported by V-11, never dropped.", "REQ-DSH-11"],
+    ["Value lists", "Lists, one row per list, showing every accepted value and the count. Answers 'what may I type here' without opening the workbook. A value outside its list is kept and reported by V-11, never dropped. READ-ONLY and with no insert control: a value added here with nothing referring to it is noise.", "REQ-DSH-11"],
     ["Editing", "The role-factor and config tables are editable and insertable like any other table, and an edit here recalculates everything - these are the multipliers.", "REQ-IMP-07, REQ-IMP-11"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t4, [24, 90, 20], wrap_cols=(2,))
@@ -695,7 +736,7 @@ r = table(ws, r, ["Behaviour", "Reason"], exp, [76, 56], wrap_cols=(1, 2))
 ws, r = sheet(wb, "08_Versioning", "Versioning and compatibility")
 ver = [
     ["Application version", "Constant in the HTML, shown in the header and footer.", "REQ-VC-02"],
-    ["Expected schema version", "Constant in the HTML. Currently 3.", "REQ-VC-02"],
+    ["Expected schema version", "Constant in the HTML. Currently 4.", "REQ-VC-02"],
     ["Check on load", "Compare Config.schema_version with the expected value.", "REQ-VC-03"],
     ["Equal", "Proceed silently.", "REQ-VC-03"],
     ["File older", "Proceed; warn that columns added since may be missing.", "REQ-VC-03"],

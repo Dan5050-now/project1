@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.6"
+DOC_VERSION = "1.7"
 DOC_STATUS = "Change against approved baseline v1.3 - issued for approval"
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -205,8 +205,8 @@ r = lines(ws, r, [
     "opens period 7. Raised as R-03 and CONFIRMED by the reviewer at the v1.1 review.",
     "",
     "v1.3 was approved by Dan on 2026-08-01 and remains the baseline. This issue carries five changes against",
-    "it - R-05 from the Step 3 review, R-06 to R-08 from the specification v0.3 review, and R-09 from the",
-    "component-list v0.3 review - and needs its own approval before it supersedes v1.3.",
+    "it - R-05 from the Step 3 review, R-06 to R-08 from the specification v0.3 review, and R-09 and R-10",
+    "from the component-list v0.3 and v0.4 reviews - and needs its own approval before it supersedes v1.3.",
     "",
     "v1.3 carries change R-04: every sheet of the source workbook now holds at least one free-text note",
     "column. Four sheets had none - Milestone, ProjectPeriod, PeriodWeightStandard and Lists - and each gains",
@@ -364,7 +364,16 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}1.6", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}1.7", DOC_DATE, "Claude Code", "Pending",
+     "Change R-10 against the v1.3 baseline, from the component-list v0.4 review. The role factor is now "
+     "keyed on project type, clinical phase, period and role rather than type and role alone, so a role's "
+     "burden can vary across the life of a project. RoleFactor gains clinical_phase and period_name and "
+     "grows from 13 rows to 249; REQ-CAL-02 reworded; V-23 added for a factor missing on a period an "
+     "assignment actually spans; source schema version steps 3 to 4. A consequence is recorded on sheet 04: "
+     "RoleFactor and PeriodWeightStandard now vary over the same three dimensions and multiply together, "
+     "so they must not both be edited for the same reason.",
+     "Issued for approval"],
+    ["1.6", DOC_DATE, "Claude Code", "Pending",
      "Change R-09 against the v1.3 baseline, from the component-list v0.3 review. Nine components changed; "
      "two needed requirements the plan did not have. REQ-DSH-11 added - the standing assumptions get their "
      "own tab. REQ-IMP-11 added - a row can be inserted, positioned below the row acted on. REQ-DSH-05 "
@@ -479,7 +488,7 @@ reqs = [
     ["REQ-PSN-07", "Person data", "One person may hold assignments on several projects simultaneously, and may hold more than one role on the same project.", "Must", "Derived", "2"],
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
-    [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x role factor x person weight x fraction of the month covered. There is no separate base allocation.", "Must", "Q-01", "2,4"],
+    [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x role factor x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, the period the month falls in, and the role - so a role's burden can vary across the life of a project.", "Must", "Q-01, R-10", "2,4"],
     ["REQ-CAL-03", "Calculation", "Project monthly load is the sum of its assignments; person monthly load is the sum across all their projects.", "Must", "Requester", "4"],
     [f"{MARK_CHG}REQ-CAL-04", "Calculation", "A person-month whose total exceeds the over-allocation threshold (default 1.50 FTE) is flagged as over-allocated. The threshold is absolute, not scaled by capacity (S2-01).", "Must", "Q-08, S2-01", "4"],
     [f"{MARK_CHG}REQ-CAL-05", "Calculation", "A partial first or last month is pro-rated by calendar days worked, not counted as a whole month.", "Must", "Q-02", "4"],
@@ -563,7 +572,7 @@ sheets_tbl = [
     ["Milestone", "One row per project milestone.", "Child of Project"],
     [f"{MARK_NEW}ProjectPeriod", "The four standard periods per project, with their start/end and weight.", "Child of Project"],
     [f"{MARK_NEW}PeriodWeightStandard", "Default weight per project category x period. Seeds ProjectPeriod.", "Reference"],
-    ["RoleFactor", "Role list and burden factor, per project type.", "Reference"],
+    [f"{MARK_CHG}RoleFactor", "Role burden factor, per project type, clinical phase and period.", "Reference"],
     ["Person", "One row per person.", "Master"],
     ["Assignment", "One row per person + project + role.", "Link"],
     ["PersonPeriodWeight", "Optional time-varying override of the person weight.", "Child of Assignment"],
@@ -647,15 +656,28 @@ r = note(ws, r, "Re-keyed at Q-26: a clinical trial's weights come from its CLIN
                 "take their weights by hand - which makes this sheet a clinical-trial table, and leaves 'Others' "
                 "projects entirely hand-entered: dates and weights alike.")
 
-r = section(ws, r, "Sheet: RoleFactor")
+r = section(ws, r, "Sheet: RoleFactor   [key extended at R-10]")
 rf = [
-    [f"{MARK_CHG}project_type", "List", "Yes", "'NewDrug CT', 'Biosimilar CT' or 'Others'. Roles are keyed by type, so a factor can differ between the two trial types.", "Q-03, R-05"],
-    [f"{MARK_CHG}role_name", "Text", "Yes", "Clinical Trial: 'Project oversight', 'Lead data manager', 'Clinical Data Associator', 'Clinical Database Programmer', 'Data Analyst'. Others: 'Project lead', 'Main staff', 'Other staff'.", "Q-03"],
-    [f"{MARK_CHG}role_factor", "Decimal", "Yes", "Relative burden of the role, the same for everyone holding it. Values still to be supplied - see Q-17.", "Q-01"],
+    ["project_type", "List", "Yes", "'NewDrug CT', 'Biosimilar CT' or 'Others'. Roles are keyed by type, so a factor can differ between the two trial types.", "Q-03, R-05"],
+    [f"{MARK_NEW}clinical_phase", "List", "Trials only", "The phase this factor applies to. EMPTY on 'Others' rows, which carry no phase.", "R-10"],
+    [f"{MARK_NEW}period_name", "Text", "Yes", "The period this factor applies to. One of the six clinical periods, or one of the three 'Others' periods, matching the project_type.", "R-10"],
+    ["role_name", "Text", "Yes", "Clinical Trial: 'Project oversight', 'Lead data manager', 'Clinical Data Associator', 'Clinical Database Programmer', 'Data Analyst'. Others: 'Project lead', 'Main staff', 'Other staff'.", "Q-03"],
+    [f"{MARK_CHG}role_factor", "Decimal", "Yes", "Relative burden of THIS role in THIS period, the same for everyone holding the role. A role's share of the work is not flat across a project: the database programmer is heaviest while the database is built, the data associator while data arrives, the analyst at lock.", "Q-01, R-10"],
     ["role_note", "Text", "No", "Basis for the factor.", "REQ-CAL-06"],
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "Basis"],
           rf, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
+r = note(ws, r, "The key is now (project_type, clinical_phase, period_name, role_name), which makes this the "
+                "largest sheet in the workbook: 2 types x 4 phases x 6 periods x 5 roles = 240 rows, plus 9 for "
+                "'Others'. That is the cost of the change and it falls on whoever maintains the file.")
+r += 1
+r = note(ws, r, "NOTE A CONSEQUENCE. PeriodWeightStandard and RoleFactor now both vary over (project_type, "
+                "clinical_phase, period_name), and the calculation multiplies them together. The pair is "
+                "therefore mathematically collapsible into one table keyed on all four dimensions. They are "
+                "kept separate deliberately - one says how busy the PROJECT is in a period, the other how much "
+                "of that falls on a ROLE - but the separation only holds if they are maintained that way. "
+                "Raising a whole project's Conduct load belongs in PeriodWeightStandard, once; doing it in "
+                "RoleFactor means five edits and double-counts the next time the period weight moves.")
 
 r = section(ws, r, "Sheet: Person")
 pers = [
@@ -676,7 +698,7 @@ asg = [
     ["person_id", "Text", "Yes", "Foreign key to Person.", "REQ-PSN-01"],
     [f"{MARK_NEW}person_name", "Text", "No", "Display convenience added at v0.11. Not authoritative: checked against Person on import and refreshed from it.", "REQ-PSN-01"],
     ["project_id", "Text", "Yes", "Foreign key to Project.", "REQ-PSN-02"],
-    [f"{MARK_CHG}role_name", "Text", "Yes", "Foreign key to RoleFactor, matched on (project's type, role_name). Several rows = several roles on one project.", "REQ-PSN-03"],
+    [f"{MARK_CHG}role_name", "Text", "Yes", "Foreign key to RoleFactor, matched on (project's type, role_name); the phase and period are supplied by the project and the month being calculated. Several rows = several roles on one project.", "REQ-PSN-03"],
     ["assign_start_date", "Date", "Yes", "Date the person joins the study.", "REQ-PSN-04"],
     ["assign_end_date", "Date", "Yes", "Date the person leaves the study. Blank = runs to project end.", "REQ-PSN-04"],
     [f"{MARK_CHG}person_weight", "Decimal", "Yes", "RENAMED from base_allocation. How much this person works on this project, e.g. 0.40. Q-01 folded the two former fields into this one.", "REQ-CAL-02"],
@@ -701,7 +723,7 @@ r = note(ws, r, "Changed at Q-01. The answer named exactly three factors, so a f
 
 r = section(ws, r, "Sheet: Config")
 cfg = [
-    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4.", "3", "REQ-VC-02"],
+    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, to 4 at v1.7.", "4", "REQ-VC-02"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],
     [f"{MARK_NEW}over_allocation_fte", "Person-month total above this is over-allocated.", "1.50", "REQ-CAL-04"],
     [f"{MARK_CHG}under_allocation_fte", "Person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity.", "0.60", "REQ-CAL-07"],
@@ -725,7 +747,8 @@ r = section(ws, r, "Referential rules checked on import")
 rules = [
     ["V-01", "Every Assignment.project_id exists in Project.", "Error - row rejected, reported with its row number."],
     ["V-02", "Every Assignment.person_id exists in Person.", "Error - row rejected."],
-    [f"{MARK_CHG}V-03", "Every Assignment.role_name exists in RoleFactor FOR THAT PROJECT'S TYPE.", "Error - row rejected. Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error."],
+    [f"{MARK_CHG}V-03", "Every Assignment.role_name appears in RoleFactor for that project's type.", "Error - row rejected. Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error."],
+    [f"{MARK_NEW}V-23", "For every (project_type, clinical_phase, period_name, role_name) an assignment can actually reach, a RoleFactor row exists.", "Error - a factor missing for ONE period of a project silently drops that stretch to 1.00, which is a wrong number rather than an obvious gap. Checked against the periods each assignment spans, not against the whole cross-product."],
     ["V-04", "project_category is present for either clinical trial type.", "Warning - shown as blank in the dashboard."],
     ["V-05", "end_date is on or after start_date, for projects, assignments and all weight periods.", "Error - row rejected."],
     ["V-06", "Periods within one project, and within one assignment, do not overlap.", "Error - overlapping pair reported."],
@@ -759,7 +782,7 @@ ws, r = sheet(wb, "05_Resource_Logic", "Resource calculation logic",
 r = section(ws, r, "Monthly load for one assignment, in one month")
 r = lines(ws, r, [
     "    load(assignment, month) = project_period_weight(project, month)",
-    "                            x role_factor(project_type, role)",
+    "                            x role_factor(project_type, clinical_phase, period, role)",
     "                            x person_weight(assignment, month)",
     "                            x coverage(assignment, month)",
     "",
@@ -767,8 +790,10 @@ r = lines(ws, r, [
     "",
     "project_period_weight  is set by the project's category for the milestone period the month falls in.",
     "                       It is identical for everyone assigned to that project in that period.",
-    "role_factor            is the standard burden of the role, identical for everyone holding it.",
-    "                       Roles are drawn from the list valid for the project's type.",
+    "role_factor            is the standard burden of the role IN THE PERIOD THE MONTH FALLS IN,",
+    "                       identical for everyone holding that role on that kind of project (R-10).",
+    "                       Roles are drawn from the list valid for the project's type. Where no row",
+    "                       matches, the factor falls back to 1.00 and V-23 reports it.",
     "person_weight          is how much this person works on this project, given per assignment;",
     "                       a PersonPeriodWeight row replaces it for the months it covers.",
     "coverage               = calendar days worked in the month / calendar days in the month.",
@@ -1022,7 +1047,8 @@ wbs = [
     ["1", "1.16", "Apply change R-05 (project_type split).", "PRAP_Development_Plan_v1.4.xlsx", "Complete - issued for review"],
     ["1", "1.17", "Apply the specification-review answers (R-06, R-07, R-08).", "PRAP_Development_Plan_v1.5.xlsx", "Complete - issued for review"],
     ["1", "1.18", "Apply the component-list review outcome (R-09).", "PRAP_Development_Plan_v1.6.xlsx", "Complete - issued for review"],
-    ["1", "1.19", "Approve plan v1.6.", "Approval on 12_Review_Log", "Pending you"],
+    ["1", "1.19", "Apply change R-10 (role factor keyed on phase and period).", "PRAP_Development_Plan_v1.7.xlsx", "Complete - issued for review"],
+    ["1", "1.20", "Approve plan v1.7.", "Approval on 12_Review_Log", "Pending you"],
     ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
     ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template + _Dummy v1.1", "Complete - issued for review"],
@@ -1117,7 +1143,8 @@ align = [
     ["v1.3", "v0.2", "-", "2", "2026-08-01", "R-04: note column on every source sheet. APPROVED 2026-08-01 by Dan."],
     ["v1.4", "v0.3", "prototype v0.2", "3", "2026-08-01", "R-05: project_type split. Superseded."],
     ["v1.5", "v0.4", "prototype v0.3", "3", "2026-08-01", "R-05..R-08. Superseded."],
-    ["v1.6", "v0.5", "prototype v0.4", "3", DOC_DATE, "R-05..R-09. Awaiting approval."],
+    ["v1.6", "v0.5", "prototype v0.4", "3", "2026-08-01", "R-05..R-09. Superseded."],
+    ["v1.7", "v0.6", "prototype v0.5", "4", DOC_DATE, "R-05..R-10. Awaiting approval."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1252,6 +1279,7 @@ chg = [
     ["R-01", "Data model", "Add 'Inspection' as a standard milestone.", "Applied. Milestone list grows to ten. Unlike the others, 'Inspection' MAY REPEAT within one project, so REQ-PRJ-13 and V-20 were added and V-14's uniqueness check now exempts it.", "Applied"],
     ["R-02", "Calculation", "Sheet 05 derivation edits: Before-Start-up ends at 'Protocol (v1)'; Start-up begins the day after it and ends at 'First SIV' (or 'FPI'); a seventh period 'After Close-out (final)' spans the Inspection dates.", "Applied. Clinical period set grows to six names; REQ-PRJ-12 and REQ-CAL-09 reworded; REQ-CAL-13 added for the milestone-beats-offset rule; 'FPI' restored to the milestone list as the First SIV fallback.", "Applied"],
     ["R-03", "Calculation", "Not requested - found while applying R-02.", "Period 7 was defined as earliest to latest 'Inspection'. Where an inspection is dated on or before the final DB lock, that makes period 7 start before period 6 and overlap Conduct. Only inspections AFTER the final DB lock open period 7; earlier ones stay markers, reported by V-21. CONFIRMED by the reviewer at the v1.1 review.", "CONFIRMED"],
+    ["R-10", "Data model", "The role factor must be given by role AND project type AND clinical phase AND period, not by role and type alone.", "Applied. RoleFactor gains clinical_phase and period_name; its key becomes all four columns and the sheet grows from 13 rows to 249. REQ-CAL-02 reworded, V-23 added, schema 3 -> 4. This is a real gain in expressiveness - a role's burden genuinely is not flat across a project, and the dummy data now shows the database programmer peaking at start-up and the analyst at lock. It carries two costs, both stated rather than hidden: 249 rows is a large hand-maintained table, and RoleFactor now varies over the same three dimensions as PeriodWeightStandard, so the two multiply and can double-count if both are edited for the same reason. See the note on sheet 04.", "Applied"],
     ["R-09", "UI", "Nine components changed at the component-list v0.3 review: a fourth tab for the standing assumptions, insert-row on every editable table, clinical-phase filter, the unit toggle demoted from filter to setting, the demand-chart legend replaced by a hover pop-up, four timeline changes, a time zone on the load stamp, and the edit counter stating its validation standing.", "Applied. Seven were satisfiable by design alone. Two were not: nothing in the plan required the assumptions to be reachable in the application, and nothing said a row could be created at all - so REQ-DSH-11 and REQ-IMP-11 were added. REQ-DSH-05 and REQ-IMP-05 reworded. One conflict surfaced: O-10 asks the timeline to be coloured by period name, which contradicts accepted decision D-06 (shade by weight). O-10 is the more specific instruction, so D-06 is superseded and weight becomes a lightness step within each period hue.", "Applied"],
     ["R-08", "UI", "The two 'Conduct' stretches of a project must be distinguishable on screen (S2-04).", "Applied as REQ-DSH-10. A display rule, not a data change: period_name stays 'Conduct' in the workbook and the screen shows it with its sequence, 'Conduct (1)' and 'Conduct (2)'. Changing the stored name would have broken the weight lookup and V-15.", "Applied"],
     ["R-07", "Calculation", "Thresholds stay ABSOLUTE, not relative to capacity_fte (S2-01), and the under-allocation floor moves to 0.60 FTE (S2-05).", "Applied. Taken together these resolve the defect S2-01 was raised about: at a 0.60 floor every capacity in the data can clear it - 1.00 needs 60% utilisation, 0.80 needs 75%, 0.60 needs 100%. The risk only returns for a capacity BELOW the floor, so V-22 warns on exactly that. REQ-CAL-04 and REQ-CAL-07 reworded; Config default 0.80 -> 0.60.", "Applied"],
@@ -1352,11 +1380,12 @@ appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
         ["PRAP Development Plan v1.3", "Dan", "2026-08-01",
          "APPROVED - FINAL. Change R-04 accepted; this issue supersedes v1.2 and closes the development "
          "plan. Step 1 is complete."],
-        ["PRAP Development Plan v1.6", "", "",
-         "Pending your signature. Changes R-05 (project_type split, schema 2 -> 3), R-06 (volume "
-         "re-baselined to 100 projects / 1,000 people), R-07 (absolute thresholds, floor 0.60), "
-         "R-08 (repeated period names distinguishable on screen) and R-09 (component-list review: "
-         "assumptions tab and insert-row become REQ-DSH-11 and REQ-IMP-11)."]]
+        ["PRAP Development Plan v1.7", "", "",
+         "Pending your signature. Changes R-05 (project_type split), R-06 (volume re-baselined to "
+         "100 projects / 1,000 people), R-07 (absolute thresholds, floor 0.60), R-08 (repeated period "
+         "names distinguishable on screen), R-09 (component-list review: assumptions tab and insert-row "
+         "become REQ-DSH-11 and REQ-IMP-11) and R-10 (role factor keyed on type, phase, period and role; "
+         "schema 3 -> 4)."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 16, 14, 88], wrap_cols=(4,))
 for cc in (1, 2, 3, 4):

@@ -6,7 +6,7 @@ left. The review trail lives in the deliverable rather than in a chat log.
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v0.4.xlsx
+Output: docs/PRAP_UI_Component_List_v0.5.xlsx
 """
 
 from pathlib import Path
@@ -16,9 +16,9 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "0.4"
+VERSION = "0.5"
 DATE = "2026-08-01"
-PROTOTYPE = "app/PRAP_Prototype_v0.4.html"
+PROTOTYPE = "app/PRAP_Prototype_v0.5.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
 FONT = "Arial"
@@ -77,13 +77,13 @@ ws = wb.create_sheet("00_Cover")
 ws.sheet_view.showGridLines = False
 ws["A1"] = "PRAP — UI component list"
 ws["A1"].font = TITLE_F
-ws["A2"] = "Step 3, task 3.1 — review round 2: your decisions applied"
+ws["A2"] = "Step 3, task 3.1 — review round 3: three further items applied"
 ws["A2"].font = NOTE_F
 meta = [("Version", f"v{VERSION}"), ("Date", DATE), ("Author", "Claude Code"),
         ("Reviewer", "Dan — v0.3 reviewed 2026-08-01"),
         ("Prototype", PROTOTYPE),
-        ("Governing plan", "PRAP_Development_Plan_v1.6.xlsx (changes R-05..R-09, awaiting signature)"),
-        ("Specification", "PRAP_Programming_Specification_v0.5.xlsx (draft)")]
+        ("Governing plan", "PRAP_Development_Plan_v1.7.xlsx (changes R-05..R-10, awaiting signature)"),
+        ("Specification", "PRAP_Programming_Specification_v0.6.xlsx (draft)")]
 r = 4
 for k, v in meta:
     ws.cell(r, 1, k).font = BOLD_F
@@ -112,6 +112,13 @@ for line in [
     "",
     "Sheet 04 lists what your review changed outside this document: two new requirements, two",
     "reworded, and the plan and specification versions that carry them.",
+    "",
+    "ROUND 3 (this issue) applied three further items you raised, listed in full on sheet 05:",
+    "the role factor is now keyed on role AND project type AND clinical phase AND period; every table",
+    "on the three data tabs scrolls inside its own panel; and the insert buttons missing from the",
+    "assumptions tab are fixed. You were right about the last one, and it was worse than reported -",
+    "the role-factor table had an 'insert' HEADER with no cells beneath it, so that table was a column",
+    "out of alignment, and the value-lists table had buttons it should never have had.",
     "",
     "To review this round: open the prototype, then mark the YELLOW column on sheets 01 and 02 -",
     "'OK' where the change landed, or 'Rework' with a note where it did not.",
@@ -283,9 +290,18 @@ C = [
      "Refuses to delete a row that is still referenced, naming what points at it.",
      "V-17", K, "", "Unchanged."),
 
-    ("X-01", "Layout", "Horizontal scroll regions",
-     "Every chart and table scrolls inside its own panel, so the page body never scrolls sideways.",
-     "REQ-NFR-02", K, "", "Unchanged."),
+    ("X-01", "Layout", "[CHANGED] Scroll regions",
+     "Every chart and table scrolls inside its own panel - horizontally when wide, and within a bounded "
+     "height when tall, with the header row staying visible.",
+     "REQ-NFR-02", "Change (round 3)",
+     "Apply scroll bar on the bottom of all sections of 'Source data (project)'/'Source data (person)'/"
+     "'General assumptions'. Some sections have problems that table size over the fixed section site. "
+     "(e.g. Periods of 'Source data (project)', Assignments and Weight overrides of 'Source data (person)')",
+     "Done. Six tables were rendering outside their panels: the milestone and period sub-tables, "
+     "assignments, weight overrides, and both assumptions tables. Each now sits in a scroll region that "
+     "is bounded in BOTH directions - the earlier rule only covered width, which is why a long "
+     "sub-table still grew the page and pushed the panels below it down. Verified by measuring the "
+     "document's scroll width against the viewport: they match, so nothing overflows sideways."),
     ("X-02", "Layout", "Type and phase pills",
      "Project type and clinical phase as labelled pills; text carries the meaning, colour only speeds recognition.",
      "REQ-PRJ-01, REQ-PRJ-09", K, "", "Unchanged."),
@@ -301,20 +317,32 @@ C = [
      "REQ-DSH-11", "", "",
      "Added for G-07. Shown as a matrix, not 48 flat rows: it is a standard, and a standard is read "
      "across. 'Others' projects are absent by design - their weights are hand-entered per project."),
-    ("A-02", "Assumptions tab", "[NEW] Role factors",
-     "RoleFactor: what one person in a role costs the project per month, keyed on project type.",
+    ("A-02", "Assumptions tab", "[CHANGED] Role factors — clinical trials",
+     "RoleFactor as a matrix: type + phase + role down the side, the six periods across.",
+     "REQ-DSH-11", "Change (round 3)",
+     "Weight of Role factors should be given by Role & Project type & Clinical phase & Periods.",
+     "Done - see sheet 05. The key is now all four columns and the sheet grows from 13 rows to 249, so "
+     "it is shown as a matrix: 40 rows of six periods each. Reading a role ACROSS the periods is the "
+     "point of the change - the database programmer peaks at start-up, the analyst at lock. Also fixed "
+     "here: this table had an 'insert' header with no cells beneath it, so every row was a column out "
+     "of alignment. It is a reference matrix now, and reference matrices carry no insert control."),
+    ("A-02b", "Assumptions tab", "[NEW] Role factors — Others",
+     "The same matrix for non-trial projects: role down the side, the three 'Others' periods across.",
      "REQ-DSH-11", "", "",
-     "Added for G-07. Keyed on type, so the same role can weigh differently on a new-drug trial and "
-     "a biosimilar."),
+     "Split out because 'Others' projects carry no clinical phase and run a different period set, so "
+     "they cannot share a matrix with the trials without a column of blanks."),
     ("A-03", "Assumptions tab", "[NEW] Configuration",
      "Config: thresholds and settings, plus the display-unit control moved here from the filter bar.",
      "REQ-DSH-11, REQ-CAL-08", "", "",
      "Added for G-07 and O-04. The thresholds that colour the tables now sit next to a note saying "
      "what they mean."),
-    ("A-04", "Assumptions tab", "[NEW] Value lists",
-     "Lists: what each list-typed column will accept, and how many values each list holds.",
-     "REQ-DSH-11", "", "",
-     "Added for G-07. Answers 'what may I type here' without opening the workbook."),
+    ("A-04", "Assumptions tab", "[CHANGED] Value lists",
+     "Lists: what each list-typed column will accept, and how many values each list holds. Read-only.",
+     "REQ-DSH-11", "Change (round 3)",
+     "Insert row button ... Check all tables of the 'General assumptions'.",
+     "Fixed. This table had insert BUTTONS it should never have had - the header carried no insert "
+     "column, so it too was out of alignment, the opposite way round from A-02. It is now explicitly "
+     "read-only: a value added here with nothing referring to it is noise, and the note says so."),
     ("X-05", "Layout", "[NEW] Hover pop-up layer",
      "A real tooltip - follows the cursor, flips at the screen edge, carries formatted multi-line content.",
      "REQ-DSH-02", "", "",
@@ -421,6 +449,15 @@ D = [
      "the same row, adjacent to each other. One shared hue made them read as a single interrupted band.",
      "", "Light amber for interim, deep orange for final. Both still read as 'the close-out family', "
          "which is what your mapping intended."),
+    ("D-19", "[NEW] PeriodWeightStandard and RoleFactor are kept as two tables, not collapsed into one.",
+     "Keying the role factor on phase and period means both tables now vary over (type, phase, period), "
+     "and the calculation multiplies them - so they are mathematically collapsible into a single table "
+     "keyed on all four columns. They are kept apart because they answer different questions: one is "
+     "how busy the PROJECT is in a period, the other how much of that falls on a ROLE.",
+     "", "Kept separate. But the separation is a maintenance convention, not something the arithmetic "
+         "enforces: raising a project's Conduct load by editing all five role rows gives the right answer "
+         "today and double-counts the next time the period weight moves. If that distinction is not kept "
+         "in practice, the honest fix is to collapse them - a schema change, so flagged rather than done."),
     ("D-18", "[NEW] The insert control leads each row rather than trailing it.",
      "Placed at the end of the row, '+ row' sat off-screen on the 23-column project table and needed a "
      "horizontal scroll every time. Leading, it is always in view and reads as a row-action gutter.",
@@ -499,6 +536,56 @@ r = table(ws, 4, ["Item", "Change", "Raised by", "What it says now", "Priority",
 r = ws.max_row + 2
 ws.cell(r, 1, "Nothing else in the plan or specification moved. Everything else you asked for was a "
               "design change the existing requirements already permitted.").font = NOTE_F
+
+# ---- round 3 ------------------------------------------------------------
+ws = wb.create_sheet("05_Round3")
+ws.sheet_view.showGridLines = False
+ws["A1"] = "Review round 3 — three items"
+ws["A1"].font = TITLE_F
+ws["A2"] = "Raised after prototype v0.4. All three applied in v0.5."
+ws["A2"].font = NOTE_F
+rows = [
+    ["1", "Data model",
+     "Weight of Role factors should be given by Role & Project type & Clinical phase & Periods. Update all "
+     "relevant outputs (plan, specification, sourcedata template, dummy test sourcedata file, prototype, "
+     "UI_Component_List).",
+     "Applied as plan change R-10, and it is a genuine gain: a role's burden is not flat across a project, "
+     "and the dummy data now shows the database programmer peaking at start-up and the analyst at lock. "
+     "RoleFactor gains clinical_phase and period_name; the key becomes all four columns; the sheet grows "
+     "from 13 rows to 249; schema version steps 3 to 4. Every output listed was regenerated. "
+     "TWO COSTS, both stated rather than hidden. (a) 249 rows is a large table to maintain by hand. "
+     "(b) RoleFactor now varies over the same three dimensions as PeriodWeightStandard and the two "
+     "multiply, so editing both for the same reason double-counts - see D-19 and specification sheet 05. "
+     "A new rule, V-23, catches a factor missing for a period an assignment actually spans, which would "
+     "otherwise drop that stretch silently to 1.00.",
+     "Plan v1.7 (R-10), spec v0.6, template v1.5, dummy v1.6, prototype v0.5"],
+    ["2", "Layout",
+     "Apply scroll bar on the bottom of all sections of 'Source data (project)' / 'Source data (person)' / "
+     "'General assumptions'. Some sections have problems that table size over the fixed section site. "
+     "(e.g. Periods of 'Source data (project)', Assignments and Weight overrides of 'Source data (person)')",
+     "Applied. Six tables were rendering outside their panels. The v0.4 rule bounded WIDTH only, which is "
+     "why the ones you named still overflowed - Periods is too wide for a half-width panel, Assignments "
+     "and Weight overrides are too tall. Each table now sits in a region bounded in both directions, and "
+     "keeps its header row visible while scrolled. Checked by measuring the document scroll width against "
+     "the viewport width: equal, so nothing overflows sideways.",
+     "Prototype v0.5, component X-01, spec v0.6 sheet 06"],
+    ["3", "Layout",
+     "Insert row button should be added, however only column is added now but no button to add new row is "
+     "added under 'Insert' column. It looks like wrong information. Check all tables of the "
+     "'General assumptions'.",
+     "Fixed, and it was worse than you saw. The role-factor table had an 'insert' HEADER with no cells "
+     "beneath it, so every row of that table was a column out of alignment - the note you read as wrong "
+     "information was wrong. The value-lists table had the opposite fault: insert buttons with no header. "
+     "Both came from one careless edit in v0.4 that moved the control to the front of the row and missed "
+     "these two tables. Now: role factors are reference matrices with no insert control at all, value "
+     "lists are explicitly read-only, and Config keeps its per-row control.",
+     "Prototype v0.5, components A-02, A-02b, A-04"],
+]
+r = table(ws, 4, ["#", "Area", "What you raised (verbatim)", "What was done", "Carried in"],
+          rows, [5, 14, 66, 104, 34], wrap_cols=(3, 4, 5))
+r = ws.max_row + 2
+ws.cell(r, 1, "Item 3 is the kind of fault a rendered screenshot catches and a code diff does not. The "
+              "prototype is now rendered and inspected on every build for exactly that reason.").font = NOTE_F
 
 wb.save(OUT)
 print(f"Written: {OUT}  ({len(C)} components, {len(D)} decisions)")

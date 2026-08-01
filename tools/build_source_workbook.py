@@ -28,9 +28,9 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 3
-TEMPLATE_VERSION = "1.4"
-DUMMY_VERSION = "1.5"
+SCHEMA_VERSION = 4
+TEMPLATE_VERSION = "1.5"
+DUMMY_VERSION = "1.6"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -139,8 +139,10 @@ SHEETS = {
     ],
     "RoleFactor": [
         ("project_type", "Which type's role list this row belongs to.", "key"),
+        ("clinical_phase", "The phase this factor applies to. Leave EMPTY for 'Others'.", "key"),
+        ("period_name", "The period this factor applies to.", "key"),
         ("role_name", "The role.", "key"),
-        ("role_factor", "YOU SUPPLY. Relative burden of the role.", "fill"),
+        ("role_factor", "YOU SUPPLY. Relative burden of this role in this period.", "fill"),
         ("role_note", "Basis for the factor.", ""),
     ],
     "Person": [
@@ -204,7 +206,7 @@ DROPDOWNS = {
     "Milestone": {"milestone_name": "milestone_name"},
     "PeriodWeightStandard": {"project_type": "project_type", "clinical_phase": "clinical_phase",
                              "period_name": "period_name_clinical"},
-    "RoleFactor": {"project_type": "project_type"},
+    "RoleFactor": {"project_type": "project_type", "clinical_phase": "clinical_phase"},
 }
 
 
@@ -271,6 +273,8 @@ def dummy_data():
     PRODUCTS = ["Onvelaris", "Cardexa", "Neurexa", "Renvia", "Hepatiq",
                 "Immunex", "Osteva", "Pulmora", "Dermaline", "Glycora"]
     PHASES = ["Phase 1", "Phase 2", "Phase 3", "Phase 4"]
+    CLINICAL_PERIODS = [v for k, v in LISTS if k == "period_name_clinical"][0]
+    OTHER_PERIODS = [v for k, v in LISTS if k == "period_name_others"][0]
     OUTSOURCING = ["Full outsourcing", "Partial outsourcing", "Full In-house"]
     PARTY = ["by CRO", "by SB"]
     EDC = ["Veeva EDC", "Rave", "eSOURCE"]
@@ -418,14 +422,40 @@ def dummy_data():
             for pn, w in prof.items():
                 pws.append((ct, ph, pn, round(w * factor, 2), note))
 
+    # A role's share of the work is not flat across a trial: the database programmer
+    # is heaviest while the database is being built, the data associator while data is
+    # coming in, the analyst at lock. That shape is what makes the factor worth keying
+    # on the period as well as the role (R-10).
     ct_role_base = [("Project oversight", 0.80), ("Lead data manager", 1.20),
                     ("Clinical Data Associator", 1.00),
                     ("Clinical Database Programmer", 1.10), ("Data Analyst", 0.90)]
-    roles_tbl = [(ct, rn, rf, "Illustrative - replace with your figure")
-                 for ct in CT_TYPES for rn, rf in ct_role_base]
-    roles_tbl += [("Others", "Project lead", 1.00, "Illustrative"),
-                  ("Others", "Main staff", 0.90, "Illustrative"),
-                  ("Others", "Other staff", 0.70, "Illustrative")]
+    role_shape = {
+        "Project oversight":            [0.90, 1.00, 1.00, 1.00, 1.00, 0.80],
+        "Lead data manager":            [0.80, 1.20, 1.00, 1.10, 1.20, 0.70],
+        "Clinical Data Associator":     [0.50, 0.80, 1.30, 1.10, 0.90, 0.50],
+        "Clinical Database Programmer": [0.70, 1.50, 0.80, 1.00, 1.10, 0.40],
+        "Data Analyst":                 [0.40, 0.60, 0.90, 1.30, 1.50, 0.90],
+    }
+    # Deliberately mild. Phase already drives PeriodWeightStandard, so a strong phase
+    # term here would count the same effect twice.
+    phase_role_mod = {"Phase 1": 0.95, "Phase 2": 1.00, "Phase 3": 1.05, "Phase 4": 0.90}
+    type_role_mod = {"NewDrug CT": 1.00, "Biosimilar CT": 0.95}
+
+    roles_tbl = []
+    for ct in CT_TYPES:
+        for ph in PHASES:
+            for i, pn in enumerate(CLINICAL_PERIODS):
+                for rn, base in ct_role_base:
+                    f = base * role_shape[rn][i] * phase_role_mod[ph] * type_role_mod[ct]
+                    roles_tbl.append((ct, ph, pn, rn, round(f, 2),
+                                      "Illustrative - replace with your figure"))
+    ot_shape = {"Project lead": [1.10, 1.00, 0.90], "Main staff": [0.70, 1.20, 0.90],
+                "Other staff": [0.60, 1.10, 1.00]}
+    ot_base = {"Project lead": 1.00, "Main staff": 0.90, "Other staff": 0.70}
+    for i, pn in enumerate(OTHER_PERIODS):
+        for rn in OT_ROLES:
+            roles_tbl.append(("Others", None, pn, rn,
+                              round(ot_base[rn] * ot_shape[rn][i], 2), "Illustrative"))
 
     # ---- periods --------------------------------------------------------
     periods = []
@@ -539,7 +569,8 @@ def add_readme(wb, kind):
         "   Milestone             one row per milestone. Eight standard names.",
         "   ProjectPeriod         the periods each project passes through, with their weights.",
         "   PeriodWeightStandard  default weights per clinical phase. Clinical trials only.",
-        "   RoleFactor            the roles and their relative burden, per project type.",
+        "   RoleFactor            the relative burden of each role, per project type, clinical phase",
+        "                         and period. Leave clinical_phase empty on the 'Others' rows.",
         "   Person                one row per person.",
         "   Assignment            one row per person + project + role.",
         "   PersonPeriodWeight    optional windows where a person's weight differs.",
@@ -687,7 +718,8 @@ def build(kind):
             "Milestone": ["PRJ-001", None, "CTA submission", date(2026, 1, 15), 2, "example row - delete before use"],
             "ProjectPeriod": ["PRJ-001", "Start-up", 2, date(2025, 12, 15), date(2026, 4, 14), 1.30, "example row - delete before use"],
             "PeriodWeightStandard": ["NewDrug CT", "Phase 1", "Start-up", None, "example row - delete before use"],
-            "RoleFactor": ["NewDrug CT", "Lead data manager", None, "example row - delete before use"],
+            "RoleFactor": ["NewDrug CT", "Phase 1", "Start-up", "Lead data manager", None,
+                           "example row - delete before use"],
             "Person": ["PSN-001", "Kim S.", "Data Management", "Lead data manager", 1.00,
                        None, None, "example row - delete before use", None, None, None, None],
             "Assignment": ["ASG-001", "PSN-001", None, "PRJ-001", "Lead data manager",

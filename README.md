@@ -8,9 +8,9 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | v1.3 approved 2026-08-01 · **v1.6 changes awaiting signature** |
-| 2 | Programming specification | **v0.5 draft — no open points** |
-| 3 | Prototype UI design | **v0.4 prototype — review round 2 applied, issued for confirmation** |
+| 1 | Development plan | v1.3 approved 2026-08-01 · **v1.7 changes awaiting signature** |
+| 2 | Programming specification | **v0.6 draft — no open points** |
+| 3 | Prototype UI design | **v0.5 prototype — review round 3 applied, issued for confirmation** |
 | 4 | Code generation | Not started |
 | 5 | Finalisation | Not started |
 
@@ -30,16 +30,19 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v1.6.xlsx` — **current.** 69 requirements, 22 validation
-  rules. Carries five changes against the approved baseline, all awaiting signature:
+- `docs/PRAP_Development_Plan_v1.7.xlsx` — **current.** 69 requirements, 23 validation
+  rules, source schema version 4. Carries six changes against the approved baseline,
+  all awaiting signature:
   R-05 (`project_type` splits into `NewDrug CT` and `Biosimilar CT`, schema version 3),
   R-06 (target volume 100 projects / 1,000 people, `Should` → `Must`), R-07 (both
   allocation thresholds absolute, under-allocation floor 0.80 → 0.60), R-08
-  (a repeated period name must be distinguishable on screen) and R-09 (the
-  component-list review: a tab for the standing assumptions, and row insertion).
+  (a repeated period name must be distinguishable on screen), R-09 (the
+  component-list review: a tab for the standing assumptions, and row insertion) and
+  R-10 (the role factor is keyed on project type, clinical phase, period and role;
+  schema 3 → 4).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -47,26 +50,26 @@ output/       Exported results and test evidence   (from Step 5)
 
 ### Step 3 deliverables (for review)
 
-- `app/PRAP_Prototype_v0.4.html` — the UI prototype. **Design only**: nothing loads,
+- `app/PRAP_Prototype_v0.5.html` — the UI prototype. **Design only**: nothing loads,
   calculates or exports. The only scripts are tab switching, row expansion and the
   hover pop-up. Self-contained, offline, light and dark. Four tabs.
-- `docs/PRAP_UI_Component_List_v0.4.xlsx` — the review-round-2 disposition: all 44
-  components with your decision and comment quoted verbatim against what was done,
-  17 design decisions, and a change log of what the review moved in the plan and
-  specification.
+- `docs/PRAP_UI_Component_List_v0.5.xlsx` — the review disposition: all 45 components
+  with your decision and comment quoted verbatim against what was done, 19 design
+  decisions, a change log of what the reviews moved in the plan and specification, and
+  sheet 05 covering review round 3.
 
 ### Step 2 deliverables (for review)
 
-- `docs/PRAP_Programming_Specification_v0.5.xlsx` — 11 sheets: parse contract,
-  all 22 validation rules with their exact messages, calculation pseudocode,
+- `docs/PRAP_Programming_Specification_v0.6.xlsx` — 11 sheets: parse contract,
+  all 23 validation rules with their exact messages, calculation pseudocode,
   UI behaviour for four tabs, editing and IO, versioning, and a traceability matrix
   covering all 69 requirements. Sheet 10 records the six open points from the v0.3
   review, the answers given, and what each one changed. None open.
 
-- `templates/PRAP_SourceData_Template_v1.4.xlsx` — blank workbook: 10 sheets, headers,
+- `templates/PRAP_SourceData_Template_v1.5.xlsx` — blank workbook: 10 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README. Every sheet
   carries at least one free-text note column (schema version 3).
-- `templates/PRAP_SourceData_Dummy_v1.5.xlsx` — the same structure populated with
+- `templates/PRAP_SourceData_Dummy_v1.6.xlsx` — the same structure populated with
   **34 NewDrug CT + 16 Biosimilar CT + 12 `Others` projects and 20 people**
   (289 assignments, 372 milestones, 308 periods across 73 months). Generated
   deterministically, so it rebuilds identically.
@@ -74,7 +77,7 @@ output/       Exported results and test evidence   (from Step 5)
 Validate either with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.5.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.6.xlsx
 ```
 
 And check the documents still describe the artifacts they claim to:
@@ -83,7 +86,7 @@ And check the documents still describe the artifacts they claim to:
 python tools/check_consistency.py
 ```
 
-That cross-checks 62 documented columns against the template's real headers, the
+That cross-checks 64 documented columns against the template's real headers, the
 schema version across all four files, the `project_type` values, every `Config`
 default the specification quotes against the value the template actually holds, all 69
 requirements plan-to-specification in both directions, and that no build markers were
@@ -112,7 +115,12 @@ Requires `openpyxl`.
 - **Five development steps** as listed above.
 - **One source workbook**, not two (Q-09).
 - **Load = project period weight × role factor × person weight × month coverage**,
-  in FTE where 1.00 FTE = 160 h/month (Q-01, Q-08).
+  in FTE where 1.00 FTE = 160 h/month (Q-01, Q-08). The **role factor is keyed on
+  project type, clinical phase, period and role** (R-10), so a role's burden varies
+  across the life of a project — the database programmer peaks at start-up, the
+  analyst at lock. `RoleFactor` is 249 rows as a result, and it now varies over the
+  same three dimensions as `PeriodWeightStandard`; the two multiply, so they must not
+  both be edited for the same reason (D-19, specification sheet 05).
 - **Over-allocation** above 1.50 FTE in a month; **under-allocation** below 0.60 FTE
   sustained three or more consecutive months (Q-08, S2-05). Both figures are
   **absolute** — not scaled by `capacity_fte` (S2-01). At 0.60 every capacity in the
@@ -160,9 +168,12 @@ Open `app/PRAP_Prototype_v0.4.html` in a browser, then work down
    period name. Those cannot both hold. O-10 wins as the more specific instruction, so
    D-06 is superseded and weight now rides as a lightness step inside each period's hue.
    Overturn that if it reads backwards.
-3. **Sheet 04** — what the review moved outside the component list: two new
-   requirements, two reworded.
+3. **Sheet 04** — what round 2 moved outside the component list: two new requirements,
+   two reworded.
+4. **Sheet 05** — round 3: the role-factor key, the scroll regions, and the insert-button
+   fault you reported. **D-19** on sheet 02 is the one to read: keying the role factor on
+   phase and period makes it overlap `PeriodWeightStandard`, and the two multiply.
 
 Per the plan, code generation starts only after the component list is approved.
 
-Also pending: **sign off plan v1.6**, which carries the five changes listed above.
+Also pending: **sign off plan v1.7**, which carries the six changes listed above.

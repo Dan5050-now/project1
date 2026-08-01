@@ -61,7 +61,13 @@ def main(path):
     PER = defaultdict(list)
     for r in rows(wb["ProjectPeriod"]):
         PER[r["project_id"]].append(r)
-    RF = {(r["project_type"], r["role_name"]): r["role_factor"] for r in rows(wb["RoleFactor"])}
+    # R-10: the factor is keyed on type + phase + period + role, so a role's burden can
+    # move across the life of a project rather than being one number for the whole run.
+    RF = {(r["project_type"], r["clinical_phase"], r["period_name"], r["role_name"]):
+          r["role_factor"] for r in rows(wb["RoleFactor"])}
+    RF_ROLES = defaultdict(set)                 # project_type -> {role_name}
+    for k in RF:
+        RF_ROLES[k[0]].add(k[3])
     PWS = {(r["project_type"], r["clinical_phase"], r["period_name"]): r["weight"]
            for r in rows(wb["PeriodWeightStandard"])}
     PSN = {r["person_id"]: r for r in rows(wb["Person"])}
@@ -84,7 +90,7 @@ def main(path):
         if a["person_id"] not in PSN:
             errors.append(f"V-02 {a['assignment_id']}: unknown person {a['person_id']}")
         ptype = P[a["project_id"]]["project_type"]
-        if (ptype, a["role_name"]) not in RF:
+        if a["role_name"] not in RF_ROLES[ptype]:
             errors.append(f"V-03 {a['assignment_id']}: role '{a['role_name']}' not valid for {ptype}")
     ids = [a["assignment_id"] for a in ASG]
     if len(ids) != len(set(ids)):
@@ -134,6 +140,21 @@ def main(path):
                 errors.append(f"V-19 {pid}: no standard weight for "
                               f"{proj['project_type']} / {ph} / {s['period_name']}")
 
+    # ---- role factor coverage (V-23) ----
+    # An assignment spans periods, so a factor missing for ONE of them silently zeroes
+    # part of the run. Check every combination the data can actually reach.
+    need = set()
+    for a in ASG:
+        proj = P.get(a["project_id"])
+        if not proj or a["person_id"] not in PSN:
+            continue
+        ph = proj["clinical_phase"] if proj["project_type"] in CLINICAL_TYPES else None
+        for s in PER.get(a["project_id"], []):
+            need.add((proj["project_type"], ph, s["period_name"], a["role_name"]))
+    for k in sorted(need - set(RF), key=lambda x: tuple(str(v) for v in x)):
+        errors.append(f"V-23: no role factor for {k[0]} / {k[1] or '-'} / {k[2]} / {k[3]} - "
+                      f"assignments covering that period would be calculated at factor 1.00")
+
     # ---- list membership (V-11) ----
     for pid, proj in P.items():
         for col, lname in [("project_type", "project_type"), ("outsourcing_type", "outsourcing_type"),
@@ -163,6 +184,17 @@ def main(path):
                 return s["weight"]
         return 1.00
 
+    def period_of(pid, y, m):
+        for s in PER.get(pid, []):
+            if d(s["period_start"]) <= date(y, m, 1) <= d(s["period_end"]):
+                return s["period_name"]
+        return None
+
+    def role_factor(proj, a, y, m):
+        ph = proj["clinical_phase"] if proj["project_type"] in CLINICAL_TYPES else None
+        pn = period_of(a["project_id"], y, m)
+        return RF.get((proj["project_type"], ph, pn, a["role_name"]), 1.00)
+
     def person_weight(a, y, m):
         for w in PPW.get(a["assignment_id"], []):
             if d(w["period_start"]) <= date(y, m, 1) <= d(w["period_end"]):
@@ -177,12 +209,12 @@ def main(path):
         proj = P[a["project_id"]]
         s = d(a["assign_start_date"])
         e = d(a["assign_end_date"]) or d(proj["end_date"])
-        rf = RF[(proj["project_type"], a["role_name"])]
         for y, m in months_between(s, e):
             cov = coverage(y, m, s, e)
             if cov <= 0:
                 continue
-            v = period_weight(a["project_id"], y, m) * rf * person_weight(a, y, m) * cov
+            v = (period_weight(a["project_id"], y, m) * role_factor(proj, a, y, m)
+                 * person_weight(a, y, m) * cov)
             load[(a["person_id"], y, m)] += v
             horizon.add((y, m))
 
@@ -258,4 +290,4 @@ def main(path):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else
-                  "templates/PRAP_SourceData_Dummy_v1.3.xlsx"))
+                  "templates/PRAP_SourceData_Dummy_v1.6.xlsx"))

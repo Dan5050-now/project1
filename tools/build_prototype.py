@@ -8,7 +8,7 @@ information hierarchy before any application code is written (plan sheet 08, tas
 
     python tools/build_prototype.py
 
-Output: app/PRAP_Prototype_v0.4.html
+Output: app/PRAP_Prototype_v0.5.html
 """
 
 import calendar
@@ -19,11 +19,11 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.5.xlsx"
-OUT = ROOT / "app" / "PRAP_Prototype_v0.4.html"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.6.xlsx"
+OUT = ROOT / "app" / "PRAP_Prototype_v0.5.html"
 
-APP_VERSION = "prototype v0.4"
-SCHEMA_EXPECTED = 3
+APP_VERSION = "prototype v0.5"
+SCHEMA_EXPECTED = 4
 WIN_FROM, WIN_TO = (2027, 1), (2027, 12)      # the 12 months the mock-up shows
 
 # ---- design tokens (validated: see dataviz palette reference) --------------
@@ -74,7 +74,9 @@ def snapshot():
     for r in rows(wb["Milestone"]):
         MS[r["project_id"]].append(r)
     RF_ROWS = list(rows(wb["RoleFactor"]))
-    RF = {(r["project_type"], r["role_name"]): r["role_factor"] for r in RF_ROWS}
+    # R-10: keyed on project type + clinical phase + period + role.
+    RF = {(r["project_type"], r["clinical_phase"], r["period_name"], r["role_name"]):
+          r["role_factor"] for r in RF_ROWS}
     PWS_ROWS = list(rows(wb["PeriodWeightStandard"]))
     LIST_ROWS = list(rows(wb["Lists"]))
     CT = {"NewDrug CT", "Biosimilar CT"}
@@ -95,6 +97,17 @@ def snapshot():
                 return s["weight"]
         return 1.00
 
+    def period_of(pid, y, m):
+        for s in PER.get(pid, []):
+            if d(s["period_start"]) <= date(y, m, 1) <= d(s["period_end"]):
+                return s["period_name"]
+        return None
+
+    def rfactor(pr, a, y, m):
+        ph = pr["clinical_phase"] if pr["project_type"] in CT else None
+        return RF.get((pr["project_type"], ph, period_of(a["project_id"], y, m),
+                       a["role_name"]), 1.00)
+
     def wweight(a, y, m):
         for w in PPW.get(a["assignment_id"], []):
             if d(w["period_start"]) <= date(y, m, 1) <= d(w["period_end"]):
@@ -114,12 +127,12 @@ def snapshot():
         if not pr or a["person_id"] not in PSN:
             continue
         s, e = d(a["assign_start_date"]), d(a["assign_end_date"]) or d(pr["end_date"])
-        rf = RF[(pr["project_type"], a["role_name"])]
         for (y, m) in months((s.year, s.month), (e.year, e.month)):
             cov = coverage(y, m, s, e)
             if cov <= 0:
                 continue
-            v = pweight(a["project_id"], y, m) * rf * wweight(a, y, m) * cov
+            v = (pweight(a["project_id"], y, m) * rfactor(pr, a, y, m)
+                 * wweight(a, y, m) * cov)
             proj_all[(a["project_id"], y, m)] += v
             if (y, m) in gridset:
                 proj_m[(a["project_id"], y, m)] += v
@@ -728,6 +741,35 @@ def person_tab():
     return tbl, arows, orows, per, pid, "".join(strip)
 
 
+def _wmatrix(rows_, row_key, row_label, col_key, val_key, cols=None):
+    """A weight table as a matrix: one row per key, one column per period."""
+    if cols is None:
+        cols = []
+        for r in rows_:
+            if r[col_key] not in cols:
+                cols.append(r[col_key])
+    grid, keys = {}, []
+    for r in rows_:
+        k = row_key(r)
+        if k not in keys:
+            keys.append(k)
+        grid[(k, r[col_key])] = r[val_key]
+    vmax = max((r[val_key] for r in rows_), default=1) or 1
+    head = "".join(f"<th>{esc(c)}</th>" for c in cols)
+    body = []
+    for k in keys:
+        tds = []
+        for c in cols:
+            v = grid.get((k, c))
+            tds.append('<td class="c z">&middot;</td>' if v is None
+                       else f'<td class="c c{seq_step(v, vmax)}">{v:.2f}</td>')
+        nm, sub = row_label(k)
+        body.append(f'<tr><th class="rh"><span class="nm">{esc(nm)}</span>'
+                    f'<span class="sub">{esc(sub)}</span></th>{"".join(tds)}</tr>')
+    return (f'<table class="grid-t"><thead><tr><th class="rh">&nbsp;</th>{head}</tr></thead>'
+            f'<tbody>{"".join(body)}</tbody></table>')
+
+
 def general_tab():
     """G-07: the fourth tab - the standards the whole simulation is multiplied by.
 
@@ -735,61 +777,41 @@ def general_tab():
     yet every figure on the Overall tab is their product. Config sits here too, so
     the thresholds that colour the tables are visible next to what they mean (O-04).
     """
-    # 48 flat rows read as a list; the same 48 as a matrix read as a standard, which
-    # is what they are. Phase down the side, period across.
+    # Both weight tables are shown as matrices. Flat, RoleFactor is now 249 rows -
+    # a list that long is unreadable, and the shape of a role across the periods is
+    # the whole point of keying it that way (R-10).
     pws = S["PWS_ROWS"]
-    periods = []
-    for r in pws:
-        if r["period_name"] not in periods:
-            periods.append(r["period_name"])
-    keys = []
-    for r in pws:
-        k = (r["project_type"], r["clinical_phase"])
-        if k not in keys:
-            keys.append(k)
-    grid_w = {(r["project_type"], r["clinical_phase"], r["period_name"]): r["weight"] for r in pws}
-    wmax = max(r["weight"] for r in pws) or 1
-    head = "".join(f"<th>{esc(p)}</th>" for p in periods)
-    body = []
-    for (ty, ph) in sorted(keys, key=lambda k: (S["TYPE_RANK"].get(k[0], 9), str(k[1]))):
-        tds = []
-        for p in periods:
-            v = grid_w.get((ty, ph, p))
-            if v is None:
-                tds.append('<td class="c z">&middot;</td>')
-            else:
-                tds.append(f'<td class="c c{seq_step(v, wmax)}">{v:.2f}</td>')
-        body.append(f'<tr><th class="rh"><span class="nm">{esc(ph)}</span>'
-                    f'<span class="sub">{esc(ty)}</span></th>{"".join(tds)}</tr>')
-    pws_tbl = (f'<table class="grid-t"><thead><tr><th class="rh">Phase</th>{head}</tr></thead>'
-               f'<tbody>{"".join(body)}</tbody></table>')
+    pws_tbl = _wmatrix(pws, lambda r: (r["project_type"], r["clinical_phase"]),
+                       lambda k: (k[1], k[0]), "period_name", "weight")
 
-    rf = sorted(S["RF_ROWS"], key=lambda r: (S["TYPE_RANK"].get(r["project_type"], 9),
-                                             -float(r["role_factor"])))
-    rf_rows = "".join(
-        f'<tr><td>{esc(r["project_type"])}</td><td>{esc(r["role_name"])}</td>'
-        f'<td class="num">{float(r["role_factor"]):.2f}</td>'
-        f'<td class="muted">{esc(r.get("role_note") or "—")}</td></tr>' for r in rf)
+    ct = [r for r in S["RF_ROWS"] if r["project_type"] in S["CT"]]
+    ot = [r for r in S["RF_ROWS"] if r["project_type"] not in S["CT"]]
+    rf_ct = _wmatrix(ct, lambda r: (r["project_type"], r["clinical_phase"], r["role_name"]),
+                     lambda k: (k[2], f"{k[0]} · {k[1]}"), "period_name", "role_factor")
+    rf_ot = _wmatrix(ot, lambda r: (r["project_type"], r["role_name"]),
+                     lambda k: (k[1], k[0]), "period_name", "role_factor")
 
     cfg_rows = "".join(
-        f'<tr><td>{esc(r["parameter"])}</td><td class="num" contenteditable="false">{esc(r["value"])}</td>'
-        f'<td class="muted">{esc(r.get("note") or "—")}</td>'
-        f'<td class="ins"><button class="btn tiny">+ row</button></td></tr>'
+        f'<tr>{INS_TD}<td>{esc(r["parameter"])}</td>'
+        f'<td class="num" contenteditable="false">{esc(r["value"])}</td>'
+        f'<td class="muted">{esc(r.get("note") or "—")}</td></tr>'
         for r in rows(load_workbook(DUMMY)["Config"]))
 
     lst = defaultdict(list)
     for r in S["LIST_ROWS"]:
         lst[r["list_name"]].append(str(r["value"]))
+    # Read-only: the lists are what the other sheets are checked against, and a row
+    # inserted here would be a value with nothing referring to it. No insert control.
     list_rows = "".join(
-        f'<tr>{INS_TD}<td>{esc(k)}</td><td class="vals">{esc(", ".join(v))}</td>'
+        f'<tr><td>{esc(k)}</td><td class="vals">{esc(", ".join(v))}</td>'
         f'<td class="num">{len(v)}</td></tr>' for k, v in lst.items())
 
-    return pws_tbl, rf_rows, cfg_rows, list_rows
+    return pws_tbl, rf_ct, rf_ot, cfg_rows, list_rows
 
 
 PTBL, MROWS, PROWS, PROJ, PPID = project_tab()
 STBL, AROWS, OROWS, PERS, SPID, STRIP = person_tab()
-PWSTBL, RFROWS, CFGROWS, LISTROWS = general_tab()
+PWSTBL, RFCT, RFOT, CFGROWS, LISTROWS = general_tab()
 
 # ---------------------------------------------------------------- page
 CSS = """
@@ -910,6 +932,11 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
 td.vals{white-space:normal;color:var(--ink2)}
 .scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* A table taller or wider than its panel must scroll INSIDE the panel. Without the
+   cap a long sub-table simply grew the page and pushed everything below it down. */
+.scrollx.tall{max-height:340px;overflow:auto}
+.scrollx.tall thead th{position:sticky;top:0;z-index:2}
+.scrollx.tall .grid-t thead th,.scrollx.tall .data-t thead th{background:var(--page)}
 table{border-collapse:collapse;width:100%;font-size:12px}
 .grid-t th,.grid-t td{border:1px solid var(--grid);padding:4px 7px;text-align:right;
  font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -1037,7 +1064,7 @@ document.querySelectorAll('nav button').forEach(function(b){
 
 html = f"""<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PRAP — UI prototype v0.4</title>
+<title>PRAP — UI prototype v0.5</title>
 <style>{CSS}</style>
 <div class="proto">PROTOTYPE — layout and components only. Figures are a fixed snapshot;
 nothing on this page loads, calculates or exports.</div>
@@ -1045,7 +1072,7 @@ nothing on this page loads, calculates or exports.</div>
 <header>
   <h1>Project Resource Assignment Program</h1>
   <span class="vers">{APP_VERSION} · expects source schema v{SCHEMA_EXPECTED}</span>
-  <span class="file">PRAP_SourceData_Dummy_v1.5.xlsx · loaded 2026-08-01 09:14
+  <span class="file">PRAP_SourceData_Dummy_v1.6.xlsx · loaded 2026-08-01 09:14
     <span class="tz">(GMT+9, KST)</span></span>
   <button class="btn">Load workbook</button>
   <button class="btn primary">Export</button>
@@ -1155,16 +1182,18 @@ nothing on this page loads, calculates or exports.</div>
     <div class="panel">
       <h2>Milestones — {esc(PROJ['project_name'])}</h2>
       <p class="cap">Only CTA submission and the DB locks set period boundaries.</p>
-      <table class="data-t"><thead><tr><th class="ins">insert</th><th>milestone</th><th>date</th>
-        <th>seq</th><th>note_1</th></tr></thead><tbody>{MROWS}</tbody></table>
+      <div class="scrollx tall"><table class="data-t"><thead><tr><th class="ins">insert</th>
+        <th>milestone</th><th>date</th><th>seq</th><th>note_1</th></tr></thead>
+        <tbody>{MROWS}</tbody></table></div>
     </div>
     <div class="panel">
       <h2>Periods — {esc(PROJ['project_name'])}</h2>
       <p class="cap">Derived from the milestones above. A period name that occurs more
         than once carries its occurrence number.
         <button class="btn">Recompute periods</button></p>
-      <table class="data-t"><thead><tr><th class="ins">insert</th><th>seq</th><th>period</th><th>start</th>
-        <th>end</th><th>weight</th><th>note_1</th></tr></thead><tbody>{PROWS}</tbody></table>
+      <div class="scrollx tall"><table class="data-t"><thead><tr><th class="ins">insert</th>
+        <th>seq</th><th>period</th><th>start</th><th>end</th><th>weight</th><th>note_1</th>
+        </tr></thead><tbody>{PROWS}</tbody></table></div>
     </div>
   </div>
 </section>
@@ -1186,16 +1215,16 @@ nothing on this page loads, calculates or exports.</div>
   <div class="two">
     <div class="panel">
       <h2>Assignments — {SPID}</h2>
-      <table class="data-t"><thead><tr><th class="ins">insert</th><th>id</th><th>project</th><th>role</th>
-        <th>start</th><th>end</th><th>weight</th></tr></thead>
-        <tbody>{AROWS}</tbody></table>
+      <div class="scrollx tall"><table class="data-t"><thead><tr><th class="ins">insert</th>
+        <th>id</th><th>project</th><th>role</th><th>start</th><th>end</th><th>weight</th>
+        </tr></thead><tbody>{AROWS}</tbody></table></div>
     </div>
     <div class="panel">
       <h2>Weight overrides</h2>
       <p class="cap">Replaces person_weight for the window it covers.</p>
-      <table class="data-t"><thead><tr><th class="ins">insert</th><th>assignment</th><th>start</th><th>end</th>
-        <th>override</th><th>reason</th></tr></thead>
-        <tbody>{OROWS}</tbody></table>
+      <div class="scrollx tall"><table class="data-t"><thead><tr><th class="ins">insert</th>
+        <th>assignment</th><th>start</th><th>end</th><th>override</th><th>reason</th>
+        </tr></thead><tbody>{OROWS}</tbody></table></div>
     </div>
   </div>
 </section>
@@ -1203,22 +1232,34 @@ nothing on this page loads, calculates or exports.</div>
 <section class="tab" id="t-gen" hidden>
   <div class="panel">
     <h2>Standard period weights <span class="scope">PeriodWeightStandard</span></h2>
-    <p class="cap">The weight every clinical trial period is multiplied by, selected by
-      the project's type and clinical phase. Shown as a matrix rather than 48 rows,
-      because it is a standard and standards are read across, not down. The shading follows
-      the same ramp as the Overall tables, so a heavier weight reads as a stronger cell.
-      <strong>Others</strong> projects do not appear here — their weights are entered by
-      hand on each project.</p>
+    <p class="cap">The weight every clinical trial period is multiplied by, selected by the
+      project's type and clinical phase. Shown as a matrix rather than 48 rows, because it is
+      a standard and standards are read across, not down. The shading follows the same ramp as
+      the Overall tables, so a heavier weight reads as a stronger cell. <strong>Others</strong>
+      projects do not appear here — their weights are entered by hand on each project.</p>
     <div class="scrollx">{PWSTBL}</div>
   </div>
 
   <div class="panel">
-    <h2>Role factors <span class="scope">RoleFactor</span></h2>
-    <p class="cap">What one person in this role costs the project per month before their
-      own weight and the period weight are applied. Keyed on project type, so the same
-      role can weigh differently on a new-drug trial and a biosimilar.</p>
-    <div class="scrollx"><table class="data-t"><thead><tr><th class="ins">insert</th><th>project_type</th>
-      <th>role_name</th><th>role_factor</th><th>role_note</th></tr></thead><tbody>{RFROWS}</tbody></table></div>
+    <h2>Role factors — clinical trials <span class="scope">RoleFactor</span></h2>
+    <p class="cap">What one person in this role costs the project per month, before their own
+      weight and the period weight are applied. Keyed on project type, clinical phase, period
+      and role — so a role's burden can move across the life of a project rather than being one
+      number for the whole run. Read a row across: the database programmer peaks at start-up,
+      the data associator through conduct, the analyst at lock.</p>
+    <div class="scrollx tall">{RFCT}</div>
+    <p class="note">All 240 clinical-trial rows, folded into 40 matrix rows of six periods
+      each — the flat sheet is 2 types × 4 phases × 6 periods × 5 roles, plus 9 rows for
+      Others. That is a lot to maintain by hand, and it now varies over the same three
+      dimensions as the period weight above; see the note on double-counting in the
+      specification, sheet 05.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Role factors — Others <span class="scope">RoleFactor</span></h2>
+    <p class="cap">The same table for non-trial projects, which carry no clinical phase and
+      run on the three-period set.</p>
+    <div class="scrollx">{RFOT}</div>
   </div>
 
   <div class="two">
@@ -1226,7 +1267,9 @@ nothing on this page loads, calculates or exports.</div>
       <h2>Configuration <span class="scope">Config</span></h2>
       <p class="cap">The thresholds and settings the whole page reads. Both allocation
         thresholds are absolute — they are not scaled by anyone's capacity.</p>
-      <table class="data-t"><thead><tr><th class="ins">insert</th><th>parameter</th><th>value</th><th>note</th></tr></thead><tbody>{CFGROWS}</tbody></table>
+      <div class="scrollx"><table class="data-t"><thead><tr><th class="ins">insert</th>
+        <th>parameter</th><th>value</th><th>note</th></tr></thead>
+        <tbody>{CFGROWS}</tbody></table></div>
       <p class="note">The display unit lives here rather than in the filter bar: it is a
         setting, not a filter, and it changes how every figure is written rather than
         which figures are shown.</p>
@@ -1238,8 +1281,9 @@ nothing on this page loads, calculates or exports.</div>
     <div class="panel">
       <h2>Value lists <span class="scope">Lists</span></h2>
       <p class="cap">What each list-typed column will accept. A value outside its list is
-        kept and reported (V-11), never silently dropped.</p>
-      <div class="scrollx"><table class="data-t"><thead><tr><th>list_name</th>
+        kept and reported (V-11), never silently dropped. Read-only — a value here with
+        nothing referring to it would be noise, so there is no insert control.</p>
+      <div class="scrollx tall"><table class="data-t"><thead><tr><th>list_name</th>
         <th>values</th><th>n</th></tr></thead><tbody>{LISTROWS}</tbody></table></div>
     </div>
   </div>
