@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.3"
-DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.2 - Gate 4 refinements rounds 1-2."
+DOC_VERSION = "2.4"
+DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.3 - Gate 4 refinements rounds 1-3."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -366,7 +366,18 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.3", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.4", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 refinements round 3, application v1.3. Three changes. (1) Column headings stay visible in "
+     "EVERY scroll region, and the corner cell of the two Overall grids is pinned in both directions - a "
+     "month heading that scrolls away turns the table into unlabelled numbers. (2) The two utilisation "
+     "charts carry the year on the x axis, shown where the year changes with a divider at each boundary. "
+     "(3) EDITING IS NOW PROVISIONAL: a change is applied on screen so its effect is visible, but is held "
+     "as pending until the user presses Save or Leave without change. Save commits it to the working data; "
+     "Leave without change restores the snapshot taken before the first pending edit. Export is HELD while "
+     "anything is pending, so nothing unconfirmed can reach a file. This is a behavioural change to "
+     "REQ-IMP-07 and REQ-IMP-08 and is recorded for the specification to take up at the next issue.",
+     "Issued for review"],
+    ["2.3", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 refinements round 2, application v1.2. The application now shows, at the top of the page, "
      "which controlled documents the build implements - development plan, programming specification, UI "
      "component list and source-data template - collapsed to one line with the full table on demand, and "
@@ -1148,7 +1159,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-2 applied (app v1.2); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-3 applied (app v1.3); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1224,7 +1235,8 @@ align = [
     ["v2.0", "v1.0", "prototype v0.8", "5", "2026-08-02", "APPROVED BASELINE. Steps 1-3 closed; Step 4 authorised."],
     ["v2.1", "v1.0", "application v1.0", "5", "2026-08-02", "Step 4 built: app/PRAP.html. Tasks 4.1-4.8 complete."],
     ["v2.2", "v1.0", "application v1.1", "5", "2026-08-02", "Gate 4 refinements round 1: three UI changes."],
-    ["v2.3", "v1.0", "application v1.2", "5", DOC_DATE, "Gate 4 round 2: the application carries its own document provenance. 4.9 continues."],
+    ["v2.3", "v1.0", "application v1.2", "5", "2026-08-02", "Gate 4 round 2: the application carries its own document provenance."],
+    ["v2.4", "v1.0", "application v1.3", "5", DOC_DATE, "Gate 4 round 3: sticky headers, year axis, provisional editing. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

@@ -37,6 +37,9 @@
  --s1:#2a78d6;--other:#b8b7b0;--overbg:#fbe9e9;--underbg:#fdf3dd;--underink:#8a6100;
  --accent:#2a78d6;}
 *{box-sizing:border-box}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:no-preference){
+  .btn,nav button,#prov > summary{transition:color .12s,border-color .12s,background .12s}}
 body{margin:0;background:var(--page);color:var(--ink);
  font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
 .wrap{max-width:1360px;margin:0 auto;padding:16px 20px 60px}
@@ -78,10 +81,6 @@ h2{font-size:14.5px;margin:0 0 3px}
  border-radius:8px;background:var(--underbg);border:1px solid var(--ring);font-size:13px}
 .banner.bad{background:var(--overbg)}
 .banner .lk{margin-left:auto;color:var(--accent);cursor:pointer;text-decoration:underline}
-.dirty{margin:10px 0;font-size:13px;color:var(--ink2)}
-.dirty .dot-w{width:8px;height:8px;border-radius:50%;background:var(--warn);
- display:inline-block;margin-right:6px}
-.dirty .ok{color:var(--good);font-weight:600}
 .panel{background:var(--surface);border:1px solid var(--ring);border-radius:10px;
  padding:14px 16px;margin:14px 0}
 .cap{color:var(--ink2);font-size:12px;margin:0 0 10px}
@@ -93,15 +92,30 @@ h2{font-size:14.5px;margin:0 0 3px}
 .ctl label{font-size:11px;color:var(--muted)}
 .ctl select,.ctl input{border:1px solid var(--base);background:var(--surface);
  color:var(--ink);border-radius:6px;padding:4px 7px;font-size:12.5px;font-family:inherit}
-nav{display:flex;gap:2px;margin:14px 0 0;border-bottom:1px solid var(--ring);flex-wrap:wrap}
+/* The edit bar sits above the tabs and sticks to the top of the viewport, so the
+   decision it asks for is reachable from anywhere in a long page - which is the whole
+   point of making changes provisional. */
+#editbar{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:8px 14px;
+ align-items:center;margin:12px 0 0;padding:9px 14px;border-radius:10px;
+ background:var(--surface);border:1px solid var(--ring);font-size:12px;color:var(--ink2)}
+#editbar.dirty{border-color:var(--warn);background:var(--underbg);color:var(--ink)}
+#editbar .guide{max-width:min(760px,60%)}
+#editbar .guide strong{color:var(--ink)}
+#editbar #editstate{margin-left:auto;font-weight:650;white-space:nowrap}
+#editbar.dirty #editstate{color:var(--underink)}
+#editbar .btn{white-space:nowrap}
+nav{display:flex;gap:2px;margin:14px 0 0;border-bottom:1px solid var(--ring);flex-wrap:wrap;
+ position:sticky;top:56px;z-index:19;background:var(--page)}
 nav button{border:0;background:none;color:var(--ink2);padding:9px 15px;font-size:13.5px;
  cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
 nav button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:14px 0}
 .tile{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:11px 13px}
 .tile.over{background:var(--overbg)}.tile.under{background:var(--underbg)}
-.tile .tl{font-size:11.5px;color:var(--ink2)}
-.tile .tv{font-size:23px;font-weight:650;letter-spacing:-.02em}
+.tile{transition:none}
+.tile .tl{font-size:11.5px;color:var(--ink2);font-weight:600;letter-spacing:.01em}
+.tile .tv{font-size:26px;font-weight:680;letter-spacing:-.025em;line-height:1.2;margin:2px 0 1px;
+ font-variant-numeric:tabular-nums}
 .tile.over .tv{color:var(--crit)}.tile.under .tv{color:var(--underink)}
 .tile .ts{font-size:11px;color:var(--muted)}
 .scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -110,7 +124,16 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-
    now scrolls vertically as well as horizontally. Capped as a share of the viewport
    so a tall panel still leaves the next one visible on a laptop screen. */
 .scrollx.xl{max-height:min(700px,72vh);overflow:auto}
-.scrollx.tall thead th{position:sticky;top:0;z-index:2;background:var(--page)}
+/* Sticky headers in EVERY scroll region, not just the short ones. A month-column
+   heading that scrolls away turns the table into a grid of unlabelled numbers.
+   Three layers, and the order matters: the corner cell has to out-rank both the row
+   header it sits above and the column header it sits beside, or it is overprinted by
+   whichever scrolls under it. */
+.scrollx thead th{position:sticky;top:0;z-index:3;background:var(--page)}
+.scrollx thead th::after{content:"";position:absolute;left:0;right:0;bottom:-1px;
+ height:1px;background:var(--base)}
+.grid-t th.rh{z-index:2}
+.scrollx .grid-t thead th.rh{z-index:4}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .two>*{min-width:0}
 @media(max-width:900px){.two{grid-template-columns:1fr}}
@@ -119,11 +142,14 @@ table{border-collapse:collapse;width:100%;font-size:12px}
  font-variant-numeric:tabular-nums;white-space:nowrap}
 .grid-t thead th{background:var(--page);color:var(--ink2);font-weight:600;font-size:10.5px;
  text-align:center}
-.grid-t th.rh{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1;
- min-width:230px;max-width:300px;white-space:normal}
+.grid-t th.rh{text-align:left;position:sticky;left:0;background:var(--surface);
+ min-width:240px;max-width:320px;white-space:normal;
+ box-shadow:1px 0 0 var(--grid)}
 .grid-t thead th.rh{background:var(--page)}
-.grid-t .nm{font-weight:600}
-.grid-t .sub{display:block;color:var(--muted);font-size:10px;font-weight:400}
+.grid-t .nm{font-weight:600;margin-right:2px}
+.grid-t th.rh{line-height:1.45;padding-top:6px;padding-bottom:6px}
+.grid-t .sub{display:block;color:var(--muted);font-size:10px;font-weight:400;
+ margin-top:1px;font-variant-numeric:tabular-nums}
 .grid-t .role{display:block;color:var(--muted);font-size:10px}
 .grid-t tr.parent{cursor:pointer}
 .grid-t tr.parent:hover th.rh{color:var(--accent)}
@@ -134,8 +160,10 @@ td.over{background:var(--overbg);color:var(--crit);font-weight:600}
 td.under{background:var(--underbg);color:var(--underink);font-weight:600}
 .grid-t tr.grand th,.grid-t tr.grand td{font-weight:650;border-top:2px solid var(--base)}
 .exp{display:inline-block;width:11px;color:var(--muted)}
-.data-t th,.data-t td{border:1px solid var(--grid);padding:4px 7px;text-align:left;
+.data-t th,.data-t td{border:1px solid var(--grid);padding:5px 8px;text-align:left;
  white-space:nowrap;font-size:11.5px}
+.data-t tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--ink) 3%,transparent)}
+.data-t tbody tr:hover td{background:color-mix(in srgb,var(--accent) 8%,transparent)}
 .data-t thead th{background:var(--page);color:var(--ink2);font-weight:600;font-size:10.5px}
 .data-t tr.sel td{background:color-mix(in srgb,var(--accent) 9%,transparent)}
 .data-t tr{cursor:pointer}
@@ -150,13 +178,16 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 .ty.nd{background:color-mix(in srgb,var(--accent) 14%,transparent)}
 .ty.bs{background:color-mix(in srgb,var(--good) 14%,transparent)}
 .ty.ot{background:var(--page);color:var(--ink2)}
-.ph{font-size:9.5px;font-weight:650;margin-left:5px}
+/* Pills must never break across lines - "Phase" on one line and "4" on the next reads
+   as two labels and leaves every row a different height. */
+.ph{font-size:9.5px;font-weight:650;margin-left:5px;white-space:nowrap}
 .ph1{color:#8a6100}.ph2{color:#0d6b4a}.ph3{color:#184f95}.ph4{color:#7a3b8f}
 @media (prefers-color-scheme:dark){.ph1{color:#fab219}.ph2{color:#19c68a}
  .ph3{color:#6da7ec}.ph4{color:#c79ae0}}
 .chart{width:100%;height:auto;display:block}
 .grid{stroke:var(--grid);stroke-width:1}
 .base{stroke:var(--base);stroke-width:1}
+.yrdiv{stroke:var(--base);stroke-width:1;stroke-dasharray:2 3;opacity:.75}
 /* Chart text carries values, not decoration, so it is sized and weighted to be read.
    The halo is what lets a label sit over a bar without becoming unreadable. */
 .ax{fill:var(--ink2);font-size:11.5px}
@@ -227,8 +258,6 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 </details>
 
 <div id="banner"></div>
-<div id="dirty"></div>
-
 <div class="panel" id="filterbar" hidden>
   <h2>Horizon and filters <span class="scope">applies to every tab</span></h2>
   <p class="cap">One setting drives the whole page — the charts, both Overall tables and
@@ -245,6 +274,13 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <div class="ctl"><label>Department</label><select id="fDept"></select></div>
     <div class="ctl"><label>&nbsp;</label><button class="btn reset" id="fReset">Reset filters</button></div>
   </div>
+</div>
+
+<div id="editbar" hidden>
+  <span class="guide" id="guide"></span>
+  <span id="editstate"></span>
+  <button class="btn primary" id="saveBtn" disabled>Save</button>
+  <button class="btn" id="discardBtn" disabled>Leave without change</button>
 </div>
 
 <nav role="tablist" id="tabs" hidden>
@@ -282,7 +318,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.2";
+const APP_VERSION = "1.3";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -291,8 +327,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.3.xlsx",           ver:"2.3",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.3 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.4.xlsx",           ver:"2.4",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.4 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -1044,7 +1080,7 @@ const S = {
   from:null, to:null,                       // month keys
   f:{type:"All", phase:"All", proj:"All", pers:"All", role:"All", dept:"All"},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null,
-  edits:[], editedCells:new Set(), headers:{},
+  pending:[], saved:0, snapshot:null, editedCells:new Set(), headers:{},
 };
 
 function activeProjects(){
@@ -1255,12 +1291,8 @@ function chartStacked(pids){
         + `data-tip="${att(tip)}"></rect>`);
       base -= h;
     }
-    o.push(`<text class="ax" x="${(x0+(bw-8)/2).toFixed(1)}" y="${H-padB+16}" text-anchor="middle">`
-      + `${keyToLabel(k).split(" ")[0]}</text>`);
-    if (i === 0 || k % 12 === 0)
-      o.push(`<text class="ax" x="${(x0+(bw-8)/2).toFixed(1)}" y="${H-padB+29}" `
-        + `text-anchor="middle">${Math.floor(k/12)}</text>`);
   });
+  monthAxis(o, G, i => padL + i * bw + 3, bw - 8, H - padB + 17, H - padB + 32, padT, H - padB);
   o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-8}" y2="${H-padB}"/></svg>`);
   return o.join("");
 }
@@ -1336,10 +1368,10 @@ function chartProjectUtil(pid){
   for (const [k, v] of C.projMonth) if (k.startsWith(pid + "|") && v > 0.004) own.push(v);
   const ownAvg = own.length ? own.reduce((a,b)=>a+b,0) / own.length : 0;
   const vals = G.map(k => C.projMonth.get(pid+"|"+k) || 0);
-  const W = 1080, H = 290, padL = 62, padR = 230;
+  const W = 1080, H = 300, padL = 62, padR = 230;
   const vmax = Math.max(Math.max(...vals, upper), 0.01) * 1.18;
   const bw = (W - padL - padR) / Math.max(1, G.length);
-  const base = H - 30, top = 26;
+  const base = H - 44, top = 26;
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly resource for this project against the portfolio average">`];
   o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
@@ -1356,9 +1388,8 @@ function chartProjectUtil(pid){
       + `&#183; this project ${ownAvg.toFixed(2)}</span>`;
     o.push(`<rect class="bar ${cls}" x="${(padL+i*bw+2).toFixed(1)}" y="${(base-h).toFixed(1)}" `
       + `width="${(bw-4).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" data-tip="${att(tip)}"></rect>`);
-    o.push(`<text class="ax" x="${(padL+i*bw+bw/2).toFixed(1)}" y="${H-8}" text-anchor="middle">`
-      + `${keyToLabel(G[i]).split(" ")[0]}</text>`);
   });
+  monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base);
   for (const [v, cls, lab] of [[upper,"th-over",`2 × portfolio avg — ${upper.toFixed(2)}`],
                                [lower,"th-under",`0.5 × portfolio avg — ${lower.toFixed(2)}`],
                                [ownAvg,"th-own",`this project avg — ${ownAvg.toFixed(2)}`]]){
@@ -1375,10 +1406,10 @@ function chartProjectUtil(pid){
 function chartPersonStrip(sid){
   const M = S.model, C = S.calc, G = grid();
   const vals = G.map(k => C.persMonth.get(sid+"|"+k) || 0);
-  const W = 1080, H = 270, padL = 62, padR = 175;
+  const W = 1080, H = 280, padL = 62, padR = 175;
   const vmax = Math.max(Math.max(...vals, M.OVER), 0.01) * 1.15;
   const bw = (W - padL - padR) / Math.max(1, G.length);
-  const base = H - 30, top = 26;
+  const base = H - 44, top = 26;
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly load for the selected person against both thresholds">`];
   o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
@@ -1393,9 +1424,8 @@ function chartPersonStrip(sid){
     o.push(`<rect class="bar ${cls}" x="${(padL+i*bw+2).toFixed(1)}" y="${(base-h).toFixed(1)}" `
       + `width="${(bw-4).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" `
       + `data-tip="${att(`${keyToLabel(G[i])} &#183; <b>${fmt(v)} ${unitLabel()}</b>`)}"></rect>`);
-    o.push(`<text class="ax" x="${(padL+i*bw+bw/2).toFixed(1)}" y="${H-8}" text-anchor="middle">`
-      + `${keyToLabel(G[i]).split(" ")[0]}</text>`);
   });
+  monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base);
   for (const [v, cls, lab] of [[M.OVER,"th-over",`ceiling ${M.OVER.toFixed(2)}`],
                                [M.UNDER,"th-under",`floor ${M.UNDER.toFixed(2)}`]]){
     const yy = base - (v/vmax) * (base-top);
@@ -1408,6 +1438,25 @@ function chartPersonStrip(sid){
 }
 
 /* ============================================================ 10. tables */
+
+/** Month labels with the year shown where it changes, plus a divider at each year
+ *  boundary. Repeating the year under all 24 columns is noise; showing it only at the
+ *  first column and each January is the smallest mark that answers "which year is this".
+ *  One helper so the three time charts label their axes identically. */
+function monthAxis(o, G, xOf, bw, yLabel, yTick, yDiv0, yDiv1){
+  G.forEach((k, i) => {
+    const [mon, yr] = keyToLabel(k).split(" ");
+    const cx = xOf(i) + bw / 2;
+    o.push(`<text class="ax" x="${cx.toFixed(1)}" y="${yLabel}" text-anchor="middle">${mon}</text>`);
+    if (i === 0 || k % 12 === 0){
+      o.push(`<text class="ax yr" x="${cx.toFixed(1)}" y="${yTick}" text-anchor="middle">${yr}</text>`);
+      if (i > 0){
+        const dx = xOf(i) - (bw * 0.06);
+        o.push(`<line class="yrdiv" x1="${dx.toFixed(1)}" y1="${yDiv0}" x2="${dx.toFixed(1)}" y2="${yDiv1}"/>`);
+      }
+    }
+  });
+}
 
 function monthHead(){
   return grid().map(k => {
@@ -1762,13 +1811,58 @@ function renderAll(){
 
 /* ============================================================ 12. editing + IO */
 
+/* An edit is provisional until confirmed. The change is applied to the model straight
+   away - the numbers on screen must never disagree with the data on screen - but a
+   snapshot taken before the FIRST pending edit lets 'Leave without change' put it all
+   back. Nothing provisional can reach an export. */
+function snapshotRaw(){
+  const snap = {};
+  for (const s of REQUIRED_SHEETS) snap[s] = S.model.raw[s].map(r => ({...r}));
+  return snap;
+}
+function beginEditSession(){
+  if (!S.snapshot) S.snapshot = snapshotRaw();
+}
+function saveEdits(){
+  if (!S.pending.length) return;
+  S.saved += S.pending.length;
+  S.pending = [];
+  S.snapshot = null;
+  renderDirty();
+  showBanner("", `Saved ${S.saved} change${S.saved===1?"":"s"} to the working data. `
+    + `They will be written to the file when you press Export. The workbook on disk is `
+    + `still untouched until then.`);
+}
+function discardEdits(){
+  if (!S.pending.length) return;
+  const n = S.pending.length;
+  for (const s of REQUIRED_SHEETS) S.model.raw[s] = S.snapshot[s].map(r => ({...r}));
+  S.snapshot = null;
+  S.pending = [];
+  S.editedCells.clear();
+  rebuild(true);
+  renderKeepingTab();
+  showBanner("", `${n} change${n===1?" was":"s were"} discarded. The data is back to how it was `
+    + `${S.saved ? "after your last save" : "when the workbook was loaded"}.`);
+}
+
 function renderDirty(){
-  const n = S.edits.length;
-  el("dirty").innerHTML = n === 0 ? "" :
-    `<span class="dot-w"></span> <strong>${n} unsaved edit${n===1?"":"s"}</strong> · `
-    + `<span class="ok">all ${n} pass validation</span> — export writes every validated edit back to `
-    + `the workbook. An edit that fails a rule is rejected at entry and never reaches the model, so `
-    + `nothing invalid can be exported.`;
+  const n = S.pending.length, bar = el("editbar");
+  bar.hidden = !S.model;
+  bar.classList.toggle("dirty", n > 0);
+  el("saveBtn").disabled = el("discardBtn").disabled = (n === 0);
+  el("editstate").textContent = n
+    ? `${n} unsaved change${n===1?"":"s"}`
+    : (S.saved ? `${S.saved} saved change${S.saved===1?"":"s"} · nothing pending`
+               : "no changes");
+  el("guide").innerHTML = n
+    ? `<strong>${n} change${n===1?"":"s"} not yet saved.</strong> They are applied on screen so you can
+       see their effect, but they are <em>not final</em>. All ${n} pass validation — an edit that fails a
+       rule is rejected at entry, so nothing invalid can be saved. <strong>Export is held</strong> until
+       you choose.`
+    : `<strong>Changes are temporary.</strong> Edits are applied on screen so you can see their effect,
+       but they are <em>not final</em> until you choose. Click <strong>Save</strong> to keep them — only
+       saved changes go into the exported file.`;
 }
 
 /** Apply one cell edit: coerce, validate, write to the model, recalculate. */
@@ -1788,6 +1882,7 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
     v = n;
   }
   const before = target[col];
+  beginEditSession();
 
   // REQ-IMP-10: changing an identifier that other sheets reference cascades to every
   // referencing row, after saying how many will change. Blocking the edit instead would
@@ -1804,8 +1899,8 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
       return;
     }
     for (const [r, c2] of hits) r[c2] = v;               // one atomic step
-    if (hits.length) S.edits.push({sheet:"(cascade)", row:"", col,
-                                   from:before, to:v, n:hits.length});
+    if (hits.length) S.pending.push({sheet:"(cascade)", row:"", col,
+                                     from:before, to:v, n:hits.length});
   }
   target[col] = v;
 
@@ -1820,11 +1915,10 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
     flashBad(tdEl, newErrors[newErrors.length - 1].msg);
     return;
   }
-  S.edits.push({sheet, row:rowNum, col, from:before, to:v});
+  S.pending.push({sheet, row:rowNum, col, from:before, to:v});
   S.editedCells.add(`${sheet}|${rowNum}|${col}`);
   tdEl.classList.add("edited");
   rebuild(true);
-  el("exportBtn").disabled = false;
   renderKeepingTab();
 }
 
@@ -1853,6 +1947,11 @@ function rawToRows(sheet){
 }
 
 function exportWorkbook(){
+  if (S.pending.length){
+    showBanner("bad", `Export held — ${S.pending.length} change${S.pending.length===1?" is":"s are"} `
+      + `not yet saved. Press Save to keep them, or Leave without change to discard them, then export.`);
+    return;
+  }
   // A row inserted but never filled has no identifier, so nothing could ever reference
   // it and re-importing would silently drop it. Refuse, and name it.
   const incomplete = [];
@@ -1876,7 +1975,7 @@ function exportWorkbook(){
   a.download = `${base}_${stamp}.xlsx`;                 // never silently overwrite the source
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  S.edits = []; S.editedCells.clear();
+  S.saved = 0; S.editedCells.clear();
   for (const s of REQUIRED_SHEETS) for (const r of S.model.raw[s]) delete r.__new;
   renderAll(); showTab(S.tab);
   showBanner("", `Exported ${a.download}. The source workbook on disk is untouched.`);
@@ -1980,11 +2079,12 @@ async function loadFile(file){
     }
     S.model = M; S.calc = calculate(M);
     S.fileName = file.name; S.loadedAt = new Date();
-    S.edits = []; S.editedCells.clear(); S.expanded.clear(); S.selProj = null; S.selPers = null;
+    S.pending = []; S.saved = 0; S.snapshot = null;
+    S.editedCells.clear(); S.expanded.clear(); S.selProj = null; S.selPers = null;
     defaultHorizon();
     fillFilters();
     el("empty").hidden = true; el("tabs").hidden = false; el("filterbar").hidden = false;
-    el("exportBtn").disabled = false;
+    el("editbar").hidden = false; el("exportBtn").disabled = false;
     const tz = -new Date().getTimezoneOffset() / 60;
     const tzName = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").split("/").pop() || "local";
     el("fileline").innerHTML = `${esc(file.name)} · loaded ${S.loadedAt.toISOString().slice(0,16).replace("T"," ")} `
@@ -2079,11 +2179,11 @@ document.addEventListener("click", e => {
     const blank = {__row: Math.max(0, ...rows.map(r => r.__row)) + 1, __new:true};
     for (const h of (S.headers[sheet] || [])) blank[h] = null;
     rows.splice(i + 1, 0, blank);                        // directly below, not appended
-    S.edits.push({sheet, row:blank.__row, col:"(new row)", from:null, to:""});
+    beginEditSession();
+    S.pending.push({sheet, row:blank.__row, col:"(new row)", from:null, to:""});
     // Deliberately no rebuild: a row with every cell empty is INCOMPLETE, not invalid,
     // and the parser skips blank rows. It becomes real when a field is filled, and the
     // export guard refuses to write one that still has no identifier.
-    el("exportBtn").disabled = false;
     renderKeepingTab();
     return;
   }
@@ -2150,8 +2250,11 @@ document.addEventListener("change", e => {
   }
 });
 
+el("saveBtn").onclick = saveEdits;
+el("discardBtn").onclick = discardEdits;
 addEventListener("beforeunload", e => {
-  if (S.edits.length){ e.preventDefault(); e.returnValue = ""; }   // REQ-IMP-08
+  // REQ-IMP-08. Saved-but-not-exported changes count too: they exist only in memory.
+  if (S.pending.length || S.saved){ e.preventDefault(); e.returnValue = ""; }
 });
 </script>
 </html>
