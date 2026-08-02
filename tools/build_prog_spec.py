@@ -14,10 +14,10 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "0.8"
-DOC_STATUS = "Draft for review - PersonPeriodWeight key explained; two validation gaps closed (R-12)"
+DOC_VERSION = "0.9"
+DOC_STATUS = "Draft for review - component-list v0.7 review applied (R-13)"
 DOC_DATE = "2026-08-01"
-PLAN = "PRAP_Development_Plan_v1.9.xlsx"
+PLAN = "PRAP_Development_Plan_v1.10.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
 
@@ -116,7 +116,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Governing document", f"{PLAN} - changes R-05..R-12 against the v1.3 baseline, awaiting signature"),
+    ("Governing document", f"{PLAN} - changes R-05..R-13 against the v1.3 baseline, awaiting signature"),
     ("Schema version specified", "5"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
@@ -135,7 +135,7 @@ r = section(ws, r, "What this document is")
 r = lines(ws, r, [
     "The plan says WHAT the application must do. This says HOW, in enough detail that the code can be written",
     "from it and checked against it. Every section cites the REQ-IDs it implements, and sheet 09 shows the",
-    "reverse: each of the 69 requirements mapped to the section that satisfies it.",
+    "reverse: each of the 70 requirements mapped to the section that satisfies it.",
     "",
     "Two things make this specification unusual, and both are deliberate:",
     "",
@@ -160,14 +160,20 @@ guide = [
     ("06_UI_Spec", "The four tabs, their components, filters and states."),
     ("07_Editing_IO", "Edit buffer, dirty state, cascading identifier edits, import and export."),
     ("08_Versioning", "Schema compatibility check and version display."),
-    ("09_Traceability", "All 69 requirements mapped to the section that implements them."),
+    ("09_Traceability", "All 70 requirements mapped to the section that implements them."),
     ("10_Open_Points", "The six points raised at the v0.3 review, with the answers given and what changed. None open."),
 ]
 r = table(ws, r, ["Sheet", "Contents"], guide, [24, 86], wrap_cols=(2,))
 
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
-rows = [["0.8", DOC_DATE, "Claude Code", "Dan",
+rows = [["0.9", DOC_DATE, "Claude Code", "Dan",
+         "Plan change R-13, from the component-list v0.7 review. Sheet 06 gains two entries: the interim "
+         "and final DB lock milestones are emphasised on the timeline in red and at a larger size, and "
+         "the project source-data tab gains a utilisation graph with RELATIVE reference lines "
+         "(REQ-DSH-12). The relative framing is the point - a project has no absolute ceiling or floor, "
+         "so the person tab's threshold model does not transfer. Written against plan v1.10.", "Draft"],
+        ["0.8", DOC_DATE, "Claude Code", "Dan",
          "Plan change R-12, from a reviewer question: why does the PersonPeriodWeight key include "
          "period_start when assignment_id is unique in Assignment? The key is unchanged and sheet 03 "
          "now says why - PersonPeriodWeight is a CHILD of Assignment and one assignment may carry "
@@ -233,7 +239,7 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 
 r = section(ws, r, "Source documents")
 src = [
-    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-12 awaiting signature. 69 requirements, 24 validation rules, 11 decisions, source schema version 5.", "Governs this document"],
+    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-13 awaiting signature. 70 requirements, 24 validation rules, 11 decisions, source schema version 5.", "Governs this document"],
     ["templates/PRAP_SourceData_Template_v1.6.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
     ["templates/PRAP_SourceData_Dummy_v1.8.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
@@ -699,9 +705,17 @@ t2 = [
     ["Milestone sub-table", "Milestones of the selected project in date order. 'Inspection' may appear several times.", "REQ-PRJ-05, REQ-PRJ-13"],
     ["Period sub-table", "Derived periods with seq, dates and weight, in seq order. Names are unique within a project since R-11, so project_id + period_name identifies a row. Shows whether each date was derived or hand-set.", "REQ-PRJ-06, REQ-CAL-09, REQ-DSH-10"],
     ["Recompute periods", "Re-derives from current milestones, warning that hand-set dates will be replaced.", "decision C-10"],
+    ["Utilisation graph", "The selected project's monthly resource across the horizon, as bars, with THREE reference lines: 2x and 0.5x the average an ACTIVE project-month draws across the portfolio, and the project's own average over its full life. Sits directly under the project table, mirroring the person tab's strip. Months where the project draws nothing are excluded from the portfolio average - averaging them in would drag the norm toward zero and make every running project look heavy.", "REQ-DSH-12"],
     ["Export", "Visible table to .xlsx.", "REQ-DSH-06"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t2, [24, 90, 20], wrap_cols=(2,))
+r = note(ws, r, "The reference lines are RELATIVE, and that is the whole design. A person has a capacity, "
+                "so an absolute ceiling and floor mean something. A project does not: 3 FTE a month is "
+                "heavy for a Phase 1 and light for a Phase 3 close-out. Comparing a project to the "
+                "portfolio and to its own history is the only framing that carries meaning across "
+                "62 projects of different types and phases. The lines are context, not pass or fail, and "
+                "the caption must say so - a dashed line above a bar reads as a limit unless it is "
+                "labelled otherwise.")
 
 r = section(ws, r, "Tab 3 - Source data (person)")
 t3 = [

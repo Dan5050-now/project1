@@ -8,7 +8,7 @@ information hierarchy before any application code is written (plan sheet 08, tas
 
     python tools/build_prototype.py
 
-Output: app/PRAP_Prototype_v0.7.html
+Output: app/PRAP_Prototype_v0.8.html
 """
 
 import calendar
@@ -20,9 +20,9 @@ from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.8.xlsx"
-OUT = ROOT / "app" / "PRAP_Prototype_v0.7.html"
+OUT = ROOT / "app" / "PRAP_Prototype_v0.8.html"
 
-APP_VERSION = "prototype v0.7"
+APP_VERSION = "prototype v0.8"
 SCHEMA_EXPECTED = 5
 WIN_FROM, WIN_TO = (2027, 1), (2027, 12)      # the 12 months the mock-up shows
 
@@ -271,6 +271,10 @@ PERIOD_HUE = {
 }
 
 
+# D-20: the milestones the period derivation actually hangs on.
+KEY_MILESTONES = {"interim DB lock", "final DB lock"}
+
+
 def band_fill(name, w, wmax):
     """Hue carries the period; lightness within that hue carries the weight.
 
@@ -489,13 +493,24 @@ def chart_gantt():
 
         # O-10.3: 'Inspection' is a milestone like any other, so it takes the same
         # marker. One shape for one kind of thing.
+        # D-20: the two DB LOCKS are the exception. They are what the whole period
+        # derivation hangs on - move a lock and the periods move with it - so they
+        # take red and a larger marker. Size as well as hue, because D-04 makes
+        # "never colour alone" a floor. The cut-off milestones stay ordinary: the
+        # cut-off is preparation, the lock is the event that moves the timeline.
         for ms in S["MS"][p]:
             x = x_of(d(ms["milestone_date"]))
-            tip = (f'<b>{esc(pr["project_name"])}</b><br>{esc(ms["milestone_name"])}<br>'
-                   f'{d(ms["milestone_date"])}')
+            key = ms["milestone_name"] in KEY_MILESTONES
+            boundary = ('<span class="tr">&#183; sets a period boundary</span>'
+                        if key else "")
+            tip = (f'<b>{esc(pr["project_name"])}</b><br>{esc(ms["milestone_name"])} '
+                   f'{boundary}<br>{d(ms["milestone_date"])}')
             cy = y + 1
-            out.append(f'<polygon class="ms" points="{x - 5:.1f},{cy:.1f} {x + 5:.1f},{cy:.1f} '
-                       f'{x:.1f},{cy + 9:.1f}" data-tip="{att(tip)}">'
+            w_ = 6.5 if key else 5
+            h_ = 11 if key else 9
+            out.append(f'<polygon class="ms{" key" if key else ""}" '
+                       f'points="{x - w_:.1f},{cy:.1f} {x + w_:.1f},{cy:.1f} '
+                       f'{x:.1f},{cy + h_:.1f}" data-tip="{att(tip)}">'
                        f'<title>{esc(ms["milestone_name"])} &#183; {d(ms["milestone_date"])}</title>'
                        f'</polygon>')
     out.append("</svg>")
@@ -508,6 +523,7 @@ def chart_gantt():
         seen.append(nm)
         leg.append(f'<li><span class="sw" style="background:{PERIOD_HUE[nm]}"></span>{esc(nm)}</li>')
     leg.append('<li><span class="sw tri"></span>milestone</li>')
+    leg.append('<li><span class="sw tri key"></span>DB lock &#8212; sets a period boundary</li>')
     leg.append('<li class="hint">darker band = higher period weight</li>')
     leg.append("</ul>")
     return "".join(out) + "".join(leg)
@@ -693,6 +709,69 @@ def project_tab():
     return tbl, mrows, prows, pr, pid
 
 
+def chart_project_util(pid):
+    """D-21: monthly resource for ONE project, against RELATIVE reference lines.
+
+    A person has absolute thresholds - a capacity, a ceiling, a floor. A project has
+    none: 3 FTE/month is heavy for a Phase 1 and light for a Phase 3 close-out. So the
+    references here are relative, as the reviewer asked: twice and half the average a
+    project draws across the whole portfolio, plus this project's own average over its
+    full life. They are context, not pass/fail, and the caption says so.
+    """
+    # The portfolio norm: what an ACTIVE project-month typically costs. Months where a
+    # project draws nothing are excluded - averaging them in would drag the norm toward
+    # zero and make every running project look heavy.
+    active = [v for v in S["proj_all"].values() if v > 0.004]
+    port_avg = (sum(active) / len(active)) if active else 1.0
+    upper, lower = 2.0 * port_avg, 0.5 * port_avg
+
+    own = [v for (p_, _y, _m), v in S["proj_all"].items() if p_ == pid and v > 0.004]
+    own_avg = (sum(own) / len(own)) if own else 0.0
+
+    vals = [S["proj_m"].get((pid, y, m), 0.0) for (y, m) in GRID]
+    # Full-width panel, so a full-width chart. The reference labels sit in the right
+    # margin and need room for their text - clipped labels are worse than no labels.
+    W, H, padl, padr = 1080, 210, 52, 190
+    vmax = max(max(vals + [upper]), 0.01) * 1.18
+    bw = (W - padl - padr) / len(vals)
+    base, top = H - 26, 18
+
+    out = [f'<svg viewBox="0 0 {W} {H}" class="chart" style="min-width:{W}px" role="img" '
+           f'aria-label="Monthly resource for this project against the portfolio average">']
+    out.append(f'<text class="ax" x="{padl - 44}" y="{top - 4}">FTE</text>')
+    for k in range(4):
+        gv = vmax * k / 3
+        gy = base - (gv / vmax) * (base - top)
+        out.append(f'<line class="grid" x1="{padl}" y1="{gy:.1f}" x2="{W - padr + 4}" y2="{gy:.1f}"/>')
+        out.append(f'<text class="ax" x="{padl - 8}" y="{gy + 3:.1f}" text-anchor="end">{gv:.1f}</text>')
+    for i, v in enumerate(vals):
+        h = (v / vmax) * (base - top)
+        cls = "over" if v > upper else ("under" if 0 < v < lower else "")
+        tip = (f'<b>{esc(S["P"][pid]["project_name"])}</b><br>'
+               f'{calendar.month_abbr[GRID[i][1]]} {GRID[i][0]} &#183; <b>{v:.2f} FTE</b> '
+               f'({v * HOURS:.0f} h)<br><span class="tr">portfolio average '
+               f'{port_avg:.2f} &#183; this project {own_avg:.2f}</span>')
+        out.append(f'<rect class="bar {cls}" x="{padl + i * bw + 2:.1f}" y="{base - h:.1f}" '
+                   f'width="{bw - 4:.1f}" height="{max(0, h):.1f}" rx="2" '
+                   f'data-tip="{att(tip)}"></rect>')
+        out.append(f'<text class="ax" x="{padl + i * bw + bw / 2:.1f}" y="{H - 8}" '
+                   f'text-anchor="middle">{calendar.month_abbr[GRID[i][1]]}</text>')
+    # reference lines last, so they read over the bars rather than behind them
+    refs = [(upper, "th-over", f"2 \u00d7 portfolio avg \u2014 {upper:.2f}"),
+            (lower, "th-under", f"0.5 \u00d7 portfolio avg \u2014 {lower:.2f}"),
+            (own_avg, "th-own", f"this project avg \u2014 {own_avg:.2f}")]
+    for v, cls, lab in refs:
+        if v <= 0:
+            continue
+        y = base - (v / vmax) * (base - top)
+        out.append(f'<line class="halo" x1="{padl}" y1="{y:.1f}" x2="{W - padr + 4}" y2="{y:.1f}"/>')
+        out.append(f'<line class="{cls}" x1="{padl}" y1="{y:.1f}" x2="{W - padr + 4}" y2="{y:.1f}"/>')
+        out.append(f'<text class="thlab {cls}" x="{W - padr + 8}" y="{y + 3:.1f}">{lab}</text>')
+    out.append(f'<line class="base" x1="{padl}" y1="{base}" x2="{W - padr + 4}" y2="{base}"/>')
+    out.append("</svg>")
+    return "".join(out), port_avg, own_avg
+
+
 def person_tab():
     pid = "PSN-001"
     per = S["PSN"][pid]
@@ -813,6 +892,7 @@ def general_tab():
 
 
 PTBL, MROWS, PROWS, PROJ, PPID = project_tab()
+PUTIL, PORTAVG, OWNAVG = chart_project_util(PPID)
 STBL, AROWS, OROWS, PERS, SPID, STRIP = person_tab()
 PWSTBL, RFCT, RFOT, CFGROWS, LISTROWS = general_tab()
 
@@ -906,10 +986,13 @@ section[hidden]{display:none}
 .halo{stroke:var(--surface);stroke-width:4;opacity:.9}
 .th-over{stroke:var(--crit);stroke-width:1.5;stroke-dasharray:5 3}
 .th-under{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:5 3}
+.th-own{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:2 3}
+.thlab.th-own{fill:var(--accent);stroke:none}
 .thlab{font-size:9.5px;font-weight:600}
 .thbg{fill:var(--surface);opacity:.85}.thlab.th-over{fill:var(--crit);stroke:none}
 .thlab.th-under{fill:var(--underink);stroke:none}
 .ms{fill:var(--ink);stroke:var(--surface);stroke-width:1.2;cursor:pointer}
+.ms.key{fill:var(--crit);stroke-width:1.4}
 .ms:hover{fill:var(--accent)}
 .legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 0 0;padding:0;
  font-size:11.5px;color:var(--ink2)}
@@ -919,6 +1002,8 @@ section[hidden]{display:none}
 .legend .sw.dot{border-radius:50%;background:var(--ink2);width:9px;height:9px}
 .legend .sw.tri{width:0;height:0;border-radius:0;border-left:6px solid transparent;
  border-right:6px solid transparent;border-top:9px solid var(--ink);background:none}
+.legend .sw.tri.key{border-top-color:var(--crit);border-left-width:7px;
+ border-right-width:7px;border-top-width:11px}
 .legend .hint{color:var(--muted);font-style:italic}
 /* O-06 / O-10: a real hover pop-up, not the native SVG title. The native tooltip
    cannot show a list of people, and waits half a second before appearing. */
@@ -1067,7 +1152,7 @@ document.querySelectorAll('nav button').forEach(function(b){
 
 html = f"""<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PRAP — UI prototype v0.7</title>
+<title>PRAP — UI prototype v0.8</title>
 <style>{CSS}</style>
 <div class="proto">PROTOTYPE — layout and components only. Figures are a fixed snapshot;
 nothing on this page loads, calculates or exports.</div>
@@ -1181,6 +1266,17 @@ nothing on this page loads, calculates or exports.</div>
       in this and every other section.</p>
     {PTBL}
     <p class="note">Showing 9 of 62 rows in this mock-up, with the selected row tinted. The real table lists all 62, sorted and filtered.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Utilisation — {esc(PROJ['project_name'])}</h2>
+    <p class="cap">Monthly resource for the selected project, the same chronological view the
+      person tab gives. A project has no absolute ceiling or floor — 3 FTE a month is heavy for
+      a Phase 1 and light for a Phase 3 close-out — so the reference lines are <strong>relative</strong>:
+      twice and half the average an active project draws across the whole portfolio
+      ({PORTAVG:.2f} FTE), plus this project's own average over its full life
+      ({OWNAVG:.2f} FTE). They are context, not pass or fail.</p>
+    <div class="scrollx">{PUTIL}</div>
   </div>
   <div class="two">
     <div class="panel">

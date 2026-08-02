@@ -6,7 +6,7 @@ left. The review trail lives in the deliverable rather than in a chat log.
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v0.7.xlsx
+Output: docs/PRAP_UI_Component_List_v0.8.xlsx
 """
 
 from pathlib import Path
@@ -16,9 +16,9 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "0.7"
+VERSION = "0.8"
 DATE = "2026-08-01"
-PROTOTYPE = "app/PRAP_Prototype_v0.7.html"
+PROTOTYPE = "app/PRAP_Prototype_v0.8.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
 FONT = "Arial"
@@ -77,13 +77,13 @@ ws = wb.create_sheet("00_Cover")
 ws.sheet_view.showGridLines = False
 ws["A1"] = "PRAP — UI component list"
 ws["A1"].font = TITLE_F
-ws["A2"] = "Step 3, task 3.1 — review round 5: the PersonPeriodWeight key question"
+ws["A2"] = "Step 3, task 3.1 — review round 6: everything confirmed, two new requests applied"
 ws["A2"].font = NOTE_F
 meta = [("Version", f"v{VERSION}"), ("Date", DATE), ("Author", "Claude Code"),
         ("Reviewer", "Dan — v0.3, v0.4 and v0.5 reviewed 2026-08-01 to 08-02"),
         ("Prototype", PROTOTYPE),
-        ("Governing plan", "PRAP_Development_Plan_v1.9.xlsx (changes R-05..R-12, awaiting signature)"),
-        ("Specification", "PRAP_Programming_Specification_v0.8.xlsx (draft)")]
+        ("Governing plan", "PRAP_Development_Plan_v1.10.xlsx (changes R-05..R-13, awaiting signature)"),
+        ("Specification", "PRAP_Programming_Specification_v0.9.xlsx (draft)")]
 r = 4
 for k, v in meta:
     ws.cell(r, 1, k).font = BOLD_F
@@ -126,6 +126,15 @@ for line in [
     "at the time, so D-15 is now SUPERSEDED. It also retires the need for the display numbering that",
     "REQ-DSH-10 introduced: the requirement is satisfied by the data model instead.",
     "",
+    "ROUND 6 (this issue) is on sheet 08. You confirmed all 13 changed components and all 7 changed",
+    "decisions as OK - nothing was marked Rework - and added two requests, both applied: the DB lock",
+    "milestones are emphasised on the timeline, and the project tab gains a utilisation graph with",
+    "relative reference lines. The second needed a new requirement, REQ-DSH-12, for the reason you",
+    "gave: a project has no static threshold, so the person tab's model does not transfer.",
+    "",
+    "Rows already confirmed carry 'OK (v0.7)' in the Confirm column, so a blank cell means an item",
+    "that is new this round rather than one nobody has looked at.",
+    "",
     "To review this round: open the prototype, then mark the YELLOW column on sheets 01 and 02 -",
     "'OK' where the change landed, or 'Rework' with a note where it did not.",
 ]:
@@ -140,6 +149,12 @@ ws["A1"].font = TITLE_F
 SUBTITLE_CELL = ws["A2"]          # filled once the component list below is defined
 ws["A2"].font = NOTE_F
 ws.freeze_panes = "A5"
+
+# Confirmed OK at the v0.7 review. Recorded here so the trail lives in the document:
+# a blank column would read as "not yet looked at" a round later.
+CONFIRMED = {"G-02", "G-06", "G-07", "O-03", "O-04", "O-06", "O-10", "P-01", "S-01",
+             "X-01", "X-03", "A-02", "A-04",
+             "D-06", "D-11", "D-15", "D-16", "D-17", "D-18", "D-19"}
 
 K = "Keep"
 C = [
@@ -269,6 +284,20 @@ C = [
      "decision C-10", K, "", "Unchanged."),
     ("P-05", "Project tab", "Export visible table", "Current table to .xlsx.",
      "REQ-DSH-06", K, "", "Unchanged."),
+    ("P-06", "Project tab", "[NEW] Project utilisation graph",
+     "The selected project's monthly resource across the horizon, against three relative reference "
+     "lines. Sits directly under the project table.",
+     "REQ-DSH-12", "Add (round 6)",
+     "In 'Source Data (project)', add 'Utilisation' graph for projects specific monthly resource with "
+     "bars (upper: 2 times x average of all projects FTE, lower: 0.5 times x average of all projects, "
+     "additional: the project's average FTE during entire period). The graph location is next to the "
+     "'Project' table.",
+     "Added, with your three lines exactly as specified. Your reasoning is what made it a new "
+     "requirement rather than a copy of the person strip: a project has no static threshold, so the "
+     "person tab's absolute ceiling and floor do not transfer. Hence REQ-DSH-12. One judgement call to "
+     "flag - the portfolio average is taken over ACTIVE project-months only. Including months where a "
+     "project draws nothing would pull the average toward zero and make every running project look "
+     "heavy against it. Say if you meant the simple mean across all months instead."),
 
     ("S-01", "Person tab", "[CHANGED] Person table",
      "All 12 columns, sortable, filterable, editable, with an insert control on every row.",
@@ -374,7 +403,7 @@ SUBTITLE_CELL.value = (
     f"{sum(1 for c in C if str(c[5]).startswith('Change'))} Change (amber), "
     f"{sum(1 for c in C if '[NEW]' in c[2])} added by those changes (green). "
     f"Your comments are quoted exactly as written.")
-rows = [list(c) + [""] for c in C]
+rows = [list(c) + ["OK (v0.7)" if c[0] in CONFIRMED else ""] for c in C]
 r = table(ws, 4,
           ["ID", "Area", "Component", "What it does", "REQ-IDs",
            "Your decision", "Your comment (verbatim)", "What was done in v0.4", "Confirm"],
@@ -473,6 +502,27 @@ D = [
      "the same row, adjacent to each other. One shared hue made them read as a single interrupted band.",
      "", "Light amber for interim, deep orange for final. Both still read as 'the close-out family', "
          "which is what your mapping intended."),
+    ("D-20", "[NEW] The two DB locks are drawn in red and larger; the '...cut-off' milestones are not.",
+     "You asked for the interim and final DB locks to stand out because they matter more than the other "
+     "milestones. They do, and specifically: they are what the whole period derivation hangs on - move a "
+     "lock and every period after it moves with it. Nothing else on the timeline has that reach.",
+     "", "Applied. Red plus a larger marker, so size carries the emphasis as well as hue - D-04, which "
+         "you accepted, makes 'never colour alone' a floor for this UI. The markers sit in their own "
+         "lane above the bands (D-17), so red reads cleanly there and does not collide with the red "
+         "Start-up band. Judgement call to flag: 'interim DB lock cut-off' and 'final DB lock cut-off' "
+         "are LEFT ordinary. The cut-off is preparation; the lock is the event that moves the timeline. "
+         "Say if you want the cut-offs emphasised too."),
+    ("D-21", "[NEW] The project utilisation graph uses RELATIVE reference lines, not thresholds.",
+     "Your own reasoning: a project has no static threshold for over-burden or under-resource. So the "
+     "lines are 2x and 0.5x the portfolio average, plus the project's own lifetime average - three "
+     "reference points rather than two limits.",
+     "", "Applied as specified, and it is why this needed a new requirement (REQ-DSH-12) rather than "
+         "reusing the person strip. One consequence worth stating: because the lines move as the "
+         "portfolio changes, a bar that is 'above the line' this month can fall below it next month "
+         "with no change to the project itself. That is correct behaviour for a relative measure, but "
+         "it means the graph answers 'heavy compared to what we usually run' rather than 'over "
+         "budget'. The caption says so, because a dashed line above a bar reads as a limit unless it "
+         "is labelled otherwise."),
     ("D-19", "[NEW] PeriodWeightStandard and RoleFactor are kept as two tables, not collapsed into one.",
      "Keying the role factor on phase and period means both tables now vary over (type, phase, period), "
      "and the calculation multiplies them - so they are mathematically collapsible into a single table "
@@ -493,7 +543,7 @@ D = [
      "", "The markers occupy a thin lane above each row's band. Alternative: draw them on the bands and "
          "drop the in-band labels, which trades one legibility problem for another."),
 ]
-rows = [list(x) + [""] for x in D]
+rows = [list(x) + ["OK (v0.7)" if x[0] in CONFIRMED else ""] for x in D]
 r = table(ws, 4, ["ID", "Decision", "Why", "Your decision", "State after your review", "Confirm"],
           rows, [8, 60, 66, 18, 76, 14], wrap_cols=(2, 3, 5, 6), yellow_col=6, mark_col=2)
 dv2 = DataValidation(type="list", formula1='"OK,Rework"', allow_blank=True)
@@ -699,6 +749,51 @@ r = ws.max_row + 2
 ws.cell(r, 1, "Worth noting for its own sake: a question about a key found two silent-wrong-answer bugs. "
               "Neither was reachable by reading the code, because both were absences - a rule that was "
               "written down and never built.").font = NOTE_F
+
+# ---- round 6 ------------------------------------------------------------
+ws = wb.create_sheet("08_Round6")
+ws.sheet_view.showGridLines = False
+ws["A1"] = "Review round 6 — everything confirmed, two additions"
+ws["A1"].font = TITLE_F
+ws["A2"] = ("All 13 changed components and all 7 changed decisions marked OK; none marked Rework. "
+            "Two new requests, both applied in prototype v0.8.")
+ws["A2"].font = NOTE_F
+rows = [
+    ["1", "UI",
+     "Milestone markers color highlights 'Interim DB Lock' and 'Final DB Lock' as Red. Those milestones "
+     "(interim/final DB Lock) are more important and it should be recognizable than others.",
+     "Applied. Red, and a larger marker with it - size as well as hue, because D-04 makes 'never colour "
+     "alone' a floor for this UI and a red triangle alone would be invisible to a reader with red-green "
+     "colour blindness. The markers already sit in their own lane above the bands (D-17), so red reads "
+     "cleanly and does not collide with the red Start-up band. The legend gains an entry naming what "
+     "they are. JUDGEMENT CALL: 'interim DB lock cut-off' and 'final DB lock cut-off' are left "
+     "ordinary - the cut-off is preparation, the lock is the event that moves the timeline. Say if you "
+     "want the cut-offs emphasised too.",
+     "Prototype v0.8, decision D-20, spec v0.9 sheet 06"],
+    ["2", "UI",
+     "In 'Source Data (project)', add 'Utilisation' graph for projects specific monthly resource with "
+     "bars (upper: 2 times x average of all projects FTE, lower: 0.5 times x average of all projects, "
+     "additional: the project's average FTE during entire period). The graph location is next to the "
+     "'Project' table. Project also can provide chronological resource trend like 'Source data (person)' "
+     "tab. In addition, a project doesn't have static threshold to measure over-burden or "
+     "under-resource. It suggests some bars to give more informative stuffs.",
+     "Applied with your three lines exactly as specified, directly under the project table where the "
+     "person tab puts its strip. Your second sentence is the important one and it is why this became a "
+     "new requirement rather than a copy: a person has a capacity, so absolute thresholds mean "
+     "something; a project does not, so the references had to be relative. That is REQ-DSH-12. "
+     "JUDGEMENT CALL: the portfolio average is taken over ACTIVE project-months only. Including months "
+     "where a project draws nothing would pull the average toward zero and make every running project "
+     "look heavy against it. Say if you meant the simple mean across all months. "
+     "One property to be aware of: because the lines move with the portfolio, a bar can cross a line "
+     "with no change to the project itself. Correct for a relative measure, but it means the graph "
+     "answers 'heavy compared to what we usually run', not 'over budget' - and the caption says so.",
+     "Prototype v0.8, component P-06, decision D-21, plan v1.10 REQ-DSH-12, spec v0.9"],
+]
+r = table(ws, 4, ["#", "Area", "What you raised (verbatim)", "What was done", "Carried in"],
+          rows, [5, 10, 66, 112, 32], wrap_cols=(3, 4, 5))
+r = ws.max_row + 2
+ws.cell(r, 1, "Both items carry a judgement call I made rather than guessed at silently. Neither blocks "
+              "anything: each is one line to change if I have read you wrong.").font = NOTE_F
 
 wb.save(OUT)
 print(f"Written: {OUT}  ({len(C)} components, {len(D)} decisions)")

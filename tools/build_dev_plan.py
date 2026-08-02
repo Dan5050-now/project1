@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.9"
+DOC_VERSION = "1.10"
 DOC_STATUS = "Change against approved baseline v1.3 - issued for approval"
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -205,7 +205,7 @@ r = lines(ws, r, [
     "opens period 7. Raised as R-03 and CONFIRMED by the reviewer at the v1.1 review.",
     "",
     "v1.3 was approved by Dan on 2026-08-01 and remains the baseline. This issue carries five changes against",
-    "it - R-05 from the Step 3 review, R-06 to R-08 from the specification v0.3 review, and R-09 to R-12",
+    "it - R-05 from the Step 3 review, R-06 to R-08 from the specification v0.3 review, and R-09 to R-13",
     "from the component-list reviews - and needs its own approval before it supersedes v1.3.",
     "",
     "v1.3 carries change R-04: every sheet of the source workbook now holds at least one free-text note",
@@ -365,7 +365,15 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}1.9", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}1.10", DOC_DATE, "Claude Code", "Pending",
+     "Change R-13, from the component-list v0.7 review. All 13 changed components and all 7 changed "
+     "decisions were confirmed OK; nothing was marked Rework. Two new requests were raised and both are "
+     "applied: the interim and final DB lock milestones are emphasised on the timeline, and the project "
+     "source-data tab gains a utilisation graph. The second needed a new requirement, REQ-DSH-12, because "
+     "a project has no absolute ceiling or floor - its reference lines are relative to the portfolio "
+     "average and to the project's own lifetime average. No schema change.",
+     "Issued for approval"],
+    ["1.9", DOC_DATE, "Claude Code", "Pending",
      "Change R-12. A reviewer question about the PersonPeriodWeight key - why period_start is needed "
      "when assignment_id looks unique - was answered by confirming the key is correct: one assignment "
      "may carry several non-overlapping override windows, so assignment_id alone would cap it at one. "
@@ -530,6 +538,7 @@ reqs = [
     [f"{MARK_NEW}REQ-DSH-08", "Dashboard", "Over-allocated and under-allocated person-months are distinguishable at a glance, and both are counted in the summary tiles.", "Must", "Q-08", "3,4"],
     [f"{MARK_NEW}REQ-DSH-09", "Dashboard", "At the target volume a table taller than the viewport renders only the visible rows, and the per-person chart shows an aggregate or a ranked subset rather than one bar per person. A thousand bars is not a chart.", "Must", "S2-06", "3,4"],
     [f"{MARK_CHG}REQ-DSH-10", "Dashboard", "Every period of a project is distinguishable from every other on screen. Since R-11 this is satisfied by the data model rather than by a display rule - no name repeats, so a name alone identifies a period. The display numbering that satisfied it before is retained only as a guard against a repeat reaching the renderer.", "Must", "S2-04, R-11", "3,4"],
+    [f"{MARK_NEW}REQ-DSH-12", "Dashboard", "The project source-data tab shows the selected project's monthly resource over the horizon, against RELATIVE reference lines - a multiple and a fraction of the average an active project draws across the portfolio, and the project's own average over its full life. A project has no absolute ceiling or floor, so the references are context rather than pass or fail.", "Should", "Reviewer v0.7", "3,4"],
     [f"{MARK_NEW}REQ-DSH-11", "Dashboard", "The standing assumptions the simulation multiplies by - standard period weights, role factors, configuration and value lists - are presented on their own tab, so a reader can see what every figure was derived from without opening the workbook.", "Must", "G-07", "3,4"],
 
     [f"{MARK_CHG}REQ-IMP-01", "Import/Export", "The user loads the source workbook through a file picker or drag-and-drop, chosen because a local HTML page cannot open a file from disk unaided.", "Must", "Decision D-01", "4"],
@@ -1075,7 +1084,8 @@ wbs = [
     ["1", "1.19", "Apply change R-10 (role factor keyed on phase and period).", "PRAP_Development_Plan_v1.7.xlsx", "Complete - issued for review"],
     ["1", "1.20", "Apply change R-11 (conduct stretches named apart; ProjectPeriod natural key).", "PRAP_Development_Plan_v1.8.xlsx", "Complete - issued for review"],
     ["1", "1.21", "Close the validation gaps found while answering the PersonPeriodWeight key question (R-12).", "PRAP_Development_Plan_v1.9.xlsx", "Complete - issued for review"],
-    ["1", "1.22", "Approve plan v1.9.", "Approval on 12_Review_Log", "Pending you"],
+    ["1", "1.22", "Apply the component-list v0.7 review outcome (R-13).", "PRAP_Development_Plan_v1.10.xlsx", "Complete - issued for review"],
+    ["1", "1.23", "Approve plan v1.10.", "Approval on 12_Review_Log", "Pending you"],
     ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
     ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template + _Dummy v1.1", "Complete - issued for review"],
@@ -1173,7 +1183,8 @@ align = [
     ["v1.6", "v0.5", "prototype v0.4", "3", "2026-08-01", "R-05..R-09. Superseded."],
     ["v1.7", "v0.6", "prototype v0.5", "4", "2026-08-02", "R-05..R-10. Superseded."],
     ["v1.8", "v0.7", "prototype v0.6", "5", "2026-08-02", "R-05..R-11. Superseded."],
-    ["v1.9", "v0.8", "prototype v0.7", "5", DOC_DATE, "R-05..R-12. Awaiting approval."],
+    ["v1.9", "v0.8", "prototype v0.7", "5", "2026-08-02", "R-05..R-12. Superseded."],
+    ["v1.10", "v0.9", "prototype v0.8", "5", DOC_DATE, "R-05..R-13. Awaiting approval."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1308,6 +1319,7 @@ chg = [
     ["R-01", "Data model", "Add 'Inspection' as a standard milestone.", "Applied. Milestone list grows to ten. Unlike the others, 'Inspection' MAY REPEAT within one project, so REQ-PRJ-13 and V-20 were added and V-14's uniqueness check now exempts it.", "Applied"],
     ["R-02", "Calculation", "Sheet 05 derivation edits: Before-Start-up ends at 'Protocol (v1)'; Start-up begins the day after it and ends at 'First SIV' (or 'FPI'); a seventh period 'After Close-out (final)' spans the Inspection dates.", "Applied. Clinical period set grows to six names; REQ-PRJ-12 and REQ-CAL-09 reworded; REQ-CAL-13 added for the milestone-beats-offset rule; 'FPI' restored to the milestone list as the First SIV fallback.", "Applied"],
     ["R-03", "Calculation", "Not requested - found while applying R-02.", "Period 7 was defined as earliest to latest 'Inspection'. Where an inspection is dated on or before the final DB lock, that makes period 7 start before period 6 and overlap Conduct. Only inspections AFTER the final DB lock open period 7; earlier ones stay markers, reported by V-21. CONFIRMED by the reviewer at the v1.1 review.", "CONFIRMED"],
+    ["R-13", "UI", "Two requests at the component-list v0.7 review: highlight the interim and final DB lock milestones in red, and add a project utilisation graph to the 'Source data (project)' tab.", "Both applied. The DB locks are the milestones the whole period derivation hangs on - move a lock and every period after it moves - so red plus a larger marker is warranted; size carries it as well as hue, because D-04 makes 'never colour alone' a floor. The cut-off milestones stay ordinary: the cut-off is preparation, the lock is the event. The utilisation graph needed a new requirement, REQ-DSH-12, because the person tab's equivalent rests on absolute thresholds a project does not have - which the reviewer identified. The references are therefore relative: 2x and 0.5x the portfolio average for an active project-month, plus the project's own lifetime average.", "Applied"],
     ["R-12", "Validation", "Raised as a question about the PersonPeriodWeight key - why is period_start needed when assignment_id looks unique?", "The key is correct and unchanged: (assignment_id, period_start). assignment_id is unique in Assignment, but PersonPeriodWeight is a CHILD of it, and REQ-PSN-05, V-06 and the data model all allow one assignment to carry several non-overlapping override windows. Keying on assignment_id alone would cap it at one. But checking the question exposed two real gaps, both now closed: V-06's assignment-window half had never been implemented, so an overlapping pair passed silently and the applied weight depended on row order; and nothing checked that a PersonPeriodWeight row referred to a real assignment, so an orphan override was accepted and ignored without a word. V-24 added for the second. The dummy fixture now carries an assignment with TWO windows - it only ever had one each, which is why neither gap surfaced.", "Applied"],
     ["R-11", "Data model", "Name the two conduct stretches apart - 'Conduct (interim)' before an interim DB lock, 'Conduct (final)' after it or where there is no interim lock - and key ProjectPeriod on (project_id, period_name).", "Applied, and it simplifies more than it costs. The clinical period set grows from six names to seven, but no name now repeats in a project, so ProjectPeriod has a natural key again and period_seq goes back to carrying order rather than identity. V-18 becomes a plain uniqueness check. REQ-CAL-11 and REQ-PRJ-12 reworded. REQ-DSH-10, which existed to number repeated names on screen, is now satisfied by the data model instead - the display numbering is kept only as a guard. This is the alternative offered against decision D-15 at the component-list review, so D-15 is superseded. Schema 4 -> 5: the columns are unchanged but the period_name value set is not, so a v4 file's 'Conduct' rows would fail V-15. PeriodWeightStandard grows 48 -> 56 rows and RoleFactor 249 -> 289; both new Conduct entries carry the same weights the single 'Conduct' did, so the change renames without reweighting - the dummy dataset returns byte-identical load figures.", "Applied"],
     ["R-10", "Data model", "The role factor must be given by role AND project type AND clinical phase AND period, not by role and type alone.", "Applied. RoleFactor gains clinical_phase and period_name; its key becomes all four columns and the sheet grows from 13 rows to 249. REQ-CAL-02 reworded, V-23 added, schema 3 -> 4. This is a real gain in expressiveness - a role's burden genuinely is not flat across a project, and the dummy data now shows the database programmer peaking at start-up and the analyst at lock. It carries two costs, both stated rather than hidden: 249 rows is a large hand-maintained table, and RoleFactor now varies over the same three dimensions as PeriodWeightStandard, so the two multiply and can double-count if both are edited for the same reason. See the note on sheet 04.", "Applied"],
@@ -1411,14 +1423,15 @@ appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
         ["PRAP Development Plan v1.3", "Dan", "2026-08-01",
          "APPROVED - FINAL. Change R-04 accepted; this issue supersedes v1.2 and closes the development "
          "plan. Step 1 is complete."],
-        ["PRAP Development Plan v1.9", "", "",
+        ["PRAP Development Plan v1.10", "", "",
          "Pending your signature. Changes R-05 (project_type split), R-06 (volume re-baselined to "
          "100 projects / 1,000 people), R-07 (absolute thresholds, floor 0.60), R-08 (repeated period "
          "names distinguishable on screen), R-09 (component-list review: assumptions tab and insert-row "
          "become REQ-DSH-11 and REQ-IMP-11), R-10 (role factor keyed on type, phase, period and role) "
          "R-11 (conduct stretches named apart; ProjectPeriod keyed on project_id + period_name; "
          "schema 4 -> 5) and R-12 (two unimplemented validation rules on PersonPeriodWeight closed; "
-         "V-24 added)."]]
+         "V-24 added) and R-13 (component-list review: DB lock milestones emphasised, and a project "
+         "utilisation graph added as REQ-DSH-12)."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 16, 14, 88], wrap_cols=(4,))
 for cc in (1, 2, 3, 4):
