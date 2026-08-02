@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.1"
-DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.0 built and verified."
+DOC_VERSION = "2.2"
+DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.1 - first Gate 4 refinements applied."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -366,7 +366,17 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.1", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.2", DOC_DATE, "Claude Code", "Pending",
+     "First refinements from the Gate 4 review (WBS 4.9), applied to application v1.1. Three UI changes, "
+     "no change to any requirement, rule, calculation or schema. (1) The three named Overall sections - "
+     "monthly demand, resource by project, resource by person - are up to twice their previous size. "
+     "(2) The project timeline scrolls in both directions inside its panel, which also let the 20-project "
+     "display cap be removed: every project in the filter is now drawn. (3) Chart text is larger and "
+     "higher contrast, and each threshold or reference label moved out of the plot area into a right-hand "
+     "margin - drawn over the bars they were unreadable at any size, and enlarging them made the "
+     "collision worse rather than better. Breaching bars on the person chart now state their own value.",
+     "Issued for review"],
+    ["2.1", DOC_DATE, "Claude Code", "Pending",
      "Step 4 progress against the v2.0 baseline. The application is built: app/PRAP.html, one offline "
      "file with its own .xlsx reader and writer. WBS tasks 4.1 to 4.8 move to Complete; 4.9 - your "
      "review of the output against real data - is the Gate 4 review and is what remains. No requirement, "
@@ -1128,7 +1138,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "Pending you - GATE 4"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - round 1 applied (app v1.1); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1202,7 +1212,8 @@ align = [
     ["v1.9", "v0.8", "prototype v0.7", "5", "2026-08-02", "R-05..R-12. Superseded."],
     ["v1.10", "v0.9", "prototype v0.8", "5", "2026-08-02", "R-05..R-13. Superseded by v2.0."],
     ["v2.0", "v1.0", "prototype v0.8", "5", "2026-08-02", "APPROVED BASELINE. Steps 1-3 closed; Step 4 authorised."],
-    ["v2.1", "v1.0", "application v1.0", "5", DOC_DATE, "Step 4 built: app/PRAP.html. Tasks 4.1-4.8 complete; 4.9 is the Gate 4 review."],
+    ["v2.1", "v1.0", "application v1.0", "5", "2026-08-02", "Step 4 built: app/PRAP.html. Tasks 4.1-4.8 complete."],
+    ["v2.2", "v1.0", "application v1.1", "5", DOC_DATE, "Gate 4 refinements round 1: three UI changes. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

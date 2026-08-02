@@ -87,6 +87,10 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-
 .tile .ts{font-size:11px;color:var(--muted)}
 .scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .scrollx.tall{max-height:340px;overflow:auto}
+/* The three Overall sections the reviewer asked to enlarge, and the timeline, which
+   now scrolls vertically as well as horizontally. Capped as a share of the viewport
+   so a tall panel still leaves the next one visible on a laptop screen. */
+.scrollx.xl{max-height:min(700px,72vh);overflow:auto}
 .scrollx.tall thead th{position:sticky;top:0;z-index:2;background:var(--page)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .two>*{min-width:0}
@@ -134,22 +138,29 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 .chart{width:100%;height:auto;display:block}
 .grid{stroke:var(--grid);stroke-width:1}
 .base{stroke:var(--base);stroke-width:1}
-.ax{fill:var(--muted);font-size:10px}
+/* Chart text carries values, not decoration, so it is sized and weighted to be read.
+   The halo is what lets a label sit over a bar without becoming unreadable. */
+.ax{fill:var(--ink2);font-size:11.5px}
+.ax.yr{font-size:11px;fill:var(--muted)}
 .bar{fill:var(--s1)}.bar.over{fill:var(--crit)}.bar.under{fill:var(--warn)}
 .band{cursor:pointer}.band:hover{stroke:var(--ink);stroke-width:1.4}
-.bandlab{fill:#fff;font-size:9.5px;font-weight:600;pointer-events:none;
+.bandlab{fill:#fff;font-size:10.5px;font-weight:650;pointer-events:none;
  paint-order:stroke;stroke:rgba(0,0,0,.3);stroke-width:2.4px}
 .rowlab{fill:var(--ink);font-size:11.5px;font-weight:600}
-.rowsub{fill:var(--muted);font-size:9.5px;font-variant-numeric:tabular-nums}
+.rowsub{fill:var(--ink2);font-size:10.5px;font-variant-numeric:tabular-nums}
 .ms{fill:var(--ink);stroke:var(--surface);stroke-width:1.2;cursor:pointer}
 .ms.key{fill:var(--crit);stroke-width:1.4}
 .halo{stroke:var(--surface);stroke-width:4;opacity:.9}
 .th-over{stroke:var(--crit);stroke-width:1.5;stroke-dasharray:5 3}
 .th-under{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:5 3}
 .th-own{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:2 3}
-.thlab{font-size:9.5px;font-weight:600}
+.thlab{font-size:12.5px;font-weight:700;paint-order:stroke;
+ stroke:var(--surface);stroke-width:3.5px;stroke-linejoin:round}
 .thlab.th-over{fill:var(--crit)}.thlab.th-under{fill:var(--underink)}
 .thlab.th-own{fill:var(--accent)}
+.barlab{font-size:11.5px;font-weight:700;paint-order:stroke;
+ stroke:var(--surface);stroke-width:3.5px;stroke-linejoin:round}
+.barlab.over{fill:var(--crit)}.barlab.under{fill:var(--underink)}
 .legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 0 0;padding:0;
  font-size:11.5px;color:var(--ink2)}
 .legend .sw{width:11px;height:11px;border-radius:2px;display:inline-block;
@@ -247,7 +258,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.0";
+const APP_VERSION = "1.1";
 const SCHEMA_EXPECTED = 5;
 
 /* ============================================================ 1. ZIP + XLSX read
@@ -1082,7 +1093,10 @@ const bandFill = (n, w, wmax) => mix(PERIOD_HUE[n] || "#adaca6",
 function chartGantt(pids){
   const M = S.model, C = S.calc;
   if (!pids.length) return `<p class="note">No projects match the current filters.</p>`;
-  const rows = pids.slice(0, 20);
+  // The panel now scrolls vertically as well as horizontally, so every project in the
+  // filter is drawn rather than the first 20. The scroll region is what makes that
+  // readable - without it the panel would simply grow down the page.
+  const rows = pids.slice();
   let lo = Infinity, hi = -Infinity;
   for (const p of rows){
     const pr = M.projects[p];
@@ -1091,7 +1105,7 @@ function chartGantt(pids){
   }
   if (!isFinite(lo) || !isFinite(hi)) return `<p class="note">These projects carry no dates.</p>`;
   const span = Math.max(1, (hi - lo) / DAY);
-  const W = 1180, rowh = 38, padL = 210, padT = 30;
+  const W = 1180, rowh = 42, padL = 220, padT = 34;
   const H = padT + rowh * rows.length + 30, inner = W - padL - 14;
   const x = t => padL + ((t - lo) / DAY / span) * inner;
   let wmax = 0;
@@ -1152,9 +1166,8 @@ function chartGantt(pids){
   leg.push('<li><span class="sw tri"></span>milestone</li>');
   leg.push('<li><span class="sw tri key"></span>DB lock &#8212; sets a period boundary</li>');
   leg.push('<li class="hint">darker band = higher period weight</li></ul>');
-  if (pids.length > rows.length)
-    leg.push(`<p class="note">Showing the first ${rows.length} of ${pids.length} projects in the `
-      + `current filter — filter further to see the rest.</p>`);
+  leg.push(`<p class="note">All ${rows.length} project(s) in the current filter, scrolling in `
+    + `both directions inside this panel.</p>`);
   return o.join("") + leg.join("");
 }
 
@@ -1167,7 +1180,7 @@ function chartStacked(pids){
   const colour = {}; let ci = 0;
   for (const p of order)
     colour[p] = M.projects[p].project_type === "Others" ? "var(--other)" : projColour(ci++);
-  const W = Math.max(700, 90 + G.length * 74), H = 300, padL = 56, padB = 46, padT = 26;
+  const W = Math.max(700, 90 + G.length * 74), H = 600, padL = 62, padB = 52, padT = 30;
   const bw = (W - padL - 14) / G.length;
   let vmax = 0;
   for (const k of G){ let s = 0; for (const p of order) s += C.projMonth.get(p+"|"+k) || 0; vmax = Math.max(vmax, s); }
@@ -1175,7 +1188,7 @@ function chartStacked(pids){
   const scale = (H - padB - padT) / (vmax * 1.08);
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly resource demand, one stacked band per project">`];
-  o.push(`<text class="ax" x="${padL-44}" y="${padT-10}">${unitLabel()}</text>`);
+  o.push(`<text class="ax" x="${padL-8}" y="${padT-12}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 4; i++){
     const v = vmax * 1.08 * i / 4, yy = H - padB - v * scale;
     o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-8}" y2="${yy.toFixed(1)}"/>`);
@@ -1212,6 +1225,7 @@ function chartStacked(pids){
   return o.join("");
 }
 
+const padL0 = 60;
 function chartPeople(sids){
   const M = S.model, C = S.calc, G = grid();
   const means = sids.map(s => {
@@ -1224,15 +1238,19 @@ function chartPeople(sids){
     ? means.slice(LIMIT).reduce((s,x) => s + x[1], 0) / (means.length - LIMIT) : null;
   const bars = shown.concat(restAvg !== null ? [["__rest", restAvg]] : []);
   if (!bars.length) return `<p class="note">Nobody matches the current filters.</p>`;
-  const W = Math.max(640, 60 + bars.length * 42), H = 240, padL = 52, padB = 52, padT = 26;
-  const bw = (W - padL - 12) / bars.length;
+  // The threshold labels live in a right-hand margin, outside the plot. Drawn over the
+  // bars they were unreadable at any size - a halo cannot rescue dark text on a solid
+  // red bar, and making the type bigger only made the collision worse.
+  const padR = 210;
+  const W = Math.max(720, padL0 + padR + bars.length * 46), H = 300, padL = padL0, padB = 56, padT = 30;
+  const bw = (W - padL - padR) / bars.length;
   const vmax = Math.max(Math.max(...bars.map(b => b[1])), M.OVER) * 1.15 || 1;
   const scale = (H - padB - padT) / vmax;
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Mean monthly load per person against both thresholds">`];
   for (let i = 0; i <= 3; i++){
     const v = vmax * i / 3, yy = H - padB - v * scale;
-    o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-6}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR+4}" y2="${yy.toFixed(1)}"/>`);
     o.push(`<text class="ax" x="${padL-8}" y="${(yy+3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`);
   }
   bars.forEach(([s, v], i) => {
@@ -1246,17 +1264,22 @@ function chartPeople(sids){
     o.push(`<rect class="${cls}" x="${x0.toFixed(1)}" y="${(H-padB-h).toFixed(1)}" `
       + `width="${(bw-8).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" `
       + `fill="${rest ? "var(--other)" : ""}" data-tip="${att(tip)}"></rect>`);
-    o.push(`<text class="ax" x="${(x0+(bw-8)/2).toFixed(1)}" y="${H-padB+14}" text-anchor="middle">`
+    o.push(`<text class="ax" x="${(x0+(bw-8)/2).toFixed(1)}" y="${H-padB+16}" text-anchor="middle">`
       + `${esc(rest ? "rest" : s.slice(-3))}</text>`);
+    // A breaching bar states its own value, so the flag never rests on colour alone (D-04).
+    if (!rest && (v > M.OVER || (v > 0 && v < M.UNDER)))
+      o.push(`<text class="barlab ${v > M.OVER ? "over" : "under"}" `
+        + `x="${(x0+(bw-8)/2).toFixed(1)}" y="${(H-padB-h-7).toFixed(1)}" text-anchor="middle">`
+        + `${v > M.OVER ? "&#9650;" : "&#9660;"} ${fmt(v)}</text>`);
   });
-  for (const [v, cls, lab] of [[M.OVER,"th-over",`over-allocation ceiling ${M.OVER.toFixed(2)}`],
-                               [M.UNDER,"th-under",`under-allocation floor ${M.UNDER.toFixed(2)}`]]){
+  for (const [v, cls, lab] of [[M.OVER,"th-over",`over-allocation ceiling — ${M.OVER.toFixed(2)}`],
+                               [M.UNDER,"th-under",`under-allocation floor — ${M.UNDER.toFixed(2)}`]]){
     const yy = H - padB - v * scale;
-    o.push(`<line class="halo" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-6}" y2="${yy.toFixed(1)}"/>`);
-    o.push(`<line class="${cls}" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-6}" y2="${yy.toFixed(1)}"/>`);
-    o.push(`<text class="thlab ${cls}" x="${padL+6}" y="${(yy-4).toFixed(1)}">${lab}</text>`);
+    o.push(`<line class="halo" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR+4}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<line class="${cls}" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR+4}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<text class="thlab ${cls}" x="${W-padR+10}" y="${(yy+4).toFixed(1)}">${lab}</text>`);
   }
-  o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-6}" y2="${H-padB}"/></svg>`);
+  o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-padR+4}" y2="${H-padB}"/></svg>`);
   if (restAvg !== null)
     o.push(`<p class="note">${LIMIT} most loaded people shown individually; the remaining `
       + `${means.length - LIMIT} are one band. ${means.length} bars at this width would be `
@@ -1273,13 +1296,13 @@ function chartProjectUtil(pid){
   for (const [k, v] of C.projMonth) if (k.startsWith(pid + "|") && v > 0.004) own.push(v);
   const ownAvg = own.length ? own.reduce((a,b)=>a+b,0) / own.length : 0;
   const vals = G.map(k => C.projMonth.get(pid+"|"+k) || 0);
-  const W = 1080, H = 210, padL = 52, padR = 190;
+  const W = 1080, H = 290, padL = 62, padR = 230;
   const vmax = Math.max(Math.max(...vals, upper), 0.01) * 1.18;
   const bw = (W - padL - padR) / Math.max(1, G.length);
-  const base = H - 26, top = 18;
+  const base = H - 30, top = 26;
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly resource for this project against the portfolio average">`];
-  o.push(`<text class="ax" x="${padL-44}" y="${top-4}">${unitLabel()}</text>`);
+  o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 3; i++){
     const gv = vmax * i / 3, gy = base - (gv/vmax) * (base-top);
     o.push(`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR+4}" y2="${gy.toFixed(1)}"/>`);
@@ -1312,12 +1335,13 @@ function chartProjectUtil(pid){
 function chartPersonStrip(sid){
   const M = S.model, C = S.calc, G = grid();
   const vals = G.map(k => C.persMonth.get(sid+"|"+k) || 0);
-  const W = 1080, H = 190, padL = 52, padR = 150;
+  const W = 1080, H = 270, padL = 62, padR = 175;
   const vmax = Math.max(Math.max(...vals, M.OVER), 0.01) * 1.15;
   const bw = (W - padL - padR) / Math.max(1, G.length);
-  const base = H - 26, top = 16;
+  const base = H - 30, top = 26;
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly load for the selected person against both thresholds">`];
+  o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 3; i++){
     const gv = vmax * i / 3, gy = base - (gv/vmax) * (base-top);
     o.push(`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR+4}" y2="${gy.toFixed(1)}"/>`);
@@ -1503,23 +1527,23 @@ function renderOverall(){
       <p class="cap">One row per project, with its start, end and length under the name. Bands are
         coloured by period and shaded darker as the period weight rises. The two DB locks are red —
         they are what the period derivation hangs on. <strong>Hover any band or marker</strong> for detail.</p>
-      <div class="scrollx">${chartGantt(pids.slice().sort(byRank))}</div></div>
+      <div class="scrollx xl">${chartGantt(pids.slice().sort(byRank))}</div></div>
     <div class="tiles">${tiles}</div>
     <div class="panel"><h2>Monthly demand by project</h2>
       <p class="cap">One band per project, ordered by total resource with the largest on the baseline.
         <strong>Hover any band</strong> for the project, its ${unitLabel()} that month and who is on it.</p>
-      <div class="scrollx">${chartStacked(pids)}</div></div>
+      <div class="scrollx xl">${chartStacked(pids)}</div></div>
     <div class="panel"><h2>Resource by project</h2>
       <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
         <strong>Click a project name</strong> to expand it to the people and roles on it.</p>
-      <div class="scrollx tall">${tableProjects(pids)}</div></div>
+      <div class="scrollx xl">${tableProjects(pids)}</div></div>
     <div class="panel"><h2>Mean load per person</h2>
       <p class="cap">Averaged over the horizon, against the two absolute thresholds.</p>
       <div class="scrollx">${chartPeople(sids)}</div></div>
     <div class="panel"><h2>Resource by person</h2>
       <p class="cap">Summed across every project. &#9650; above the ceiling, &#9660; below the floor.
         <strong>Click a person name</strong> to expand to their projects and roles.</p>
-      <div class="scrollx tall">${tablePeople(sids)}</div>
+      <div class="scrollx xl">${tablePeople(sids)}</div>
       <p class="note">Under-allocation is counted as a run of ${M.MINM} or more consecutive months, not
         per month — the run is what matters, a single quiet month is not.</p></div>`;
 }
