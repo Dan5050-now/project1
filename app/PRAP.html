@@ -347,7 +347,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.5";
+const APP_VERSION = "1.6";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -356,8 +356,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.6.xlsx",           ver:"2.6",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.6 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.7.xlsx",           ver:"2.7",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.7 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -723,6 +723,20 @@ const HELP = {
 };
 
 const OWNER = {project_id:"Project", person_id:"Person", assignment_id:"Assignment"};
+/* A child table is shown filtered to the parent selected above it. A new row therefore
+   has to INHERIT that parent, or it fails the very filter that decides whether it is
+   visible - the row exists but can never be seen or filled in. The specification says
+   this ("pre-fill the parent key where the table is a child of a selection"); it was
+   specified and not implemented. */
+const PARENT_OF = {
+  Milestone:          () => ["project_id", S.selProj],
+  ProjectPeriod:      () => ["project_id", S.selProj],
+  Assignment:         () => ["person_id", S.selPers],
+  PersonPeriodWeight: () => {
+    const first = S.model.assignments.find(a => a.person_id === S.selPers);
+    return ["assignment_id", first ? first.assignment_id : null];
+  },
+};
 const REFS = {
   project_id: [["Milestone","project_id"],["ProjectPeriod","project_id"],["Assignment","project_id"]],
   person_id:  [["Assignment","person_id"]],
@@ -870,6 +884,7 @@ function buildModel(sheets){
     M.people[p.person_id] = p;
   }
   for (const m of raw.Milestone){
+    if (!m.project_id || !m.milestone_name || !m.milestone_date) continue;   // incomplete
     ((M.milestones[m.project_id] ||= {})[m.milestone_name] ||= []).push(m.milestone_date);
   }
   for (const k of Object.keys(M.milestones))
@@ -883,7 +898,10 @@ function buildModel(sheets){
   }
 
   // ---- periods: use what is in the file; derive where a trial has none -------
-  for (const r of raw.ProjectPeriod) (M.periods[r.project_id] ||= []).push(r);
+  for (const r of raw.ProjectPeriod){
+    if (r.__new && !r.period_name) continue;
+    (M.periods[r.project_id] ||= []).push(r);
+  }
   for (const [pid, proj] of Object.entries(M.projects)){
     if (!M.periods[pid] && CLINICAL_TYPES.has(proj.project_type)){
       const derived = derivePeriods(proj, M.milestones[pid] || {});
@@ -1013,6 +1031,9 @@ function validate(M, F){
   // V-01, V-02, V-03, V-07, V-08, V-13 on assignments
   const seen = new Set();
   for (const a of M.raw.Assignment){
+    // A row the user is still creating is INCOMPLETE, not invalid (spec sheet 07). It
+    // starts being checked once it carries an identifier.
+    if (a.__new && !a.assignment_id) continue;
     if (seen.has(a.assignment_id))
       add("error","V-08","Assignment",a.__row,`assignment_id ${a.assignment_id} appears more than once.`);
     seen.add(a.assignment_id);
@@ -1047,7 +1068,10 @@ function validate(M, F){
 
   // V-06 + V-24 on override windows: this is a child table of windows, and one
   // assignment may carry several. Both halves of that need a rule.
-  for (const w of M.raw.PersonPeriodWeight) (M.ppw[w.assignment_id] ||= []).push(w);
+  for (const w of M.raw.PersonPeriodWeight){
+    if (w.__new && !w.period_start) continue;
+    (M.ppw[w.assignment_id] ||= []).push(w);
+  }
   for (const [aid, wins] of Object.entries(M.ppw)){
     if (!seen.has(aid)){
       add("error","V-24","PersonPeriodWeight","",
@@ -1125,15 +1149,19 @@ function calculate(M){
 
   const periodAt = (pid, y, m) => {
     const first = Date.UTC(y, m, 1);
-    for (const s of (M.periods[pid] || []))
+    for (const s of (M.periods[pid] || [])){
+      if (!s.period_start || !s.period_end) continue;   // an incomplete row has no window
       if (s.period_start.getTime() <= first && first <= s.period_end.getTime()) return s;
+    }
     return null;
   };
   const personWeight = (a, y, m) => {
     const first = Date.UTC(y, m, 1);
-    for (const w of (M.ppw[a.assignment_id] || []))
+    for (const w of (M.ppw[a.assignment_id] || [])){
+      if (!w.period_start || !w.period_end) continue;   // an incomplete row has no window
       if (w.period_start.getTime() <= first && first <= w.period_end.getTime())
         return num(w.weight_override) ?? 0;
+    }
     return num(a.person_weight) ?? 0;
   };
 
@@ -1142,7 +1170,7 @@ function calculate(M){
     const proj = M.projects[a.project_id];
     if (!proj || !M.people[a.person_id] || a.__bad) continue;
     const s = a.assign_start_date, e = a.assign_end_date || proj.end_date;
-    if (!s || !e) continue;
+    if (!s || !e || a.__new) continue;              // an incomplete row contributes nothing
     const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
     for (const [y, m] of monthsBetween(s, e)){
       const cov = coverage(y, m, s, e);
@@ -1304,6 +1332,7 @@ function chartGantt(pids){
     o.push(`<text class="rowsub" x="${padL-12}" y="${y+27}" text-anchor="end">`
       + `${ymd(pr.start_date)} &#8594; ${ymd(pr.end_date)} &middot; ${months} months</text>`);
     for (const s of (M.periods[p] || [])){
+      if (!s.period_start || !s.period_end) continue;      // a row still being filled in
       const x0 = x(s.period_start.getTime()), x1 = x(s.period_end.getTime());
       const w = Math.max(1.5, x1 - x0 - 2);
       const ms = monthsBetween(s.period_start, s.period_end);
@@ -1322,6 +1351,7 @@ function chartGantt(pids){
     }
     for (const [nm, dates] of Object.entries(M.milestones[p] || {}))
       for (const d of dates){
+        if (!d) continue;
         const xx = x(d.getTime()), key = KEY_MILESTONES.has(nm);
         const tip = `<b>${esc(pr.project_name)}</b><br>${esc(nm)}`
           + (key ? ` <span class="tr">&#183; sets a period boundary</span>` : "") + `<br>${ymd(d)}`;
@@ -1836,7 +1866,9 @@ function renderProjTab(){
 function projDetail(pid){
   const M = S.model, pr = M.projects[pid];
   const util = chartProjectUtil(pid);
-  const ms = M.raw.Milestone.filter(m => m.project_id === pid)
+  // `|| m.__new` so a row the user just created is visible even before its parent key
+  // is filled in. Seeding usually covers it; this covers the case where it cannot.
+  const ms = M.raw.Milestone.filter(m => m.project_id === pid || m.__new)
     .sort((a,b) => (a.milestone_date||0) - (b.milestone_date||0));
   const per = (M.periods[pid] || []);
   const derived = per.some(p => p.__derived);
@@ -1885,8 +1917,11 @@ function renderPersTab(){
 
 function persDetail(sid){
   const M = S.model, pe = M.people[sid];
-  const asg = M.assignments.filter(a => a.person_id === sid);
-  const ppw = M.raw.PersonPeriodWeight.filter(w => asg.some(a => a.assignment_id === w.assignment_id));
+  // From raw, not from M.assignments: the model's array is rebuilt by validate() and
+  // excludes anything it rejected, so a row being repaired would vanish while edited.
+  const asg = M.raw.Assignment.filter(a => a.person_id === sid || a.__new);
+  const ppw = M.raw.PersonPeriodWeight.filter(w =>
+    w.__new || asg.some(a => a.assignment_id === w.assignment_id));
   return `<div class="panel"><h2>Utilisation — ${esc(pe.person_name)} (${esc(sid)})</h2>
       <p class="cap">Monthly load across the horizon. Dashed lines are the ceiling and floor — the same
         two figures for everyone, since both thresholds are absolute.</p>
@@ -2035,8 +2070,30 @@ function snapshotRaw(){
 function beginEditSession(){
   if (!S.snapshot) S.snapshot = snapshotRaw();
 }
+/** A row still being created is held out of validation - it is INCOMPLETE, not invalid,
+ *  and reporting "project_id is empty" at every keystroke would be noise. Save is where
+ *  that grace ends: a draft that now has content is promoted to an ordinary row and
+ *  checked like one, and if that turns up an error the save is refused rather than
+ *  quietly keeping a bad record. */
 function saveEdits(){
   if (!S.pending.length) return;
+  const drafts = [];
+  for (const s of REQUIRED_SHEETS)
+    for (const r of S.model.raw[s]) if (r.__new && !isBlankRow(s, r)) drafts.push(r);
+  if (drafts.length){
+    for (const r of drafts) delete r.__new;
+    const probe = rebuild();
+    const errs = probe.findings.filter(f => f.sev === "error" || f.sev === "fatal");
+    const was = (S.model.findings || []).filter(f => f.sev === "error" || f.sev === "fatal");
+    if (errs.length > was.length){
+      for (const r of drafts) r.__new = true;
+      showBanner("bad", `Save refused — the new row${drafts.length===1?"" :"s"} would break a rule: `
+        + `${errs[errs.length-1].msg} Correct it, or delete the row, then save.`);
+      return;
+    }
+    rebuild(true);
+    renderKeepingTab();
+  }
   S.saved += S.pending.length;
   S.pending = [];
   S.snapshot = null;
@@ -2140,21 +2197,54 @@ function flashBad(tdEl, msg){
   showBanner("bad", `Edit rejected — ${msg}`);
 }
 
-/** Rebuild model+calc from the current raw rows. `commit` writes it back to state. */
+/** True when the parser would discard this row: every mapped column empty. */
+function isBlankRow(sheet, r){
+  return (S.headers[sheet] || []).every(h => {
+    const v = r[h];
+    return v === null || v === undefined || String(v).trim() === "";
+  });
+}
+
+/** Rebuild model+calc from the current raw rows. `commit` writes it back to state.
+ *
+ *  Two things make this more than a re-parse.
+ *
+ *  The parser SKIPS blank rows - right for an imported file, where a blank line is not a
+ *  record, and wrong for a row the user just created and has not filled in yet. Such a
+ *  row is held out of the parse and put back at its own position afterwards, so an edit
+ *  or a delete elsewhere cannot destroy it.
+ *
+ *  The parser also NUMBERS rows by position (__row = spreadsheet line). Deleting a row
+ *  shifts every row below it, so re-parsing would hand those rows new identities while
+ *  S.pending, S.editedCells and the rendered cells still name the old ones. Identity is
+ *  therefore restored from the rows that were fed in, position by position - which is
+ *  exact, because exactly the non-held rows were emitted, in order. */
 function rebuild(commit){
-  const sheets = {};
-  for (const s of REQUIRED_SHEETS) sheets[s] = rawToRows(s);
+  const kept = {}, held = {}, sheets = {};
+  for (const s of REQUIRED_SHEETS){
+    const rows = S.model.raw[s] || [];
+    kept[s] = []; held[s] = [];
+    rows.forEach((r, i) => {
+      if (r.__new || isBlankRow(s, r)) held[s].push([i, r]); else kept[s].push(r);
+    });
+    sheets[s] = rawToRows(s, kept[s]);
+  }
   const m = buildModel(sheets);
+  for (const s of REQUIRED_SHEETS){
+    m.raw[s].forEach((r, i) => { if (kept[s][i]) r.__row = kept[s][i].__row; });
+    for (const [i, r] of held[s]) m.raw[s].splice(i, 0, r);
+  }
   if (commit){ S.model = m; S.calc = calculate(m); }
   return m;
 }
 
-/** Model rows -> the row-array shape readWorkbook produces, so rebuild and export share one path. */
-function rawToRows(sheet){
-  const rows = S.model.raw[sheet];
+/** Model rows -> the row-array shape readWorkbook produces, so rebuild and export share
+ *  one path. Export passes nothing and gets every row; rebuild passes the rows it wants
+ *  the parser to see. */
+function rawToRows(sheet, rows){
   const hdr = S.headers[sheet] || [];
   const out = [hdr.slice()];
-  for (const r of rows) out.push(hdr.map(h => r[h] ?? null));
+  for (const r of (rows || S.model.raw[sheet])) out.push(hdr.map(h => r[h] ?? null));
   return out;
 }
 
@@ -2208,7 +2298,15 @@ function exportWorkbook(){
   for (const s of REQUIRED_SHEETS){
     const key = KEY_COL[s];
     if (!key) continue;
-    for (const r of S.model.raw[s]) if (r.__new && !r[key]) incomplete.push(`${s} (${key} is empty)`);
+    for (const r of S.model.raw[s]){
+      if (!r.__new) continue;
+      if (!r[key]){ incomplete.push(`${s} (${key} is empty)`); continue; }
+      // A child row seeded with its parent and nothing else is an empty record, and the
+      // parent key alone would not make it one on re-import either.
+      const filled = (S.headers[s] || []).some(h => h !== key && r[h] !== null
+        && r[h] !== undefined && String(r[h]).trim() !== "");
+      if (!filled) incomplete.push(`${s} (a new row has only ${key} filled in)`);
+    }
   }
   if (incomplete.length){
     showBanner("bad", `Export blocked — ${incomplete.length} new row(s) have no identifier: `
@@ -2435,6 +2533,10 @@ document.addEventListener("click", e => {
     const i = rows.findIndex(r => r.__row === after);
     const blank = {__row: Math.max(0, ...rows.map(r => r.__row)) + 1, __new:true};
     for (const h of (S.headers[sheet] || [])) blank[h] = null;
+    if (PARENT_OF[sheet]){
+      const [col, val] = PARENT_OF[sheet]();
+      if (val) blank[col] = val;
+    }
     rows.splice(i + 1, 0, blank);                        // directly below, not appended
     beginEditSession();
     S.pending.push({sheet, row:blank.__row, col:"(new row)", from:null, to:""});

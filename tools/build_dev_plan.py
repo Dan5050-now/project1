@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.6"
+DOC_VERSION = "2.7"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,24 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.6", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.7", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 defect fix round 6, application v1.6. Reviewer reported that inserting and deleting rows "
+     "did not work on Milestones, Periods, Assignments and Weight overrides - the four CHILD tables, "
+     "which are the four rendered filtered to a selected parent. Three defects, all in the shared "
+     "insert/rebuild path, none touching a requirement, rule, calculation or schema. (D-1) A new row "
+     "was created with every column empty, so the parent filter that decides which rows the table shows "
+     "excluded it: the row existed but was invisible. A new child row is now seeded with the parent it "
+     "was created under, and each filter admits a row still being drafted. (D-2) Every edit and delete "
+     "re-parses the data, and the parser discards blank rows - correct for a file being read, wrong for "
+     "a row the user has not filled in yet, which was silently destroyed by the next action. Rows the "
+     "parser would discard are now held out of the parse and put back in place. (D-3) The parser numbers "
+     "rows by position, so deleting a row renumbered every row below it while pending edits, edit "
+     "highlights and the rendered cells still named the old numbers - an edit could end up attached to a "
+     "different record, and a drafted row could be duplicated. Row identity is now preserved across a "
+     "rebuild. A drafted row is exempt from validation while it is being written and is validated when "
+     "Save is pressed; a draft that would break a rule is refused by name rather than kept.",
+     "Issued for review"],
+    ["2.6", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 refinements round 5, application v1.5. Five changes, none touching a requirement, rule, "
      "calculation or schema. (1) and (2) The Assignments and Weight-overrides tables carry the project "
      "name, and the overrides table also the role - looked up from the master row and marked as such, "
@@ -377,7 +394,7 @@ rows = [
      "workbook rows and cannot carry a per-row action. (5) Type-ahead on every column with a vocabulary: "
      "the Lists sheet where the column is backed by one, the distinct values already present where it is "
      "not, and the type-dependent set for period_name and role_name.",
-     "Issued for review"],
+     "Superseded by v2.7"],
     ["2.5", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 refinements round 4, application v1.4. (1) Information pop-ups: every column heading on the "
      "source-data tabs explains what its column is for, and the summary tiles, month headings and project "
@@ -1182,7 +1199,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-5 applied (app v1.5); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-6 applied (app v1.6); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1261,7 +1278,8 @@ align = [
     ["v2.3", "v1.0", "application v1.2", "5", "2026-08-02", "Gate 4 round 2: the application carries its own document provenance."],
     ["v2.4", "v1.0", "application v1.3", "5", "2026-08-02", "Gate 4 round 3: sticky headers, year axis, provisional editing."],
     ["v2.5", "v1.0", "application v1.4", "5", "2026-08-02", "Gate 4 round 4: information pop-ups and row deletion."],
-    ["v2.6", "v1.0", "application v1.5", "5", DOC_DATE, "Gate 4 round 5: lookup columns, cell values, row actions everywhere, type-ahead. 4.9 continues."],
+    ["v2.6", "v1.0", "application v1.5", "5", DOC_DATE, "Gate 4 round 5: lookup columns, cell values, row actions everywhere, type-ahead."],
+    ["v2.7", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 6: insert/delete fixed on the four child tables. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

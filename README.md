@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.6 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.7 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -30,7 +30,7 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.6.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.7.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -46,7 +46,7 @@ output/       Exported results and test evidence   (from Step 5)
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -75,6 +75,7 @@ output/       Exported results and test evidence   (from Step 5)
   | Identifier edit | cascades to all 19 referencing rows, no errors introduced |
   | Bad date (`03/04/2026`) | rejected at entry, cell restored |
   | Row insert | lands directly below the row acted on |
+  | Row insert / delete on the four child tables | `tools/test_rows.py`, and it fails against the build before the fix |
 
   Gate 4 round 1 (app v1.1): the three named Overall sections are up to twice their
   previous size; the project timeline scrolls in both directions, so every project in
@@ -99,6 +100,16 @@ output/       Exported results and test evidence   (from Step 5)
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 6 (app v1.6): a reported defect — insert and delete did nothing useful on
+  Milestones, Periods, Assignments and Weight overrides. Three faults, all in the shared
+  insert/rebuild path: a new child row was created with no parent, so the filter that
+  decides what a child table shows hid it; the re-parse that follows every edit discards
+  blank rows, which silently destroyed a row not yet filled in; and rows are numbered by
+  position, so a delete renumbered everything below it while pending edits still named
+  the old numbers. New rows are now seeded with their parent, held out of the re-parse
+  until they have content, and keep their identity across a rebuild. A row still being
+  written is exempt from validation and is validated when **Save** is pressed.
 
 ### Step 3 deliverables (approved)
 
@@ -141,6 +152,16 @@ python tools/test_app.py
 That drives `app/PRAP.html` in a real browser, compares its calculation with
 `verify_source_workbook.py` cell by cell, exports, re-imports, and puts the export
 through `openpyxl` — a reader that is not ours.
+
+And check that rows can be added and removed on every table:
+
+```bash
+python tools/test_rows.py
+```
+
+That inserts and deletes on each of the four child tables, then fills a new row in on
+each, saves, exports and reads the export back — the four operations that were broken
+before app v1.6.
 
 And check the documents still describe the artifacts they claim to:
 
