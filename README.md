@@ -8,9 +8,9 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | v1.3 approved 2026-08-01 · **v1.7 changes awaiting signature** |
-| 2 | Programming specification | **v0.6 draft — no open points** |
-| 3 | Prototype UI design | **v0.5 prototype — review round 3 applied, issued for confirmation** |
+| 1 | Development plan | v1.3 approved 2026-08-01 · **v1.8 changes awaiting signature** |
+| 2 | Programming specification | **v0.7 draft — no open points** |
+| 3 | Prototype UI design | **v0.6 prototype — review round 4 applied, issued for confirmation** |
 | 4 | Code generation | Not started |
 | 5 | Finalisation | Not started |
 
@@ -30,19 +30,20 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v1.7.xlsx` — **current.** 69 requirements, 23 validation
-  rules, source schema version 4. Carries six changes against the approved baseline,
+- `docs/PRAP_Development_Plan_v1.8.xlsx` — **current.** 69 requirements, 23 validation
+  rules, source schema version 5. Carries seven changes against the approved baseline,
   all awaiting signature:
   R-05 (`project_type` splits into `NewDrug CT` and `Biosimilar CT`, schema version 3),
   R-06 (target volume 100 projects / 1,000 people, `Should` → `Must`), R-07 (both
   allocation thresholds absolute, under-allocation floor 0.80 → 0.60), R-08
   (a repeated period name must be distinguishable on screen), R-09 (the
   component-list review: a tab for the standing assumptions, and row insertion) and
-  R-10 (the role factor is keyed on project type, clinical phase, period and role;
-  schema 3 → 4).
+  R-10 (the role factor is keyed on project type, clinical phase, period and role) and
+  R-11 (the two conduct stretches are named apart, so `ProjectPeriod` is keyed on
+  `project_id + period_name`; schema 4 → 5).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -50,26 +51,26 @@ output/       Exported results and test evidence   (from Step 5)
 
 ### Step 3 deliverables (for review)
 
-- `app/PRAP_Prototype_v0.5.html` — the UI prototype. **Design only**: nothing loads,
+- `app/PRAP_Prototype_v0.6.html` — the UI prototype. **Design only**: nothing loads,
   calculates or exports. The only scripts are tab switching, row expansion and the
   hover pop-up. Self-contained, offline, light and dark. Four tabs.
-- `docs/PRAP_UI_Component_List_v0.5.xlsx` — the review disposition: all 45 components
+- `docs/PRAP_UI_Component_List_v0.6.xlsx` — the review disposition: all 45 components
   with your decision and comment quoted verbatim against what was done, 19 design
   decisions, a change log of what the reviews moved in the plan and specification, and
-  sheet 05 covering review round 3.
+  sheets 05 and 06 covering review rounds 3 and 4.
 
 ### Step 2 deliverables (for review)
 
-- `docs/PRAP_Programming_Specification_v0.6.xlsx` — 11 sheets: parse contract,
+- `docs/PRAP_Programming_Specification_v0.7.xlsx` — 11 sheets: parse contract,
   all 23 validation rules with their exact messages, calculation pseudocode,
   UI behaviour for four tabs, editing and IO, versioning, and a traceability matrix
   covering all 69 requirements. Sheet 10 records the six open points from the v0.3
   review, the answers given, and what each one changed. None open.
 
-- `templates/PRAP_SourceData_Template_v1.5.xlsx` — blank workbook: 10 sheets, headers,
+- `templates/PRAP_SourceData_Template_v1.6.xlsx` — blank workbook: 10 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README. Every sheet
   carries at least one free-text note column (schema version 3).
-- `templates/PRAP_SourceData_Dummy_v1.6.xlsx` — the same structure populated with
+- `templates/PRAP_SourceData_Dummy_v1.7.xlsx` — the same structure populated with
   **34 NewDrug CT + 16 Biosimilar CT + 12 `Others` projects and 20 people**
   (289 assignments, 372 milestones, 308 periods across 73 months). Generated
   deterministically, so it rebuilds identically.
@@ -77,7 +78,7 @@ output/       Exported results and test evidence   (from Step 5)
 Validate either with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.6.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.7.xlsx
 ```
 
 And check the documents still describe the artifacts they claim to:
@@ -141,11 +142,14 @@ Requires `openpyxl`.
 - **Three project types**: `NewDrug CT`, `Biosimilar CT`, `Others`. The two trial
   types share one period set and one derivation, and differ in their weights.
 - **Period sets differ by project type**: both trial types use Before-Start-up /
-  Start-up / Conduct / Close-out (interim) / Close-out (final) / After Close-out
-  (final), derived from milestone dates; Others uses Planning / Develop / Close,
-  entered directly.
-- **`Conduct` can occur twice** in one project, split by an interim DB lock, so a
-  period name is not unique within a project (Q-23).
+  Start-up / Conduct (interim) / Close-out (interim) / Conduct (final) / Close-out
+  (final) / After Close-out (final) — seven names, derived from milestone dates;
+  Others uses Planning / Develop / Close, entered directly.
+- **The conduct phase is split by NAME, not by sequence** (R-11): `Conduct (interim)`
+  where the project has an interim DB lock and the stretch runs before it,
+  `Conduct (final)` after it or where there is no interim lock. Period names are
+  therefore unique within a project, and `ProjectPeriod` is keyed on
+  `project_id + period_name`; `period_seq` carries order only.
 - **`Inspection` may be recorded several times** per project, and opens a seventh
   period where it follows the final DB lock. An inspection dated on or before the
   final DB lock stays a marker (R-01, R-02, R-03 — confirmed).
@@ -173,7 +177,9 @@ Open `app/PRAP_Prototype_v0.4.html` in a browser, then work down
 4. **Sheet 05** — round 3: the role-factor key, the scroll regions, and the insert-button
    fault you reported. **D-19** on sheet 02 is the one to read: keying the role factor on
    phase and period makes it overlap `PeriodWeightStandard`, and the two multiply.
+5. **Sheet 06** — round 4: naming the conduct stretches apart. This supersedes **D-15**
+   and retires the display numbering that REQ-DSH-10 introduced.
 
 Per the plan, code generation starts only after the component list is approved.
 
-Also pending: **sign off plan v1.7**, which carries the six changes listed above.
+Also pending: **sign off plan v1.8**, which carries the seven changes listed above.

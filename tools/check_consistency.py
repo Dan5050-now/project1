@@ -14,10 +14,10 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v1.7.xlsx"
-SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v0.6.xlsx"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.5.xlsx"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.6.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v1.8.xlsx"
+SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v0.7.xlsx"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.6.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.7.xlsx"
 
 problems, notes = [], []
 
@@ -109,7 +109,8 @@ types = lists.get("project_type", [])
 # own words and the change requests necessarily quote values that have since been
 # retired. Rewriting them to match today's schema would falsify the review trail, so
 # they are exempt from the retired-literal scan.
-RECORD_SHEETS = {"11_Open_Questions", "12_Review_Log", "01_Version_History"}
+RECORD_SHEETS = {"11_Open_Questions", "12_Review_Log", "01_Version_History",
+                 "10_Open_Points"}
 for doc, wb in (("plan", plan), ("specification", spec)):
     txt = " ".join(str(c.value) for s in wb.sheetnames if s not in RECORD_SHEETS
                    for c in cells(wb[s]))
@@ -154,6 +155,20 @@ for row in sch.iter_rows(values_only=True):
     if not same:
         problems.append(f"specification documents Config.{name} default {documented_default}, "
                         f"template holds {actual}")
+
+# ---- 4d. the period names the documents describe vs the template's list ---
+# R-11 changed the clinical period set. A document still listing the old six names
+# reads perfectly well on its own, which is exactly why this needs a machine check.
+period_names = lists.get("period_name_clinical", []) + lists.get("period_name_others", [])
+for doc, wb in (("plan", plan), ("specification", spec)):
+    txt = " ".join(str(c.value) for s in wb.sheetnames if s not in RECORD_SHEETS
+                   for c in cells(wb[s]))
+    for nm in period_names:
+        if nm not in txt:
+            problems.append(f"{doc} never mentions period name '{nm}'")
+    # the bare 'Conduct' was retired at R-11; it must not survive as a period name
+    if re.search(r"'Conduct'|\bConduct(?!\s*\()", txt):
+        notes.append(f"{doc} mentions a bare 'Conduct' - check it is prose, not the retired period name")
 
 # ---- 5. every requirement in the plan is traced in the specification ------
 plan_reqs = {str(plan["03_Requirements"].cell(r, 1).value).strip()

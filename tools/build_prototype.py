@@ -8,7 +8,7 @@ information hierarchy before any application code is written (plan sheet 08, tas
 
     python tools/build_prototype.py
 
-Output: app/PRAP_Prototype_v0.5.html
+Output: app/PRAP_Prototype_v0.6.html
 """
 
 import calendar
@@ -19,11 +19,11 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.6.xlsx"
-OUT = ROOT / "app" / "PRAP_Prototype_v0.5.html"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.7.xlsx"
+OUT = ROOT / "app" / "PRAP_Prototype_v0.6.html"
 
-APP_VERSION = "prototype v0.5"
-SCHEMA_EXPECTED = 4
+APP_VERSION = "prototype v0.6"
+SCHEMA_EXPECTED = 5
 WIN_FROM, WIN_TO = (2027, 1), (2027, 12)      # the 12 months the mock-up shows
 
 # ---- design tokens (validated: see dataviz palette reference) --------------
@@ -167,9 +167,11 @@ def is_ct(pid):
     return S["P"][pid]["project_type"] in S["CT"]
 
 
-# REQ-DSH-10: 'Conduct' occurs twice in a trial with an interim DB lock, so the bare
-# name is ambiguous wherever it is shown. Number the occurrences - but only when there
-# is more than one, since 'Start-up (1)' would be noise.
+# REQ-DSH-10: where a period name occurs more than once in a project, each occurrence
+# must be distinguishable on screen. Since R-11 named the two conduct stretches apart,
+# no name repeats and this never fires - the requirement is now satisfied by the data
+# model rather than by a display rule. Kept as the guard for that: V-18 rejects a
+# repeated name on import, but a hand-built model could still reach the renderer.
 _PLABEL = {}
 for _pid, _segs in S["PER"].items():
     _segs = sorted(_segs, key=lambda r: r["period_seq"])
@@ -258,7 +260,8 @@ def att(t):
 PERIOD_HUE = {
     "Before-Start-up":        "#adaca6",   # grey, light
     "Start-up":               "#d9472f",   # red, shifted toward orange
-    "Conduct":                "#1baf7a",   # green
+    "Conduct (interim)":      "#3fc795",   # green, light - the first stretch
+    "Conduct (final)":        "#159068",   # green, deep  - the stretch that ends the trial
     "Close-out (interim)":    "#f2b53d",   # orange, light - the interim stop
     "Close-out (final)":      "#d97e0a",   # orange, deep - the final one
     "After Close-out (final)": "#6f6f68",  # grey, dark - still legible on a dark surface
@@ -498,8 +501,8 @@ def chart_gantt():
     out.append("</svg>")
 
     seen, leg = [], ['<ul class="legend">']
-    for nm in ["Before-Start-up", "Start-up", "Conduct", "Close-out (interim)",
-               "Close-out (final)", "After Close-out (final)"]:
+    for nm in ["Before-Start-up", "Start-up", "Conduct (interim)", "Close-out (interim)",
+               "Conduct (final)", "Close-out (final)", "After Close-out (final)"]:
         if nm in seen:
             continue
         seen.append(nm)
@@ -1064,7 +1067,7 @@ document.querySelectorAll('nav button').forEach(function(b){
 
 html = f"""<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PRAP — UI prototype v0.5</title>
+<title>PRAP — UI prototype v0.6</title>
 <style>{CSS}</style>
 <div class="proto">PROTOTYPE — layout and components only. Figures are a fixed snapshot;
 nothing on this page loads, calculates or exports.</div>
@@ -1072,7 +1075,7 @@ nothing on this page loads, calculates or exports.</div>
 <header>
   <h1>Project Resource Assignment Program</h1>
   <span class="vers">{APP_VERSION} · expects source schema v{SCHEMA_EXPECTED}</span>
-  <span class="file">PRAP_SourceData_Dummy_v1.6.xlsx · loaded 2026-08-01 09:14
+  <span class="file">PRAP_SourceData_Dummy_v1.7.xlsx · loaded 2026-08-01 09:14
     <span class="tz">(GMT+9, KST)</span></span>
   <button class="btn">Load workbook</button>
   <button class="btn primary">Export</button>
@@ -1122,8 +1125,9 @@ nothing on this page loads, calculates or exports.</div>
     <p class="cap">One row per project, with its start, end and length under the name.
       Bands are coloured by period — grey before start-up, red through start-up, green
       through conduct, orange at close-out, dark grey after — and shaded darker as the
-      period weight rises. Trials with an interim DB lock show two Conduct stretches,
-      numbered <em>Conduct (1)</em> and <em>Conduct (2)</em>. <strong>Hover any band</strong>
+      period weight rises. Trials with an interim DB lock show two conduct stretches,
+      named <em>Conduct (interim)</em> and <em>Conduct (final)</em>; trials without one show
+      a single <em>Conduct (final)</em>. <strong>Hover any band</strong>
       for its dates, weight and the FTE per month the project draws across it; hover a
       marker for the milestone.</p>
     <div class="scrollx">{chart_gantt()}</div>
@@ -1188,8 +1192,8 @@ nothing on this page loads, calculates or exports.</div>
     </div>
     <div class="panel">
       <h2>Periods — {esc(PROJ['project_name'])}</h2>
-      <p class="cap">Derived from the milestones above. A period name that occurs more
-        than once carries its occurrence number.
+      <p class="cap">Derived from the milestones above. Period names are unique within a
+        project, so <code>project_id + period_name</code> identifies a row.
         <button class="btn">Recompute periods</button></p>
       <div class="scrollx tall"><table class="data-t"><thead><tr><th class="ins">insert</th>
         <th>seq</th><th>period</th><th>start</th><th>end</th><th>weight</th><th>note_1</th>

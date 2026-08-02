@@ -13,8 +13,8 @@ since v1.2; only the dummy dataset was regenerated.
 
 The dummy file is generated deterministically (seeded), so it rebuilds identically.
 It holds 50 clinical trials, 12 'Others' projects and 20 people, and is built to
-exercise the rules rather than merely fill cells: interim DB locks that split
-'Conduct' in two, inspections that open the seventh period, hand-entered 'Others'
+exercise the rules rather than merely fill cells: interim DB locks that open a
+'Conduct (interim)' stretch, inspections that open the final period, hand-entered 'Others'
 periods, part-time capacities, weight overrides, and both allocation thresholds.
 """
 
@@ -28,9 +28,9 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 4
-TEMPLATE_VERSION = "1.5"
-DUMMY_VERSION = "1.6"
+SCHEMA_VERSION = 5
+TEMPLATE_VERSION = "1.6"
+DUMMY_VERSION = "1.7"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -67,9 +67,9 @@ LISTS = [
     ("milestone_name", ["Protocol (v1)", "CTA submission", "FPI", "First SIV", "LPI",
                         "interim DB lock cut-off", "interim DB lock",
                         "final DB lock cut-off", "final DB lock", "Inspection"]),
-    ("period_name_clinical", ["Before-Start-up", "Start-up", "Conduct",
-                              "Close-out (interim)", "Close-out (final)",
-                              "After Close-out (final)"]),
+    ("period_name_clinical", ["Before-Start-up", "Start-up", "Conduct (interim)",
+                              "Close-out (interim)", "Conduct (final)",
+                              "Close-out (final)", "After Close-out (final)"]),
     ("period_name_others", ["Planning", "Develop", "Close"]),
     ("role_clinical", ["Project oversight", "Lead data manager", "Clinical Data Associator",
                        "Clinical Database Programmer", "Data Analyst"]),
@@ -123,8 +123,8 @@ SHEETS = {
     ],
     "ProjectPeriod": [
         ("project_id", "Foreign key to Project.", "key"),
-        ("period_name", "From the set for this project's type. NOT unique - 'Conduct' can appear twice.", ""),
-        ("period_seq", "Orders periods along the timeline. Unique within a project.", "key"),
+        ("period_name", "From the set for this project's type. UNIQUE within a project, so (project_id, period_name) is the key (R-11).", "key"),
+        ("period_seq", "Orders periods along the timeline. Unique within a project.", ""),
         ("period_start", "Inclusive.", ""),
         ("period_end", "Inclusive. Periods must not overlap or leave a gap.", ""),
         ("weight", "Effort multiplier. Clinical trial types: seeded from PeriodWeightStandard. Others: type it.", ""),
@@ -133,7 +133,7 @@ SHEETS = {
     "PeriodWeightStandard": [
         ("project_type", "'NewDrug CT' or 'Biosimilar CT'. 'Others' projects take manual weights instead.", ""),
         ("clinical_phase", "The phase this standard applies to.", "key"),
-        ("period_name", "One of the six clinical periods.", "key"),
+        ("period_name", "One of the seven clinical periods. Unique within a project (R-11).", "key"),
         ("weight", "YOU SUPPLY. Default multiplier for this phase and period.", "fill"),
         ("note_1", "Free text. e.g. the basis for this weight.", ""),
     ],
@@ -243,14 +243,18 @@ def derive_periods(start, end, milestones, inspections):
     if su_s > start:
         segs.append(("Before-Start-up", start, su_s - timedelta(days=1)))
     segs.append(("Start-up", su_s, su_e))
+    # R-11: the two Conduct stretches carry different names, so period_name is unique
+    # within a project. 'Conduct (interim)' only exists where there IS an interim DB
+    # lock and the stretch runs before it; everything else is 'Conduct (final)',
+    # including the single stretch of a project that never has an interim lock.
     if idbl and idbl < fdbl:
         coi_s = idbl - rd(months=3)
-        segs.append(("Conduct", su_e + timedelta(days=1), coi_s - timedelta(days=1)))
+        segs.append(("Conduct (interim)", su_e + timedelta(days=1), coi_s - timedelta(days=1)))
         segs.append(("Close-out (interim)", coi_s, idbl))
         cof_s = max(cof_s, idbl + timedelta(days=1))
-        segs.append(("Conduct", idbl + timedelta(days=1), cof_s - timedelta(days=1)))
+        segs.append(("Conduct (final)", idbl + timedelta(days=1), cof_s - timedelta(days=1)))
     else:
-        segs.append(("Conduct", su_e + timedelta(days=1), cof_s - timedelta(days=1)))
+        segs.append(("Conduct (final)", su_e + timedelta(days=1), cof_s - timedelta(days=1)))
     segs.append(("Close-out (final)", cof_s, cof_e))
     if p7_s:
         segs.append(("After Close-out (final)", p7_s, p7_e))
@@ -287,18 +291,21 @@ def dummy_data():
     OT_ROLES = ["Project lead", "Main staff", "Other staff"]
 
     phase_profile = {
-        "Phase 1": {"Before-Start-up": 0.60, "Start-up": 1.30, "Conduct": 1.00,
-                    "Close-out (interim)": 1.20, "Close-out (final)": 1.40,
-                    "After Close-out (final)": 0.84},
-        "Phase 2": {"Before-Start-up": 0.70, "Start-up": 1.40, "Conduct": 1.10,
-                    "Close-out (interim)": 1.30, "Close-out (final)": 1.50,
-                    "After Close-out (final)": 0.90},
-        "Phase 3": {"Before-Start-up": 0.80, "Start-up": 1.60, "Conduct": 1.20,
-                    "Close-out (interim)": 1.40, "Close-out (final)": 1.70,
-                    "After Close-out (final)": 1.02},
-        "Phase 4": {"Before-Start-up": 0.50, "Start-up": 1.10, "Conduct": 0.90,
-                    "Close-out (interim)": 1.00, "Close-out (final)": 1.20,
-                    "After Close-out (final)": 0.72},
+        # The two Conduct entries carry the SAME weight as the single 'Conduct' did
+        # before R-11. Splitting the name should not silently reweight anything; if the
+        # two stretches really do differ in burden, that is a data edit, not a default.
+        "Phase 1": {"Before-Start-up": 0.60, "Start-up": 1.30, "Conduct (interim)": 1.00,
+                    "Close-out (interim)": 1.20, "Conduct (final)": 1.00,
+                    "Close-out (final)": 1.40, "After Close-out (final)": 0.84},
+        "Phase 2": {"Before-Start-up": 0.70, "Start-up": 1.40, "Conduct (interim)": 1.10,
+                    "Close-out (interim)": 1.30, "Conduct (final)": 1.10,
+                    "Close-out (final)": 1.50, "After Close-out (final)": 0.90},
+        "Phase 3": {"Before-Start-up": 0.80, "Start-up": 1.60, "Conduct (interim)": 1.20,
+                    "Close-out (interim)": 1.40, "Conduct (final)": 1.20,
+                    "Close-out (final)": 1.70, "After Close-out (final)": 1.02},
+        "Phase 4": {"Before-Start-up": 0.50, "Start-up": 1.10, "Conduct (interim)": 0.90,
+                    "Close-out (interim)": 1.00, "Conduct (final)": 0.90,
+                    "Close-out (final)": 1.20, "After Close-out (final)": 0.72},
     }
 
     # ---- projects -------------------------------------------------------
@@ -429,12 +436,15 @@ def dummy_data():
     ct_role_base = [("Project oversight", 0.80), ("Lead data manager", 1.20),
                     ("Clinical Data Associator", 1.00),
                     ("Clinical Database Programmer", 1.10), ("Data Analyst", 0.90)]
+    # Indexed by CLINICAL_PERIODS: BSU, Start-up, Conduct (i), Close-out (i),
+    # Conduct (f), Close-out (f), After Close-out. The two Conduct values match, for
+    # the same reason the period weights do - R-11 renames, it does not reweight.
     role_shape = {
-        "Project oversight":            [0.90, 1.00, 1.00, 1.00, 1.00, 0.80],
-        "Lead data manager":            [0.80, 1.20, 1.00, 1.10, 1.20, 0.70],
-        "Clinical Data Associator":     [0.50, 0.80, 1.30, 1.10, 0.90, 0.50],
-        "Clinical Database Programmer": [0.70, 1.50, 0.80, 1.00, 1.10, 0.40],
-        "Data Analyst":                 [0.40, 0.60, 0.90, 1.30, 1.50, 0.90],
+        "Project oversight":            [0.90, 1.00, 1.00, 1.00, 1.00, 1.00, 0.80],
+        "Lead data manager":            [0.80, 1.20, 1.00, 1.10, 1.00, 1.20, 0.70],
+        "Clinical Data Associator":     [0.50, 0.80, 1.30, 1.10, 1.30, 0.90, 0.50],
+        "Clinical Database Programmer": [0.70, 1.50, 0.80, 1.00, 0.80, 1.10, 0.40],
+        "Data Analyst":                 [0.40, 0.60, 0.90, 1.30, 0.90, 1.50, 0.90],
     }
     # Deliberately mild. Phase already drives PeriodWeightStandard, so a strong phase
     # term here would count the same effect twice.

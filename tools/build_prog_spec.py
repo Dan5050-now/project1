@@ -14,10 +14,10 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "0.6"
-DOC_STATUS = "Draft for review - role factor keyed on phase and period (R-10)"
+DOC_VERSION = "0.7"
+DOC_STATUS = "Draft for review - conduct stretches named apart; ProjectPeriod natural key (R-11)"
 DOC_DATE = "2026-08-01"
-PLAN = "PRAP_Development_Plan_v1.7.xlsx"
+PLAN = "PRAP_Development_Plan_v1.8.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
 
@@ -116,8 +116,8 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Governing document", f"{PLAN} - changes R-05..R-10 against the v1.3 baseline, awaiting signature"),
-    ("Schema version specified", "4"),
+    ("Governing document", f"{PLAN} - changes R-05..R-11 against the v1.3 baseline, awaiting signature"),
+    ("Schema version specified", "5"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -140,7 +140,7 @@ r = lines(ws, r, [
     "Two things make this specification unusual, and both are deliberate:",
     "",
     "  - The data schema is not described in prose. It already exists as a working file,",
-    "    templates/PRAP_SourceData_Template_v1.5.xlsx, and sheet 03 documents the parse contract against it.",
+    "    templates/PRAP_SourceData_Template_v1.6.xlsx, and sheet 03 documents the parse contract against it.",
     "  - The calculation and validation logic already has a reference implementation in",
     "    tools/verify_source_workbook.py, which runs against the dummy data. Sheet 05 gives the pseudocode;",
     "    that script is the executable check that the pseudocode is right.",
@@ -167,7 +167,16 @@ r = table(ws, r, ["Sheet", "Contents"], guide, [24, 86], wrap_cols=(2,))
 
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
-rows = [["0.6", DOC_DATE, "Claude Code", "Dan",
+rows = [["0.7", DOC_DATE, "Claude Code", "Dan",
+         "Plan change R-11 applied. The conduct phase is split by NAME: 'Conduct (interim)' where the "
+         "project has an interim DB lock and the stretch runs before it, 'Conduct (final)' after it or "
+         "where there is no interim lock. Period names are therefore unique within a project, and "
+         "ProjectPeriod is keyed on (project_id, period_name) - sheets 03 and 05 updated, V-18 becomes a "
+         "plain uniqueness check, and period_seq carries order only. The clinical period set grows to "
+         "seven names, so PeriodWeightStandard is 56 rows and RoleFactor 289. Schema 4 to 5. Weights "
+         "unchanged: the dummy dataset returns identical load figures, which is the evidence that this "
+         "renamed without reweighting. Written against plan v1.8.", "Draft"],
+        ["0.6", DOC_DATE, "Claude Code", "Dan",
          "Plan change R-10 applied: the role factor is keyed on project type, clinical phase, period "
          "and role rather than type and role alone. Sheet 03 documents the two new RoleFactor columns "
          "and the four-part key; sheet 05 selects the factor by the period the month falls in; V-03 "
@@ -215,9 +224,9 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 
 r = section(ws, r, "Source documents")
 src = [
-    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-10 awaiting signature. 69 requirements, 23 validation rules, 11 decisions, source schema version 4.", "Governs this document"],
-    ["templates/PRAP_SourceData_Template_v1.5.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
-    ["templates/PRAP_SourceData_Dummy_v1.6.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
+    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-11 awaiting signature. 69 requirements, 23 validation rules, 11 decisions, source schema version 5.", "Governs this document"],
+    ["templates/PRAP_SourceData_Template_v1.6.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
+    ["templates/PRAP_SourceData_Dummy_v1.7.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
     ["docs/STEP2_OPEN_POINTS.md", "Points raised while building the template.", "Carried into sheet 10"],
 ]
@@ -245,7 +254,7 @@ r = table(ws, r, ["Deferred", "Why"], defer, [56, 76], wrap_cols=(1, 2))
 
 # ---- 03 Data schema -------------------------------------------------------
 ws, r = sheet(wb, "03_Data_Schema", "Data schema - the parse contract",
-              "Documents templates/PRAP_SourceData_Template_v1.5.xlsx. Sheet and column names are matched "
+              "Documents templates/PRAP_SourceData_Template_v1.6.xlsx. Sheet and column names are matched "
               "exactly and case-sensitively.")
 
 r = section(ws, r, "Reading the workbook")
@@ -274,9 +283,9 @@ r = section(ws, r, "Sheets and keys")
 sheets = [
     ["Project", "project_id", "-", "23", "Master."],
     ["Milestone", "project_id + milestone_name + milestone_date", "Project", "6", "milestone_name is NOT unique alone - 'Inspection' repeats (REQ-PRJ-13)."],
-    ["ProjectPeriod", "project_id + period_name + period_start", "Project", "7", "A natural key: period_name alone is not unique, since 'Conduct' occurs twice, but the two differ in start date. period_seq orders them (V-18)."],
-    ["PeriodWeightStandard", "project_type + clinical_phase + period_name", "-", "5", "Both trial types, keyed separately (R-05). 'Others' take manual weights (Q-28)."],
-    ["RoleFactor", "project_type + clinical_phase + period_name + role_name", "-", "6", "249 rows. Keyed on all four so a role's burden can vary across the life of a project (R-10). clinical_phase is EMPTY on the nine 'Others' rows - the lookup must match null to null, not fall through."],
+    ["ProjectPeriod", "project_id + period_name", "Project", "7", "Since R-11 no period name repeats in a project, so the name alone identifies the row. period_seq carries order, not identity (V-18)."],
+    ["PeriodWeightStandard", "project_type + clinical_phase + period_name", "-", "5", "56 rows: both trial types keyed separately (R-05), across seven periods (R-11). 'Others' take manual weights (Q-28)."],
+    ["RoleFactor", "project_type + clinical_phase + period_name + role_name", "-", "6", "289 rows after R-11 added a seventh clinical period. Keyed on all four so a role's burden can vary across the life of a project (R-10). clinical_phase is EMPTY on the nine 'Others' rows - the lookup must match null to null, not fall through."],
     ["Person", "person_id", "-", "12", "Master."],
     ["Assignment", "assignment_id", "Person, Project, RoleFactor", "11", "One row per person + project + role."],
     ["PersonPeriodWeight", "assignment_id + period_start", "Assignment", "5", "Optional. Overrides person_weight for its window."],
@@ -313,7 +322,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "4", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "5", "Compared with the version this application expects (sheet 08)."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
     ["over_allocation_fte", "Decimal", "1.50", "Absolute, not scaled by capacity_fte (S2-01). See sheet 05."],
     ["under_allocation_fte", "Decimal", "0.60", "Absolute, not scaled by capacity_fte. Moved from 0.80 at S2-05. See sheet 05."],
@@ -322,8 +331,10 @@ cfg = [
     ["capacity_unit", "List", "FTE", "'FTE' or 'percent'."],
 ]
 r = table(ws, r, ["parameter", "Type", "Default", "Use"], cfg, [30, 12, 12, 86], wrap_cols=(4,))
-r = note(ws, r, "schema_version stepped from 3 to 4 at R-10: RoleFactor gained two columns, and an older "
-                "file's four-column sheet cannot be read as a six-column one. V-09 reports the mismatch.")
+r = note(ws, r, "schema_version stepped from 3 to 4 at R-10 (RoleFactor gained two columns), and from 4 to 5 at "
+                "R-11. R-11 changed no columns at all - but it retired the period name 'Conduct', so every "
+                "ProjectPeriod row of a v4 file would fail V-15. A value set is part of the contract, not "
+                "decoration. V-09 reports the mismatch.")
 r += 1
 r = note(ws, r, "A missing Config row falls back to the default above and raises a warning. A Config value that fails "
                 "coercion is an error - a threshold read as text would silently disable a flag.")
@@ -359,14 +370,14 @@ rules = [
     ["V-12", "Warning", "A project's periods leave a gap or do not cover its full span.", "Project PRJ-006: 2026-07-01 to 2026-07-31 belongs to no period. Those months are calculated at weight 1.00."],
     ["V-13", "Warning", "A denormalised name does not match its master row.", "Assignment ASG-014 records person_name 'Kim' but PSN-001 is 'Kim S.'. The master value is used."],
     ["V-14", "Error / Warning", "A boundary milestone is out of chronological order, or a milestone falls outside the project window.", "Project PRJ-003: 'First SIV' 2025-12-01 precedes 'CTA submission' 2026-01-15, so periods cannot be derived."],
-    ["V-15", "Error", "A period_name not in the set for that project's type.", "Project PRJ-006 is type 'Others' but has a period named 'Conduct'. Valid: Planning, Develop, Close."],
+    ["V-15", "Error", "A period_name not in the set for that project's type.", "Project PRJ-006 is type 'Others' but has a period named 'Conduct (final)'. Valid: Planning, Develop, Close."],
     ["V-16", "Error", "A clinical trial lacking CTA submission or any DB lock.", "Project PRJ-007 has no DB lock milestone, so its periods cannot be derived. Enter them manually or add the milestone."],
     ["V-17", "Error", "An edit would orphan a reference (see sheet 07).", "PSN-001 cannot be deleted: 3 assignments still refer to it."],
-    ["V-18", "Error", "Within a project, (period_name, period_start) is not unique, or period_seq is duplicated.", "Project PRJ-003: two periods named 'Conduct' both start on 2027-04-01, so they cannot be told apart. period_seq must also be unique - it fixes their order."],
+    ["V-18", "Error", "Within a project, period_name is not unique, or period_seq is duplicated.", "Project PRJ-003: period_name 'Conduct (final)' appears 2 times; (project_id, period_name) must be unique. period_seq must also be unique - it fixes their order."],
     ["V-19", "Error", "A clinical trial with no clinical_phase, or no PeriodWeightStandard rows for its phase.", "Project PRJ-005 is Phase 3, but PeriodWeightStandard has no Phase 3 rows. Its periods cannot be weighted."],
     ["V-20", "Warning", "A milestone other than 'Inspection' recorded more than once.", "Project PRJ-002 records 'CTA submission' twice. Only 'Inspection' is expected to repeat."],
     ["V-21", "Information", "An 'Inspection' dated on or before the final DB lock.", "Project PRJ-002: 1 inspection on or before the final DB lock is treated as a marker and does not open the final period."],
-    ["V-23", "Error", "No RoleFactor row for a (project_type, clinical_phase, period_name, role_name) that an assignment actually spans.", "No role factor for NewDrug CT / Phase 3 / Conduct / Data Analyst - assignments covering that period would be calculated at factor 1.00. 3 assignments are affected."],
+    ["V-23", "Error", "No RoleFactor row for a (project_type, clinical_phase, period_name, role_name) that an assignment actually spans.", "No role factor for NewDrug CT / Phase 3 / Conduct (final) / Data Analyst - assignments covering that period would be calculated at factor 1.00. 3 assignments are affected."],
     ["V-22", "Warning", "Person.capacity_fte is below config.under_allocation_fte.", "PSN-018: capacity 0.50 FTE is below the under-allocation floor of 0.60, so this person can never clear it however fully they are booked. Lower the floor or raise the capacity."],
 ]
 r = table(ws, r, ["ID", "Severity", "Trigger", "Message shown to the user"],
@@ -410,20 +421,29 @@ r = code(ws, r, [
     "  segments = []",
     "  if su_start > project.start:  segments += ('Before-Start-up', project.start, su_start - 1 day)",
     "  segments += ('Start-up', su_start, su_end)",
-    "  if idbl and idbl < fdbl:",
+    "  if idbl and idbl < fdbl:                            # R-11: the split case",
     "      coi_start = idbl - 3 months",
-    "      segments += ('Conduct',             su_end + 1 day,  coi_start - 1 day)",
-    "      segments += ('Close-out (interim)', coi_start,       idbl)",
+    "      segments += ('Conduct (interim)',    su_end + 1 day,  coi_start - 1 day)",
+    "      segments += ('Close-out (interim)',  coi_start,       idbl)",
     "      cof_start = max( cof_start, idbl + 1 day )",
-    "      segments += ('Conduct',             idbl + 1 day,    cof_start - 1 day)",
-    "  else:",
-    "      segments += ('Conduct',             su_end + 1 day,  cof_start - 1 day)",
+    "      segments += ('Conduct (final)',      idbl + 1 day,    cof_start - 1 day)",
+    "  else:                                               # no interim lock to be interim to",
+    "      segments += ('Conduct (final)',      su_end + 1 day,  cof_start - 1 day)",
     "  segments += ('Close-out (final)', cof_start, cof_end)",
     "  if p7_start:  segments += ('After Close-out (final)', p7_start, p7_end)",
     "",
     "  drop every segment whose end < start          # REQ-CAL-12, decision C-11",
     "  number the survivors 1..n as period_seq",
 ])
+r = note(ws, r, "'Conduct (interim)' is emitted ONLY in the split branch, so the name is never a lie: it exists "
+                "only where there is an interim DB lock to be interim to. Every other conduct stretch - "
+                "including the single one of a project that never has an interim lock - is 'Conduct (final)'. "
+                "That is what makes period_name unique within a project and gives ProjectPeriod its natural "
+                "key (R-11).")
+r += 1
+r = note(ws, r, "A project may legitimately end up with 'Conduct (interim)' and no 'Conduct (final)': where the "
+                "two locks are less than three months apart, the final stretch is squeezed to nothing and "
+                "dropped by the rule above. The names describe position, not a required pair.")
 r = note(ws, r, "'month' arithmetic clamps to the end of a short month: 31 Mar minus 1 month is 28 Feb (29 in a leap "
                 "year). Test that explicitly - it is the classic off-by-one in this kind of code.")
 r += 1
@@ -524,7 +544,7 @@ ex = [
     ["Assignment", "PSN-001 on PRJ-001 (Clinical Trial), role 'Lead data manager'", ""],
     ["person_weight", "0.40", ""],
     ["Window", "2026-03-10 to 2026-12-31", "Joins part-way through March"],
-    ["Periods", "Start-up to 2026-06-30 at weight 1.50; Conduct from 2026-07-01 at 1.00", "From the trial's clinical phase"],
+    ["Periods", "Start-up to 2026-06-30 at weight 1.50; Conduct (final) from 2026-07-01 at 1.00", "From the trial's clinical phase"],
     ["role_factor", "1.20", "Illustrative; the real value is data"],
     ["March 2026", "1.50 x 1.20 x 0.40 x (22/31) = 0.511 FTE", "81.8 hours"],
     ["April 2026", "1.50 x 1.20 x 0.40 x 1.0000 = 0.720 FTE", "115.2 hours"],
@@ -532,10 +552,11 @@ ex = [
 ]
 r = table(ws, r, ["Element", "Value", "Note"], ex, [22, 62, 44], wrap_cols=(2, 3))
 r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workbook.py against "
-                "PRAP_SourceData_Dummy_v1.6.xlsx must give no errors and no warnings, across 62 projects, "
+                "PRAP_SourceData_Dummy_v1.7.xlsx must give no errors and no warnings, across 62 projects, "
                 "20 people, 289 assignments and 308 periods spanning 73 months. Every period set must be "
-                "contiguous, 30 trials must show two 'Conduct' stretches, and 12 must carry the seventh "
-                "period. Those figures are the regression baseline for Step 4.")
+                "contiguous, all 50 trials must carry 'Conduct (final)', 30 must also carry "
+                "'Conduct (interim)', and 12 must carry the final inspection period. No project may carry "
+                "a repeated period name. Those figures are the regression baseline for Step 4.")
 
 # ---- 06 UI ----------------------------------------------------------------
 ws, r = sheet(wb, "06_UI_Spec", "User interface",
@@ -569,7 +590,7 @@ ov = [
     ["Row expansion - project", "Clicking a project name reveals one row per person and role on it, each with its own monthly figures. Clicking again collapses.", "REQ-DSH-01"],
     ["Row expansion - person", "Clicking a person name reveals one row per project and role they hold, ordered NewDrug CT, Biosimilar CT, Others, then earliest project first.", "REQ-DSH-01"],
     ["Type and phase pills", "Project type and clinical phase shown as labelled pills. The text carries the meaning; the colour only speeds recognition.", "REQ-PRJ-01, REQ-PRJ-09"],
-    ["Repeated period labels", "A period name occurring more than once in a project is labelled with its occurrence number - 'Conduct (1)', 'Conduct (2)' - everywhere it is named: timeline bands, tooltips, the period sub-table and any export. A name occurring once is never numbered.", "REQ-DSH-10"],
+    ["Repeated period labels", "Retained as a guard only. Since R-11 no period name repeats in a project, so the numbering never fires and a name alone identifies a period on screen. V-18 rejects a repeat on import; this keeps the renderer honest if one ever reaches it another way.", "REQ-DSH-10"],
     ["Row virtualisation", "Both tables render only the rows inside the viewport plus a small overscan, with row height fixed so the scrollbar stays truthful. Sorting, filtering and totals run over the whole model, never over the rendered slice.", "REQ-DSH-09, REQ-NFR-03"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], ov, [24, 90, 20], wrap_cols=(2,))
@@ -584,7 +605,8 @@ r = lines(ws, r, [
 colour = [
     ["Before-Start-up", "grey, light", "Not started. The two greys bracket the active work."],
     ["Start-up", "red, shifted toward orange", "Requested as red. Shifted because red beside green is the pair red-green colour blindness collapses, and REQ-DSH-08's principle - never colour alone - applies here too."],
-    ["Conduct", "green", "The long middle of a trial."],
+    ["Conduct (interim)", "green, light", "The stretch before an interim DB lock. Exists only where there is one."],
+    ["Conduct (final)", "green, deep", "The stretch that runs to the final lock - one green family, two steps, because they are the same phase of work at different points."],
     ["Close-out (interim)", "orange, light", "Split from the final close-out: a trial with an interim DB lock shows both in one row, and a single shared orange read as one interrupted band."],
     ["Close-out (final)", "orange, deep", "As above."],
     ["After Close-out (final)", "grey, dark", "Both greys are chosen to stay legible on the dark surface as well as the light one."],
@@ -627,7 +649,7 @@ r = section(ws, r, "Tab 2 - Source data (project)")
 t2 = [
     ["Project table", "All 23 Project columns, sortable and filterable, total_period_months recomputed. Editable.", "REQ-DSH-03, REQ-IMP-07"],
     ["Milestone sub-table", "Milestones of the selected project in date order. 'Inspection' may appear several times.", "REQ-PRJ-05, REQ-PRJ-13"],
-    ["Period sub-table", "Derived periods with seq, dates and weight, in seq order. A repeated period name is numbered - 'Conduct (1)', 'Conduct (2)'. Shows whether each date was derived or hand-set.", "REQ-PRJ-06, REQ-CAL-09, REQ-DSH-10"],
+    ["Period sub-table", "Derived periods with seq, dates and weight, in seq order. Names are unique within a project since R-11, so project_id + period_name identifies a row. Shows whether each date was derived or hand-set.", "REQ-PRJ-06, REQ-CAL-09, REQ-DSH-10"],
     ["Recompute periods", "Re-derives from current milestones, warning that hand-set dates will be replaced.", "decision C-10"],
     ["Export", "Visible table to .xlsx.", "REQ-DSH-06"],
 ]
@@ -736,7 +758,7 @@ r = table(ws, r, ["Behaviour", "Reason"], exp, [76, 56], wrap_cols=(1, 2))
 ws, r = sheet(wb, "08_Versioning", "Versioning and compatibility")
 ver = [
     ["Application version", "Constant in the HTML, shown in the header and footer.", "REQ-VC-02"],
-    ["Expected schema version", "Constant in the HTML. Currently 4.", "REQ-VC-02"],
+    ["Expected schema version", "Constant in the HTML. Currently 5.", "REQ-VC-02"],
     ["Check on load", "Compare Config.schema_version with the expected value.", "REQ-VC-03"],
     ["Equal", "Proceed silently.", "REQ-VC-03"],
     ["File older", "Proceed; warn that columns added since may be missing.", "REQ-VC-03"],

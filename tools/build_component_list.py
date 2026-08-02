@@ -6,7 +6,7 @@ left. The review trail lives in the deliverable rather than in a chat log.
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v0.5.xlsx
+Output: docs/PRAP_UI_Component_List_v0.6.xlsx
 """
 
 from pathlib import Path
@@ -16,9 +16,9 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "0.5"
+VERSION = "0.6"
 DATE = "2026-08-01"
-PROTOTYPE = "app/PRAP_Prototype_v0.5.html"
+PROTOTYPE = "app/PRAP_Prototype_v0.6.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
 FONT = "Arial"
@@ -77,13 +77,13 @@ ws = wb.create_sheet("00_Cover")
 ws.sheet_view.showGridLines = False
 ws["A1"] = "PRAP — UI component list"
 ws["A1"].font = TITLE_F
-ws["A2"] = "Step 3, task 3.1 — review round 3: three further items applied"
+ws["A2"] = "Step 3, task 3.1 — review round 4: the conduct periods named apart"
 ws["A2"].font = NOTE_F
 meta = [("Version", f"v{VERSION}"), ("Date", DATE), ("Author", "Claude Code"),
-        ("Reviewer", "Dan — v0.3 reviewed 2026-08-01, v0.4 reviewed 2026-08-02"),
+        ("Reviewer", "Dan — v0.3, v0.4 and v0.5 reviewed 2026-08-01 to 08-02"),
         ("Prototype", PROTOTYPE),
-        ("Governing plan", "PRAP_Development_Plan_v1.7.xlsx (changes R-05..R-10, awaiting signature)"),
-        ("Specification", "PRAP_Programming_Specification_v0.6.xlsx (draft)")]
+        ("Governing plan", "PRAP_Development_Plan_v1.8.xlsx (changes R-05..R-11, awaiting signature)"),
+        ("Specification", "PRAP_Programming_Specification_v0.7.xlsx (draft)")]
 r = 4
 for k, v in meta:
     ws.cell(r, 1, k).font = BOLD_F
@@ -119,6 +119,12 @@ for line in [
     "assumptions tab are fixed. You were right about the last one, and it was worse than reported -",
     "the role-factor table had an 'insert' HEADER with no cells beneath it, so that table was a column",
     "out of alignment, and the value-lists table had buttons it should never have had.",
+    "",
+    "ROUND 4 (this issue) is on sheet 06. You named the two conduct stretches apart -",
+    "'Conduct (interim)' and 'Conduct (final)' - which makes period_name unique in a project and",
+    "gives ProjectPeriod a natural key again. That is the alternative D-15 offered and was not taken",
+    "at the time, so D-15 is now SUPERSEDED. It also retires the need for the display numbering that",
+    "REQ-DSH-10 introduced: the requirement is satisfied by the data model instead.",
     "",
     "To review this round: open the prototype, then mark the YELLOW column on sheets 01 and 02 -",
     "'OK' where the change landed, or 'Rework' with a note where it did not.",
@@ -304,9 +310,16 @@ C = [
     ("X-02", "Layout", "Type and phase pills",
      "Project type and clinical phase as labelled pills; text carries the meaning, colour only speeds recognition.",
      "REQ-PRJ-01, REQ-PRJ-09", K, "", "Unchanged."),
-    ("X-03", "Layout", "Numbered repeated periods",
-     "'Conduct (1)', 'Conduct (2)' wherever a period name occurs more than once.",
-     "REQ-DSH-10", K, "", "Unchanged. Now also visible on the timeline bands themselves."),
+    ("X-03", "Layout", "[CHANGED] Numbered repeated periods — now a guard only",
+     "Retained, but it never fires: since R-11 no period name repeats, so a name alone identifies a "
+     "period on screen.",
+     "REQ-DSH-10", "Change (round 4)",
+     "Change period name for conduct as 'Conduct (interim)' and 'Conduct (final)' in order to "
+     "distinguish multiple periods.",
+     "Done - see sheet 06. This component is what REQ-DSH-10 asked for, and your change satisfies that "
+     "requirement structurally instead. The numbering code is kept as a guard: V-18 now rejects a "
+     "repeated name on import, but a hand-built model could still reach the renderer, and a silent "
+     "collision there would be worse than a redundant ten lines."),
     ("X-04", "Layout", "Row virtualisation",
      "Both Overall tables render only the rows in the viewport plus overscan.",
      "REQ-DSH-09, REQ-NFR-03", K, "", "Unchanged."),
@@ -445,10 +458,16 @@ D = [
     ("D-14", "At the target volume the person chart shows the 20 most loaded people, not all 1,000.",
      "1,000 bars across a 1,200px panel is 1.2px each - narrower than the gap between them.",
      "Accept", "Stands. No change."),
-    ("D-15", "Repeated period names are numbered by occurrence, not renamed.",
-     "Numbering keeps the source data untouched; renaming in the workbook would break the "
-     "PeriodWeightStandard lookup, which is keyed on the period name.", "Accept",
-     "Stands. The numbers now appear on the timeline bands as well as in the tables."),
+    ("D-15", "[CHANGED] SUPERSEDED — the conduct stretches are RENAMED, not numbered.",
+     "D-15 argued for numbering because renaming would break the PeriodWeightStandard lookup, which is "
+     "keyed on the period name. Its stated alternative was to label them by what separates them - "
+     "'Conduct (pre-interim)' and 'Conduct (post-interim)'. You took that alternative in round 4.",
+     "Accept, then superseded",
+     "The objection was answered rather than ignored: the lookup does not break because the new names "
+     "were added to the standard period set, so PeriodWeightStandard and RoleFactor are keyed on them "
+     "like any other period. The cost is the one D-15 named - the set grows from six names to seven, and "
+     "both weight tables grow with it. The gain is larger: period_name is unique within a project, so "
+     "ProjectPeriod has a natural key and the display numbering is no longer needed at all."),
     ("D-16", "[NEW] The two 'Close-out' periods take a light and a deep orange, not one shared orange.",
      "Your mapping gave 'Close-out' a single colour, but a trial with an interim DB lock shows both in "
      "the same row, adjacent to each other. One shared hue made them read as a single interrupted band.",
@@ -591,6 +610,49 @@ r = table(ws, 4, ["#", "Area", "What you raised (verbatim)", "What was done", "C
 r = ws.max_row + 2
 ws.cell(r, 1, "Item 3 is the kind of fault a rendered screenshot catches and a code diff does not. The "
               "prototype is now rendered and inspected on every build for exactly that reason.").font = NOTE_F
+
+# ---- round 4 ------------------------------------------------------------
+ws = wb.create_sheet("06_Round4")
+ws.sheet_view.showGridLines = False
+ws["A1"] = "Review round 4 — two items"
+ws["A1"].font = TITLE_F
+ws["A2"] = "Raised after prototype v0.5. Both applied in v0.6. The second follows from the first."
+ws["A2"].font = NOTE_F
+rows = [
+    ["1", "Data model",
+     "Change period name for conduct as 'Conduct (interim)' and 'Conduct (final)' in order to distinguish "
+     "multiple periods. Conduct (interim): if the milestone has interim DB lock and is before interim DB "
+     "lock then use this period name. Conduct (final): if the milestone is after interim DB lock or the "
+     "project has only final DB lock without interim DB lock, use this period name.",
+     "Applied as plan change R-11. Your rule maps exactly onto the derivation already in the "
+     "specification: the split branch runs only when an interim DB lock exists, so 'Conduct (interim)' is "
+     "emitted only there, and every other conduct stretch - including the single one of a project with no "
+     "interim lock - is 'Conduct (final)'. The clinical period set grows from six names to seven. "
+     "PeriodWeightStandard grows 48 to 56 rows and RoleFactor 249 to 289; both new entries carry the same "
+     "weights the single 'Conduct' did, so this RENAMES without reweighting - the dummy dataset returns "
+     "189 over-allocated person-months before and after, which is the evidence. Schema 4 to 5: no column "
+     "changed, but the period_name value set did, so a v4 file's 'Conduct' rows would now fail V-15.",
+     "Plan v1.8 (R-11), spec v0.7, template v1.6, dummy v1.7, prototype v0.6"],
+    ["2", "Data model",
+     "Change key of ProjectPeriod to 'project_id + period_name' because now the period table has a unique "
+     "period name list. Use the changed key to map relative information.",
+     "Applied, and this is the payoff of item 1. period_name is now unique within a project, so "
+     "(project_id, period_name) is a natural key and period_seq goes back to carrying ORDER rather than "
+     "identity. V-18 becomes a plain uniqueness check on the name - proved by renaming one row in a copy "
+     "of the dummy file and confirming the error. Three things simplify as a result: the ProjectPeriod key "
+     "loses period_start, which was only ever there to tell two identically-named rows apart; decision "
+     "D-15 is superseded; and REQ-DSH-10's display numbering becomes unnecessary, since a name alone now "
+     "identifies a period on screen. The numbering code is kept as a guard, not as the mechanism.",
+     "Plan v1.8 (R-11), spec v0.7 sheets 03 and 04, component X-03, decision D-15"],
+]
+r = table(ws, 4, ["#", "Area", "What you raised (verbatim)", "What was done", "Carried in"],
+          rows, [5, 14, 66, 104, 34], wrap_cols=(3, 4, 5))
+r = ws.max_row + 2
+ws.cell(r, 1, "A note on what this change is worth: the previous design carried the repeated name through "
+              "four places - a composite key, a validation rule, a display numbering rule and a "
+              "requirement. Naming the two stretches apart removes the need for all four. It is the "
+              "cheaper design and it was available from the start; D-15 argued against it on a lookup "
+              "objection that turned out to be answerable.").font = NOTE_F
 
 wb.save(OUT)
 print(f"Written: {OUT}  ({len(C)} components, {len(D)} decisions)")

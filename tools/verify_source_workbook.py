@@ -15,9 +15,9 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-CLINICAL_PERIODS = ["Before-Start-up", "Start-up", "Conduct",
-                    "Close-out (interim)", "Close-out (final)",
-                    "After Close-out (final)"]
+CLINICAL_PERIODS = ["Before-Start-up", "Start-up", "Conduct (interim)",
+                    "Close-out (interim)", "Conduct (final)",
+                    "Close-out (final)", "After Close-out (final)"]
 OTHER_PERIODS = ["Planning", "Develop", "Close"]
 CLINICAL_TYPES = {"NewDrug CT", "Biosimilar CT"}   # both are clinical trials
 
@@ -104,6 +104,14 @@ def main(path):
             continue
         allowed = (CLINICAL_PERIODS if proj["project_type"] in CLINICAL_TYPES
                    else OTHER_PERIODS)
+        # V-18: (project_id, period_name) is the key since R-11, so a repeated name is
+        # now a duplicate key rather than a legitimate second stretch. period_seq must
+        # still be unique - it is what orders them.
+        names = [s["period_name"] for s in segs]
+        dupes = sorted({n for n in names if names.count(n) > 1})
+        for n in dupes:
+            errors.append(f"V-18 {pid}: period_name '{n}' appears {names.count(n)} times; "
+                          f"(project_id, period_name) must be unique")
         seqs = [s["period_seq"] for s in segs]
         if len(seqs) != len(set(seqs)):
             errors.append(f"V-18 {pid}: duplicate period_seq")
@@ -290,4 +298,4 @@ def main(path):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else
-                  "templates/PRAP_SourceData_Dummy_v1.6.xlsx"))
+                  "templates/PRAP_SourceData_Dummy_v1.7.xlsx"))
