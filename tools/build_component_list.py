@@ -16,7 +16,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "0.8"
+VERSION = "1.0"
 DATE = "2026-08-01"
 PROTOTYPE = "app/PRAP_Prototype_v0.8.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
@@ -77,13 +77,13 @@ ws = wb.create_sheet("00_Cover")
 ws.sheet_view.showGridLines = False
 ws["A1"] = "PRAP — UI component list"
 ws["A1"].font = TITLE_F
-ws["A2"] = "Step 3, task 3.1 — review round 6: everything confirmed, two new requests applied"
+ws["A2"] = "Step 3, task 3.1 — APPROVED by Dan, 2026-08-02. Step 3 gate closed."
 ws["A2"].font = NOTE_F
 meta = [("Version", f"v{VERSION}"), ("Date", DATE), ("Author", "Claude Code"),
         ("Reviewer", "Dan — v0.3, v0.4 and v0.5 reviewed 2026-08-01 to 08-02"),
         ("Prototype", PROTOTYPE),
-        ("Governing plan", "PRAP_Development_Plan_v1.10.xlsx (changes R-05..R-13, awaiting signature)"),
-        ("Specification", "PRAP_Programming_Specification_v0.9.xlsx (draft)")]
+        ("Governing plan", "PRAP_Development_Plan_v2.0.xlsx (APPROVED BASELINE)"),
+        ("Specification", "PRAP_Programming_Specification_v1.0.xlsx (APPROVED)")]
 r = 4
 for k, v in meta:
     ws.cell(r, 1, k).font = BOLD_F
@@ -135,8 +135,12 @@ for line in [
     "Rows already confirmed carry 'OK (v0.7)' in the Confirm column, so a blank cell means an item",
     "that is new this round rather than one nobody has looked at.",
     "",
-    "To review this round: open the prototype, then mark the YELLOW column on sheets 01 and 02 -",
-    "'OK' where the change landed, or 'Rework' with a note where it did not.",
+    "APPROVED by Dan on 2026-08-02, together with development plan v2.0 and programming",
+    "specification v1.0. Step 3 is closed and Step 4 - code generation - is authorised.",
+    "",
+    "The two judgement calls flagged on sheet 08 were approved as made: the '...cut-off' milestones",
+    "stay ordinary, and the portfolio average covers active project-months only. Both are recorded",
+    "here so a later reader knows they were decided rather than defaulted.",
 ]:
     ws.cell(r, 1, line).font = BODY_F
     r += 1

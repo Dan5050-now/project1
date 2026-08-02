@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.10"
-DOC_STATUS = "Change against approved baseline v1.3 - issued for approval"
+DOC_VERSION = "2.1"
+DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.0 built and verified."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -206,7 +206,8 @@ r = lines(ws, r, [
     "",
     "v1.3 was approved by Dan on 2026-08-01 and remains the baseline. This issue carries five changes against",
     "it - R-05 from the Step 3 review, R-06 to R-08 from the specification v0.3 review, and R-09 to R-13",
-    "from the component-list reviews - and needs its own approval before it supersedes v1.3.",
+    "from the component-list reviews. All were approved by Dan on 2026-08-02, and this issue is now THE",
+    "BASELINE, superseding v1.3. Steps 1 to 3 are closed; Step 4, code generation, is authorised.",
     "",
     "v1.3 carries change R-04: every sheet of the source workbook now holds at least one free-text note",
     "column. Four sheets had none - Milestone, ProjectPeriod, PeriodWeightStandard and Lists - and each gains",
@@ -365,7 +366,21 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}1.10", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.1", DOC_DATE, "Claude Code", "Pending",
+     "Step 4 progress against the v2.0 baseline. The application is built: app/PRAP.html, one offline "
+     "file with its own .xlsx reader and writer. WBS tasks 4.1 to 4.8 move to Complete; 4.9 - your "
+     "review of the output against real data - is the Gate 4 review and is what remains. No requirement, "
+     "rule or schema changed: this issue records progress, not a change of intent. The calculation "
+     "engine was checked cell-by-cell against tools/verify_source_workbook.py and matches exactly across "
+     "all 1,225 person-months of the dummy dataset.",
+     "Issued for review"],
+    ["2.0", "2026-08-02", "Claude Code", "Dan",
+     "APPROVED BASELINE. Content identical to v1.10; the version number changes because the numbering "
+     "rule on sheet 09 reserves x.0 for an approved baseline and v1.10 was a change awaiting signature. "
+     "Approved together with programming specification v1.0 and UI component list v1.0. Changes R-05 to "
+     "R-13 are now part of the baseline rather than pending against v1.3, and Step 4 is authorised.",
+     "APPROVED 2026-08-02 by Dan - BASELINE"],
+    ["1.10", DOC_DATE, "Claude Code", "Pending",
      "Change R-13, from the component-list v0.7 review. All 13 changed components and all 7 changed "
      "decisions were confirmed OK; nothing was marked Rework. Two new requests were raised and both are "
      "applied: the interim and final DB lock milestones are emphasised on the timeline, and the project "
@@ -1085,7 +1100,8 @@ wbs = [
     ["1", "1.20", "Apply change R-11 (conduct stretches named apart; ProjectPeriod natural key).", "PRAP_Development_Plan_v1.8.xlsx", "Complete - issued for review"],
     ["1", "1.21", "Close the validation gaps found while answering the PersonPeriodWeight key question (R-12).", "PRAP_Development_Plan_v1.9.xlsx", "Complete - issued for review"],
     ["1", "1.22", "Apply the component-list v0.7 review outcome (R-13).", "PRAP_Development_Plan_v1.10.xlsx", "Complete - issued for review"],
-    ["1", "1.23", "Approve plan v1.10.", "Approval on 12_Review_Log", "Pending you"],
+    ["1", "1.23", "Approve the plan as a baseline.", "Approval on 12_Review_Log", "Complete - APPROVED 2026-08-02"],
+    ["1", "G1d", "GATE 1 CLOSED - plan v2.0 approved by Dan, 2026-08-02, superseding v1.3.", "Approval recorded on 12_Review_Log", "Complete"],
     ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
     ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template + _Dummy v1.1", "Complete - issued for review"],
@@ -1104,15 +1120,15 @@ wbs = [
     ["3", "3.3", "Final UI design with clear per-component requirements.", "Prototype HTML v1.0 + component list", "Not started"],
     ["3", "G3", "GATE 3 - final design and component list approved. Code generation starts only for approved components.", "Approved component list", "Not started"],
 
-    ["4", "4.1", "IO layer: workbook load, sheet/column mapping, export.", "Application code", "Not started"],
-    ["4", "4.2", "Validation layer: rules V-01..V-21 and the findings report.", "Application code", "Not started"],
-    ["4", "4.3", "Model layer, Lists and Config handling.", "Application code", "Not started"],
-    ["4", "4.4", "Edit buffer: on-screen editing, dirty state, per-edit validation.", "Application code", "Not started"],
-    ["4", "4.5", "Calculation engine, verified against the worked example.", "Application code + test evidence", "Not started"],
-    ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "Application code", "Not started"],
-    ["4", "4.7", "Source data (project) and Source data (person) tabs.", "Application code", "Not started"],
-    ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData template", "Not started"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "Not started"],
+    ["4", "4.1", "IO layer: workbook load, sheet/column mapping, export.", "app/PRAP.html", "Complete"],
+    ["4", "4.2", "Validation layer: rules V-00..V-24 and the findings report.", "app/PRAP.html", "Complete"],
+    ["4", "4.3", "Model layer, Lists and Config handling.", "app/PRAP.html", "Complete"],
+    ["4", "4.4", "Edit buffer: on-screen editing, dirty state, per-edit validation, cascading identifier edits, row insertion.", "app/PRAP.html", "Complete"],
+    ["4", "4.5", "Calculation engine, verified against the reference implementation.", "app/PRAP.html + test evidence", "Complete - EXACT MATCH on all 1,225 person-months of the dummy dataset"],
+    ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
+    ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
+    ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "Pending you - GATE 4"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1184,7 +1200,9 @@ align = [
     ["v1.7", "v0.6", "prototype v0.5", "4", "2026-08-02", "R-05..R-10. Superseded."],
     ["v1.8", "v0.7", "prototype v0.6", "5", "2026-08-02", "R-05..R-11. Superseded."],
     ["v1.9", "v0.8", "prototype v0.7", "5", "2026-08-02", "R-05..R-12. Superseded."],
-    ["v1.10", "v0.9", "prototype v0.8", "5", DOC_DATE, "R-05..R-13. Awaiting approval."],
+    ["v1.10", "v0.9", "prototype v0.8", "5", "2026-08-02", "R-05..R-13. Superseded by v2.0."],
+    ["v2.0", "v1.0", "prototype v0.8", "5", "2026-08-02", "APPROVED BASELINE. Steps 1-3 closed; Step 4 authorised."],
+    ["v2.1", "v1.0", "application v1.0", "5", DOC_DATE, "Step 4 built: app/PRAP.html. Tasks 4.1-4.8 complete; 4.9 is the Gate 4 review."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1423,8 +1441,10 @@ appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
         ["PRAP Development Plan v1.3", "Dan", "2026-08-01",
          "APPROVED - FINAL. Change R-04 accepted; this issue supersedes v1.2 and closes the development "
          "plan. Step 1 is complete."],
-        ["PRAP Development Plan v1.10", "", "",
-         "Pending your signature. Changes R-05 (project_type split), R-06 (volume re-baselined to "
+        ["PRAP Development Plan v2.0", "Dan", "2026-08-02",
+         "APPROVED - BASELINE. Development plan v2.0, programming specification v1.0 and UI component "
+         "list v1.0 all approved together; Steps 1 to 3 are closed and Step 4, code generation, is "
+         "authorised. This issue supersedes v1.3 as the baseline. Changes R-05 (project_type split), R-06 (volume re-baselined to "
          "100 projects / 1,000 people), R-07 (absolute thresholds, floor 0.60), R-08 (repeated period "
          "names distinguishable on screen), R-09 (component-list review: assumptions tab and insert-row "
          "become REQ-DSH-11 and REQ-IMP-11), R-10 (role factor keyed on type, phase, period and role) "

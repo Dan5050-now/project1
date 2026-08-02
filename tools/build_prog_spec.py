@@ -14,10 +14,10 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "0.9"
-DOC_STATUS = "Draft for review - component-list v0.7 review applied (R-13)"
+DOC_VERSION = "1.0"
+DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
-PLAN = "PRAP_Development_Plan_v1.10.xlsx"
+PLAN = "PRAP_Development_Plan_v2.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
 
@@ -116,7 +116,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Governing document", f"{PLAN} - changes R-05..R-13 against the v1.3 baseline, awaiting signature"),
+    ("Governing document", f"{PLAN} - APPROVED BASELINE, Dan 2026-08-02"),
     ("Schema version specified", "5"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
@@ -167,7 +167,12 @@ r = table(ws, r, ["Sheet", "Contents"], guide, [24, 86], wrap_cols=(2,))
 
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
-rows = [["0.9", DOC_DATE, "Claude Code", "Dan",
+rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
+         "APPROVED. Content identical to v0.9; the version number changes because 1.0 marks an approved "
+         "issue rather than a draft. Approved together with development plan v2.0 and UI component list "
+         "v1.0. This document now governs Step 4: the code is written from it and checked against it.",
+         "APPROVED 2026-08-02 by Dan"],
+        ["0.9", DOC_DATE, "Claude Code", "Dan",
          "Plan change R-13, from the component-list v0.7 review. Sheet 06 gains two entries: the interim "
          "and final DB lock milestones are emphasised on the timeline in red and at a larger size, and "
          "the project source-data tab gains a utilisation graph with RELATIVE reference lines "
@@ -239,7 +244,7 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 
 r = section(ws, r, "Source documents")
 src = [
-    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-13 awaiting signature. 70 requirements, 24 validation rules, 11 decisions, source schema version 5.", "Governs this document"],
+    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes APPROVED BASELINE 2026-08-02. 70 requirements, 24 validation rules, 11 decisions, source schema version 5.", "Governs this document"],
     ["templates/PRAP_SourceData_Template_v1.6.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
     ["templates/PRAP_SourceData_Dummy_v1.8.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],

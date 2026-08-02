@@ -8,10 +8,10 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | v1.3 approved 2026-08-01 · **v1.10 changes awaiting signature** |
-| 2 | Programming specification | **v0.9 draft — no open points** |
-| 3 | Prototype UI design | **v0.8 prototype — review round 6 applied, issued for confirmation** |
-| 4 | Code generation | Not started |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.1 records Step 4 progress |
+| 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
+| 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
+| 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
 | 5 | Finalisation | Not started |
 
 Each step ends at a review gate. Work on a step begins only once the previous gate
@@ -30,9 +30,10 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v1.10.xlsx` — **current.** 70 requirements, 24 validation
-  rules, source schema version 5. Carries nine changes against the approved baseline,
-  all awaiting signature:
+- `docs/PRAP_Development_Plan_v2.1.xlsx` — **current.** 70 requirements, 24 validation
+  rules, source schema version 5. Records Step 4 progress against the approved baseline.
+- `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
+  superseding v1.3. It carries the nine changes made across the review rounds:
   R-05 (`project_type` splits into `NewDrug CT` and `Biosimilar CT`, schema version 3),
   R-06 (target volume 100 projects / 1,000 people, `Should` → `Must`), R-07 (both
   allocation thresholds absolute, under-allocation floor 0.80 → 0.60), R-08
@@ -51,19 +52,43 @@ output/       Exported results and test evidence   (from Step 5)
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
   specification to settle.
 
-### Step 3 deliverables (for review)
+### Step 4 deliverable — the application
+
+- `app/PRAP.html` — **the application.** One file, offline, no network and no install.
+  Open it in a browser, choose a `.xlsx`, and it parses, validates, derives periods,
+  calculates, renders four tabs and exports back to `.xlsx`.
+
+  It carries its own `.xlsx` reader and writer. An `.xlsx` is a ZIP of XML; the browser
+  supplies `DecompressionStream` for the deflate entries and `DOMParser` for the XML,
+  and a ZIP written with STORED entries needs only a CRC32. Vendoring a spreadsheet
+  library would have been quicker and would have cost the single-file property that
+  decision D-01 turns on.
+
+  **How it was verified**, since a screenshot proves very little:
+
+  | Check | Result |
+  |---|---|
+  | Calculation vs `verify_source_workbook.py` | **exact match on all 1,225 person-months** |
+  | Findings vs the Python verifier | both report zero on the dummy |
+  | Export → re-import | identical figures, zero findings |
+  | Export read by `openpyxl` (an independent implementation) | passes the full verifier |
+  | Identifier edit | cascades to all 19 referencing rows, no errors introduced |
+  | Bad date (`03/04/2026`) | rejected at entry, cell restored |
+  | Row insert | lands directly below the row acted on |
+
+### Step 3 deliverables (approved)
 
 - `app/PRAP_Prototype_v0.8.html` — the UI prototype. **Design only**: nothing loads,
   calculates or exports. The only scripts are tab switching, row expansion and the
   hover pop-up. Self-contained, offline, light and dark. Four tabs.
-- `docs/PRAP_UI_Component_List_v0.8.xlsx` — the review disposition: all 46 components
+- `docs/PRAP_UI_Component_List_v1.0.xlsx` — **approved.** The review disposition: all 46 components
   with your decision and comment quoted verbatim against what was done, 19 design
   decisions, a change log of what the reviews moved in the plan and specification, and
   sheets 05 to 08 covering review rounds 3 to 6.
 
 ### Step 2 deliverables (for review)
 
-- `docs/PRAP_Programming_Specification_v0.9.xlsx` — 11 sheets: parse contract,
+- `docs/PRAP_Programming_Specification_v1.0.xlsx` — **approved.** 11 sheets: parse contract,
   all 24 validation rules with their exact messages, calculation pseudocode,
   UI behaviour for four tabs, editing and IO, versioning, and a traceability matrix
   covering all 70 requirements. Sheet 10 records the six open points from the v0.3
@@ -82,6 +107,16 @@ Validate either with:
 ```bash
 python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.8.xlsx
 ```
+
+And check the application against the reference implementation:
+
+```bash
+python tools/test_app.py
+```
+
+That drives `app/PRAP.html` in a real browser, compares its calculation with
+`verify_source_workbook.py` cell by cell, exports, re-imports, and puts the export
+through `openpyxl` — a reader that is not ours.
 
 And check the documents still describe the artifacts they claim to:
 
@@ -193,4 +228,4 @@ Open `app/PRAP_Prototype_v0.4.html` in a browser, then work down
 
 Per the plan, code generation starts only after the component list is approved.
 
-Also pending: **sign off plan v1.10**, which carries the nine changes listed above.
+Gate 4 is the remaining review: run the application against real data and say what needs to change.

@@ -1,0 +1,2061 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PRAP — Project Resource Assignment Program</title>
+<!--
+  PRAP — Project Resource Assignment Program
+  Step 4 deliverable. Built from PRAP_Programming_Specification_v1.0.xlsx,
+  which governs, against PRAP_Development_Plan_v2.0.xlsx (approved baseline).
+
+  Single file, offline, no network. The .xlsx reader and writer below are written
+  from scratch for that reason: an .xlsx is a ZIP of XML, the browser has
+  DecompressionStream for the deflate entries and DOMParser for the XML, and a ZIP
+  written with STORED entries needs only a CRC32. Vendoring a spreadsheet library
+  would have been quicker and would have cost the single-file property (D-01).
+-->
+<style>
+:root{color-scheme:light dark;
+ --page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;
+ --grid:#e1e0d9;--base:#c3c2b7;--ring:rgba(11,11,11,.10);
+ --s1:#2a78d6;--other:#b8b7b0;
+ --good:#0ca30c;--warn:#fab219;--crit:#d03b3b;
+ --overbg:#fbe9e9;--underbg:#fdf3dd;--underink:#8a6100;--accent:#2a78d6;}
+@media (prefers-color-scheme:dark){:root{
+ --page:#141414;--surface:#1b1b1a;--ink:#f2f2ef;--ink2:#c9c7c1;--muted:#8f8d87;
+ --grid:#2e2e2c;--base:#4a4945;--ring:rgba(255,255,255,.12);
+ --s1:#3987e5;--other:#5a5a55;--overbg:#3a1e1e;--underbg:#33290f;--underink:#fab219;
+ --accent:#3987e5;}}
+:root[data-theme="dark"]{
+ --page:#141414;--surface:#1b1b1a;--ink:#f2f2ef;--ink2:#c9c7c1;--muted:#8f8d87;
+ --grid:#2e2e2c;--base:#4a4945;--ring:rgba(255,255,255,.12);
+ --s1:#3987e5;--other:#5a5a55;--overbg:#3a1e1e;--underbg:#33290f;--underink:#fab219;
+ --accent:#3987e5;}
+:root[data-theme="light"]{
+ --page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;
+ --grid:#e1e0d9;--base:#c3c2b7;--ring:rgba(11,11,11,.10);
+ --s1:#2a78d6;--other:#b8b7b0;--overbg:#fbe9e9;--underbg:#fdf3dd;--underink:#8a6100;
+ --accent:#2a78d6;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);
+ font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:1360px;margin:0 auto;padding:16px 20px 60px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+ padding-bottom:12px;border-bottom:1px solid var(--ring)}
+h1{font-size:19px;margin:0;letter-spacing:-.01em}
+h2{font-size:14.5px;margin:0 0 3px}
+.vers{color:var(--muted);font-size:11.5px}
+.file{margin-left:auto;color:var(--ink2);font-size:12px}
+.file .tz{color:var(--muted)}
+.btn{border:1px solid var(--base);background:var(--surface);color:var(--ink);
+ border-radius:7px;padding:5px 11px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{opacity:.9;color:#fff}
+.btn.primary[disabled],.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.tiny{font-size:10.5px;padding:1px 7px;border-radius:6px}
+.btn.reset{border-color:var(--accent);color:var(--accent)}
+.banner{display:flex;align-items:center;gap:10px;margin:12px 0;padding:8px 12px;
+ border-radius:8px;background:var(--underbg);border:1px solid var(--ring);font-size:13px}
+.banner.bad{background:var(--overbg)}
+.banner .lk{margin-left:auto;color:var(--accent);cursor:pointer;text-decoration:underline}
+.dirty{margin:10px 0;font-size:13px;color:var(--ink2)}
+.dirty .dot-w{width:8px;height:8px;border-radius:50%;background:var(--warn);
+ display:inline-block;margin-right:6px}
+.dirty .ok{color:var(--good);font-weight:600}
+.panel{background:var(--surface);border:1px solid var(--ring);border-radius:10px;
+ padding:14px 16px;margin:14px 0}
+.cap{color:var(--ink2);font-size:12px;margin:0 0 10px}
+.note{color:var(--muted);font-size:11.5px;font-style:italic;margin:8px 0 0}
+.scope{font-weight:400;font-size:11px;color:var(--muted);border:1px solid var(--ring);
+ border-radius:9px;padding:1px 7px;margin-left:6px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+.ctl{display:flex;flex-direction:column;gap:3px}
+.ctl label{font-size:11px;color:var(--muted)}
+.ctl select,.ctl input{border:1px solid var(--base);background:var(--surface);
+ color:var(--ink);border-radius:6px;padding:4px 7px;font-size:12.5px;font-family:inherit}
+nav{display:flex;gap:2px;margin:14px 0 0;border-bottom:1px solid var(--ring);flex-wrap:wrap}
+nav button{border:0;background:none;color:var(--ink2);padding:9px 15px;font-size:13.5px;
+ cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
+nav button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:14px 0}
+.tile{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:11px 13px}
+.tile.over{background:var(--overbg)}.tile.under{background:var(--underbg)}
+.tile .tl{font-size:11.5px;color:var(--ink2)}
+.tile .tv{font-size:23px;font-weight:650;letter-spacing:-.02em}
+.tile.over .tv{color:var(--crit)}.tile.under .tv{color:var(--underink)}
+.tile .ts{font-size:11px;color:var(--muted)}
+.scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scrollx.tall{max-height:340px;overflow:auto}
+.scrollx.tall thead th{position:sticky;top:0;z-index:2;background:var(--page)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.two>*{min-width:0}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+table{border-collapse:collapse;width:100%;font-size:12px}
+.grid-t th,.grid-t td{border:1px solid var(--grid);padding:4px 7px;text-align:right;
+ font-variant-numeric:tabular-nums;white-space:nowrap}
+.grid-t thead th{background:var(--page);color:var(--ink2);font-weight:600;font-size:10.5px;
+ text-align:center}
+.grid-t th.rh{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1;
+ min-width:230px;max-width:300px;white-space:normal}
+.grid-t thead th.rh{background:var(--page)}
+.grid-t .nm{font-weight:600}
+.grid-t .sub{display:block;color:var(--muted);font-size:10px;font-weight:400}
+.grid-t .role{display:block;color:var(--muted);font-size:10px}
+.grid-t tr.parent{cursor:pointer}
+.grid-t tr.parent:hover th.rh{color:var(--accent)}
+.grid-t tr.child th.rh{padding-left:20px;font-weight:400;color:var(--ink2)}
+.grid-t td.c{color:var(--ink2)}
+.grid-t td.z{color:var(--muted)}
+td.over{background:var(--overbg);color:var(--crit);font-weight:600}
+td.under{background:var(--underbg);color:var(--underink);font-weight:600}
+.grid-t tr.grand th,.grid-t tr.grand td{font-weight:650;border-top:2px solid var(--base)}
+.exp{display:inline-block;width:11px;color:var(--muted)}
+.data-t th,.data-t td{border:1px solid var(--grid);padding:4px 7px;text-align:left;
+ white-space:nowrap;font-size:11.5px}
+.data-t thead th{background:var(--page);color:var(--ink2);font-weight:600;font-size:10.5px}
+.data-t tr.sel td{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.data-t tr{cursor:pointer}
+.data-t td[contenteditable="true"]:focus{outline:2px solid var(--accent);outline-offset:-2px}
+.data-t td.edited{background:color-mix(in srgb,var(--warn) 22%,transparent)}
+.data-t td.num{text-align:right;font-variant-numeric:tabular-nums}
+.data-t td.muted{color:var(--muted)}
+.data-t td.vals{white-space:normal;color:var(--ink2)}
+td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
+.ty{font-size:9.5px;border-radius:9px;padding:1px 6px;margin-left:6px;
+ border:1px solid var(--ring);white-space:nowrap}
+.ty.nd{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.ty.bs{background:color-mix(in srgb,var(--good) 14%,transparent)}
+.ty.ot{background:var(--page);color:var(--ink2)}
+.ph{font-size:9.5px;font-weight:650;margin-left:5px}
+.ph1{color:#8a6100}.ph2{color:#0d6b4a}.ph3{color:#184f95}.ph4{color:#7a3b8f}
+@media (prefers-color-scheme:dark){.ph1{color:#fab219}.ph2{color:#19c68a}
+ .ph3{color:#6da7ec}.ph4{color:#c79ae0}}
+.chart{width:100%;height:auto;display:block}
+.grid{stroke:var(--grid);stroke-width:1}
+.base{stroke:var(--base);stroke-width:1}
+.ax{fill:var(--muted);font-size:10px}
+.bar{fill:var(--s1)}.bar.over{fill:var(--crit)}.bar.under{fill:var(--warn)}
+.band{cursor:pointer}.band:hover{stroke:var(--ink);stroke-width:1.4}
+.bandlab{fill:#fff;font-size:9.5px;font-weight:600;pointer-events:none;
+ paint-order:stroke;stroke:rgba(0,0,0,.3);stroke-width:2.4px}
+.rowlab{fill:var(--ink);font-size:11.5px;font-weight:600}
+.rowsub{fill:var(--muted);font-size:9.5px;font-variant-numeric:tabular-nums}
+.ms{fill:var(--ink);stroke:var(--surface);stroke-width:1.2;cursor:pointer}
+.ms.key{fill:var(--crit);stroke-width:1.4}
+.halo{stroke:var(--surface);stroke-width:4;opacity:.9}
+.th-over{stroke:var(--crit);stroke-width:1.5;stroke-dasharray:5 3}
+.th-under{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:5 3}
+.th-own{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:2 3}
+.thlab{font-size:9.5px;font-weight:600}
+.thlab.th-over{fill:var(--crit)}.thlab.th-under{fill:var(--underink)}
+.thlab.th-own{fill:var(--accent)}
+.legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 0 0;padding:0;
+ font-size:11.5px;color:var(--ink2)}
+.legend .sw{width:11px;height:11px;border-radius:2px;display:inline-block;
+ margin-right:6px;vertical-align:-1px}
+.legend .sw.tri{width:0;height:0;border-radius:0;border-left:6px solid transparent;
+ border-right:6px solid transparent;border-top:9px solid var(--ink);background:none}
+.legend .sw.tri.key{border-top-color:var(--crit);border-left-width:7px;
+ border-right-width:7px;border-top-width:11px}
+.legend .hint{color:var(--muted);font-style:italic}
+.tip{position:fixed;z-index:50;max-width:330px;pointer-events:none;background:var(--surface);
+ color:var(--ink);border:1px solid var(--base);border-radius:8px;padding:8px 10px;
+ font-size:11.5px;line-height:1.5;box-shadow:0 6px 22px rgba(0,0,0,.18)}
+.tip b{font-weight:650}.tip .tr{color:var(--muted);font-size:10.5px}
+.drop{border:2px dashed var(--base);border-radius:12px;padding:44px 20px;text-align:center;
+ color:var(--ink2);background:var(--surface)}
+.drop.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+.drop h2{font-size:16px;margin-bottom:6px}
+dialog{border:1px solid var(--base);border-radius:12px;background:var(--surface);
+ color:var(--ink);max-width:900px;width:92vw;padding:0}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg-h{display:flex;align-items:center;gap:10px;padding:12px 16px;
+ border-bottom:1px solid var(--ring)}
+.dlg-b{padding:12px 16px;max-height:64vh;overflow:auto}
+.sev{font-size:10px;font-weight:700;border-radius:5px;padding:1px 6px;
+ text-transform:uppercase;letter-spacing:.03em}
+.sev.fatal,.sev.error{background:var(--overbg);color:var(--crit)}
+.sev.warning{background:var(--underbg);color:var(--underink)}
+.sev.information{background:var(--page);color:var(--ink2)}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Project Resource Assignment Program</h1>
+  <span class="vers" id="vers"></span>
+  <span class="file" id="fileline">no workbook loaded</span>
+  <input type="file" id="picker" accept=".xlsx" hidden>
+  <button class="btn" id="loadBtn">Load workbook</button>
+  <button class="btn primary" id="exportBtn" disabled>Export</button>
+  <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
+</header>
+
+<div id="banner"></div>
+<div id="dirty"></div>
+
+<div class="panel" id="filterbar" hidden>
+  <h2>Horizon and filters <span class="scope">applies to every tab</span></h2>
+  <p class="cap">One setting drives the whole page — the charts, both Overall tables and
+    the source-data tabs.</p>
+  <div class="controls">
+    <div class="ctl"><label>From</label><input id="fFrom" size="8"></div>
+    <div class="ctl"><label>To</label><input id="fTo" size="8"></div>
+    <div class="ctl"><label>&nbsp;</label><button class="btn" id="fAll">Expand to all projects</button></div>
+    <div class="ctl"><label>Project type</label><select id="fType"></select></div>
+    <div class="ctl"><label>Clinical phase</label><select id="fPhase"></select></div>
+    <div class="ctl"><label>Project</label><select id="fProj"></select></div>
+    <div class="ctl"><label>Person</label><select id="fPers"></select></div>
+    <div class="ctl"><label>Role</label><select id="fRole"></select></div>
+    <div class="ctl"><label>Department</label><select id="fDept"></select></div>
+    <div class="ctl"><label>&nbsp;</label><button class="btn reset" id="fReset">Reset filters</button></div>
+  </div>
+</div>
+
+<nav role="tablist" id="tabs" hidden>
+  <button role="tab" aria-selected="true" data-tab="t-overall">Overall</button>
+  <button role="tab" aria-selected="false" data-tab="t-proj">Source data (project)</button>
+  <button role="tab" aria-selected="false" data-tab="t-pers">Source data (person)</button>
+  <button role="tab" aria-selected="false" data-tab="t-gen">General assumptions</button>
+</nav>
+
+<div id="empty">
+  <div class="drop" id="drop">
+    <h2>Load a source workbook</h2>
+    <p class="cap">Choose a <code>.xlsx</code> file or drop one here. Nothing leaves this
+      machine — the file is read in the browser and never uploaded.</p>
+    <button class="btn primary" id="loadBtn2">Choose file</button>
+    <p class="note">Need the layout? Build a blank one with
+      <code>python tools/build_source_workbook.py</code>, or start from
+      <code>PRAP_SourceData_Template_v1.6.xlsx</code>.</p>
+  </div>
+</div>
+
+<section class="tab" id="t-overall" hidden></section>
+<section class="tab" id="t-proj" hidden></section>
+<section class="tab" id="t-pers" hidden></section>
+<section class="tab" id="t-gen" hidden></section>
+</div>
+
+<div id="tip" class="tip" hidden></div>
+
+<dialog id="report">
+  <div class="dlg-h"><strong>Validation findings</strong>
+    <button class="btn" style="margin-left:auto" id="repClose">Close</button></div>
+  <div class="dlg-b" id="repBody"></div>
+</dialog>
+
+<script>
+"use strict";
+const APP_VERSION = "1.0";
+const SCHEMA_EXPECTED = 5;
+
+/* ============================================================ 1. ZIP + XLSX read
+   An .xlsx is a ZIP of XML parts. Read the central directory from the end of the
+   file, then inflate each entry we need. Written out rather than vendored so the
+   application stays one offline file (decision D-01).                          */
+
+const td = new TextDecoder();
+
+async function inflateRaw(bytes){
+  const ds = new DecompressionStream("deflate-raw");
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function unzip(buf){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  // End of central directory: signature 0x06054b50, scanned backwards because the
+  // record carries a variable-length comment.
+  let eocd = -1;
+  for (let i = u8.length - 22; i >= 0 && i > u8.length - 65558; i--){
+    if (dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error("Not a .xlsx file — no ZIP directory found.");
+  const count = dv.getUint16(eocd + 10, true);
+  let off = dv.getUint32(eocd + 16, true);
+  const files = {};
+  for (let n = 0; n < count; n++){
+    if (dv.getUint32(off, true) !== 0x02014b50) break;
+    const method = dv.getUint16(off + 10, true);
+    const csize  = dv.getUint32(off + 20, true);
+    const nlen   = dv.getUint16(off + 28, true);
+    const elen   = dv.getUint16(off + 30, true);
+    const clen   = dv.getUint16(off + 32, true);
+    const lho    = dv.getUint32(off + 42, true);
+    const name   = td.decode(u8.subarray(off + 46, off + 46 + nlen));
+    // The local header repeats the name and extra field, at its own lengths.
+    const lnlen = dv.getUint16(lho + 26, true), lelen = dv.getUint16(lho + 28, true);
+    const start = lho + 30 + lnlen + lelen;
+    files[name] = { method, data: u8.subarray(start, start + csize) };
+    off += 46 + nlen + elen + clen;
+  }
+  const out = {};
+  for (const [name, f] of Object.entries(files)){
+    if (!/\.(xml|rels)$/i.test(name)) continue;
+    out[name] = td.decode(f.method === 0 ? f.data : await inflateRaw(f.data));
+  }
+  return out;
+}
+
+const XP = new DOMParser();
+function xml(s){ return XP.parseFromString(s, "application/xml"); }
+
+function colNum(ref){                       // "BC12" -> 0-based column index
+  let n = 0;
+  for (const ch of ref){
+    const c = ch.charCodeAt(0);
+    if (c < 65 || c > 90) break;
+    n = n * 26 + (c - 64);
+  }
+  return n - 1;
+}
+
+/** Read every sheet into { sheetName: [ [cell,...], ... ] }, values as string|number. */
+async function readWorkbook(buf){
+  const parts = await unzip(buf);
+  const shared = [];
+  if (parts["xl/sharedStrings.xml"]){
+    for (const si of xml(parts["xl/sharedStrings.xml"]).getElementsByTagName("si")){
+      // <si> may hold one <t> or several inside <r> runs; concatenate in order.
+      shared.push(Array.from(si.getElementsByTagName("t")).map(t => t.textContent).join(""));
+    }
+  }
+  const rels = {};
+  for (const r of xml(parts["xl/_rels/workbook.xml.rels"]).getElementsByTagName("Relationship")){
+    rels[r.getAttribute("Id")] = r.getAttribute("Target").replace(/^\/?xl\//, "");
+  }
+  const sheets = {};
+  for (const sh of xml(parts["xl/workbook.xml"]).getElementsByTagName("sheet")){
+    const name = sh.getAttribute("name");
+    const rid = sh.getAttribute("r:id") || sh.getAttributeNS(
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+    const target = "xl/" + rels[rid];
+    const doc = xml(parts[target] || "");
+    const rows = [];
+    for (const row of doc.getElementsByTagName("row")){
+      const cells = [];
+      for (const c of row.getElementsByTagName("c")){
+        const i = colNum(c.getAttribute("r") || "");
+        const t = c.getAttribute("t");
+        let v;
+        if (t === "inlineStr"){
+          v = Array.from(c.getElementsByTagName("t")).map(x => x.textContent).join("");
+        } else {
+          const vEl = c.getElementsByTagName("v")[0];
+          const raw = vEl ? vEl.textContent : null;
+          // A formula cell with no cached result is written <v/>, and Number("") is 0.
+          // Reading that as zero turns every uncalculated derived cell into a real value.
+          if (raw === null || raw === "") { v = null; }
+          else if (t === "s") v = shared[+raw];
+          else if (t === "str" || t === "e") v = raw;
+          else if (t === "b") v = raw === "1";
+          else { const n = Number(raw); v = isFinite(n) ? n : raw; }
+        }
+        if (i >= 0) cells[i] = (v === "" ? null : v);
+      }
+      rows.push(cells);
+    }
+    sheets[name] = rows;
+  }
+  return sheets;
+}
+
+/* ============================================================ 2. XLSX write
+   STORED entries only: valid ZIP, no compressor needed, and Excel reads it. The
+   cost is file size, which for a workbook of this shape is a few hundred KB.   */
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++){
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(u8){
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+const TE = new TextEncoder();
+
+function zipStored(entries){          // [{name, text}] -> Blob
+  const chunks = [], dir = [];
+  let offset = 0;
+  const enc = s => TE.encode(s);
+  for (const e of entries){
+    const data = enc(e.text), crc = crc32(data), n = enc(e.name);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true);
+    lh.setUint16(8, 0, true);                       // stored
+    lh.setUint32(14, crc, true);
+    lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, n.length, true);
+    chunks.push(new Uint8Array(lh.buffer), n, data);
+    const cd = new DataView(new ArrayBuffer(46));
+    cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true);
+    cd.setUint16(10, 0, true);
+    cd.setUint32(16, crc, true);
+    cd.setUint32(20, data.length, true); cd.setUint32(24, data.length, true);
+    cd.setUint16(28, n.length, true);
+    cd.setUint32(42, offset, true);
+    dir.push(new Uint8Array(cd.buffer), n);
+    offset += 30 + n.length + data.length;
+  }
+  const dirSize = dir.reduce((s, d) => s + d.length, 0);
+  const eo = new DataView(new ArrayBuffer(22));
+  eo.setUint32(0, 0x06054b50, true);
+  eo.setUint16(8, entries.length, true); eo.setUint16(10, entries.length, true);
+  eo.setUint32(12, dirSize, true); eo.setUint32(16, offset, true);
+  return new Blob([...chunks, ...dir, new Uint8Array(eo.buffer)],
+                  {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+
+const xesc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function sheetXml(rows){
+  const out = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'];
+  rows.forEach((row, r) => {
+    out.push(`<row r="${r+1}">`);
+    row.forEach((v, c) => {
+      if (v === null || v === undefined || v === "") return;
+      const ref = colName(c) + (r + 1);
+      if (v instanceof Date){
+        out.push(`<c r="${ref}" s="1"><v>${dateToSerial(v)}</v></c>`);
+      } else if (typeof v === "number" && isFinite(v)){
+        out.push(`<c r="${ref}"><v>${v}</v></c>`);
+      } else {
+        out.push(`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`);
+      }
+    });
+    out.push('</row>');
+  });
+  out.push('</sheetData></worksheet>');
+  return out.join("");
+}
+function colName(i){
+  let s = "";
+  for (i++; i > 0; i = Math.floor((i - 1) / 26)) s = String.fromCharCode(65 + (i - 1) % 26) + s;
+  return s;
+}
+
+function buildXlsx(sheetsObj){
+  const names = Object.keys(sheetsObj);
+  const entries = [
+    {name:"[Content_Types].xml", text:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      names.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("") +
+      '</Types>'},
+    {name:"_rels/.rels", text:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      '</Relationships>'},
+    {name:"xl/workbook.xml", text:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+      names.map((n,i)=>`<sheet name="${xesc(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join("") +
+      '</sheets></workbook>'},
+    {name:"xl/_rels/workbook.xml.rels", text:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      names.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join("") +
+      `<Relationship Id="rId${names.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>` +
+      '</Relationships>'},
+    {name:"xl/styles.xml", text:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<numFmts count="1"><numFmt numFmtId="164" formatCode="yyyy\\-mm\\-dd"/></numFmts>' +
+      '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>' +
+      '<fills count="1"><fill><patternFill patternType="none"/></fill></fills>' +
+      '<borders count="1"><border/></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="2">' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+      '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
+      '</cellXfs>' +
+      // Without a named default style, openpyxl warns and some readers substitute their
+      // own. Cheap to include, and it is the difference between a file that opens
+      // cleanly everywhere and one that opens with a complaint.
+      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
+      '</styleSheet>'},
+  ];
+  names.forEach((n, i) => entries.push({name:`xl/worksheets/sheet${i+1}.xml`,
+                                        text: sheetXml(sheetsObj[n])}));
+  return zipStored(entries);
+}
+
+/* ============================================================ 3. dates + parse
+   Spec sheet 03: accept an Excel serial or an ISO yyyy-mm-dd string, normalise to a
+   date with no time part, and never guess at any other format (REQ-NFR-05).     */
+
+const EPOCH = Date.UTC(1899, 11, 30);      // Excel's 1900 leap-year bug included
+function serialToDate(n){ return new Date(EPOCH + Math.round(n) * 86400000); }
+function dateToSerial(d){ return Math.round((d.getTime() - EPOCH) / 86400000); }
+function ymd(d){ return d ? d.toISOString().slice(0, 10) : ""; }
+function parseDate(v){
+  if (v === null || v === undefined || v === "") return null;
+  if (v instanceof Date) return v;
+  if (typeof v === "number") return serialToDate(v);
+  const m = String(v).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : undefined;   // undefined = bad
+}
+function num(v){
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "number") return v;
+  const n = Number(String(v).trim());
+  return isFinite(n) ? n : undefined;
+}
+function txt(v){
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s === "" ? null : s;
+}
+
+const SHEET_COLS = {
+  Project: {date:["start_date","end_date"], num:["planned_member_count","total_period_months"]},
+  Milestone: {date:["milestone_date"], num:["milestone_seq"]},
+  ProjectPeriod: {date:["period_start","period_end"], num:["period_seq","weight"]},
+  PeriodWeightStandard: {date:[], num:["weight"]},
+  RoleFactor: {date:[], num:["role_factor"]},
+  Person: {date:["employment_start","employment_end"], num:["capacity_fte"]},
+  Assignment: {date:["assign_start_date","assign_end_date"], num:["person_weight"]},
+  PersonPeriodWeight: {date:["period_start","period_end"], num:["weight_override"]},
+  Lists: {date:[], num:[]},
+  Config: {date:[], num:[]},
+};
+const REQUIRED_SHEETS = Object.keys(SHEET_COLS);
+const CLINICAL_TYPES = new Set(["NewDrug CT","Biosimilar CT"]);
+const CLINICAL_PERIODS = ["Before-Start-up","Start-up","Conduct (interim)","Close-out (interim)",
+                          "Conduct (final)","Close-out (final)","After Close-out (final)"];
+const OTHER_PERIODS = ["Planning","Develop","Close"];
+const KEY_MILESTONES = new Set(["interim DB lock","final DB lock"]);
+// The identifier of each sheet, and everywhere that identifier is referenced.
+// Editing one has to rewrite the others (REQ-IMP-10); a new row without one blocks export.
+const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignment_id",
+                 Milestone:"project_id", ProjectPeriod:"project_id",
+                 PersonPeriodWeight:"assignment_id", Config:"parameter", Lists:"list_name",
+                 PeriodWeightStandard:"project_type", RoleFactor:"project_type"};
+const REFS = {
+  project_id: [["Milestone","project_id"],["ProjectPeriod","project_id"],["Assignment","project_id"]],
+  person_id:  [["Assignment","person_id"]],
+  assignment_id: [["PersonPeriodWeight","assignment_id"]],
+};
+
+/** Rows -> objects keyed by header, with per-column coercion. Findings collected. */
+function toObjects(sheet, rows, F){
+  if (!rows || !rows.length){ return []; }
+  const hdr = (rows[0] || []).map(h => txt(h));
+  const spec = SHEET_COLS[sheet];
+  const out = [];
+  for (let r = 1; r < rows.length; r++){
+    const raw = rows[r] || [];
+    if (raw.every(v => v === null || v === undefined || v === "")) continue;  // blank row: skip
+    const o = {__row: r + 1};
+    let bad = false;
+    hdr.forEach((h, i) => {
+      if (!h) return;
+      let v = raw[i];
+      if (spec.date.includes(h)){
+        const d = parseDate(v);
+        if (d === undefined){
+          F.push({sev:"error", rule:"V-00", sheet, row:r+1,
+            msg:`${sheet} row ${r+1}: '${v}' is not a date. Use yyyy-mm-dd or a real Excel date — `
+              + `a format like 03/04/2026 is ambiguous and is never guessed at.`});
+          bad = true; v = null;
+        } else v = d;
+      } else if (spec.num.includes(h)){
+        const n = num(v);
+        if (n === undefined){
+          F.push({sev:"error", rule:"V-00", sheet, row:r+1,
+            msg:`${sheet} row ${r+1}: '${v}' is not a number in column ${h}.`});
+          bad = true; v = null;
+        } else v = n;
+      } else {
+        v = (typeof v === "number") ? String(v) : txt(v);
+      }
+      o[h] = v;
+    });
+    o.__bad = bad;
+    out.push(o);
+  }
+  return out;
+}
+
+/* ============================================================ 4. period derivation
+   Spec sheet 05. A recorded milestone beats the month offset (REQ-CAL-13); boundaries
+   apply in order and a period squeezed to nothing is dropped (REQ-CAL-12, C-11).  */
+
+const DAY = 86400000;
+function addMonths(d, n){
+  const y = d.getUTCFullYear(), m = d.getUTCMonth(), day = d.getUTCDate();
+  const last = new Date(Date.UTC(y, m + n + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m + n, Math.min(day, last)));   // clamps 31 Mar -1m -> 28/29 Feb
+}
+const addDays = (d, n) => new Date(d.getTime() + n * DAY);
+
+function derivePeriods(proj, ms){
+  const get = n => (ms[n] && ms[n][0]) || null;
+  const protocol = get("Protocol (v1)"), cta = get("CTA submission");
+  const siv = get("First SIV") || get("FPI");
+  const idbl = get("interim DB lock");
+  const fdbl = get("final DB lock") || idbl;
+  if (!cta || !fdbl) return null;                              // V-16
+
+  const start = proj.start_date, end = proj.end_date;
+  const suS0 = protocol ? addDays(protocol, 1) : addMonths(cta, -1);
+  const suS = suS0 > start ? suS0 : start;
+  const suE = (siv && siv >= suS) ? siv : addDays(addMonths(suS, 4), -1);
+
+  const later = (ms["Inspection"] || []).filter(d => d > fdbl);   // V-21, R-03
+  const p7S = later.length ? new Date(Math.min(...later)) : null;
+  const p7E = later.length ? new Date(Math.max(Math.max(...later), end.getTime())) : null;
+
+  let cofS = addMonths(fdbl, -3);
+  const cofE = p7S ? addDays(p7S, -1) : new Date(Math.max(fdbl.getTime(), end.getTime()));
+
+  const segs = [];
+  if (suS > start) segs.push(["Before-Start-up", start, addDays(suS, -1)]);
+  segs.push(["Start-up", suS, suE]);
+  if (idbl && idbl < fdbl){                                    // R-11: the split case
+    const coiS = addMonths(idbl, -3);
+    segs.push(["Conduct (interim)", addDays(suE, 1), addDays(coiS, -1)]);
+    segs.push(["Close-out (interim)", coiS, idbl]);
+    if (addDays(idbl, 1) > cofS) cofS = addDays(idbl, 1);
+    segs.push(["Conduct (final)", addDays(idbl, 1), addDays(cofS, -1)]);
+  } else {
+    segs.push(["Conduct (final)", addDays(suE, 1), addDays(cofS, -1)]);
+  }
+  segs.push(["Close-out (final)", cofS, cofE]);
+  if (p7S) segs.push(["After Close-out (final)", p7S, p7E]);
+
+  return segs.filter(s => s[2] >= s[1])
+             .map((s, i) => ({period_name:s[0], period_seq:i+1, period_start:s[1], period_end:s[2]}));
+}
+
+/* ============================================================ 5. model + validation
+   Every rule from spec sheet 04. The load never stops at the first problem: findings
+   are collected and shown as one report (REQ-IMP-02).                            */
+
+function buildModel(sheets){
+  const F = [];
+  for (const s of REQUIRED_SHEETS){
+    if (!sheets[s]) F.push({sev:"fatal", rule:"V-00", sheet:s, row:"",
+      msg:`Sheet '${s}' not found. The workbook must contain all ${REQUIRED_SHEETS.length} sheets — `
+        + `compare it against the delivered template.`});
+  }
+  if (F.some(f => f.sev === "fatal")) return {fatal:true, findings:F};
+
+  const raw = {};
+  for (const s of REQUIRED_SHEETS) raw[s] = toObjects(s, sheets[s], F);
+
+  const M = {
+    projects:{}, milestones:{}, periods:{}, people:{}, assignments:[],
+    ppw:{}, pws:{}, rf:{}, rfRoles:{}, lists:{}, config:{}, raw, findings:F,
+  };
+  for (const r of raw.Lists) if (r.list_name) (M.lists[r.list_name] ||= []).push(r.value);
+  for (const r of raw.Config) if (r.parameter) M.config[r.parameter] = r.value;
+
+  const cfg = (k, d) => { const v = num(M.config[k]); return (v === null || v === undefined) ? d : v; };
+  M.OVER = cfg("over_allocation_fte", 1.50);
+  M.UNDER = cfg("under_allocation_fte", 0.60);
+  M.MINM = cfg("under_allocation_min_months", 3);
+  M.HOURS = cfg("fte_hours_per_month", 160);
+  M.HORIZON = cfg("default_horizon_months", 24);
+  M.UNIT = M.config.capacity_unit || "FTE";
+
+  const sv = num(M.config.schema_version);
+  if (sv === null) F.push({sev:"warning", rule:"V-09", sheet:"Config", row:"",
+    msg:`No schema_version in Config. Treating this file as version 1; columns added since may be missing.`});
+  else if (sv !== SCHEMA_EXPECTED) F.push({sev:"warning", rule:"V-09", sheet:"Config", row:"",
+    msg:`This file is schema version ${sv}; this application expects version ${SCHEMA_EXPECTED}. `
+      + (sv < SCHEMA_EXPECTED ? `Columns added since version ${sv} may be missing.`
+                              : `Columns added after version ${SCHEMA_EXPECTED} will be ignored — consider updating the application.`)});
+
+  for (const p of raw.Project){
+    if (M.projects[p.project_id]) F.push({sev:"error", rule:"V-08", sheet:"Project", row:p.__row,
+      msg:`project_id ${p.project_id} appears more than once.`});
+    M.projects[p.project_id] = p;
+  }
+  for (const p of raw.Person){
+    if (M.people[p.person_id]) F.push({sev:"error", rule:"V-08", sheet:"Person", row:p.__row,
+      msg:`person_id ${p.person_id} appears more than once.`});
+    M.people[p.person_id] = p;
+  }
+  for (const m of raw.Milestone){
+    ((M.milestones[m.project_id] ||= {})[m.milestone_name] ||= []).push(m.milestone_date);
+  }
+  for (const k of Object.keys(M.milestones))
+    for (const n of Object.keys(M.milestones[k])) M.milestones[k][n].sort((a,b)=>a-b);
+
+  for (const r of raw.PeriodWeightStandard)
+    M.pws[[r.project_type, r.clinical_phase, r.period_name]] = num(r.weight);
+  for (const r of raw.RoleFactor){
+    M.rf[[r.project_type, r.clinical_phase, r.period_name, r.role_name]] = num(r.role_factor);
+    (M.rfRoles[r.project_type] ||= new Set()).add(r.role_name);
+  }
+
+  // ---- periods: use what is in the file; derive where a trial has none -------
+  for (const r of raw.ProjectPeriod) (M.periods[r.project_id] ||= []).push(r);
+  for (const [pid, proj] of Object.entries(M.projects)){
+    if (!M.periods[pid] && CLINICAL_TYPES.has(proj.project_type)){
+      const derived = derivePeriods(proj, M.milestones[pid] || {});
+      if (derived){
+        M.periods[pid] = derived.map(d => ({...d, project_id:pid, __derived:true,
+          weight: M.pws[[proj.project_type, proj.clinical_phase, d.period_name]] ?? 1.00}));
+      } else {
+        F.push({sev:"error", rule:"V-16", sheet:"Project", row:proj.__row,
+          msg:`Project ${pid} has no periods and cannot derive them — it is missing CTA submission `
+            + `or a DB lock. Enter its periods by hand or add the milestone.`});
+      }
+    }
+  }
+  for (const k of Object.keys(M.periods)) M.periods[k].sort((a,b) => a.period_seq - b.period_seq);
+
+  validate(M, F);
+  recomputeDerived(M, F);
+  return M;
+}
+
+/** Spec sheet 03, "derived columns — read, do not trust".
+ *  The template holds a formula, but an exported or hand-edited file may not, and the
+ *  cached result of a formula that was never calculated is empty. So: compare what the
+ *  file says (V-13 reports a mismatch), then let the master value win. */
+function recomputeDerived(M, F){
+  for (const m of M.raw.Milestone){
+    const master = (M.projects[m.project_id] || {}).project_name ?? null;
+    if (m.project_name && master && m.project_name !== master)
+      F.push({sev:"warning", rule:"V-13", sheet:"Milestone", row:m.__row,
+        msg:`Milestone row ${m.__row} records project_name '${m.project_name}' but `
+          + `${m.project_id} is '${master}'. The master value is used.`});
+    m.project_name = master;
+  }
+  for (const a of M.raw.Assignment) a.person_name = (M.people[a.person_id] || {}).person_name ?? null;
+  for (const p of M.raw.Project){
+    if (p.start_date && p.end_date)
+      p.total_period_months = (p.end_date.getUTCFullYear() - p.start_date.getUTCFullYear()) * 12
+        + (p.end_date.getUTCMonth() - p.start_date.getUTCMonth()) + 1;
+  }
+}
+
+function validate(M, F){
+  const add = (sev, rule, sheet, row, msg) => F.push({sev, rule, sheet, row, msg});
+
+  // V-04, V-05, V-10, V-11, V-19 on projects
+  for (const [pid, p] of Object.entries(M.projects)){
+    const isCT = CLINICAL_TYPES.has(p.project_type);
+    if (p.start_date && p.end_date && p.end_date < p.start_date)
+      add("error","V-05","Project",p.__row,
+        `Project ${pid}: end_date ${ymd(p.end_date)} is before start_date ${ymd(p.start_date)}.`);
+    if (isCT && !p.project_category)
+      add("warning","V-04","Project",p.__row,`Project ${pid} is a clinical trial with no product category.`);
+    if (isCT && !p.clinical_phase)
+      add("error","V-19","Project",p.__row,
+        `Project ${pid} is a clinical trial with no clinical_phase, so its periods cannot be weighted.`);
+    if (isCT) for (const c of ["EDC_setup","DataReviewSystem_setup","RBQM_setup"])
+      if (p[c] === null) add("warning","V-10","Project",p.__row,`Project ${pid} has no ${c} recorded.`);
+    for (const [col,list] of [["project_type","project_type"],["outsourcing_type","outsourcing_type"],
+                              ["status","project_status"],["clinical_phase","clinical_phase"]]){
+      const v = p[col];
+      if (v && M.lists[list] && !M.lists[list].includes(v))
+        add("warning","V-11","Project",p.__row,
+          `Project ${pid}: ${col} '${v}' is not a known value. Valid: ${M.lists[list].join(", ")}.`);
+    }
+  }
+
+  // V-11 / V-20 / V-21 on milestones
+  for (const [pid, mm] of Object.entries(M.milestones)){
+    for (const [nm, dates] of Object.entries(mm)){
+      if (M.lists.milestone_name && !M.lists.milestone_name.includes(nm))
+        add("warning","V-11","Milestone","",`Project ${pid}: milestone '${nm}' is not in the standard list.`);
+      if (nm !== "Inspection" && dates.length > 1)
+        add("warning","V-20","Milestone","",
+          `Project ${pid} records '${nm}' ${dates.length} times. Only 'Inspection' is expected to repeat.`);
+    }
+    const lock = (mm["final DB lock"] || mm["interim DB lock"] || [])[0];
+    if (lock){
+      const early = (mm["Inspection"] || []).filter(d => d <= lock);
+      if (early.length) add("information","V-21","Milestone","",
+        `Project ${pid}: ${early.length} Inspection date(s) on or before the final DB lock are treated `
+        + `as markers inside the existing periods and do not open the final period.`);
+    }
+  }
+
+  // V-06, V-12, V-15, V-18 on periods
+  for (const [pid, proj] of Object.entries(M.projects)){
+    const segs = M.periods[pid];
+    if (!segs || !segs.length){
+      if (!F.some(f => f.rule === "V-16" && String(f.msg).includes(pid)))
+        add("error","V-12","ProjectPeriod","",`Project ${pid} has no periods.`);
+      continue;
+    }
+    const allowed = CLINICAL_TYPES.has(proj.project_type) ? CLINICAL_PERIODS : OTHER_PERIODS;
+    const names = segs.map(s => s.period_name);
+    for (const n of new Set(names)) if (names.filter(x => x === n).length > 1)
+      add("error","V-18","ProjectPeriod","",
+        `Project ${pid}: period_name '${n}' appears ${names.filter(x=>x===n).length} times; `
+        + `(project_id, period_name) must be unique.`);
+    const seqs = segs.map(s => s.period_seq);
+    if (new Set(seqs).size !== seqs.length)
+      add("error","V-18","ProjectPeriod","",`Project ${pid}: period_seq is duplicated.`);
+    let prevEnd = null;
+    for (const s of segs){
+      if (!allowed.includes(s.period_name))
+        add("error","V-15","ProjectPeriod","",
+          `Project ${pid} is type '${proj.project_type}' but has a period named '${s.period_name}'. `
+          + `Valid: ${allowed.join(", ")}.`);
+      if (s.period_end < s.period_start)
+        add("error","V-05","ProjectPeriod","",`Project ${pid} period ${s.period_seq}: end before start.`);
+      if (prevEnd){
+        const gap = Math.round((s.period_start - prevEnd) / DAY);
+        if (gap > 1) add("warning","V-12","ProjectPeriod","",
+          `Project ${pid}: ${gap-1} day(s) before period ${s.period_seq} belong to no period. `
+          + `Those months are calculated at weight 1.00.`);
+        else if (gap < 1) add("error","V-06","ProjectPeriod","",
+          `Project ${pid}: periods overlap at ${s.period_name}.`);
+      }
+      prevEnd = s.period_end;
+      if (CLINICAL_TYPES.has(proj.project_type) && proj.clinical_phase &&
+          M.pws[[proj.project_type, proj.clinical_phase, s.period_name]] === undefined)
+        add("error","V-19","PeriodWeightStandard","",
+          `Project ${pid}: no standard weight for ${proj.project_type} / ${proj.clinical_phase} / `
+          + `${s.period_name}. Its periods cannot be weighted.`);
+    }
+  }
+
+  // V-01, V-02, V-03, V-07, V-08, V-13 on assignments
+  const seen = new Set();
+  for (const a of M.raw.Assignment){
+    if (seen.has(a.assignment_id))
+      add("error","V-08","Assignment",a.__row,`assignment_id ${a.assignment_id} appears more than once.`);
+    seen.add(a.assignment_id);
+    const proj = M.projects[a.project_id];
+    if (!proj){
+      add("error","V-01","Assignment",a.__row,
+        `Assignment ${a.assignment_id} refers to project ${a.project_id}, which does not exist.`);
+      continue;
+    }
+    if (!M.people[a.person_id])
+      add("error","V-02","Assignment",a.__row,
+        `Assignment ${a.assignment_id} refers to person ${a.person_id}, which does not exist.`);
+    const roles = M.rfRoles[proj.project_type];
+    if (!roles || !roles.has(a.role_name))
+      add("error","V-03","Assignment",a.__row,
+        `Assignment ${a.assignment_id}: role '${a.role_name}' is not valid for a project of type `
+        + `'${proj.project_type}'. Valid roles for this type: ${roles ? [...roles].join(", ") : "none defined"}.`);
+    if (a.assign_end_date && a.assign_start_date && a.assign_end_date < a.assign_start_date)
+      add("error","V-05","Assignment",a.__row,`Assignment ${a.assignment_id}: end before start.`);
+    if (proj.end_date && a.assign_end_date && a.assign_end_date > proj.end_date)
+      add("warning","V-07","Assignment",a.__row,
+        `Assignment ${a.assignment_id} runs to ${ymd(a.assign_end_date)}, after project ${a.project_id} `
+        + `ends on ${ymd(proj.end_date)}.`);
+    const per = M.people[a.person_id];
+    if (per && a.person_name && a.person_name !== per.person_name)
+      add("warning","V-13","Assignment",a.__row,
+        `Assignment ${a.assignment_id} records person_name '${a.person_name}' but ${a.person_id} is `
+        + `'${per.person_name}'. The master value is used.`);
+    // (recomputeDerived then overwrites it with the master — see spec sheet 03.)
+    M.assignments.push(a);
+  }
+
+  // V-06 + V-24 on override windows: this is a child table of windows, and one
+  // assignment may carry several. Both halves of that need a rule.
+  for (const w of M.raw.PersonPeriodWeight) (M.ppw[w.assignment_id] ||= []).push(w);
+  for (const [aid, wins] of Object.entries(M.ppw)){
+    if (!seen.has(aid)){
+      add("error","V-24","PersonPeriodWeight","",
+        `${aid}: PersonPeriodWeight refers to an assignment that does not exist; its override is `
+        + `silently ignored.`);
+      continue;
+    }
+    wins.sort((a,b) => a.period_start - b.period_start);
+    const starts = wins.map(w => +w.period_start);
+    if (new Set(starts).size !== starts.length)
+      add("error","V-24","PersonPeriodWeight","",
+        `${aid}: two override windows share a period_start; (assignment_id, period_start) must be unique.`);
+    for (let i = 1; i < wins.length; i++)
+      if (wins[i].period_start <= wins[i-1].period_end)
+        add("error","V-06","PersonPeriodWeight","",
+          `${aid}: override windows overlap — ${ymd(wins[i-1].period_start)}..${ymd(wins[i-1].period_end)} `
+          + `and ${ymd(wins[i].period_start)}..${ymd(wins[i].period_end)}. Which weight applies in the `
+          + `shared months would depend on row order.`);
+    for (const w of wins) if (w.period_end < w.period_start)
+      add("error","V-05","PersonPeriodWeight","",`${aid}: override window ends before it starts.`);
+  }
+
+  // V-22: an absolute floor only means something if everyone can reach it
+  for (const [sid, p] of Object.entries(M.people)){
+    const cap = num(p.capacity_fte);
+    if (cap !== null && cap !== undefined && cap < M.UNDER)
+      add("warning","V-22","Person",p.__row,
+        `${sid}: capacity ${cap.toFixed(2)} FTE is below the under-allocation floor of `
+        + `${M.UNDER.toFixed(2)}, so this person can never clear it however fully they are booked.`);
+  }
+
+  // V-23: a role factor missing for a period an assignment actually spans
+  const need = new Map();
+  for (const a of M.assignments){
+    const proj = M.projects[a.project_id];
+    if (!proj || !M.people[a.person_id]) continue;
+    const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
+    for (const s of (M.periods[a.project_id] || []))
+      need.set([proj.project_type, ph, s.period_name, a.role_name].join(""),
+               [proj.project_type, ph, s.period_name, a.role_name]);
+  }
+  for (const [, k] of need)
+    if (M.rf[[k[0], k[1], k[2], k[3]]] === undefined)
+      add("error","V-23","RoleFactor","",
+        `No role factor for ${k[0]} / ${k[1] || "-"} / ${k[2]} / ${k[3]} — assignments covering that `
+        + `period would be calculated at factor 1.00.`);
+}
+
+/* ============================================================ 6. calculation
+   load = project period weight x role factor x person weight x month coverage.
+   Pure: no DOM, no file access. Spec sheet 05, verified against the worked example. */
+
+function monthsBetween(a, b){
+  const out = [];
+  let y = a.getUTCFullYear(), m = a.getUTCMonth();
+  const ey = b.getUTCFullYear(), em = b.getUTCMonth();
+  while (y < ey || (y === ey && m <= em)){ out.push([y, m]); if (++m === 12){ m = 0; y++; } }
+  return out;
+}
+function monthKey(y, m){ return y * 12 + m; }
+function keyToLabel(k){
+  const y = Math.floor(k / 12), m = k % 12;
+  return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m] + " " + y;
+}
+function coverage(y, m, s, e){
+  const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const m0 = Date.UTC(y, m, 1), m1 = Date.UTC(y, m, days);
+  const lo = Math.max(m0, s.getTime()), hi = Math.min(m1, e.getTime());
+  return hi < lo ? 0 : ((hi - lo) / DAY + 1) / days;
+}
+
+function calculate(M){
+  const projMonth = new Map(), persMonth = new Map(), cell = new Map(), who = new Map();
+  const add = (map, k, v) => map.set(k, (map.get(k) || 0) + v);
+
+  const periodAt = (pid, y, m) => {
+    const first = Date.UTC(y, m, 1);
+    for (const s of (M.periods[pid] || []))
+      if (s.period_start.getTime() <= first && first <= s.period_end.getTime()) return s;
+    return null;
+  };
+  const personWeight = (a, y, m) => {
+    const first = Date.UTC(y, m, 1);
+    for (const w of (M.ppw[a.assignment_id] || []))
+      if (w.period_start.getTime() <= first && first <= w.period_end.getTime())
+        return num(w.weight_override) ?? 0;
+    return num(a.person_weight) ?? 0;
+  };
+
+  let lo = Infinity, hi = -Infinity;
+  for (const a of M.assignments){
+    const proj = M.projects[a.project_id];
+    if (!proj || !M.people[a.person_id] || a.__bad) continue;
+    const s = a.assign_start_date, e = a.assign_end_date || proj.end_date;
+    if (!s || !e) continue;
+    const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
+    for (const [y, m] of monthsBetween(s, e)){
+      const cov = coverage(y, m, s, e);
+      if (cov <= 0) continue;
+      const seg = periodAt(a.project_id, y, m);
+      const pw = seg ? (num(seg.weight) ?? 1) : 1;                       // no period -> 1.00, V-12
+      const rf = M.rf[[proj.project_type, ph, seg ? seg.period_name : null, a.role_name]] ?? 1;
+      const v = pw * rf * personWeight(a, y, m) * cov;
+      const k = monthKey(y, m);
+      lo = Math.min(lo, k); hi = Math.max(hi, k);
+      add(projMonth, a.project_id + "|" + k, v);
+      add(persMonth, a.person_id + "|" + k, v);
+      add(cell, [a.project_id, a.person_id, a.role_name, k].join("|"), v);
+      const wk = a.project_id + "|" + k;
+      if (!who.has(wk)) who.set(wk, []);
+      who.get(wk).push([a.person_id, a.role_name]);
+    }
+  }
+  return {projMonth, persMonth, cell, who, lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
+}
+
+/* ============================================================ 7. state + filters */
+
+const S = {
+  model:null, calc:null, fileName:"", loadedAt:null,
+  from:null, to:null,                       // month keys
+  f:{type:"All", phase:"All", proj:"All", pers:"All", role:"All", dept:"All"},
+  tab:"t-overall", expanded:new Set(), selProj:null, selPers:null,
+  edits:[], editedCells:new Set(), headers:{},
+};
+
+function activeProjects(){
+  const M = S.model, out = [];
+  for (const [pid, p] of Object.entries(M.projects)){
+    if (S.f.type !== "All" && p.project_type !== S.f.type) continue;
+    if (S.f.phase !== "All" && p.clinical_phase !== S.f.phase) continue;
+    if (S.f.proj !== "All" && pid !== S.f.proj) continue;
+    if (S.f.pers !== "All" && !M.assignments.some(a => a.project_id === pid && a.person_id === S.f.pers)) continue;
+    if (S.f.role !== "All" && !M.assignments.some(a => a.project_id === pid && a.role_name === S.f.role)) continue;
+    if (S.f.dept !== "All" && !M.assignments.some(a => a.project_id === pid &&
+        (M.people[a.person_id] || {}).department === S.f.dept)) continue;
+    out.push(pid);
+  }
+  return out;
+}
+function activePeople(){
+  const M = S.model, projs = new Set(activeProjects()), out = [];
+  for (const [sid, p] of Object.entries(M.people)){
+    if (S.f.pers !== "All" && sid !== S.f.pers) continue;
+    if (S.f.dept !== "All" && p.department !== S.f.dept) continue;
+    if (S.f.role !== "All" && !M.assignments.some(a => a.person_id === sid && a.role_name === S.f.role)) continue;
+    if (!M.assignments.some(a => a.person_id === sid && projs.has(a.project_id))) continue;
+    out.push(sid);
+  }
+  return out;
+}
+const grid = () => { const g = []; for (let k = S.from; k <= S.to; k++) g.push(k); return g; };
+
+const TYPE_RANK = {"NewDrug CT":0, "Biosimilar CT":1, "Others":2};
+function prank(pid){
+  const p = S.model.projects[pid];
+  return [TYPE_RANK[p.project_type] ?? 9, p.start_date ? p.start_date.getTime() : 0, pid];
+}
+const byRank = (a, b) => { const x = prank(a), y = prank(b);
+  return x[0]-y[0] || x[1]-y[1] || (x[2] < y[2] ? -1 : 1); };
+
+/* ============================================================ 8. render helpers */
+
+const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const att = s => esc(s).replace(/"/g,"&quot;");
+const el = id => document.getElementById(id);
+const fmt = v => S.model.UNIT === "hours" ? (v * S.model.HOURS).toFixed(0) : v.toFixed(2);
+const unitLabel = () => S.model.UNIT === "hours" ? "hours" : "FTE";
+
+function typePill(pid){
+  const t = S.model.projects[pid].project_type;
+  const k = {"NewDrug CT":"nd","Biosimilar CT":"bs"}[t] || "ot";
+  return `<span class="ty ${k}">${esc(t)}</span>`;
+}
+function phasePill(pid){
+  const p = S.model.projects[pid];
+  if (!CLINICAL_TYPES.has(p.project_type) || !p.clinical_phase) return "";
+  const n = String(p.clinical_phase).replace("Phase ","");
+  return `<span class="ph ph${n}">${esc(p.clinical_phase)}</span>`;
+}
+
+const SEQ = ["#cde2fb","#b7d3f6","#9ec5f4","#86b6ef","#6da7ec","#5598e7","#3987e5",
+             "#2a78d6","#256abf","#1c5cab","#184f95"];
+function seqStep(v, vmax){
+  if (v <= 0 || vmax <= 0) return null;
+  return Math.min(SEQ.length - 1, Math.round((v / vmax) * (SEQ.length - 1)));
+}
+const BASE7 = ["#2a78d6","#eb6834","#1baf7a","#eda100","#e87ba4","#008300","#4a3aa7"];
+const STEPS = [1.0,0.70,1.30,0.85,1.15,0.55,1.45,0.62];
+function mix(hex, f){
+  let r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  if (f >= 1){ const t = Math.min(1, f-1); r += (255-r)*t; g += (255-g)*t; b += (255-b)*t; }
+  else { r *= f; g *= f; b *= f; }
+  return "#" + [r,g,b].map(x => Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,"0")).join("");
+}
+const projColour = i => mix(BASE7[i % 7], STEPS[Math.floor(i / 7) % STEPS.length]);
+
+const PERIOD_HUE = {
+  "Before-Start-up":"#adaca6", "Start-up":"#d9472f",
+  "Conduct (interim)":"#3fc795", "Close-out (interim)":"#f2b53d",
+  "Conduct (final)":"#159068",  "Close-out (final)":"#d97e0a",
+  "After Close-out (final)":"#6f6f68",
+  "Planning":"#adaca6", "Develop":"#3fc795", "Close":"#d97e0a",
+};
+const bandFill = (n, w, wmax) => mix(PERIOD_HUE[n] || "#adaca6",
+                                     1.14 - 0.24 * (wmax ? Math.min(w, wmax) / wmax : 0));
+
+/* ============================================================ 9. charts */
+
+function chartGantt(pids){
+  const M = S.model, C = S.calc;
+  if (!pids.length) return `<p class="note">No projects match the current filters.</p>`;
+  const rows = pids.slice(0, 20);
+  let lo = Infinity, hi = -Infinity;
+  for (const p of rows){
+    const pr = M.projects[p];
+    if (pr.start_date) lo = Math.min(lo, pr.start_date.getTime());
+    if (pr.end_date) hi = Math.max(hi, pr.end_date.getTime());
+  }
+  if (!isFinite(lo) || !isFinite(hi)) return `<p class="note">These projects carry no dates.</p>`;
+  const span = Math.max(1, (hi - lo) / DAY);
+  const W = 1180, rowh = 38, padL = 210, padT = 30;
+  const H = padT + rowh * rows.length + 30, inner = W - padL - 14;
+  const x = t => padL + ((t - lo) / DAY / span) * inner;
+  let wmax = 0;
+  for (const p of rows) for (const s of (M.periods[p] || [])) wmax = Math.max(wmax, num(s.weight) || 0);
+  wmax = wmax || 1;
+
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+    + `aria-label="Project timeline: one row per project, bands coloured by period">`];
+  for (let y = new Date(lo).getUTCFullYear(); y <= new Date(hi).getUTCFullYear(); y++){
+    const xx = x(Date.UTC(y, 0, 1));
+    if (xx >= padL){
+      o.push(`<line class="grid" x1="${xx.toFixed(1)}" y1="${padT-8}" x2="${xx.toFixed(1)}" y2="${H-22}"/>`);
+      o.push(`<text class="ax" x="${xx.toFixed(1)}" y="${padT-12}" text-anchor="middle">${y}</text>`);
+    }
+  }
+  rows.forEach((p, i) => {
+    const pr = M.projects[p], y = padT + i * rowh;
+    const months = (pr.start_date && pr.end_date)
+      ? (pr.end_date.getUTCFullYear()-pr.start_date.getUTCFullYear())*12
+        + (pr.end_date.getUTCMonth()-pr.start_date.getUTCMonth()) + 1 : 0;
+    o.push(`<text class="rowlab" x="${padL-12}" y="${y+14}" text-anchor="end">`
+      + `${esc(String(pr.project_name).slice(0,26))}</text>`);
+    o.push(`<text class="rowsub" x="${padL-12}" y="${y+27}" text-anchor="end">`
+      + `${ymd(pr.start_date)} &#8594; ${ymd(pr.end_date)} &middot; ${months} months</text>`);
+    for (const s of (M.periods[p] || [])){
+      const x0 = x(s.period_start.getTime()), x1 = x(s.period_end.getTime());
+      const w = Math.max(1.5, x1 - x0 - 2);
+      const ms = monthsBetween(s.period_start, s.period_end);
+      let tot = 0, n = 0;
+      for (const [yy, mm] of ms){ tot += C.projMonth.get(p + "|" + monthKey(yy, mm)) || 0; n++; }
+      const fte = n ? tot / n : 0;
+      const tip = `<b>${esc(pr.project_name)}</b><br>${esc(s.period_name)}<br>`
+        + `${ymd(s.period_start)} to ${ymd(s.period_end)}<br>period weight ${(num(s.weight)||0).toFixed(2)}`
+        + `<br><b>${fte.toFixed(2)} FTE per month</b> on average across this period`;
+      o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${y+13}" width="${w.toFixed(1)}" `
+        + `height="${rowh-20}" fill="${bandFill(s.period_name, num(s.weight)||0, wmax)}" rx="2" `
+        + `data-tip="${att(tip)}"></rect>`);
+      if (w > s.period_name.length * 5.7 + 12)
+        o.push(`<text class="bandlab" x="${(x0+w/2).toFixed(1)}" y="${(y+rowh/2+5).toFixed(1)}" `
+          + `text-anchor="middle">${esc(s.period_name)}</text>`);
+    }
+    for (const [nm, dates] of Object.entries(M.milestones[p] || {}))
+      for (const d of dates){
+        const xx = x(d.getTime()), key = KEY_MILESTONES.has(nm);
+        const tip = `<b>${esc(pr.project_name)}</b><br>${esc(nm)}`
+          + (key ? ` <span class="tr">&#183; sets a period boundary</span>` : "") + `<br>${ymd(d)}`;
+        const w_ = key ? 6.5 : 5, h_ = key ? 11 : 9;
+        o.push(`<polygon class="ms${key ? " key" : ""}" points="${(xx-w_).toFixed(1)},${y+1} `
+          + `${(xx+w_).toFixed(1)},${y+1} ${xx.toFixed(1)},${y+1+h_}" data-tip="${att(tip)}"></polygon>`);
+      }
+  });
+  o.push("</svg>");
+  const seen = new Set();
+  const leg = ['<ul class="legend">'];
+  for (const p of rows) for (const s of (M.periods[p] || [])) seen.add(s.period_name);
+  for (const n of [...CLINICAL_PERIODS, ...OTHER_PERIODS]) if (seen.has(n))
+    leg.push(`<li><span class="sw" style="background:${PERIOD_HUE[n]}"></span>${esc(n)}</li>`);
+  leg.push('<li><span class="sw tri"></span>milestone</li>');
+  leg.push('<li><span class="sw tri key"></span>DB lock &#8212; sets a period boundary</li>');
+  leg.push('<li class="hint">darker band = higher period weight</li></ul>');
+  if (pids.length > rows.length)
+    leg.push(`<p class="note">Showing the first ${rows.length} of ${pids.length} projects in the `
+      + `current filter — filter further to see the rest.</p>`);
+  return o.join("") + leg.join("");
+}
+
+function chartStacked(pids){
+  const M = S.model, C = S.calc, G = grid();
+  const tot = {};
+  for (const p of pids){ tot[p] = 0; for (const k of G) tot[p] += C.projMonth.get(p+"|"+k) || 0; }
+  const order = pids.filter(p => tot[p] > 0.004).sort((a,b) => tot[b]-tot[a] || (a<b?-1:1));
+  if (!order.length) return `<p class="note">No resource falls inside this horizon.</p>`;
+  const colour = {}; let ci = 0;
+  for (const p of order)
+    colour[p] = M.projects[p].project_type === "Others" ? "var(--other)" : projColour(ci++);
+  const W = Math.max(700, 90 + G.length * 74), H = 300, padL = 56, padB = 46, padT = 26;
+  const bw = (W - padL - 14) / G.length;
+  let vmax = 0;
+  for (const k of G){ let s = 0; for (const p of order) s += C.projMonth.get(p+"|"+k) || 0; vmax = Math.max(vmax, s); }
+  vmax = vmax || 1;
+  const scale = (H - padB - padT) / (vmax * 1.08);
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+    + `aria-label="Monthly resource demand, one stacked band per project">`];
+  o.push(`<text class="ax" x="${padL-44}" y="${padT-10}">${unitLabel()}</text>`);
+  for (let i = 0; i <= 4; i++){
+    const v = vmax * 1.08 * i / 4, yy = H - padB - v * scale;
+    o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-8}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<text class="ax" x="${padL-8}" y="${(yy+3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`);
+  }
+  G.forEach((k, i) => {
+    const x0 = padL + i * bw + 3;
+    let base = H - padB;
+    for (const p of order){
+      const v = C.projMonth.get(p+"|"+k) || 0;
+      if (v <= 0.004) continue;
+      const h = v * scale;
+      const crew = (C.who.get(p+"|"+k) || []).slice().sort();
+      const list = crew.slice(0,8).map(([ps,role]) =>
+        `&#183; ${esc((M.people[ps]||{}).person_name || ps)} <span class="tr">${esc(role)}</span>`).join("<br>");
+      const tip = `<b>${esc(M.projects[p].project_name)}</b> `
+        + `<span class="tr">${esc(M.projects[p].project_type)}</span><br>`
+        + `${keyToLabel(k)} &#183; <b>${fmt(v)} ${unitLabel()}</b><br>`
+        + `<span class="tr">${crew.length} ${crew.length===1?"person":"people"} this month</span><br>`
+        + (list || "&#183; nobody assigned")
+        + (crew.length > 8 ? `<br>&#183; and ${crew.length-8} more` : "");
+      o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${(base-h).toFixed(1)}" `
+        + `width="${(bw-8).toFixed(1)}" height="${Math.max(0.6,h).toFixed(1)}" fill="${colour[p]}" `
+        + `data-tip="${att(tip)}"></rect>`);
+      base -= h;
+    }
+    o.push(`<text class="ax" x="${(x0+(bw-8)/2).toFixed(1)}" y="${H-padB+16}" text-anchor="middle">`
+      + `${keyToLabel(k).split(" ")[0]}</text>`);
+    if (i === 0 || k % 12 === 0)
+      o.push(`<text class="ax" x="${(x0+(bw-8)/2).toFixed(1)}" y="${H-padB+29}" `
+        + `text-anchor="middle">${Math.floor(k/12)}</text>`);
+  });
+  o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-8}" y2="${H-padB}"/></svg>`);
+  return o.join("");
+}
+
+function chartPeople(sids){
+  const M = S.model, C = S.calc, G = grid();
+  const means = sids.map(s => {
+    let t = 0; for (const k of G) t += C.persMonth.get(s+"|"+k) || 0;
+    return [s, G.length ? t / G.length : 0];
+  }).sort((a,b) => b[1]-a[1]);
+  const LIMIT = 20;                                              // REQ-DSH-09 / D-14
+  const shown = means.slice(0, LIMIT);
+  const restAvg = means.length > LIMIT
+    ? means.slice(LIMIT).reduce((s,x) => s + x[1], 0) / (means.length - LIMIT) : null;
+  const bars = shown.concat(restAvg !== null ? [["__rest", restAvg]] : []);
+  if (!bars.length) return `<p class="note">Nobody matches the current filters.</p>`;
+  const W = Math.max(640, 60 + bars.length * 42), H = 240, padL = 52, padB = 52, padT = 26;
+  const bw = (W - padL - 12) / bars.length;
+  const vmax = Math.max(Math.max(...bars.map(b => b[1])), M.OVER) * 1.15 || 1;
+  const scale = (H - padB - padT) / vmax;
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+    + `aria-label="Mean monthly load per person against both thresholds">`];
+  for (let i = 0; i <= 3; i++){
+    const v = vmax * i / 3, yy = H - padB - v * scale;
+    o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-6}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<text class="ax" x="${padL-8}" y="${(yy+3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`);
+  }
+  bars.forEach(([s, v], i) => {
+    const x0 = padL + i * bw + 3, h = v * scale;
+    const rest = s === "__rest";
+    const cls = rest ? "bar" : (v > M.OVER ? "bar over" : (v > 0 && v < M.UNDER ? "bar under" : "bar"));
+    const nm = rest ? `the other ${means.length - LIMIT} people` : ((M.people[s]||{}).person_name || s);
+    const tip = `<b>${esc(nm)}</b>${rest ? "" : ` <span class="tr">${esc(s)}</span>`}<br>`
+      + `mean ${fmt(v)} ${unitLabel()} over the horizon`
+      + (rest ? `<br><span class="tr">shown as one band — see the table below for each of them</span>` : "");
+    o.push(`<rect class="${cls}" x="${x0.toFixed(1)}" y="${(H-padB-h).toFixed(1)}" `
+      + `width="${(bw-8).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" `
+      + `fill="${rest ? "var(--other)" : ""}" data-tip="${att(tip)}"></rect>`);
+    o.push(`<text class="ax" x="${(x0+(bw-8)/2).toFixed(1)}" y="${H-padB+14}" text-anchor="middle">`
+      + `${esc(rest ? "rest" : s.slice(-3))}</text>`);
+  });
+  for (const [v, cls, lab] of [[M.OVER,"th-over",`over-allocation ceiling ${M.OVER.toFixed(2)}`],
+                               [M.UNDER,"th-under",`under-allocation floor ${M.UNDER.toFixed(2)}`]]){
+    const yy = H - padB - v * scale;
+    o.push(`<line class="halo" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-6}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<line class="${cls}" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-6}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<text class="thlab ${cls}" x="${padL+6}" y="${(yy-4).toFixed(1)}">${lab}</text>`);
+  }
+  o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-6}" y2="${H-padB}"/></svg>`);
+  if (restAvg !== null)
+    o.push(`<p class="note">${LIMIT} most loaded people shown individually; the remaining `
+      + `${means.length - LIMIT} are one band. ${means.length} bars at this width would be `
+      + `unreadable (REQ-DSH-09).</p>`);
+  return o.join("");
+}
+
+function chartProjectUtil(pid){
+  const M = S.model, C = S.calc, G = grid();
+  const act = [...C.projMonth.values()].filter(v => v > 0.004);
+  const portAvg = act.length ? act.reduce((a,b)=>a+b,0) / act.length : 1;
+  const upper = 2 * portAvg, lower = 0.5 * portAvg;
+  const own = [];
+  for (const [k, v] of C.projMonth) if (k.startsWith(pid + "|") && v > 0.004) own.push(v);
+  const ownAvg = own.length ? own.reduce((a,b)=>a+b,0) / own.length : 0;
+  const vals = G.map(k => C.projMonth.get(pid+"|"+k) || 0);
+  const W = 1080, H = 210, padL = 52, padR = 190;
+  const vmax = Math.max(Math.max(...vals, upper), 0.01) * 1.18;
+  const bw = (W - padL - padR) / Math.max(1, G.length);
+  const base = H - 26, top = 18;
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+    + `aria-label="Monthly resource for this project against the portfolio average">`];
+  o.push(`<text class="ax" x="${padL-44}" y="${top-4}">${unitLabel()}</text>`);
+  for (let i = 0; i <= 3; i++){
+    const gv = vmax * i / 3, gy = base - (gv/vmax) * (base-top);
+    o.push(`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR+4}" y2="${gy.toFixed(1)}"/>`);
+    o.push(`<text class="ax" x="${padL-8}" y="${(gy+3).toFixed(1)}" text-anchor="end">${fmt(gv)}</text>`);
+  }
+  vals.forEach((v, i) => {
+    const h = (v/vmax) * (base-top);
+    const cls = v > upper ? "over" : (v > 0 && v < lower ? "under" : "");
+    const tip = `<b>${esc(M.projects[pid].project_name)}</b><br>${keyToLabel(G[i])} &#183; `
+      + `<b>${fmt(v)} ${unitLabel()}</b><br><span class="tr">portfolio average ${portAvg.toFixed(2)} `
+      + `&#183; this project ${ownAvg.toFixed(2)}</span>`;
+    o.push(`<rect class="bar ${cls}" x="${(padL+i*bw+2).toFixed(1)}" y="${(base-h).toFixed(1)}" `
+      + `width="${(bw-4).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" data-tip="${att(tip)}"></rect>`);
+    o.push(`<text class="ax" x="${(padL+i*bw+bw/2).toFixed(1)}" y="${H-8}" text-anchor="middle">`
+      + `${keyToLabel(G[i]).split(" ")[0]}</text>`);
+  });
+  for (const [v, cls, lab] of [[upper,"th-over",`2 × portfolio avg — ${upper.toFixed(2)}`],
+                               [lower,"th-under",`0.5 × portfolio avg — ${lower.toFixed(2)}`],
+                               [ownAvg,"th-own",`this project avg — ${ownAvg.toFixed(2)}`]]){
+    if (v <= 0) continue;
+    const yy = base - (v/vmax) * (base-top);
+    o.push(`<line class="halo" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR+4}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<line class="${cls}" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR+4}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<text class="thlab ${cls}" x="${W-padR+8}" y="${(yy+3).toFixed(1)}">${lab}</text>`);
+  }
+  o.push(`<line class="base" x1="${padL}" y1="${base}" x2="${W-padR+4}" y2="${base}"/></svg>`);
+  return {svg:o.join(""), portAvg, ownAvg};
+}
+
+function chartPersonStrip(sid){
+  const M = S.model, C = S.calc, G = grid();
+  const vals = G.map(k => C.persMonth.get(sid+"|"+k) || 0);
+  const W = 1080, H = 190, padL = 52, padR = 150;
+  const vmax = Math.max(Math.max(...vals, M.OVER), 0.01) * 1.15;
+  const bw = (W - padL - padR) / Math.max(1, G.length);
+  const base = H - 26, top = 16;
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+    + `aria-label="Monthly load for the selected person against both thresholds">`];
+  for (let i = 0; i <= 3; i++){
+    const gv = vmax * i / 3, gy = base - (gv/vmax) * (base-top);
+    o.push(`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR+4}" y2="${gy.toFixed(1)}"/>`);
+    o.push(`<text class="ax" x="${padL-8}" y="${(gy+3).toFixed(1)}" text-anchor="end">${fmt(gv)}</text>`);
+  }
+  vals.forEach((v, i) => {
+    const h = (v/vmax) * (base-top);
+    const cls = v > M.OVER ? "over" : (v > 0 && v < M.UNDER ? "under" : "");
+    o.push(`<rect class="bar ${cls}" x="${(padL+i*bw+2).toFixed(1)}" y="${(base-h).toFixed(1)}" `
+      + `width="${(bw-4).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" `
+      + `data-tip="${att(`${keyToLabel(G[i])} &#183; <b>${fmt(v)} ${unitLabel()}</b>`)}"></rect>`);
+    o.push(`<text class="ax" x="${(padL+i*bw+bw/2).toFixed(1)}" y="${H-8}" text-anchor="middle">`
+      + `${keyToLabel(G[i]).split(" ")[0]}</text>`);
+  });
+  for (const [v, cls, lab] of [[M.OVER,"th-over",`ceiling ${M.OVER.toFixed(2)}`],
+                               [M.UNDER,"th-under",`floor ${M.UNDER.toFixed(2)}`]]){
+    const yy = base - (v/vmax) * (base-top);
+    o.push(`<line class="halo" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR+4}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<line class="${cls}" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR+4}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<text class="thlab ${cls}" x="${W-padR+8}" y="${(yy+3).toFixed(1)}">${lab}</text>`);
+  }
+  o.push(`<line class="base" x1="${padL}" y1="${base}" x2="${W-padR+4}" y2="${base}"/></svg>`);
+  return o.join("");
+}
+
+/* ============================================================ 10. tables */
+
+function monthHead(){
+  return grid().map(k => {
+    const [mon, yr] = keyToLabel(k).split(" ");
+    return `<th>${mon}<br><span class="sub">${yr}</span></th>`;
+  }).join("");
+}
+
+function tableProjects(pids){
+  const M = S.model, C = S.calc, G = grid();
+  const listed = pids.slice().sort(byRank);
+  let vmax = 0;
+  for (const p of listed) for (const k of G) vmax = Math.max(vmax, C.projMonth.get(p+"|"+k) || 0);
+  const body = [];
+  for (const pid of listed){
+    const open = S.expanded.has("p-"+pid);
+    let tot = 0;
+    const tds = G.map(k => {
+      const v = C.projMonth.get(pid+"|"+k) || 0; tot += v;
+      if (v <= 0.004) return '<td class="c z">&middot;</td>';
+      const i = seqStep(v, vmax);
+      return `<td class="c" style="background:${SEQ[i]};color:${i>6?"#fff":"var(--ink)"}">${fmt(v)}</td>`;
+    }).join("");
+    body.push(`<tr class="parent" data-k="p-${esc(pid)}" tabindex="0" role="button" `
+      + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
+      + `<span class="nm">${esc(M.projects[pid].project_name)}</span>${typePill(pid)}${phasePill(pid)}`
+      + `<span class="sub">${esc(pid)} &middot; starts ${ymd(M.projects[pid].start_date)}</span></th>`
+      + `${tds}<td>${fmt(tot)}</td></tr>`);
+    if (!open) continue;
+    const rows = M.assignments.filter(a => a.project_id === pid)
+      .sort((a,b) => (a.role_name||"").localeCompare(b.role_name||"") ||
+                     (a.person_id||"").localeCompare(b.person_id||""));
+    for (const a of rows){
+      let dt = 0;
+      const dtds = G.map(k => {
+        const v = C.cell.get([pid, a.person_id, a.role_name, k].join("|")) || 0; dt += v;
+        return v > 0.004 ? `<td class="c">${fmt(v)}</td>` : '<td class="c z">&middot;</td>';
+      }).join("");
+      if (dt <= 0.004) continue;
+      body.push(`<tr class="child"><th class="rh">&#8627; `
+        + `${esc((M.people[a.person_id]||{}).person_name || a.person_id)}`
+        + `<span class="role">${esc(a.role_name)}</span></th>${dtds}<td>${fmt(dt)}</td></tr>`);
+    }
+  }
+  let gt = 0;
+  const gtds = G.map(k => {
+    let s = 0; for (const p of listed) s += C.projMonth.get(p+"|"+k) || 0; gt += s;
+    return `<td>${fmt(s)}</td>`;
+  }).join("");
+  body.push(`<tr class="grand"><th class="rh">All ${listed.length} projects</th>${gtds}<td>${fmt(gt)}</td></tr>`);
+  return `<table class="grid-t"><thead><tr><th class="rh">Project</th>${monthHead()}`
+    + `<th>Total</th></tr></thead><tbody>${body.join("")}</tbody></table>`;
+}
+
+function tablePeople(sids){
+  const M = S.model, C = S.calc, G = grid();
+  const listed = sids.slice().sort();
+  let vmax = 0;
+  for (const s of listed) for (const k of G) vmax = Math.max(vmax, C.persMonth.get(s+"|"+k) || 0);
+  const body = [];
+  for (const sid of listed){
+    const open = S.expanded.has("s-"+sid);
+    let tot = 0;
+    const tds = G.map(k => {
+      const v = C.persMonth.get(sid+"|"+k) || 0; tot += v;
+      if (v > M.OVER) return `<td class="c over">&#9650; ${fmt(v)}</td>`;
+      if (v > 0 && v < M.UNDER) return `<td class="c under">&#9660; ${fmt(v)}</td>`;
+      if (v <= 0.004) return '<td class="c z">&middot;</td>';
+      const i = seqStep(v, vmax);
+      return `<td class="c" style="background:${SEQ[i]};color:${i>6?"#fff":"var(--ink)"}">${fmt(v)}</td>`;
+    }).join("");
+    const cap = num((M.people[sid]||{}).capacity_fte);
+    body.push(`<tr class="parent" data-k="s-${esc(sid)}" tabindex="0" role="button" `
+      + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
+      + `<span class="nm">${esc((M.people[sid]||{}).person_name || sid)}</span>`
+      + `<span class="sub">${esc(sid)}${cap!==null&&cap!==undefined?` &middot; capacity ${cap.toFixed(2)} FTE`:""}`
+      + ` &middot; ${esc((M.people[sid]||{}).department || "")}</span></th>${tds}<td>${fmt(tot)}</td></tr>`);
+    if (!open) continue;
+    const mine = M.assignments.filter(a => a.person_id === sid)
+      .sort((a,b) => byRank(a.project_id, b.project_id));
+    for (const a of mine){
+      let dt = 0;
+      const dtds = G.map(k => {
+        const v = C.cell.get([a.project_id, sid, a.role_name, k].join("|")) || 0; dt += v;
+        return v > 0.004 ? `<td class="c">${fmt(v)}</td>` : '<td class="c z">&middot;</td>';
+      }).join("");
+      if (dt <= 0.004) continue;
+      body.push(`<tr class="child"><th class="rh">&#8627; `
+        + `${esc((M.projects[a.project_id]||{}).project_name || a.project_id)}`
+        + `${typePill(a.project_id)}${phasePill(a.project_id)}`
+        + `<span class="role">${esc(a.role_name)}</span></th>${dtds}<td>${fmt(dt)}</td></tr>`);
+    }
+  }
+  let gt = 0;
+  const gtds = G.map(k => {
+    let s = 0; for (const p of listed) s += C.persMonth.get(p+"|"+k) || 0; gt += s;
+    return `<td>${fmt(s)}</td>`;
+  }).join("");
+  body.push(`<tr class="grand"><th class="rh">All ${listed.length} people</th>${gtds}<td>${fmt(gt)}</td></tr>`);
+  return `<table class="grid-t"><thead><tr><th class="rh">Person</th>${monthHead()}`
+    + `<th>Total</th></tr></thead><tbody>${body.join("")}</tbody></table>`;
+}
+
+/** Editable data table. Every cell is editable; edits are validated on entry. */
+function dataTable(sheet, rows, cols, selKey, selVal){
+  const head = '<th class="ins">insert</th>' + cols.map(c => `<th>${esc(c)}</th>`).join("");
+  const body = rows.map(r => {
+    const sel = (selKey && r[selKey] === selVal) ? ' class="sel"' : "";
+    const tds = cols.map(c => {
+      const v = r[c];
+      const disp = v instanceof Date ? ymd(v) : (v === null || v === undefined ? "" : v);
+      const marked = S.editedCells.has(`${sheet}|${r.__row}|${c}`) ? " class=\"edited\"" : "";
+      return `<td${marked} contenteditable="true" data-sheet="${att(sheet)}" data-row="${r.__row}" `
+        + `data-col="${att(c)}">${esc(disp)}</td>`;
+    }).join("");
+    return `<tr${sel} data-id="${att(r[selKey] ?? "")}">`
+      + `<td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="${r.__row}"`
+      + ` title="Insert a new row directly below this one">+ row</button></td>${tds}</tr>`;
+  }).join("");
+  return `<div class="scrollx tall"><table class="data-t" data-sheet="${att(sheet)}">`
+    + `<thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+/* ============================================================ 11. tab rendering */
+
+function renderOverall(){
+  const M = S.model, C = S.calc, G = grid();
+  const pids = activeProjects(), sids = activePeople();
+  let total = 0, over = 0;
+  for (const p of pids) for (const k of G) total += C.projMonth.get(p+"|"+k) || 0;
+  for (const s of sids) for (const k of G){
+    const v = C.persMonth.get(s+"|"+k) || 0;
+    if (v > M.OVER) over++;
+  }
+  let runs = 0;
+  for (const s of sids){
+    let run = 0;
+    for (const k of G){
+      const v = C.persMonth.get(s+"|"+k) || 0;
+      if (v > 0 && v < M.UNDER) run++;
+      else { if (run >= M.MINM) runs++; run = 0; }
+    }
+    if (run >= M.MINM) runs++;
+  }
+  const tiles = [
+    ["Projects in view", pids.length, `of ${Object.keys(M.projects).length} in the file`, ""],
+    ["People in view", sids.length, `of ${Object.keys(M.people).length} in the file`, ""],
+    ["Total demand", fmt(total), `${unitLabel()}-months over ${G.length} months`, ""],
+    ["Over-allocated", over, `person-months above ${M.OVER.toFixed(2)} FTE`, "over"],
+    ["Under-allocation runs", runs, `${M.MINM}+ months below ${M.UNDER.toFixed(2)} FTE`, "under"],
+  ].map(([l,v,s,c]) => `<div class="tile ${c}"><div class="tl">${l}</div>`
+    + `<div class="tv">${c==="over"?"&#9650; ":c==="under"?"&#9660; ":""}${v}</div>`
+    + `<div class="ts">${s}</div></div>`).join("");
+
+  el("t-overall").innerHTML =
+    `<div class="panel"><h2>Project timeline</h2>
+      <p class="cap">One row per project, with its start, end and length under the name. Bands are
+        coloured by period and shaded darker as the period weight rises. The two DB locks are red —
+        they are what the period derivation hangs on. <strong>Hover any band or marker</strong> for detail.</p>
+      <div class="scrollx">${chartGantt(pids.slice().sort(byRank))}</div></div>
+    <div class="tiles">${tiles}</div>
+    <div class="panel"><h2>Monthly demand by project</h2>
+      <p class="cap">One band per project, ordered by total resource with the largest on the baseline.
+        <strong>Hover any band</strong> for the project, its ${unitLabel()} that month and who is on it.</p>
+      <div class="scrollx">${chartStacked(pids)}</div></div>
+    <div class="panel"><h2>Resource by project</h2>
+      <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
+        <strong>Click a project name</strong> to expand it to the people and roles on it.</p>
+      <div class="scrollx tall">${tableProjects(pids)}</div></div>
+    <div class="panel"><h2>Mean load per person</h2>
+      <p class="cap">Averaged over the horizon, against the two absolute thresholds.</p>
+      <div class="scrollx">${chartPeople(sids)}</div></div>
+    <div class="panel"><h2>Resource by person</h2>
+      <p class="cap">Summed across every project. &#9650; above the ceiling, &#9660; below the floor.
+        <strong>Click a person name</strong> to expand to their projects and roles.</p>
+      <div class="scrollx tall">${tablePeople(sids)}</div>
+      <p class="note">Under-allocation is counted as a run of ${M.MINM} or more consecutive months, not
+        per month — the run is what matters, a single quiet month is not.</p></div>`;
+}
+
+function renderProjTab(){
+  const M = S.model;
+  const pids = activeProjects().sort(byRank);
+  if (!pids.length){ el("t-proj").innerHTML = `<div class="panel"><p class="note">No projects match the current filters.</p></div>`; return; }
+  if (!S.selProj || !pids.includes(S.selProj)) S.selProj = pids[0];
+  const pid = S.selProj, pr = M.projects[pid];
+  const cols = ["project_id","project_name","project_type","project_category","clinical_phase",
+                "outsourcing_type","EDC_setup","EDC_system","planned_member_count",
+                "start_date","end_date","status"];
+  const keep = new Set(pids);
+  const rows = M.raw.Project.filter(r => keep.has(r.project_id) || r.__new);
+  const util = chartProjectUtil(pid);
+  const ms = M.raw.Milestone.filter(m => m.project_id === pid)
+    .sort((a,b) => a.milestone_date - b.milestone_date);
+  const per = (M.periods[pid] || []);
+  const derived = per.some(p => p.__derived);
+
+  el("t-proj").innerHTML =
+    `<div class="panel"><h2>Projects</h2>
+      <p class="cap">Every field is editable — click a cell and type. Clicking a row also selects it,
+        which drives the panels below. <strong>+ row</strong> inserts directly below that row.</p>
+      ${dataTable("Project", rows, cols, "project_id", pid)}
+      <p class="note">${rows.length} project(s) in the current filter.</p></div>
+    <div id="projDetail">${projDetail(pid)}</div>`;
+}
+
+function projDetail(pid){
+  const M = S.model, pr = M.projects[pid];
+  const util = chartProjectUtil(pid);
+  const ms = M.raw.Milestone.filter(m => m.project_id === pid)
+    .sort((a,b) => (a.milestone_date||0) - (b.milestone_date||0));
+  const per = (M.periods[pid] || []);
+  const derived = per.some(p => p.__derived);
+  return `<div class="panel"><h2>Utilisation — ${esc(pr.project_name)}</h2>
+      <p class="cap">Monthly resource for the selected project. A project has no absolute ceiling or
+        floor, so the reference lines are <strong>relative</strong>: twice and half the average an active
+        project draws across the portfolio (${util.portAvg.toFixed(2)} FTE), plus this project's own
+        average over its full life (${util.ownAvg.toFixed(2)} FTE). They are context, not pass or fail.</p>
+      <div class="scrollx">${util.svg}</div></div>
+    <div class="two">
+      <div class="panel"><h2>Milestones — ${esc(pr.project_name)}</h2>
+        <p class="cap">CTA submission and the DB locks set the period boundaries.</p>
+        ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_seq","note_1"])}</div>
+      <div class="panel"><h2>Periods — ${esc(pr.project_name)}</h2>
+        <p class="cap">${derived ? "Derived from the milestones above." : "As entered in the workbook."}
+          Names are unique within a project, so <code>project_id + period_name</code> identifies a row.</p>
+        <div class="scrollx tall"><table class="data-t"><thead><tr><th>seq</th><th>period</th>
+          <th>start</th><th>end</th><th>weight</th><th>source</th></tr></thead><tbody>
+          ${per.map(p => `<tr><td>${p.period_seq}</td><td>${esc(p.period_name)}</td>`
+            + `<td>${ymd(p.period_start)}</td><td>${ymd(p.period_end)}</td>`
+            + `<td class="num">${(num(p.weight)||0).toFixed(2)}</td>`
+            + `<td class="muted">${p.__derived ? "derived from milestones" : "from the workbook"}</td></tr>`).join("")}
+          </tbody></table></div></div>
+    </div>`;
+}
+
+function renderPersTab(){
+  const M = S.model;
+  const sids = activePeople().sort();
+  if (!sids.length){ el("t-pers").innerHTML = `<div class="panel"><p class="note">Nobody matches the current filters.</p></div>`; return; }
+  if (!S.selPers || !sids.includes(S.selPers)) S.selPers = sids[0];
+  const sid = S.selPers, pe = M.people[sid];
+  const cols = ["person_id","person_name","department","primary_role","capacity_fte"];
+  const keepP = new Set(sids);
+
+  el("t-pers").innerHTML =
+    `<div class="panel"><h2>People</h2>
+      <p class="cap">Editable, same rules as the project table — including <strong>+ row</strong>
+        on every row.</p>
+      ${dataTable("Person", M.raw.Person.filter(r => keepP.has(r.person_id) || r.__new),
+                  cols, "person_id", sid)}
+      <p class="note">${sids.length} person/people in the current filter.</p></div>
+    <div id="persDetail">${persDetail(sid)}</div>`;
+}
+
+function persDetail(sid){
+  const M = S.model, pe = M.people[sid];
+  const asg = M.assignments.filter(a => a.person_id === sid);
+  const ppw = M.raw.PersonPeriodWeight.filter(w => asg.some(a => a.assignment_id === w.assignment_id));
+  return `<div class="panel"><h2>Utilisation — ${esc(pe.person_name)} (${esc(sid)})</h2>
+      <p class="cap">Monthly load across the horizon. Dashed lines are the ceiling and floor — the same
+        two figures for everyone, since both thresholds are absolute.</p>
+      <div class="scrollx">${chartPersonStrip(sid)}</div></div>
+    <div class="two">
+      <div class="panel"><h2>Assignments — ${esc(sid)}</h2>
+        ${dataTable("Assignment", asg, ["assignment_id","project_id","role_name",
+          "assign_start_date","assign_end_date","person_weight"])}</div>
+      <div class="panel"><h2>Weight overrides</h2>
+        <p class="cap">Replaces person_weight for the window it covers. One assignment may carry
+          several non-overlapping windows.</p>
+        ${dataTable("PersonPeriodWeight", ppw, ["assignment_id","period_start","period_end",
+          "weight_override","reason"])}</div>
+    </div>`;
+}
+
+function wmatrix(rows, keyOf, labelOf, colKey, valKey){
+  const cols = [], keys = [], grid = {};
+  let vmax = 0;
+  for (const r of rows){
+    if (!cols.includes(r[colKey])) cols.push(r[colKey]);
+    const k = keyOf(r).join(" · ");
+    if (!keys.includes(k)) keys.push(k);
+    grid[k + "||" + r[colKey]] = num(r[valKey]);
+    vmax = Math.max(vmax, num(r[valKey]) || 0);
+  }
+  const head = cols.map(c => `<th>${esc(c)}</th>`).join("");
+  const body = keys.map(k => {
+    const [nm, sub] = labelOf(k);
+    const tds = cols.map(c => {
+      const v = grid[k + "||" + c];
+      if (v === undefined || v === null) return '<td class="c z">&middot;</td>';
+      const i = seqStep(v, vmax);
+      return `<td class="c" style="background:${SEQ[i]};color:${i>6?"#fff":"var(--ink)"}">${v.toFixed(2)}</td>`;
+    }).join("");
+    return `<tr><th class="rh"><span class="nm">${esc(nm)}</span>`
+      + `<span class="sub">${esc(sub)}</span></th>${tds}</tr>`;
+  }).join("");
+  return `<table class="grid-t"><thead><tr><th class="rh">&nbsp;</th>${head}</tr></thead>`
+    + `<tbody>${body}</tbody></table>`;
+}
+
+function renderGenTab(){
+  const M = S.model;
+  const pws = wmatrix(M.raw.PeriodWeightStandard,
+    r => [r.project_type, r.clinical_phase], k => { const p = k.split(" · "); return [p[1], p[0]]; },
+    "period_name", "weight");
+  const ct = M.raw.RoleFactor.filter(r => CLINICAL_TYPES.has(r.project_type));
+  const ot = M.raw.RoleFactor.filter(r => !CLINICAL_TYPES.has(r.project_type));
+  const rfCT = wmatrix(ct, r => [r.project_type, r.clinical_phase, r.role_name],
+    k => { const p = k.split(" · "); return [p[2], p[0] + " · " + p[1]]; },
+    "period_name", "role_factor");
+  const rfOT = wmatrix(ot, r => [r.project_type, r.role_name],
+    k => { const p = k.split(" · "); return [p[1], p[0]]; }, "period_name", "role_factor");
+  const lists = Object.entries(M.lists).map(([k, v]) =>
+    `<tr><td>${esc(k)}</td><td class="vals">${esc(v.join(", "))}</td>`
+    + `<td class="num">${v.length}</td></tr>`).join("");
+
+  el("t-gen").innerHTML =
+    `<div class="panel"><h2>Standard period weights <span class="scope">PeriodWeightStandard</span></h2>
+      <p class="cap">The weight every clinical trial period is multiplied by, selected by the project's
+        type and clinical phase. Shown as a matrix because it is a standard, and standards are read
+        across. <strong>Others</strong> projects take hand-entered weights instead.</p>
+      <div class="scrollx tall">${pws}</div></div>
+    <div class="panel"><h2>Role factors — clinical trials <span class="scope">RoleFactor</span></h2>
+      <p class="cap">What one person in this role costs the project per month, before their own weight
+        and the period weight are applied. Keyed on type, phase, period and role — read a row across to
+        see how a role's burden moves over the life of a project.</p>
+      <div class="scrollx tall">${rfCT}</div></div>
+    <div class="panel"><h2>Role factors — Others <span class="scope">RoleFactor</span></h2>
+      <div class="scrollx">${rfOT}</div></div>
+    <div class="two">
+      <div class="panel"><h2>Configuration <span class="scope">Config</span></h2>
+        <p class="cap">The thresholds and settings the whole page reads. Both allocation thresholds are
+          absolute — they are not scaled by anyone's capacity.</p>
+        ${dataTable("Config", M.raw.Config, ["parameter","value","note"])}
+        <div class="controls" style="margin-top:10px">
+          <div class="ctl"><label>Display unit</label><select id="unitSel">
+            <option${M.UNIT!=="hours"?" selected":""}>FTE</option>
+            <option${M.UNIT==="hours"?" selected":""}>hours</option></select></div></div></div>
+      <div class="panel"><h2>Value lists <span class="scope">Lists</span></h2>
+        <p class="cap">What each list-typed column will accept. A value outside its list is kept and
+          reported (V-11), never dropped. Read-only.</p>
+        <div class="scrollx tall"><table class="data-t"><thead><tr><th>list_name</th><th>values</th>
+          <th>n</th></tr></thead><tbody>${lists}</tbody></table></div></div>
+    </div>`;
+}
+
+function renderAll(){
+  renderOverall(); renderProjTab(); renderPersTab(); renderGenTab();
+  renderDirty();
+}
+
+/* ============================================================ 12. editing + IO */
+
+function renderDirty(){
+  const n = S.edits.length;
+  el("dirty").innerHTML = n === 0 ? "" :
+    `<span class="dot-w"></span> <strong>${n} unsaved edit${n===1?"":"s"}</strong> · `
+    + `<span class="ok">all ${n} pass validation</span> — export writes every validated edit back to `
+    + `the workbook. An edit that fails a rule is rejected at entry and never reaches the model, so `
+    + `nothing invalid can be exported.`;
+}
+
+/** Apply one cell edit: coerce, validate, write to the model, recalculate. */
+function applyEdit(sheet, rowNum, col, raw, tdEl){
+  const M = S.model;
+  const target = M.raw[sheet].find(r => r.__row === rowNum);
+  if (!target) return;
+  const spec = SHEET_COLS[sheet];
+  let v = raw.trim() === "" ? null : raw.trim();
+  if (v !== null && spec.date.includes(col)){
+    const d = parseDate(v);
+    if (d === undefined){ flashBad(tdEl, `'${raw}' is not a date. Use yyyy-mm-dd.`); return; }
+    v = d;
+  } else if (v !== null && spec.num.includes(col)){
+    const n = num(v);
+    if (n === undefined){ flashBad(tdEl, `'${raw}' is not a number.`); return; }
+    v = n;
+  }
+  const before = target[col];
+
+  // REQ-IMP-10: changing an identifier that other sheets reference cascades to every
+  // referencing row, after saying how many will change. Blocking the edit instead would
+  // make the field read-only in all but name.
+  if (KEY_COL[sheet] === col && REFS[col] && before !== null && v !== null && v !== before){
+    const hits = [];
+    for (const [s2, c2] of REFS[col])
+      for (const r of M.raw[s2]) if (r[c2] === before) hits.push([r, c2]);
+    if (hits.length && !confirm(
+        `${before} is referenced by ${hits.length} row(s) across `
+        + `${[...new Set(REFS[col].map(x => x[0]))].join(", ")}.\n\n`
+        + `Change it to ${v} and update them all?`)){
+      tdEl.textContent = String(before);
+      return;
+    }
+    for (const [r, c2] of hits) r[c2] = v;               // one atomic step
+    if (hits.length) S.edits.push({sheet:"(cascade)", row:"", col,
+                                   from:before, to:v, n:hits.length});
+  }
+  target[col] = v;
+
+  // Re-validate the whole model with the same rules as an import (REQ-IMP-09). An edit
+  // that introduces an ERROR is rejected outright rather than left to surface later.
+  const probe = rebuild();
+  const newErrors = probe.findings.filter(f => f.sev === "error" || f.sev === "fatal");
+  const oldErrors = (S.model.findings || []).filter(f => f.sev === "error" || f.sev === "fatal");
+  if (newErrors.length > oldErrors.length){
+    target[col] = before;
+    rebuild(true);
+    flashBad(tdEl, newErrors[newErrors.length - 1].msg);
+    return;
+  }
+  S.edits.push({sheet, row:rowNum, col, from:before, to:v});
+  S.editedCells.add(`${sheet}|${rowNum}|${col}`);
+  tdEl.classList.add("edited");
+  rebuild(true);
+  el("exportBtn").disabled = false;
+  renderKeepingTab();
+}
+
+function flashBad(tdEl, msg){
+  const prev = tdEl.dataset.orig ?? "";
+  tdEl.textContent = prev;
+  showBanner("bad", `Edit rejected — ${msg}`);
+}
+
+/** Rebuild model+calc from the current raw rows. `commit` writes it back to state. */
+function rebuild(commit){
+  const sheets = {};
+  for (const s of REQUIRED_SHEETS) sheets[s] = rawToRows(s);
+  const m = buildModel(sheets);
+  if (commit){ S.model = m; S.calc = calculate(m); }
+  return m;
+}
+
+/** Model rows -> the row-array shape readWorkbook produces, so rebuild and export share one path. */
+function rawToRows(sheet){
+  const rows = S.model.raw[sheet];
+  const hdr = S.headers[sheet] || [];
+  const out = [hdr.slice()];
+  for (const r of rows) out.push(hdr.map(h => r[h] ?? null));
+  return out;
+}
+
+function exportWorkbook(){
+  // A row inserted but never filled has no identifier, so nothing could ever reference
+  // it and re-importing would silently drop it. Refuse, and name it.
+  const incomplete = [];
+  for (const s of REQUIRED_SHEETS){
+    const key = KEY_COL[s];
+    if (!key) continue;
+    for (const r of S.model.raw[s]) if (r.__new && !r[key]) incomplete.push(`${s} (${key} is empty)`);
+  }
+  if (incomplete.length){
+    showBanner("bad", `Export blocked — ${incomplete.length} new row(s) have no identifier: `
+      + `${[...new Set(incomplete)].join("; ")}. Fill it in or delete the row.`);
+    return;
+  }
+  const sheets = {};
+  for (const s of REQUIRED_SHEETS) sheets[s] = rawToRows(s);
+  const blob = buildXlsx(sheets);
+  const stamp = new Date().toISOString().slice(0,10);
+  const base = (S.fileName || "PRAP_SourceData.xlsx").replace(/\.xlsx$/i, "");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${base}_${stamp}.xlsx`;                 // never silently overwrite the source
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  S.edits = []; S.editedCells.clear();
+  for (const s of REQUIRED_SHEETS) for (const r of S.model.raw[s]) delete r.__new;
+  renderAll(); showTab(S.tab);
+  showBanner("", `Exported ${a.download}. The source workbook on disk is untouched.`);
+}
+
+/* ============================================================ 13. findings report */
+
+function showBanner(kind, text, findings){
+  const n = findings ? findings.length : 0;
+  const counts = {};
+  if (findings) for (const f of findings) counts[f.sev] = (counts[f.sev] || 0) + 1;
+  const summary = n
+    ? Object.entries(counts).map(([k,v]) => `${v} ${k}${v===1?"":"s"}`).join(", ")
+    : "";
+  el("banner").innerHTML =
+    `<div class="banner ${kind}"><strong>${esc(text)}</strong>`
+    + (n ? ` ${esc(summary)}.<span class="lk" id="openRep">Open full report</span>` : "")
+    + `</div>`;
+  const b = el("openRep");
+  if (b) b.onclick = () => { renderReport(findings); el("report").showModal(); };
+}
+
+function renderReport(findings){
+  const order = {fatal:0, error:1, warning:2, information:3};
+  const rows = findings.slice().sort((a,b) =>
+    (order[a.sev]-order[b.sev]) || String(a.sheet).localeCompare(String(b.sheet)) ||
+    (a.row||0)-(b.row||0));
+  el("repBody").innerHTML = rows.length
+    ? `<table class="data-t"><thead><tr><th>severity</th><th>rule</th><th>sheet</th><th>row</th>
+        <th>finding</th></tr></thead><tbody>${rows.map(f =>
+        `<tr><td><span class="sev ${f.sev}">${f.sev}</span></td><td>${esc(f.rule)}</td>`
+        + `<td>${esc(f.sheet)}</td><td>${f.row || ""}</td>`
+        + `<td style="white-space:normal">${esc(f.msg)}</td></tr>`).join("")}</tbody></table>`
+    : `<p class="cap">Nothing to report — the workbook passed every rule.</p>`;
+}
+
+/* ============================================================ 14. wiring */
+
+function renderKeepingTab(){
+  renderAll();
+  showTab(S.tab);
+}
+function showTab(id){
+  S.tab = id;
+  for (const b of document.querySelectorAll("nav button"))
+    b.setAttribute("aria-selected", String(b.dataset.tab === id));
+  for (const s of document.querySelectorAll("section.tab")) s.hidden = (s.id !== id);
+}
+
+function fillFilters(){
+  const M = S.model;
+  const set = (id, vals) => {
+    const s = el(id);
+    s.innerHTML = ['All', ...vals].map(v => `<option${v===s.value?" selected":""}>${esc(v)}</option>`).join("");
+  };
+  set("fType", [...new Set(Object.values(M.projects).map(p => p.project_type))].filter(Boolean));
+  set("fPhase", [...new Set(Object.values(M.projects).map(p => p.clinical_phase))].filter(Boolean));
+  set("fProj", Object.keys(M.projects).sort());
+  set("fPers", Object.keys(M.people).sort());
+  set("fRole", [...new Set(M.assignments.map(a => a.role_name))].filter(Boolean).sort());
+  set("fDept", [...new Set(Object.values(M.people).map(p => p.department))].filter(Boolean).sort());
+}
+function readFilters(){
+  S.f = {type:el("fType").value, phase:el("fPhase").value, proj:el("fProj").value,
+         pers:el("fPers").value, role:el("fRole").value, dept:el("fDept").value};
+  const pk = s => { const m = String(s).match(/^(\d{4})-(\d{2})$/); return m ? (+m[1])*12 + (+m[2]-1) : null; };
+  const a = pk(el("fFrom").value), b = pk(el("fTo").value);
+  if (a !== null) S.from = a;
+  if (b !== null) S.to = b;
+  if (S.to < S.from) S.to = S.from;
+  if (S.to - S.from > 120) S.to = S.from + 120;         // a table 10 years wide helps nobody
+  writeHorizon();
+}
+function writeHorizon(){
+  const s = k => `${Math.floor(k/12)}-${String(k%12+1).padStart(2,"0")}`;
+  el("fFrom").value = s(S.from); el("fTo").value = s(S.to);
+}
+function defaultHorizon(){
+  const M = S.model, C = S.calc;
+  const now = new Date();
+  let from = monthKey(now.getUTCFullYear(), now.getUTCMonth());
+  if (from < C.lo || from > C.hi) from = C.lo;          // demo data may not span today
+  S.from = from;
+  S.to = Math.min(C.hi, from + Math.max(1, M.HORIZON) - 1);
+  writeHorizon();
+}
+
+async function loadFile(file){
+  try {
+    showBanner("", `Reading ${file.name}…`);
+    const buf = await file.arrayBuffer();
+    const sheets = await readWorkbook(buf);
+    S.headers = {};
+    for (const s of REQUIRED_SHEETS)
+      S.headers[s] = ((sheets[s] || [])[0] || []).map(h => txt(h)).filter(Boolean);
+    const M = buildModel(sheets);
+    if (M.fatal){
+      showBanner("bad", "The workbook could not be loaded.", M.findings);
+      renderReport(M.findings); el("report").showModal();
+      return;
+    }
+    S.model = M; S.calc = calculate(M);
+    S.fileName = file.name; S.loadedAt = new Date();
+    S.edits = []; S.editedCells.clear(); S.expanded.clear(); S.selProj = null; S.selPers = null;
+    defaultHorizon();
+    fillFilters();
+    el("empty").hidden = true; el("tabs").hidden = false; el("filterbar").hidden = false;
+    el("exportBtn").disabled = false;
+    const tz = -new Date().getTimezoneOffset() / 60;
+    const tzName = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").split("/").pop() || "local";
+    el("fileline").innerHTML = `${esc(file.name)} · loaded ${S.loadedAt.toISOString().slice(0,16).replace("T"," ")} `
+      + `<span class="tz">(GMT${tz>=0?"+":""}${tz}, ${esc(tzName)})</span>`;
+    const errs = M.findings.filter(f => f.sev === "error").length;
+    showBanner(errs ? "bad" : "",
+      errs ? `Loaded with problems.` : `Loaded cleanly.`, M.findings);
+    renderAll(); showTab(S.tab);
+  } catch (e){
+    showBanner("bad", `Could not read that file: ${e.message}`);
+    console.error(e);
+  }
+}
+
+el("vers").textContent = `v${APP_VERSION} · expects source schema v${SCHEMA_EXPECTED}`;
+el("loadBtn").onclick = el("loadBtn2").onclick = () => el("picker").click();
+el("picker").onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); };
+el("exportBtn").onclick = exportWorkbook;
+el("repClose").onclick = () => el("report").close();
+el("themeBtn").onclick = () => {
+  const r = document.documentElement;
+  const dark = r.dataset.theme ? r.dataset.theme === "dark"
+             : matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme = dark ? "light" : "dark";
+};
+
+const drop = el("drop");
+["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => {
+  e.preventDefault(); drop.classList.add("on"); }));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => {
+  e.preventDefault(); drop.classList.remove("on"); }));
+drop.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+
+for (const id of ["fType","fPhase","fProj","fPers","fRole","fDept"])
+  el(id).addEventListener("change", () => { readFilters(); renderKeepingTab(); });
+for (const id of ["fFrom","fTo"])
+  el(id).addEventListener("change", () => { readFilters(); renderKeepingTab(); });
+el("fAll").onclick = () => { S.from = S.calc.lo; S.to = S.calc.hi;
+  if (S.to - S.from > 120) S.to = S.from + 120; writeHorizon(); renderKeepingTab(); };
+el("fReset").onclick = () => {
+  for (const id of ["fType","fPhase","fProj","fPers","fRole","fDept"]) el(id).value = "All";
+  defaultHorizon(); readFilters(); renderKeepingTab();
+};
+
+document.addEventListener("click", e => {
+  const tab = e.target.closest("nav button");
+  if (tab){ showTab(tab.dataset.tab); window.scrollTo({top:0}); return; }
+  const parent = e.target.closest("tr.parent");
+  if (parent){
+    const k = parent.dataset.k;
+    S.expanded.has(k) ? S.expanded.delete(k) : S.expanded.add(k);
+    renderKeepingTab(); return;
+  }
+  const ins = e.target.closest("[data-ins]");
+  if (ins){
+    e.stopPropagation();
+    const sheet = ins.dataset.ins, after = +ins.dataset.after;
+    const rows = S.model.raw[sheet];
+    const i = rows.findIndex(r => r.__row === after);
+    const blank = {__row: Math.max(0, ...rows.map(r => r.__row)) + 1, __new:true};
+    for (const h of (S.headers[sheet] || [])) blank[h] = null;
+    rows.splice(i + 1, 0, blank);                        // directly below, not appended
+    S.edits.push({sheet, row:blank.__row, col:"(new row)", from:null, to:""});
+    // Deliberately no rebuild: a row with every cell empty is INCOMPLETE, not invalid,
+    // and the parser skips blank rows. It becomes real when a field is filled, and the
+    // export guard refuses to write one that still has no identifier.
+    el("exportBtn").disabled = false;
+    renderKeepingTab();
+    return;
+  }
+  const row = e.target.closest(".data-t tbody tr");
+  if (row && row.dataset.id){
+    const sheet = row.closest(".data-t").dataset.sheet;
+    // Re-render the DEPENDENT panels only. Re-rendering the table itself would replace
+    // the cell the click just put the caret in, so the edit could never be typed.
+    if (sheet === "Project" && S.selProj !== row.dataset.id){
+      S.selProj = row.dataset.id;
+      for (const tr of row.parentNode.children) tr.classList.toggle("sel", tr === row);
+      const d = el("projDetail"); if (d) d.innerHTML = projDetail(S.selProj);
+    }
+    if (sheet === "Person" && S.selPers !== row.dataset.id){
+      S.selPers = row.dataset.id;
+      for (const tr of row.parentNode.children) tr.classList.toggle("sel", tr === row);
+      const d = el("persDetail"); if (d) d.innerHTML = persDetail(S.selPers);
+    }
+  }
+});
+
+document.addEventListener("focusin", e => {
+  const td = e.target.closest('td[contenteditable="true"]');
+  if (td) td.dataset.orig = td.textContent;
+});
+document.addEventListener("focusout", e => {
+  const td = e.target.closest('td[contenteditable="true"]');
+  if (!td) return;
+  const now = td.textContent;
+  if (now === td.dataset.orig) return;
+  applyEdit(td.dataset.sheet, +td.dataset.row, td.dataset.col, now, td);
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target.closest('td[contenteditable="true"]')){
+    e.preventDefault(); e.target.blur();
+  }
+});
+
+// Hover pop-up: follows the cursor and flips before it runs off an edge.
+(function(){
+  const tip = el("tip");
+  const place = e => {
+    const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = e.clientX + pad, y = e.clientY + pad;
+    if (x + w > innerWidth - 8) x = e.clientX - w - pad;
+    if (y + h > innerHeight - 8) y = e.clientY - h - pad;
+    tip.style.left = Math.max(8, x) + "px";
+    tip.style.top = Math.max(8, y) + "px";
+  };
+  document.addEventListener("mouseover", e => {
+    const t = e.target.closest("[data-tip]");
+    if (!t) return;
+    tip.innerHTML = t.dataset.tip; tip.hidden = false; place(e);
+  });
+  document.addEventListener("mousemove", e => { if (!tip.hidden) place(e); });
+  document.addEventListener("mouseout", e => { if (e.target.closest("[data-tip]")) tip.hidden = true; });
+})();
+
+document.addEventListener("change", e => {
+  if (e.target.id === "unitSel"){
+    S.model.UNIT = e.target.value;
+    S.model.config.capacity_unit = e.target.value;
+    renderKeepingTab();
+  }
+});
+
+addEventListener("beforeunload", e => {
+  if (S.edits.length){ e.preventDefault(); e.returnValue = ""; }   // REQ-IMP-08
+});
+</script>
+</html>
