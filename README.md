@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.4 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.5 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -30,7 +30,7 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.4.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.5.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -90,6 +90,10 @@ output/       Exported results and test evidence   (from Step 5)
   utilisation charts label the year on the x axis; and **editing is now provisional** —
   a change is applied on screen but held as pending until you press **Save** or
   **Leave without change**, and export is held while anything is pending.
+
+  Gate 4 round 4 (app v1.4): information pop-ups on every column heading, summary tile,
+  month heading and type pill — hover to see, click to pin; and a **Delete** control on
+  every editable row, refused when anything still references the row (V-17).
 
 ### Step 3 deliverables (approved)
 

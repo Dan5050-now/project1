@@ -57,6 +57,9 @@ h2{font-size:14.5px;margin:0 0 3px}
 .btn.primary:hover{opacity:.9;color:#fff}
 .btn.primary[disabled],.btn[disabled]{opacity:.45;cursor:not-allowed}
 .btn.tiny{font-size:10.5px;padding:1px 7px;border-radius:6px}
+.btn.tiny.danger{margin-left:4px}
+.btn.tiny.danger:hover{border-color:var(--crit);color:var(--crit)}
+td.ins,th.ins{white-space:nowrap}
 .btn.reset{border-color:var(--accent);color:var(--accent)}
 /* Provenance strip: one line by default, the full table on demand. It sits above the
    findings banner because it describes the application, not the loaded file. */
@@ -224,6 +227,14 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
  color:var(--ink);border:1px solid var(--base);border-radius:8px;padding:8px 10px;
  font-size:11.5px;line-height:1.5;box-shadow:0 6px 22px rgba(0,0,0,.18)}
 .tip b{font-weight:650}.tip .tr{color:var(--muted);font-size:10.5px}
+.tip.pinned{pointer-events:auto;border-color:var(--accent);box-shadow:0 8px 28px rgba(0,0,0,.24)}
+.tip .tipclose{display:block;margin-top:6px;padding-top:5px;border-top:1px solid var(--ring);
+ color:var(--muted);font-size:10px}
+/* Anything carrying an explanation says so, rather than hiding it behind a hover
+   nobody discovers. */
+[data-tip]:not(button):not(rect):not(polygon){cursor:help}
+.hasinfo{text-decoration:underline dotted var(--muted);text-underline-offset:3px}
+.tile[data-tip]:hover,.hasinfo:hover{color:var(--accent)}
 .drop{border:2px dashed var(--base);border-radius:12px;padding:44px 20px;text-align:center;
  color:var(--ink2);background:var(--surface)}
 .drop.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
@@ -318,7 +329,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.3";
+const APP_VERSION = "1.4";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -327,8 +338,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.4.xlsx",           ver:"2.4",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.4 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.5.xlsx",           ver:"2.5",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.5 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -632,6 +643,68 @@ const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignmen
                  Milestone:"project_id", ProjectPeriod:"project_id",
                  PersonPeriodWeight:"assignment_id", Config:"parameter", Lists:"list_name",
                  PeriodWeightStandard:"project_type", RoleFactor:"project_type"};
+// Which sheet OWNS each identifier. KEY_COL names the key column of every sheet, but
+// on a child sheet that column is a FOREIGN key - Milestone.project_id points at a
+// project, it does not define one. Deleting a milestone must not go looking for rows
+// that reference "its" project_id and refuse on their account.
+/* What each column means, shown on its heading. These definitions come from the plan's
+   data model - the point is that someone filling in the workbook should not have to
+   open a specification to find out what a column is for. */
+const COLUMN_HELP = {
+  project_id:"Unique identifier for the project. Editing it cascades to every row that references it.",
+  project_name:"Display name. Shown wherever the project appears.",
+  project_type:"'NewDrug CT', 'Biosimilar CT' or 'Others'. The first two are clinical trials and share one period set; they differ in their weights.",
+  project_category:"Product name. Required for either clinical trial type (V-04).",
+  clinical_phase:"Phase 1 to 4. With the project type it selects the standard period weights and role factors.",
+  outsourcing_type:"Full outsourcing, Partial outsourcing, or Full In-house.",
+  EDC_setup:"Who sets up EDC — by CRO or by SB.",
+  DataReviewSystem_setup:"Who sets up the data review system.",
+  RBQM_setup:"Who sets up RBQM.",
+  DM_conduct:"Who reviews the data.",
+  EDC_system:"EDC system in use.",
+  planned_member_count:"Planned team size. Compared against the assignments actually recorded.",
+  start_date:"Project start. Accepts yyyy-mm-dd or a real Excel date — an ambiguous format like 03/04/2026 is rejected, never guessed at.",
+  end_date:"Planned project end. Used as the assignment end when an assignment has none.",
+  total_period_months:"DERIVED. Recomputed from the dates on import; the value in the file is not trusted.",
+  status:"Planned, Active, On hold or Completed.",
+  milestone_name:"From the standard list of ten. 'Inspection' may appear on several rows; nothing else should (V-20).",
+  milestone_date:"Planned date. CTA submission and the DB locks are what the period derivation hangs on.",
+  milestone_seq:"Display order along the timeline.",
+  period_name:"One of the seven clinical periods, or the three 'Others' periods. UNIQUE within a project — with project_id it identifies the row.",
+  period_seq:"Orders the periods along the timeline. Carries order, not identity.",
+  period_start:"Inclusive. Periods must not overlap or leave a gap (V-06, V-12).",
+  period_end:"Inclusive.",
+  weight:"Effort multiplier for this period. Multiplied by the role factor, the person weight and the month coverage.",
+  weight_override:"REPLACES person_weight for the months this window covers — it does not multiply it.",
+  role_name:"Must exist in RoleFactor for this project's type (V-03).",
+  role_factor:"What one person in this role costs the project per month, before their own weight and the period weight. Keyed on type, phase, period and role.",
+  role_note:"Free text. The basis for the factor.",
+  person_id:"Unique identifier for the person. Editing it cascades to every assignment that references it.",
+  person_name:"Display name. On Assignment this is DERIVED and recomputed from the master row.",
+  department:"Grouping used by the dashboard filters.",
+  primary_role:"Usual role. An assignment can override it.",
+  capacity_fte:"How much this person is available for, in FTE. Shown for context — the allocation thresholds are absolute and are NOT scaled by it.",
+  assignment_id:"Unique identifier. One row per person + project + role.",
+  assign_start_date:"When this person starts on this project.",
+  assign_end_date:"When they finish. Empty means the project's own end date.",
+  person_weight:"How much of this person goes to this project, as a fraction. A PersonPeriodWeight window replaces it for the months it covers.",
+  parameter:"The setting's name. The application reads these on load.",
+  value:"The setting's value. A value that fails coercion is an error — a threshold read as text would silently disable a flag.",
+  note:"Free text.",
+  reason:"Why the weight differs for this window, e.g. part-time or covering a peak.",
+  note_1:"Free text. Carried through export unchanged and never read by the calculation.",
+};
+const HELP = {
+  rowactions:"<b>Row actions</b><br>Insert a new row directly below this one, or delete this row. "
+    + "Both are provisional — 'Leave without change' undoes them.",
+  insert:"<b>Insert a row</b><br>Adds a blank row directly below this one, so it lands where you are "
+    + "looking rather than at the bottom of the table. A row with no identifier will block the export "
+    + "until you fill one in.",
+  del:"<b>Delete this row</b><br>Refused if anything still references it, naming what does (V-17). "
+    + "A delete is never cascaded. Provisional like any other change — 'Leave without change' puts it back.",
+};
+
+const OWNER = {project_id:"Project", person_id:"Person", assignment_id:"Assignment"};
 const REFS = {
   project_id: [["Milestone","project_id"],["ProjectPeriod","project_id"],["Assignment","project_id"]],
   person_id:  [["Assignment","person_id"]],
@@ -1129,7 +1202,12 @@ const unitLabel = () => S.model.UNIT === "hours" ? "hours" : "FTE";
 function typePill(pid){
   const t = S.model.projects[pid].project_type;
   const k = {"NewDrug CT":"nd","Biosimilar CT":"bs"}[t] || "ot";
-  return `<span class="ty ${k}">${esc(t)}</span>`;
+  const tip = CLINICAL_TYPES.has(t)
+    ? `<b>${esc(t)}</b><br>A clinical trial. Uses the seven-period set derived from milestone dates, and `
+      + `takes its weights from the standard table for its type and phase.`
+    : `<b>${esc(t)}</b><br>A non-trial project. Uses the three-period set — Planning, Develop, Close — `
+      + `entered by hand, with hand-entered weights.`;
+  return `<span class="ty ${k}" data-tip="${att(tip)}">${esc(t)}</span>`;
 }
 function phasePill(pid){
   const p = S.model.projects[pid];
@@ -1461,7 +1539,10 @@ function monthAxis(o, G, xOf, bw, yLabel, yTick, yDiv0, yDiv1){
 function monthHead(){
   return grid().map(k => {
     const [mon, yr] = keyToLabel(k).split(" ");
-    return `<th>${mon}<br><span class="sub">${yr}</span></th>`;
+    const tip = `<b>${keyToLabel(k)}</b><br>Each cell is that month's load in ${unitLabel()}: `
+      + `period weight × role factor × person weight × the fraction of the month covered. `
+      + `A partial month is prorated by calendar days.`;
+    return `<th data-tip="${att(tip)}">${mon}<br><span class="sub">${yr}</span></th>`;
   }).join("");
 }
 
@@ -1562,7 +1643,12 @@ function tablePeople(sids){
 
 /** Editable data table. Every cell is editable; edits are validated on entry. */
 function dataTable(sheet, rows, cols, selKey, selVal){
-  const head = '<th class="ins">insert</th>' + cols.map(c => `<th>${esc(c)}</th>`).join("");
+  const head = `<th class="ins" data-tip="${att(HELP.rowactions)}">row</th>`
+    + cols.map(c => {
+        const h = COLUMN_HELP[c];
+        return `<th${h ? ` class="hasinfo" data-tip="${att(`<b>${esc(c)}</b><br>${h}`)}"` : ""}>`
+          + `${esc(c)}</th>`;
+      }).join("");
   const body = rows.map(r => {
     const sel = (selKey && r[selKey] === selVal) ? ' class="sel"' : "";
     const tds = cols.map(c => {
@@ -1574,7 +1660,9 @@ function dataTable(sheet, rows, cols, selKey, selVal){
     }).join("");
     return `<tr${sel} data-id="${att(r[selKey] ?? "")}">`
       + `<td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="${r.__row}"`
-      + ` title="Insert a new row directly below this one">+ row</button></td>${tds}</tr>`;
+      + ` data-tip="${att(HELP.insert)}">+ row</button>`
+      + `<button class="btn tiny danger" data-del="${att(sheet)}" data-row="${r.__row}"`
+      + ` data-tip="${att(HELP.del)}">Delete</button></td>${tds}</tr>`;
   }).join("");
   return `<div class="scrollx tall"><table class="data-t" data-sheet="${att(sheet)}">`
     + `<thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
@@ -1602,12 +1690,23 @@ function renderOverall(){
     if (run >= M.MINM) runs++;
   }
   const tiles = [
-    ["Projects in view", pids.length, `of ${Object.keys(M.projects).length} in the file`, ""],
-    ["People in view", sids.length, `of ${Object.keys(M.people).length} in the file`, ""],
-    ["Total demand", fmt(total), `${unitLabel()}-months over ${G.length} months`, ""],
-    ["Over-allocated", over, `person-months above ${M.OVER.toFixed(2)} FTE`, "over"],
-    ["Under-allocation runs", runs, `${M.MINM}+ months below ${M.UNDER.toFixed(2)} FTE`, "under"],
-  ].map(([l,v,s,c]) => `<div class="tile ${c}"><div class="tl">${l}</div>`
+    ["Projects in view", pids.length, `of ${Object.keys(M.projects).length} in the file`, "",
+     "Projects matching the current filters that draw resource somewhere in the horizon. Change the "
+     + "filters or the horizon and this moves."],
+    ["People in view", sids.length, `of ${Object.keys(M.people).length} in the file`, "",
+     "People holding at least one assignment on a project in view."],
+    ["Total demand", fmt(total), `${unitLabel()}-months over ${G.length} months`, "",
+     `The sum of every monthly figure in view. One ${unitLabel()}-month is one person working a full `
+     + `month. Table A and table B are the same numbers aggregated differently, so their totals agree.`],
+    ["Over-allocated", over, `person-months above ${M.OVER.toFixed(2)} FTE`, "over",
+     `How many person-months exceed the ceiling of ${M.OVER.toFixed(2)} FTE. The threshold is ABSOLUTE — `
+     + "it is not scaled by anyone's capacity."],
+    ["Under-allocation runs", runs, `${M.MINM}+ months below ${M.UNDER.toFixed(2)} FTE`, "under",
+     `Stretches of ${M.MINM} or more consecutive months below ${M.UNDER.toFixed(2)} FTE. Counted as RUNS, `
+     + "not months — three separate amber cells would look like three problems. A month at zero breaks a "
+     + "run rather than continuing it: somebody with no assignments is unassigned, not under-allocated."],
+  ].map(([l,v,s,c,h]) => `<div class="tile ${c}" data-tip="${att(`<b>${l}</b><br>${h}`)}">`
+    + `<div class="tl">${l}</div>`
     + `<div class="tv">${c==="over"?"&#9650; ":c==="under"?"&#9660; ":""}${v}</div>`
     + `<div class="ts">${s}</div></div>`).join("");
 
@@ -1946,6 +2045,44 @@ function rawToRows(sheet){
   return out;
 }
 
+/** V-17: a row that is still referenced cannot be deleted, and a delete NEVER cascades.
+ *  Losing fourteen assignments to one keystroke is unrecoverable in a way that a
+ *  cascaded rename is not - which is why editing an identifier cascades and this does
+ *  the opposite. The deletion itself is provisional like any other change. */
+function deleteRow(sheet, rowNum){
+  const M = S.model;
+  const rows = M.raw[sheet];
+  const i = rows.findIndex(r => r.__row === rowNum);
+  if (i < 0) return;
+  const r = rows[i];
+  const key = KEY_COL[sheet], val = r[key];
+
+  if (OWNER[key] === sheet && val && REFS[key]){
+    const by = {};
+    for (const [s2, c2] of REFS[key]){
+      const n = M.raw[s2].filter(x => x[c2] === val).length;
+      if (n) by[s2] = n;
+    }
+    const total = Object.values(by).reduce((a, b) => a + b, 0);
+    if (total){
+      showBanner("bad", `${val} cannot be deleted — ${total} row(s) still refer to it: `
+        + `${Object.entries(by).map(([s2, n]) => `${n} in ${s2}`).join(", ")}. `
+        + `Delete or re-point those first. A delete is never cascaded, because losing them to `
+        + `one keystroke could not be undone.`);
+      return;
+    }
+  }
+
+  beginEditSession();
+  rows.splice(i, 1);
+  for (const k of [...S.editedCells]) if (k.startsWith(`${sheet}|${rowNum}|`)) S.editedCells.delete(k);
+  S.pending.push({sheet, row:rowNum, col:"(deleted row)", from:val ?? "(blank row)", to:null});
+  rebuild(true);
+  renderKeepingTab();
+  showBanner("", `Deleted ${val ? `${val} from ${sheet}` : `a blank row from ${sheet}`}. `
+    + `This is provisional — 'Leave without change' puts it back.`);
+}
+
 function exportWorkbook(){
   if (S.pending.length){
     showBanner("bad", `Export held — ${S.pending.length} change${S.pending.length===1?" is":"s are"} `
@@ -2187,6 +2324,12 @@ document.addEventListener("click", e => {
     renderKeepingTab();
     return;
   }
+  const del = e.target.closest("[data-del]");
+  if (del){
+    e.stopPropagation();
+    deleteRow(del.dataset.del, +del.dataset.row);
+    return;
+  }
   const row = e.target.closest(".data-t tbody tr");
   if (row && row.dataset.id){
     const sheet = row.closest(".data-t").dataset.sheet;
@@ -2222,24 +2365,66 @@ document.addEventListener("keydown", e => {
   }
 });
 
-// Hover pop-up: follows the cursor and flips before it runs off an edge.
+/* Information pop-up. Hover shows it transiently; CLICK PINS it so it can be read
+   without holding the mouse still - which is also what makes it usable on a touch
+   screen and from the keyboard, where there is no hover at all. Escape or a click
+   elsewhere releases the pin. */
 (function(){
   const tip = el("tip");
-  const place = e => {
+  let pinned = null, last = {x:0, y:0};
+  const place = (x, y) => {
     const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
-    let x = e.clientX + pad, y = e.clientY + pad;
-    if (x + w > innerWidth - 8) x = e.clientX - w - pad;
-    if (y + h > innerHeight - 8) y = e.clientY - h - pad;
-    tip.style.left = Math.max(8, x) + "px";
-    tip.style.top = Math.max(8, y) + "px";
+    let nx = x + pad, ny = y + pad;
+    if (nx + w > innerWidth - 8) nx = x - w - pad;
+    if (ny + h > innerHeight - 8) ny = y - h - pad;
+    tip.style.left = Math.max(8, nx) + "px";
+    tip.style.top = Math.max(8, ny) + "px";
   };
+  const show = (html, x, y, isPin) => {
+    tip.innerHTML = html + (isPin ? `<span class="tipclose">click anywhere to close</span>` : "");
+    tip.hidden = false;
+    tip.classList.toggle("pinned", !!isPin);
+    place(x, y);
+  };
+  const hide = () => { if (!pinned){ tip.hidden = true; tip.classList.remove("pinned"); } };
+
   document.addEventListener("mouseover", e => {
-    const t = e.target.closest("[data-tip]");
-    if (!t) return;
-    tip.innerHTML = t.dataset.tip; tip.hidden = false; place(e);
+    const el_ = e.target.closest("[data-tip]");
+    if (!el_ || pinned) return;
+    last = {x:e.clientX, y:e.clientY};
+    show(el_.dataset.tip, last.x, last.y, false);
   });
-  document.addEventListener("mousemove", e => { if (!tip.hidden) place(e); });
-  document.addEventListener("mouseout", e => { if (e.target.closest("[data-tip]")) tip.hidden = true; });
+  document.addEventListener("mousemove", e => {
+    last = {x:e.clientX, y:e.clientY};
+    if (!tip.hidden && !pinned) place(last.x, last.y);
+  });
+  document.addEventListener("mouseout", e => { if (e.target.closest("[data-tip]")) hide(); });
+
+  document.addEventListener("click", e => {
+    const el_ = e.target.closest("[data-tip]");
+    // A control with its own job keeps it; the pop-up is explanation, not the action.
+    const isControl = e.target.closest("button, a, select, input, summary, [contenteditable='true']");
+    if (el_ && !isControl){
+      e.stopPropagation();
+      pinned = (pinned === el_) ? null : el_;
+      if (pinned) show(el_.dataset.tip, e.clientX, e.clientY, true);
+      else hide();
+      return;
+    }
+    if (pinned){ pinned = null; tip.hidden = true; tip.classList.remove("pinned"); }
+  }, true);
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && pinned){ pinned = null; tip.hidden = true; tip.classList.remove("pinned"); }
+  });
+  // Keyboard users get the same information on focus, since they never hover.
+  document.addEventListener("focusin", e => {
+    const el_ = e.target.closest("[data-tip]");
+    if (!el_ || pinned) return;
+    const r = el_.getBoundingClientRect();
+    show(el_.dataset.tip, r.left + r.width / 2, r.bottom, false);
+  });
+  document.addEventListener("focusout", e => { if (e.target.closest("[data-tip]")) hide(); });
 })();
 
 document.addEventListener("change", e => {
