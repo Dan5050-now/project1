@@ -58,6 +58,8 @@ h2{font-size:14.5px;margin:0 0 3px}
 .btn.primary[disabled],.btn[disabled]{opacity:.45;cursor:not-allowed}
 .btn.tiny{font-size:10.5px;padding:1px 7px;border-radius:6px}
 .btn.tiny.danger{margin-left:4px}
+.vtog{margin-left:10px;font-weight:400}
+.vtog .btn.tiny.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn.tiny.danger:hover{border-color:var(--crit);color:var(--crit)}
 td.ins,th.ins{white-space:nowrap}
 .btn.reset{border-color:var(--accent);color:var(--accent)}
@@ -227,6 +229,21 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
  color:var(--ink);border:1px solid var(--base);border-radius:8px;padding:8px 10px;
  font-size:11.5px;line-height:1.5;box-shadow:0 6px 22px rgba(0,0,0,.18)}
 .tip b{font-weight:650}.tip .tr{color:var(--muted);font-size:10.5px}
+/* Type-ahead. Anchored to the cell, filtered as you type, arrow keys and Enter to
+   choose. It exists because the valid vocabulary lives in the workbook, and nobody
+   should have to remember it or open the Lists sheet to check. */
+.sugg{position:fixed;z-index:60;min-width:190px;max-width:340px;max-height:230px;overflow:auto;
+ background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:4px;
+ box-shadow:0 8px 26px rgba(0,0,0,.22);font-size:12px}
+.sugg .s{padding:4px 8px;border-radius:5px;cursor:pointer;white-space:nowrap;
+ overflow:hidden;text-overflow:ellipsis}
+.sugg .s[aria-selected="true"],.sugg .s:hover{background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.sugg .s mark{background:none;color:var(--accent);font-weight:700}
+.sugg .hint{padding:4px 8px;color:var(--muted);font-size:10.5px;border-top:1px solid var(--ring);
+ margin-top:3px}
+.drv{font-weight:400;font-size:9px;color:var(--muted);border:1px solid var(--ring);
+ border-radius:8px;padding:0 5px;margin-left:4px}
+td.drvcell{font-style:italic}
 .tip.pinned{pointer-events:auto;border-color:var(--accent);box-shadow:0 8px 28px rgba(0,0,0,.24)}
 .tip .tipclose{display:block;margin-top:6px;padding-top:5px;border-top:1px solid var(--ring);
  color:var(--muted);font-size:10px}
@@ -320,6 +337,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 </div>
 
 <div id="tip" class="tip" hidden></div>
+<div id="sugg" class="sugg" hidden role="listbox"></div>
 
 <dialog id="report">
   <div class="dlg-h"><strong>Validation findings</strong>
@@ -329,7 +347,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.4";
+const APP_VERSION = "1.5";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -338,8 +356,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.5.xlsx",           ver:"2.5",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.5 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.6.xlsx",           ver:"2.6",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.6 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -1154,6 +1172,7 @@ const S = {
   f:{type:"All", phase:"All", proj:"All", pers:"All", role:"All", dept:"All"},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null,
   pending:[], saved:0, snapshot:null, editedCells:new Set(), headers:{},
+  genView:{pws:"matrix", rf:"matrix", lists:"matrix"},
 };
 
 function activeProjects(){
@@ -1642,21 +1661,69 @@ function tablePeople(sids){
 }
 
 /** Editable data table. Every cell is editable; edits are validated on entry. */
-function dataTable(sheet, rows, cols, selKey, selVal){
-  const head = `<th class="ins" data-tip="${att(HELP.rowactions)}">row</th>`
+/** Value suggestions for a column: the Lists sheet where the column is backed by one,
+ *  otherwise the distinct values already present in that column. The second half is what
+ *  covers project_category, department and the rest - columns with no formal list but a
+ *  real vocabulary that a typist should not have to remember or re-invent. */
+const LIST_FOR = {
+  project_type:"project_type", clinical_phase:"clinical_phase",
+  outsourcing_type:"outsourcing_type", status:"project_status",
+  EDC_setup:"setup_party", DataReviewSystem_setup:"setup_party",
+  RBQM_setup:"setup_party", DM_conduct:"setup_party",
+  EDC_system:"EDC_system", DataReviewSystem:"DataReviewSystem", RBQM_system:"RBQM_system",
+  milestone_name:"milestone_name",
+};
+function suggestionsFor(sheet, col, row){
+  const M = S.model;
+  const named = LIST_FOR[col];
+  if (named && M.lists[named]) return M.lists[named].map(String);
+  // period_name and role_name depend on the project's TYPE, so the valid set is not one
+  // list but two. Narrow it by the row's own project where that is knowable.
+  if (col === "period_name" || col === "role_name"){
+    const pid = row && (row.project_id ||
+      (row.assignment_id && (M.assignments.find(a => a.assignment_id === row.assignment_id) || {}).project_id));
+    const ty = pid && (M.projects[pid] || {}).project_type;
+    const kind = col === "period_name" ? "period_name" : "role";
+    if (ty) return (M.lists[`${kind}_${CLINICAL_TYPES.has(ty) ? "clinical" : "others"}`] || []).map(String);
+    return [...(M.lists[`${kind}_clinical`] || []), ...(M.lists[`${kind}_others`] || [])].map(String);
+  }
+  if (SHEET_COLS[sheet] && (SHEET_COLS[sheet].date.includes(col))) return [];
+  const seen = new Set();
+  for (const r of (M.raw[sheet] || [])){
+    const v = r[col];
+    if (v !== null && v !== undefined && !(v instanceof Date) && String(v).trim() !== "")
+      seen.add(String(v));
+  }
+  return seen.size > 1 && seen.size <= 400 ? [...seen].sort() : [];
+}
+
+/** One editable table.
+ *  `derived` maps a display-only column to a lookup - shown for context, never typed
+ *  into, because the master row is the truth and V-13 exists to say so. */
+function dataTable(sheet, rows, cols, selKey, selVal, derived){
+  derived = derived || {};
+  const head = `<th class="ins" data-tip="${att(HELP.rowactions)}">Row</th>`
     + cols.map(c => {
         const h = COLUMN_HELP[c];
-        return `<th${h ? ` class="hasinfo" data-tip="${att(`<b>${esc(c)}</b><br>${h}`)}"` : ""}>`
-          + `${esc(c)}</th>`;
+        const d = derived[c] ? " · shown for context, looked up from its master row and not editable" : "";
+        return `<th${h || d ? ` class="hasinfo" data-tip="${att(`<b>${esc(c)}</b><br>${(h||"")}${d}`)}"` : ""}>`
+          + `${esc(c)}${derived[c] ? ' <span class="drv">lookup</span>' : ""}</th>`;
       }).join("");
   const body = rows.map(r => {
     const sel = (selKey && r[selKey] === selVal) ? ' class="sel"' : "";
     const tds = cols.map(c => {
+      if (derived[c]){
+        const dv = derived[c](r) ?? "";
+        return `<td class="muted drvcell" data-tip="${att(`<b>${esc(c)}</b><br>${esc(dv) || "&mdash;"}`
+          + `<br><span class="tr">looked up, not stored on this row</span>`)}">${esc(dv)}</td>`;
+      }
       const v = r[c];
       const disp = v instanceof Date ? ymd(v) : (v === null || v === undefined ? "" : v);
-      const marked = S.editedCells.has(`${sheet}|${r.__row}|${c}`) ? " class=\"edited\"" : "";
-      return `<td${marked} contenteditable="true" data-sheet="${att(sheet)}" data-row="${r.__row}" `
-        + `data-col="${att(c)}">${esc(disp)}</td>`;
+      const marked = S.editedCells.has(`${sheet}|${r.__row}|${c}`) ? " edited" : "";
+      const help = COLUMN_HELP[c] ? `<br><span class="tr">${esc(COLUMN_HELP[c])}</span>` : "";
+      const tip = `<b>${esc(c)}</b><br>${disp === "" ? "<i>empty</i>" : esc(disp)}${help}`;
+      return `<td class="cell${marked}" contenteditable="true" data-sheet="${att(sheet)}" `
+        + `data-row="${r.__row}" data-col="${att(c)}" data-tip="${att(tip)}">${esc(disp)}</td>`;
     }).join("");
     return `<tr${sel} data-id="${att(r[selKey] ?? "")}">`
       + `<td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="${r.__row}"`
@@ -1664,8 +1731,12 @@ function dataTable(sheet, rows, cols, selKey, selVal){
       + `<button class="btn tiny danger" data-del="${att(sheet)}" data-row="${r.__row}"`
       + ` data-tip="${att(HELP.del)}">Delete</button></td>${tds}</tr>`;
   }).join("");
+  const empty = rows.length ? "" :
+    `<tr><td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="0" `
+    + `data-tip="${att(HELP.insert)}">+ row</button></td>`
+    + `<td class="muted" colspan="${cols.length}">No rows. Use <strong>+ row</strong> to add one.</td></tr>`;
   return `<div class="scrollx tall"><table class="data-t" data-sheet="${att(sheet)}">`
-    + `<thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+    + `<thead><tr>${head}</tr></thead><tbody>${body}${empty}</tbody></table></div>`;
 }
 
 /* ============================================================ 11. tab rendering */
@@ -1782,13 +1853,14 @@ function projDetail(pid){
       <div class="panel"><h2>Periods — ${esc(pr.project_name)}</h2>
         <p class="cap">${derived ? "Derived from the milestones above." : "As entered in the workbook."}
           Names are unique within a project, so <code>project_id + period_name</code> identifies a row.</p>
-        <div class="scrollx tall"><table class="data-t"><thead><tr><th>seq</th><th>period</th>
-          <th>start</th><th>end</th><th>weight</th><th>source</th></tr></thead><tbody>
-          ${per.map(p => `<tr><td>${p.period_seq}</td><td>${esc(p.period_name)}</td>`
-            + `<td>${ymd(p.period_start)}</td><td>${ymd(p.period_end)}</td>`
-            + `<td class="num">${(num(p.weight)||0).toFixed(2)}</td>`
-            + `<td class="muted">${p.__derived ? "derived from milestones" : "from the workbook"}</td></tr>`).join("")}
-          </tbody></table></div></div>
+        ${derived
+          ? `<p class="note">These periods were DERIVED from the milestones above because the workbook
+             carries none for this project. Adding a row here starts a hand-entered set, which the
+             application will then use as given.</p>`
+          : ""}
+        ${dataTable("ProjectPeriod", M.raw.ProjectPeriod.filter(x => x.project_id === pid || x.__new),
+          ["project_id","period_name","period_seq","period_start","period_end","weight","note_1"])}
+        </div>
     </div>`;
 }
 
@@ -1821,13 +1893,24 @@ function persDetail(sid){
       <div class="scrollx">${chartPersonStrip(sid)}</div></div>
     <div class="two">
       <div class="panel"><h2>Assignments — ${esc(sid)}</h2>
-        ${dataTable("Assignment", asg, ["assignment_id","project_id","role_name",
-          "assign_start_date","assign_end_date","person_weight"])}</div>
+        ${dataTable("Assignment", asg,
+          ["assignment_id","project_id","project_name","role_name",
+           "assign_start_date","assign_end_date","person_weight"], null, null,
+          {project_name: r => (M.projects[r.project_id] || {}).project_name})}</div>
       <div class="panel"><h2>Weight overrides</h2>
         <p class="cap">Replaces person_weight for the window it covers. One assignment may carry
           several non-overlapping windows.</p>
-        ${dataTable("PersonPeriodWeight", ppw, ["assignment_id","period_start","period_end",
-          "weight_override","reason"])}</div>
+        ${dataTable("PersonPeriodWeight", ppw,
+          ["assignment_id","project_name","role_name","period_start","period_end",
+           "weight_override","reason"], null, null,
+          {project_name: r => {
+             const a = M.assignments.find(x => x.assignment_id === r.assignment_id);
+             return a ? (M.projects[a.project_id] || {}).project_name : "";
+           },
+           role_name: r => {
+             const a = M.assignments.find(x => x.assignment_id === r.assignment_id);
+             return a ? a.role_name : "";
+           }})}</div>
     </div>`;
 }
 
@@ -1857,35 +1940,65 @@ function wmatrix(rows, keyOf, labelOf, colKey, valKey){
     + `<tbody>${body}</tbody></table>`;
 }
 
+/* The two weight sheets and the value lists are shown as MATRICES because that is how
+   they read - 289 role-factor rows flat is a list nobody scans, and a role's shape
+   across the periods is the point of keying it that way. But a matrix cannot carry row
+   actions: one matrix row is six or seven workbook rows. So each has both views, and
+   the toggle decides which. Reading and editing want different shapes; this stops one
+   compromising the other. */
+function viewToggle(id, label){
+  const rows = S.genView[id] === "rows";
+  return `<span class="vtog" data-view="${id}">`
+    + `<button class="btn tiny${rows ? "" : " on"}" data-setview="${id}|matrix">Matrix</button>`
+    + `<button class="btn tiny${rows ? " on" : ""}" data-setview="${id}|rows">Rows &amp; editing</button>`
+    + `</span>`;
+}
+
 function renderGenTab(){
   const M = S.model;
-  const pws = wmatrix(M.raw.PeriodWeightStandard,
-    r => [r.project_type, r.clinical_phase], k => { const p = k.split(" · "); return [p[1], p[0]]; },
-    "period_name", "weight");
-  const ct = M.raw.RoleFactor.filter(r => CLINICAL_TYPES.has(r.project_type));
-  const ot = M.raw.RoleFactor.filter(r => !CLINICAL_TYPES.has(r.project_type));
-  const rfCT = wmatrix(ct, r => [r.project_type, r.clinical_phase, r.role_name],
-    k => { const p = k.split(" · "); return [p[2], p[0] + " · " + p[1]]; },
-    "period_name", "role_factor");
-  const rfOT = wmatrix(ot, r => [r.project_type, r.role_name],
-    k => { const p = k.split(" · "); return [p[1], p[0]]; }, "period_name", "role_factor");
-  const lists = Object.entries(M.lists).map(([k, v]) =>
-    `<tr><td>${esc(k)}</td><td class="vals">${esc(v.join(", "))}</td>`
-    + `<td class="num">${v.length}</td></tr>`).join("");
+  const pwsRows = M.raw.PeriodWeightStandard, rfRows = M.raw.RoleFactor;
+  const pws = S.genView.pws === "rows"
+    ? dataTable("PeriodWeightStandard", pwsRows,
+        ["project_type","clinical_phase","period_name","weight","note_1"])
+    : `<div class="scrollx tall">${wmatrix(pwsRows,
+        r => [r.project_type, r.clinical_phase], k => { const p = k.split(" · "); return [p[1], p[0]]; },
+        "period_name", "weight")}</div>`;
+
+  const ct = rfRows.filter(r => CLINICAL_TYPES.has(r.project_type));
+  const ot = rfRows.filter(r => !CLINICAL_TYPES.has(r.project_type));
+  const rf = S.genView.rf === "rows"
+    ? dataTable("RoleFactor", rfRows,
+        ["project_type","clinical_phase","period_name","role_name","role_factor","role_note"])
+    : `<div class="scrollx tall">${wmatrix(ct, r => [r.project_type, r.clinical_phase, r.role_name],
+        k => { const p = k.split(" · "); return [p[2], p[0] + " · " + p[1]]; },
+        "period_name", "role_factor")}</div>
+       <h2 style="margin-top:14px">Role factors — Others</h2>
+       <div class="scrollx">${wmatrix(ot, r => [r.project_type, r.role_name],
+        k => { const p = k.split(" · "); return [p[1], p[0]]; }, "period_name", "role_factor")}</div>`;
+
+  const grouped = {};
+  for (const r of M.raw.Lists) (grouped[r.list_name] ||= []).push(String(r.value));
+  const lists = S.genView.lists === "rows"
+    ? dataTable("Lists", M.raw.Lists, ["list_name","value","note_1"])
+    : `<div class="scrollx tall"><table class="data-t"><thead><tr><th>list_name</th><th>values</th>
+        <th>n</th></tr></thead><tbody>${Object.entries(grouped).map(([k, v]) =>
+        `<tr><td>${esc(k)}</td><td class="vals">${esc(v.join(", "))}</td>`
+        + `<td class="num">${v.length}</td></tr>`).join("")}</tbody></table></div>`;
 
   el("t-gen").innerHTML =
-    `<div class="panel"><h2>Standard period weights <span class="scope">PeriodWeightStandard</span></h2>
+    `<div class="panel"><h2>Standard period weights <span class="scope">PeriodWeightStandard</span>
+        ${viewToggle("pws")}</h2>
       <p class="cap">The weight every clinical trial period is multiplied by, selected by the project's
-        type and clinical phase. Shown as a matrix because it is a standard, and standards are read
-        across. <strong>Others</strong> projects take hand-entered weights instead.</p>
-      <div class="scrollx tall">${pws}</div></div>
-    <div class="panel"><h2>Role factors — clinical trials <span class="scope">RoleFactor</span></h2>
+        type and clinical phase. The matrix is how a standard reads — across, not down. Switch to
+        <strong>Rows &amp; editing</strong> to add, change or delete individual rows.
+        <strong>Others</strong> projects take hand-entered weights instead.</p>
+      ${pws}</div>
+    <div class="panel"><h2>Role factors <span class="scope">RoleFactor</span>
+        ${viewToggle("rf")}</h2>
       <p class="cap">What one person in this role costs the project per month, before their own weight
-        and the period weight are applied. Keyed on type, phase, period and role — read a row across to
-        see how a role's burden moves over the life of a project.</p>
-      <div class="scrollx tall">${rfCT}</div></div>
-    <div class="panel"><h2>Role factors — Others <span class="scope">RoleFactor</span></h2>
-      <div class="scrollx">${rfOT}</div></div>
+        and the period weight. Keyed on type, phase, period and role — read a row across to see how a
+        role's burden moves over the life of a project. ${rfRows.length} rows in all.</p>
+      ${rf}</div>
     <div class="two">
       <div class="panel"><h2>Configuration <span class="scope">Config</span></h2>
         <p class="cap">The thresholds and settings the whole page reads. Both allocation thresholds are
@@ -1895,11 +2008,11 @@ function renderGenTab(){
           <div class="ctl"><label>Display unit</label><select id="unitSel">
             <option${M.UNIT!=="hours"?" selected":""}>FTE</option>
             <option${M.UNIT==="hours"?" selected":""}>hours</option></select></div></div></div>
-      <div class="panel"><h2>Value lists <span class="scope">Lists</span></h2>
-        <p class="cap">What each list-typed column will accept. A value outside its list is kept and
-          reported (V-11), never dropped. Read-only.</p>
-        <div class="scrollx tall"><table class="data-t"><thead><tr><th>list_name</th><th>values</th>
-          <th>n</th></tr></thead><tbody>${lists}</tbody></table></div></div>
+      <div class="panel"><h2>Value lists <span class="scope">Lists</span>
+          ${viewToggle("lists")}</h2>
+        <p class="cap">What each list-typed column will accept — and what the type-ahead offers you
+          while editing. A value outside its list is kept and reported (V-11), never dropped.</p>
+        ${lists}</div>
     </div>`;
 }
 
@@ -2307,6 +2420,13 @@ document.addEventListener("click", e => {
     S.expanded.has(k) ? S.expanded.delete(k) : S.expanded.add(k);
     renderKeepingTab(); return;
   }
+  const vt = e.target.closest("[data-setview]");
+  if (vt){
+    const [id, mode] = vt.dataset.setview.split("|");
+    S.genView[id] = mode;
+    renderGenTab();
+    return;
+  }
   const ins = e.target.closest("[data-ins]");
   if (ins){
     e.stopPropagation();
@@ -2350,20 +2470,97 @@ document.addEventListener("click", e => {
 
 document.addEventListener("focusin", e => {
   const td = e.target.closest('td[contenteditable="true"]');
-  if (td) td.dataset.orig = td.textContent;
+  if (td){ td.dataset.orig = td.textContent; SUGG.open(td); }
 });
 document.addEventListener("focusout", e => {
   const td = e.target.closest('td[contenteditable="true"]');
   if (!td) return;
+  setTimeout(() => { if (!SUGG.holding) SUGG.close(); }, 120);
   const now = td.textContent;
   if (now === td.dataset.orig) return;
   applyEdit(td.dataset.sheet, +td.dataset.row, td.dataset.col, now, td);
 });
 document.addEventListener("keydown", e => {
-  if (e.key === "Enter" && e.target.closest('td[contenteditable="true"]')){
-    e.preventDefault(); e.target.blur();
-  }
+  const td = e.target.closest('td[contenteditable="true"]');
+  if (!td) return;
+  if (SUGG.key(e)) return;                       // the list takes the key first
+  if (e.key === "Enter"){ e.preventDefault(); SUGG.close(); td.blur(); }
+  if (e.key === "Escape"){ td.textContent = td.dataset.orig ?? ""; SUGG.close(); td.blur(); }
 });
+// A pop-up over the cell you are typing into is in the way, so it goes.
+document.addEventListener("input", e => {
+  if (e.target.closest('td[contenteditable="true"]')){ el("tip").hidden = true; }
+});
+
+/* ---- type-ahead ---- */
+const SUGG = (() => {
+  const box = el("sugg");
+  let cell = null, items = [], idx = -1;
+  const api = {holding:false};
+
+  function render(q){
+    const ql = q.trim().toLowerCase();
+    const hits = (ql ? items.filter(v => v.toLowerCase().includes(ql)) : items).slice(0, 60);
+    if (!hits.length){ box.hidden = true; return; }
+    idx = Math.min(Math.max(idx, 0), hits.length - 1);
+    box.innerHTML = hits.map((v, i) => {
+      const at = ql ? v.toLowerCase().indexOf(ql) : -1;
+      const shown = at < 0 ? esc(v)
+        : esc(v.slice(0, at)) + "<mark>" + esc(v.slice(at, at + ql.length)) + "</mark>"
+          + esc(v.slice(at + ql.length));
+      return `<div class="s" role="option" data-v="${att(v)}" aria-selected="${i === idx}">${shown}</div>`;
+    }).join("") + `<div class="hint">${hits.length}${hits.length === 60 ? "+" : ""} match`
+      + `${hits.length === 1 ? "" : "es"} &middot; \u2191\u2193 move &middot; Enter choose &middot; Esc close</div>`;
+    const r = cell.getBoundingClientRect();
+    box.hidden = false;
+    box.style.left = Math.max(8, Math.min(r.left, innerWidth - box.offsetWidth - 8)) + "px";
+    box.style.top = (r.bottom + box.offsetHeight > innerHeight - 8
+      ? Math.max(8, r.top - box.offsetHeight - 4) : r.bottom + 4) + "px";
+  }
+
+  api.open = td => {
+    cell = td; idx = -1;
+    const row = (S.model.raw[td.dataset.sheet] || []).find(r => r.__row === +td.dataset.row);
+    items = suggestionsFor(td.dataset.sheet, td.dataset.col, row);
+    if (!items.length){ box.hidden = true; cell = null; return; }
+    // Opening shows the WHOLE vocabulary. Filtering by the cell's existing value would
+    // narrow it to that one value, which is the opposite of what a chooser is for.
+    render("");
+  };
+  api.close = () => { box.hidden = true; cell = null; idx = -1; api.holding = false; };
+  api.key = e => {
+    if (!cell || box.hidden) return false;
+    const opts = [...box.querySelectorAll(".s")];
+    if (!opts.length) return false;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp"){
+      e.preventDefault();
+      idx = (idx + (e.key === "ArrowDown" ? 1 : -1) + opts.length) % opts.length;
+      opts.forEach((o, i) => o.setAttribute("aria-selected", String(i === idx)));
+      opts[idx].scrollIntoView({block:"nearest"});
+      return true;
+    }
+    if (e.key === "Enter" && idx >= 0){ e.preventDefault(); choose(opts[idx].dataset.v); return true; }
+    if (e.key === "Escape"){ e.preventDefault(); api.close(); return true; }
+    return false;
+  };
+  function choose(v){
+    const td = cell;
+    api.close();
+    td.textContent = v;
+    td.blur();                                   // blur commits through the normal edit path
+  }
+  box.addEventListener("mousedown", e => {       // before focusout, or the cell is already gone
+    const s = e.target.closest(".s");
+    if (!s) return;
+    e.preventDefault(); api.holding = true; choose(s.dataset.v); api.holding = false;
+  });
+  document.addEventListener("input", e => {
+    const td = e.target.closest('td[contenteditable="true"]');
+    if (td && td === cell) render(td.textContent);
+  });
+  addEventListener("scroll", () => api.close(), true);
+  return api;
+})();
 
 /* Information pop-up. Hover shows it transiently; CLICK PINS it so it can be read
    without holding the mouse still - which is also what makes it usable on a touch

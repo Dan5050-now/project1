@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.5"
-DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.4 - Gate 4 refinements rounds 1-4."
+DOC_VERSION = "2.6"
+DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -366,7 +366,19 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.5", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.6", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 refinements round 5, application v1.5. Five changes, none touching a requirement, rule, "
+     "calculation or schema. (1) and (2) The Assignments and Weight-overrides tables carry the project "
+     "name, and the overrides table also the role - looked up from the master row and marked as such, "
+     "since an identifier alone does not tell a reader which project they are looking at. (3) Every data "
+     "cell shows its value and its column's meaning on hover or focus. (4) The Periods table and the "
+     "General-assumptions tables gain row actions. The two weight sheets and the value lists keep their "
+     "matrix view for reading and gain a rows view for editing, because a matrix row is six or seven "
+     "workbook rows and cannot carry a per-row action. (5) Type-ahead on every column with a vocabulary: "
+     "the Lists sheet where the column is backed by one, the distinct values already present where it is "
+     "not, and the type-dependent set for period_name and role_name.",
+     "Issued for review"],
+    ["2.5", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 refinements round 4, application v1.4. (1) Information pop-ups: every column heading on the "
      "source-data tabs explains what its column is for, and the summary tiles, month headings and project "
      "type pills explain what they count. They open on HOVER and PIN on CLICK, which is also what makes "
@@ -1170,7 +1182,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-4 applied (app v1.4); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-5 applied (app v1.5); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1248,7 +1260,8 @@ align = [
     ["v2.2", "v1.0", "application v1.1", "5", "2026-08-02", "Gate 4 refinements round 1: three UI changes."],
     ["v2.3", "v1.0", "application v1.2", "5", "2026-08-02", "Gate 4 round 2: the application carries its own document provenance."],
     ["v2.4", "v1.0", "application v1.3", "5", "2026-08-02", "Gate 4 round 3: sticky headers, year axis, provisional editing."],
-    ["v2.5", "v1.0", "application v1.4", "5", DOC_DATE, "Gate 4 round 4: information pop-ups and row deletion. 4.9 continues."],
+    ["v2.5", "v1.0", "application v1.4", "5", "2026-08-02", "Gate 4 round 4: information pop-ups and row deletion."],
+    ["v2.6", "v1.0", "application v1.5", "5", DOC_DATE, "Gate 4 round 5: lookup columns, cell values, row actions everywhere, type-ahead. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
