@@ -8,7 +8,7 @@ information hierarchy before any application code is written (plan sheet 08, tas
 
     python tools/build_prototype.py
 
-Output: app/PRAP_Prototype_v0.6.html
+Output: app/PRAP_Prototype_v0.7.html
 """
 
 import calendar
@@ -19,10 +19,10 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.7.xlsx"
-OUT = ROOT / "app" / "PRAP_Prototype_v0.6.html"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.8.xlsx"
+OUT = ROOT / "app" / "PRAP_Prototype_v0.7.html"
 
-APP_VERSION = "prototype v0.6"
+APP_VERSION = "prototype v0.7"
 SCHEMA_EXPECTED = 5
 WIN_FROM, WIN_TO = (2027, 1), (2027, 12)      # the 12 months the mock-up shows
 
@@ -1067,7 +1067,7 @@ document.querySelectorAll('nav button').forEach(function(b){
 
 html = f"""<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PRAP — UI prototype v0.6</title>
+<title>PRAP — UI prototype v0.7</title>
 <style>{CSS}</style>
 <div class="proto">PROTOTYPE — layout and components only. Figures are a fixed snapshot;
 nothing on this page loads, calculates or exports.</div>
@@ -1075,7 +1075,7 @@ nothing on this page loads, calculates or exports.</div>
 <header>
   <h1>Project Resource Assignment Program</h1>
   <span class="vers">{APP_VERSION} · expects source schema v{SCHEMA_EXPECTED}</span>
-  <span class="file">PRAP_SourceData_Dummy_v1.7.xlsx · loaded 2026-08-01 09:14
+  <span class="file">PRAP_SourceData_Dummy_v1.8.xlsx · loaded 2026-08-01 09:14
     <span class="tz">(GMT+9, KST)</span></span>
   <button class="btn">Load workbook</button>
   <button class="btn primary">Export</button>

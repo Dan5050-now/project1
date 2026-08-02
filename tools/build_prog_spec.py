@@ -14,10 +14,10 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "0.7"
-DOC_STATUS = "Draft for review - conduct stretches named apart; ProjectPeriod natural key (R-11)"
+DOC_VERSION = "0.8"
+DOC_STATUS = "Draft for review - PersonPeriodWeight key explained; two validation gaps closed (R-12)"
 DOC_DATE = "2026-08-01"
-PLAN = "PRAP_Development_Plan_v1.8.xlsx"
+PLAN = "PRAP_Development_Plan_v1.9.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
 
@@ -116,7 +116,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Governing document", f"{PLAN} - changes R-05..R-11 against the v1.3 baseline, awaiting signature"),
+    ("Governing document", f"{PLAN} - changes R-05..R-12 against the v1.3 baseline, awaiting signature"),
     ("Schema version specified", "5"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
@@ -155,7 +155,7 @@ guide = [
     ("01_Version_History", "Change log."),
     ("02_Scope", "What is specified here, what is deferred to Step 3, and the source documents."),
     ("03_Data_Schema", "The parse contract: every sheet, column, type and coercion rule."),
-    ("04_Validation", "V-01..V-23 with trigger, severity and the exact message shown."),
+    ("04_Validation", "V-01..V-24 with trigger, severity and the exact message shown."),
     ("05_Calculation", "Period derivation, the load formula, aggregation and the two thresholds."),
     ("06_UI_Spec", "The four tabs, their components, filters and states."),
     ("07_Editing_IO", "Edit buffer, dirty state, cascading identifier edits, import and export."),
@@ -167,7 +167,16 @@ r = table(ws, r, ["Sheet", "Contents"], guide, [24, 86], wrap_cols=(2,))
 
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
-rows = [["0.7", DOC_DATE, "Claude Code", "Dan",
+rows = [["0.8", DOC_DATE, "Claude Code", "Dan",
+         "Plan change R-12, from a reviewer question: why does the PersonPeriodWeight key include "
+         "period_start when assignment_id is unique in Assignment? The key is unchanged and sheet 03 "
+         "now says why - PersonPeriodWeight is a CHILD of Assignment and one assignment may carry "
+         "several non-overlapping windows, so assignment_id alone would cap overrides at one per "
+         "assignment. Answering it exposed two rules specified but never implemented: V-06's "
+         "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
+         "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
+         "gains an assignment with two windows. No schema change.", "Draft"],
+        ["0.7", DOC_DATE, "Claude Code", "Dan",
          "Plan change R-11 applied. The conduct phase is split by NAME: 'Conduct (interim)' where the "
          "project has an interim DB lock and the stretch runs before it, 'Conduct (final)' after it or "
          "where there is no interim lock. Period names are therefore unique within a project, and "
@@ -224,9 +233,9 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 
 r = section(ws, r, "Source documents")
 src = [
-    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-11 awaiting signature. 69 requirements, 23 validation rules, 11 decisions, source schema version 5.", "Governs this document"],
+    [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes R-05..R-12 awaiting signature. 69 requirements, 24 validation rules, 11 decisions, source schema version 5.", "Governs this document"],
     ["templates/PRAP_SourceData_Template_v1.6.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
-    ["templates/PRAP_SourceData_Dummy_v1.7.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
+    ["templates/PRAP_SourceData_Dummy_v1.8.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
     ["docs/STEP2_OPEN_POINTS.md", "Points raised while building the template.", "Carried into sheet 10"],
 ]
@@ -288,11 +297,49 @@ sheets = [
     ["RoleFactor", "project_type + clinical_phase + period_name + role_name", "-", "6", "289 rows after R-11 added a seventh clinical period. Keyed on all four so a role's burden can vary across the life of a project (R-10). clinical_phase is EMPTY on the nine 'Others' rows - the lookup must match null to null, not fall through."],
     ["Person", "person_id", "-", "12", "Master."],
     ["Assignment", "assignment_id", "Person, Project, RoleFactor", "11", "One row per person + project + role."],
-    ["PersonPeriodWeight", "assignment_id + period_start", "Assignment", "5", "Optional. Overrides person_weight for its window."],
+    ["PersonPeriodWeight", "assignment_id + period_start", "Assignment", "5", "Optional. Overrides person_weight for its window. period_start IS part of the key: one assignment may carry several non-overlapping windows, so assignment_id alone does not identify a row. See the note below."],
     ["Lists", "list_name + value", "-", "3", "Value lists, long format. Each list occupies a contiguous block."],
     ["Config", "parameter", "-", "3", "Thresholds and settings."],
 ]
 r = table(ws, r, ["Sheet", "Key", "References", "Cols", "Note"], sheets, [22, 40, 26, 7, 45], wrap_cols=(2, 5))
+
+r = section(ws, r, "Why PersonPeriodWeight is keyed on TWO columns   [R-12]")
+r = lines(ws, r, [
+    "assignment_id is unique in Assignment - it is that sheet's primary key. It is NOT unique in",
+    "PersonPeriodWeight, and it is not meant to be: this is a child table of windows, and one assignment",
+    "may carry several.",
+])
+r = code(ws, r, [
+    "  ASG-902  2026-07-01 .. 2026-09-30   0.20   part-time, parental leave",
+    "  ASG-902  2027-04-01 .. 2027-06-30   0.75   covering the start-up peak",
+    "           everything outside those windows  ->  the assignment's own person_weight",
+])
+r = lines(ws, r, [
+    "One person, one project, one role, one assignment - three different weights over its life. That is",
+    "what the table is for, and REQ-PSN-05, V-06 and the data model all assume it.",
+])
+r += 1
+r = table(ws, r, ["If the key were assignment_id alone", "Consequence"],
+          [["An assignment could carry at most ONE override window.",
+            "The case above becomes inexpressible. A second spell of changed capacity would need a second Assignment row."],
+           ["Splitting into ASG-902a / ASG-902b / ASG-902c would be the workaround.",
+            "It breaks Assignment's own meaning - one row per person + project + role - and fragments the person's history across rows that are not really different assignments."],
+           ["V-06's assignment-window half becomes dead.",
+            "Two windows could never coexist, so they could never overlap. A rule that can never fire is worse than no rule: it reads as protection."]],
+          [46, 92], wrap_cols=(1, 2))
+r = note(ws, r, "So the key stays (assignment_id, period_start). period_start is the right second column "
+                "because windows are ordered in time and cannot overlap - which V-06 enforces - so the "
+                "start date identifies one window unambiguously.")
+r += 1
+r = note(ws, r, "Two gaps surfaced while answering this, both now closed. V-06's assignment-window half was "
+                "specified from plan v1.0 but never implemented, so an overlapping pair passed silently and "
+                "the weight that applied in the shared months depended on the order rows happened to sit in "
+                "the file. And nothing checked that a PersonPeriodWeight row pointed at a real assignment, "
+                "so an orphan override was accepted and then ignored without a word - the user's typed "
+                "weight simply never applied. V-24 covers the second. The dummy fixture only ever had one "
+                "window per assignment, which is why neither surfaced: a fixture that does not exercise a "
+                "path cannot test it.")
+r += 1
 
 r = section(ws, r, "Derived columns - read, do not trust")
 der = [
@@ -361,7 +408,7 @@ rules = [
     ["V-03", "Error", "Assignment.role_name appears nowhere in RoleFactor for that project's type.", "Assignment ASG-014: role 'Main staff' is not valid for a project of type 'NewDrug CT'. Valid roles for this type: ..."],
     ["V-04", "Warning", "project_category empty on either clinical trial type.", "Project PRJ-003 is a clinical trial with no product category."],
     ["V-05", "Error", "An end date precedes its start date.", "Project PRJ-003: end_date 2026-01-01 is before start_date 2026-06-01."],
-    ["V-06", "Error", "Two periods of one project, or two windows of one assignment, overlap.", "Project PRJ-003: periods 3 and 4 overlap between 2027-06-01 and 2027-06-30."],
+    ["V-06", "Error", "Two periods of one project, or two override windows of one assignment, overlap.", "ASG-902: override windows overlap - 2026-07-01..2026-09-30 and 2026-08-15..2026-11-30. Which weight applies in the shared months would depend on row order."],
     ["V-07", "Warning", "Assignment dates fall outside the project's own dates.", "Assignment ASG-014 runs to 2029-06-30, after project PRJ-005 ends on 2029-03-31."],
     ["V-08", "Error", "A duplicate identifier.", "person_id PSN-004 appears on rows 5 and 12."],
     ["V-09", "Warning", "Config.schema_version differs from the expected version.", "This file is schema version 2; this application expects version 1. Some columns may be ignored."],
@@ -377,6 +424,7 @@ rules = [
     ["V-19", "Error", "A clinical trial with no clinical_phase, or no PeriodWeightStandard rows for its phase.", "Project PRJ-005 is Phase 3, but PeriodWeightStandard has no Phase 3 rows. Its periods cannot be weighted."],
     ["V-20", "Warning", "A milestone other than 'Inspection' recorded more than once.", "Project PRJ-002 records 'CTA submission' twice. Only 'Inspection' is expected to repeat."],
     ["V-21", "Information", "An 'Inspection' dated on or before the final DB lock.", "Project PRJ-002: 1 inspection on or before the final DB lock is treated as a marker and does not open the final period."],
+    ["V-24", "Error", "PersonPeriodWeight.assignment_id not found in Assignment, or two windows of one assignment share a period_start.", "ASG-999: PersonPeriodWeight refers to an assignment that does not exist; its override is silently ignored."],
     ["V-23", "Error", "No RoleFactor row for a (project_type, clinical_phase, period_name, role_name) that an assignment actually spans.", "No role factor for NewDrug CT / Phase 3 / Conduct (final) / Data Analyst - assignments covering that period would be calculated at factor 1.00. 3 assignments are affected."],
     ["V-22", "Warning", "Person.capacity_fte is below config.under_allocation_fte.", "PSN-018: capacity 0.50 FTE is below the under-allocation floor of 0.60, so this person can never clear it however fully they are booked. Lower the floor or raise the capacity."],
 ]
@@ -552,7 +600,7 @@ ex = [
 ]
 r = table(ws, r, ["Element", "Value", "Note"], ex, [22, 62, 44], wrap_cols=(2, 3))
 r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workbook.py against "
-                "PRAP_SourceData_Dummy_v1.7.xlsx must give no errors and no warnings, across 62 projects, "
+                "PRAP_SourceData_Dummy_v1.8.xlsx must give no errors and no warnings, across 62 projects, "
                 "20 people, 289 assignments and 308 periods spanning 73 months. Every period set must be "
                 "contiguous, all 50 trials must carry 'Conduct (final)', 30 must also carry "
                 "'Conduct (interim)', and 12 must carry the final inspection period. No project may carry "

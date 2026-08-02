@@ -6,7 +6,7 @@ left. The review trail lives in the deliverable rather than in a chat log.
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v0.6.xlsx
+Output: docs/PRAP_UI_Component_List_v0.7.xlsx
 """
 
 from pathlib import Path
@@ -16,9 +16,9 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "0.6"
+VERSION = "0.7"
 DATE = "2026-08-01"
-PROTOTYPE = "app/PRAP_Prototype_v0.6.html"
+PROTOTYPE = "app/PRAP_Prototype_v0.7.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
 FONT = "Arial"
@@ -77,13 +77,13 @@ ws = wb.create_sheet("00_Cover")
 ws.sheet_view.showGridLines = False
 ws["A1"] = "PRAP — UI component list"
 ws["A1"].font = TITLE_F
-ws["A2"] = "Step 3, task 3.1 — review round 4: the conduct periods named apart"
+ws["A2"] = "Step 3, task 3.1 — review round 5: the PersonPeriodWeight key question"
 ws["A2"].font = NOTE_F
 meta = [("Version", f"v{VERSION}"), ("Date", DATE), ("Author", "Claude Code"),
         ("Reviewer", "Dan — v0.3, v0.4 and v0.5 reviewed 2026-08-01 to 08-02"),
         ("Prototype", PROTOTYPE),
-        ("Governing plan", "PRAP_Development_Plan_v1.8.xlsx (changes R-05..R-11, awaiting signature)"),
-        ("Specification", "PRAP_Programming_Specification_v0.7.xlsx (draft)")]
+        ("Governing plan", "PRAP_Development_Plan_v1.9.xlsx (changes R-05..R-12, awaiting signature)"),
+        ("Specification", "PRAP_Programming_Specification_v0.8.xlsx (draft)")]
 r = 4
 for k, v in meta:
     ws.cell(r, 1, k).font = BOLD_F
@@ -653,6 +653,52 @@ ws.cell(r, 1, "A note on what this change is worth: the previous design carried 
               "requirement. Naming the two stretches apart removes the need for all four. It is the "
               "cheaper design and it was available from the start; D-15 argued against it on a lookup "
               "objection that turned out to be answerable.").font = NOTE_F
+
+# ---- round 5 ------------------------------------------------------------
+ws = wb.create_sheet("07_Round5")
+ws.sheet_view.showGridLines = False
+ws["A1"] = "Review round 5 — a question, not a change"
+ws["A1"].font = TITLE_F
+ws["A2"] = "The key was right. Checking it found two rules that were not implemented."
+ws["A2"].font = NOTE_F
+rows = [
+    ["1", "Data model",
+     "In the programming specification, key setting of 'PersonPeriodWeight' is 'assignment_id + "
+     "period_start'. My opinion is why period_start is needed as key. 'assignment_id' is unique in the "
+     "'PersonPeriodWeight' and 'Assignment' sheets. Explain me that point. If my opinion isn't hurting "
+     "other data consistency then change the key setting of 'PersonPeriodWeight' as 'assignment_id' only.",
+     "NOT CHANGED, and here is why. assignment_id is unique in Assignment - it is that sheet's primary "
+     "key. It was also unique in PersonPeriodWeight, but only because the dummy file happened to carry "
+     "one window per assignment; that is a property of the sample, not of the schema. "
+     "PersonPeriodWeight is a CHILD of Assignment and one assignment may carry SEVERAL non-overlapping "
+     "windows - a spell of leave, back to normal, then a peak - which is what REQ-PSN-05's 'overrides' "
+     "(plural), V-06's assignment-window clause and the data model's 'periods within one assignment must "
+     "not overlap' all assume. Keying on assignment_id alone would cap it at one window, and the second "
+     "spell would need a second Assignment row, fragmenting one person-project-role across rows that are "
+     "not really different assignments. Your condition - 'if it isn't hurting other data consistency' - "
+     "is therefore not met, so the key stays as it is. Say the word if you want the single-window model "
+     "anyway; it is a small change and the cost is exactly the one described above.",
+     "Specification v0.8 sheet 03 now carries this reasoning"],
+    ["2", "Validation",
+     "(not raised - found while answering item 1)",
+     "Two rules were specified but never implemented, and the question is what exposed them. (a) V-06 "
+     "says periods within one project AND within one assignment must not overlap. Only the project half "
+     "ran, so two overlapping override windows passed silently and the weight that applied in the shared "
+     "months depended on the order the rows happened to sit in the file. (b) Nothing checked that a "
+     "PersonPeriodWeight row pointed at a real assignment, so an orphan override was accepted and then "
+     "ignored without a word - the typed weight simply never applied. Both are now in the reference "
+     "implementation, the second as new rule V-24, and both were proved to fire against deliberately "
+     "broken copies of the dummy file. The fixture itself is the root cause: it only ever had one window "
+     "per assignment, so the multi-window path was never exercised. It now carries an assignment with "
+     "two.",
+     "Plan v1.9 (R-12), spec v0.8, dummy v1.8"],
+]
+r = table(ws, 4, ["#", "Area", "What you raised (verbatim)", "What was done", "Carried in"],
+          rows, [5, 14, 66, 110, 30], wrap_cols=(3, 4, 5))
+r = ws.max_row + 2
+ws.cell(r, 1, "Worth noting for its own sake: a question about a key found two silent-wrong-answer bugs. "
+              "Neither was reachable by reading the code, because both were absences - a rule that was "
+              "written down and never built.").font = NOTE_F
 
 wb.save(OUT)
 print(f"Written: {OUT}  ({len(C)} components, {len(D)} decisions)")

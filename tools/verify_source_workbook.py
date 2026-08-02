@@ -96,6 +96,31 @@ def main(path):
     if len(ids) != len(set(ids)):
         errors.append("V-08: duplicate assignment_id")
 
+    # ---- override windows: V-24 referential, V-06 overlap ----
+    # PersonPeriodWeight is a child of Assignment, and (assignment_id, period_start) is
+    # its key: ONE assignment may carry several non-overlapping windows. Both halves of
+    # that sentence need a rule, and neither had one.
+    known = set(ids)
+    for aid in sorted(PPW):
+        if aid not in known:
+            errors.append(f"V-24 {aid}: PersonPeriodWeight refers to an assignment that "
+                          f"does not exist; its override is silently ignored")
+            continue
+        wins = sorted(PPW[aid], key=lambda w: d(w["period_start"]))
+        starts = [d(w["period_start"]) for w in wins]
+        if len(starts) != len(set(starts)):
+            errors.append(f"V-24 {aid}: two override windows share a period_start; "
+                          f"(assignment_id, period_start) must be unique")
+        for a_, b_ in zip(wins, wins[1:]):
+            if d(b_["period_start"]) <= d(a_["period_end"]):
+                errors.append(f"V-06 {aid}: override windows overlap - "
+                              f"{d(a_['period_start'])}..{d(a_['period_end'])} and "
+                              f"{d(b_['period_start'])}..{d(b_['period_end'])}. Which "
+                              f"weight applies in the shared months would depend on row order")
+        for w in wins:
+            if d(w["period_end"]) < d(w["period_start"]):
+                errors.append(f"V-05 {aid}: override window ends before it starts")
+
     # ---- period coverage, ordering, naming (V-06, V-12, V-15, V-18) ----
     for pid, proj in P.items():
         segs = sorted(PER.get(pid, []), key=lambda r: r["period_seq"])
@@ -298,4 +323,4 @@ def main(path):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else
-                  "templates/PRAP_SourceData_Dummy_v1.7.xlsx"))
+                  "templates/PRAP_SourceData_Dummy_v1.8.xlsx"))

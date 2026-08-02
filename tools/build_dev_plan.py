@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.8"
+DOC_VERSION = "1.9"
 DOC_STATUS = "Change against approved baseline v1.3 - issued for approval"
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -205,7 +205,7 @@ r = lines(ws, r, [
     "opens period 7. Raised as R-03 and CONFIRMED by the reviewer at the v1.1 review.",
     "",
     "v1.3 was approved by Dan on 2026-08-01 and remains the baseline. This issue carries five changes against",
-    "it - R-05 from the Step 3 review, R-06 to R-08 from the specification v0.3 review, and R-09 to R-11",
+    "it - R-05 from the Step 3 review, R-06 to R-08 from the specification v0.3 review, and R-09 to R-12",
     "from the component-list reviews - and needs its own approval before it supersedes v1.3.",
     "",
     "v1.3 carries change R-04: every sheet of the source workbook now holds at least one free-text note",
@@ -365,7 +365,16 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}1.8", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}1.9", DOC_DATE, "Claude Code", "Pending",
+     "Change R-12. A reviewer question about the PersonPeriodWeight key - why period_start is needed "
+     "when assignment_id looks unique - was answered by confirming the key is correct: one assignment "
+     "may carry several non-overlapping override windows, so assignment_id alone would cap it at one. "
+     "Checking the question found two rules that were specified but never implemented. V-06's "
+     "assignment-window half now runs, and V-24 is added for referential integrity and key uniqueness "
+     "on PersonPeriodWeight. The dummy fixture gains an assignment with two windows, which is what "
+     "would have caught both. No schema change.",
+     "Issued for approval"],
+    ["1.8", DOC_DATE, "Claude Code", "Pending",
      "Change R-11 against the v1.3 baseline. The conduct phase is split by NAME rather than by sequence: "
      "'Conduct (interim)' where an interim DB lock exists and the stretch runs before it, 'Conduct (final)' "
      "after it or where there is no interim lock. Period names are therefore unique within a project and "
@@ -373,7 +382,7 @@ rows = [
      "period set grows to seven names, V-18 becomes a uniqueness check, REQ-CAL-11 and REQ-PRJ-12 are "
      "reworded, and REQ-DSH-10 is now satisfied structurally rather than by display numbering. Schema "
      "version steps 4 to 5. Weights are unchanged, so the dummy dataset produces identical figures.",
-     "Issued for approval"],
+     "Superseded by v1.9"],
     ["1.7", DOC_DATE, "Claude Code", "Pending",
      "Change R-10 against the v1.3 baseline, from the component-list v0.4 review. The role factor is now "
      "keyed on project type, clinical phase, period and role rather than type and role alone, so a role's "
@@ -720,7 +729,7 @@ r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
 r = section(ws, r, "Sheet: PersonPeriodWeight")
 ppw = [
     ["assignment_id", "Text", "Yes", "Foreign key to Assignment.", "REQ-PSN-05"],
-    ["period_start", "Date", "Yes", "Inclusive.", "REQ-PSN-05"],
+    ["period_start", "Date", "Yes", "Inclusive. Part of the key: one assignment may carry SEVERAL non-overlapping windows, so assignment_id alone does not identify a row.", "REQ-PSN-05"],
     ["period_end", "Date", "Yes", "Inclusive. Periods within one assignment must not overlap.", "REQ-PSN-05"],
     [f"{MARK_CHG}weight_override", "Decimal", "Yes", "REPLACES person_weight for months inside this window - it no longer multiplies it. Where no row covers a month, person_weight applies unchanged.", "REQ-PSN-05"],
     ["reason", "Text", "No", "Why the weight differs, e.g. 'part-time', 'covering start-up peak'.", "REQ-PSN-05"],
@@ -758,10 +767,11 @@ rules = [
     ["V-01", "Every Assignment.project_id exists in Project.", "Error - row rejected, reported with its row number."],
     ["V-02", "Every Assignment.person_id exists in Person.", "Error - row rejected."],
     [f"{MARK_CHG}V-03", "Every Assignment.role_name appears in RoleFactor for that project's type.", "Error - row rejected. Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error."],
+    [f"{MARK_NEW}V-24", "Every PersonPeriodWeight.assignment_id exists in Assignment, and (assignment_id, period_start) is unique.", "Error - an override on an assignment that does not exist is silently ignored, so the weight the user typed never applies and nothing says so."],
     [f"{MARK_NEW}V-23", "For every (project_type, clinical_phase, period_name, role_name) an assignment can actually reach, a RoleFactor row exists.", "Error - a factor missing for ONE period of a project silently drops that stretch to 1.00, which is a wrong number rather than an obvious gap. Checked against the periods each assignment spans, not against the whole cross-product."],
     ["V-04", "project_category is present for either clinical trial type.", "Warning - shown as blank in the dashboard."],
     ["V-05", "end_date is on or after start_date, for projects, assignments and all weight periods.", "Error - row rejected."],
-    ["V-06", "Periods within one project, and within one assignment, do not overlap.", "Error - overlapping pair reported."],
+    [f"{MARK_CHG}V-06", "Periods within one project, and override windows within one assignment, do not overlap.", "Error - overlapping pair reported. The assignment half was specified from v1.0 but not implemented until R-12; an overlap there makes the applied weight depend on row order."],
     ["V-07", "Assignment dates fall inside the project's own start and end dates.", "Warning - kept, but listed for review."],
     ["V-08", "project_id, person_id and assignment_id are unique in their sheet.", "Error - duplicate rejected."],
     ["V-09", "schema_version in Config matches the version the application expects.", "Warning - proceeds, banner shown."],
@@ -1064,7 +1074,8 @@ wbs = [
     ["1", "1.18", "Apply the component-list review outcome (R-09).", "PRAP_Development_Plan_v1.6.xlsx", "Complete - issued for review"],
     ["1", "1.19", "Apply change R-10 (role factor keyed on phase and period).", "PRAP_Development_Plan_v1.7.xlsx", "Complete - issued for review"],
     ["1", "1.20", "Apply change R-11 (conduct stretches named apart; ProjectPeriod natural key).", "PRAP_Development_Plan_v1.8.xlsx", "Complete - issued for review"],
-    ["1", "1.21", "Approve plan v1.8.", "Approval on 12_Review_Log", "Pending you"],
+    ["1", "1.21", "Close the validation gaps found while answering the PersonPeriodWeight key question (R-12).", "PRAP_Development_Plan_v1.9.xlsx", "Complete - issued for review"],
+    ["1", "1.22", "Approve plan v1.9.", "Approval on 12_Review_Log", "Pending you"],
     ["1", "G1", "GATE 1 - development plan approved by Dan, 2026-08-01. Decisions C-06..C-11 confirmed.", "Approval recorded on 12_Review_Log", "Complete"],
 
     ["2", "2.0", "Generate the source workbook template and a dummy data file for review.", "PRAP_SourceData_Template + _Dummy v1.1", "Complete - issued for review"],
@@ -1161,7 +1172,8 @@ align = [
     ["v1.5", "v0.4", "prototype v0.3", "3", "2026-08-01", "R-05..R-08. Superseded."],
     ["v1.6", "v0.5", "prototype v0.4", "3", "2026-08-01", "R-05..R-09. Superseded."],
     ["v1.7", "v0.6", "prototype v0.5", "4", "2026-08-02", "R-05..R-10. Superseded."],
-    ["v1.8", "v0.7", "prototype v0.6", "5", DOC_DATE, "R-05..R-11. Awaiting approval."],
+    ["v1.8", "v0.7", "prototype v0.6", "5", "2026-08-02", "R-05..R-11. Superseded."],
+    ["v1.9", "v0.8", "prototype v0.7", "5", DOC_DATE, "R-05..R-12. Awaiting approval."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
@@ -1296,6 +1308,7 @@ chg = [
     ["R-01", "Data model", "Add 'Inspection' as a standard milestone.", "Applied. Milestone list grows to ten. Unlike the others, 'Inspection' MAY REPEAT within one project, so REQ-PRJ-13 and V-20 were added and V-14's uniqueness check now exempts it.", "Applied"],
     ["R-02", "Calculation", "Sheet 05 derivation edits: Before-Start-up ends at 'Protocol (v1)'; Start-up begins the day after it and ends at 'First SIV' (or 'FPI'); a seventh period 'After Close-out (final)' spans the Inspection dates.", "Applied. Clinical period set grows to six names; REQ-PRJ-12 and REQ-CAL-09 reworded; REQ-CAL-13 added for the milestone-beats-offset rule; 'FPI' restored to the milestone list as the First SIV fallback.", "Applied"],
     ["R-03", "Calculation", "Not requested - found while applying R-02.", "Period 7 was defined as earliest to latest 'Inspection'. Where an inspection is dated on or before the final DB lock, that makes period 7 start before period 6 and overlap Conduct. Only inspections AFTER the final DB lock open period 7; earlier ones stay markers, reported by V-21. CONFIRMED by the reviewer at the v1.1 review.", "CONFIRMED"],
+    ["R-12", "Validation", "Raised as a question about the PersonPeriodWeight key - why is period_start needed when assignment_id looks unique?", "The key is correct and unchanged: (assignment_id, period_start). assignment_id is unique in Assignment, but PersonPeriodWeight is a CHILD of it, and REQ-PSN-05, V-06 and the data model all allow one assignment to carry several non-overlapping override windows. Keying on assignment_id alone would cap it at one. But checking the question exposed two real gaps, both now closed: V-06's assignment-window half had never been implemented, so an overlapping pair passed silently and the applied weight depended on row order; and nothing checked that a PersonPeriodWeight row referred to a real assignment, so an orphan override was accepted and ignored without a word. V-24 added for the second. The dummy fixture now carries an assignment with TWO windows - it only ever had one each, which is why neither gap surfaced.", "Applied"],
     ["R-11", "Data model", "Name the two conduct stretches apart - 'Conduct (interim)' before an interim DB lock, 'Conduct (final)' after it or where there is no interim lock - and key ProjectPeriod on (project_id, period_name).", "Applied, and it simplifies more than it costs. The clinical period set grows from six names to seven, but no name now repeats in a project, so ProjectPeriod has a natural key again and period_seq goes back to carrying order rather than identity. V-18 becomes a plain uniqueness check. REQ-CAL-11 and REQ-PRJ-12 reworded. REQ-DSH-10, which existed to number repeated names on screen, is now satisfied by the data model instead - the display numbering is kept only as a guard. This is the alternative offered against decision D-15 at the component-list review, so D-15 is superseded. Schema 4 -> 5: the columns are unchanged but the period_name value set is not, so a v4 file's 'Conduct' rows would fail V-15. PeriodWeightStandard grows 48 -> 56 rows and RoleFactor 249 -> 289; both new Conduct entries carry the same weights the single 'Conduct' did, so the change renames without reweighting - the dummy dataset returns byte-identical load figures.", "Applied"],
     ["R-10", "Data model", "The role factor must be given by role AND project type AND clinical phase AND period, not by role and type alone.", "Applied. RoleFactor gains clinical_phase and period_name; its key becomes all four columns and the sheet grows from 13 rows to 249. REQ-CAL-02 reworded, V-23 added, schema 3 -> 4. This is a real gain in expressiveness - a role's burden genuinely is not flat across a project, and the dummy data now shows the database programmer peaking at start-up and the analyst at lock. It carries two costs, both stated rather than hidden: 249 rows is a large hand-maintained table, and RoleFactor now varies over the same three dimensions as PeriodWeightStandard, so the two multiply and can double-count if both are edited for the same reason. See the note on sheet 04.", "Applied"],
     ["R-09", "UI", "Nine components changed at the component-list v0.3 review: a fourth tab for the standing assumptions, insert-row on every editable table, clinical-phase filter, the unit toggle demoted from filter to setting, the demand-chart legend replaced by a hover pop-up, four timeline changes, a time zone on the load stamp, and the edit counter stating its validation standing.", "Applied. Seven were satisfiable by design alone. Two were not: nothing in the plan required the assumptions to be reachable in the application, and nothing said a row could be created at all - so REQ-DSH-11 and REQ-IMP-11 were added. REQ-DSH-05 and REQ-IMP-05 reworded. One conflict surfaced: O-10 asks the timeline to be coloured by period name, which contradicts accepted decision D-06 (shade by weight). O-10 is the more specific instruction, so D-06 is superseded and weight becomes a lightness step within each period hue.", "Applied"],
@@ -1398,13 +1411,14 @@ appr = [["PRAP Development Plan v1.0", "Dan", "2026-08-01",
         ["PRAP Development Plan v1.3", "Dan", "2026-08-01",
          "APPROVED - FINAL. Change R-04 accepted; this issue supersedes v1.2 and closes the development "
          "plan. Step 1 is complete."],
-        ["PRAP Development Plan v1.8", "", "",
+        ["PRAP Development Plan v1.9", "", "",
          "Pending your signature. Changes R-05 (project_type split), R-06 (volume re-baselined to "
          "100 projects / 1,000 people), R-07 (absolute thresholds, floor 0.60), R-08 (repeated period "
          "names distinguishable on screen), R-09 (component-list review: assumptions tab and insert-row "
          "become REQ-DSH-11 and REQ-IMP-11), R-10 (role factor keyed on type, phase, period and role) "
-         "and R-11 (conduct stretches named apart; ProjectPeriod keyed on project_id + period_name; "
-         "schema 4 -> 5)."]]
+         "R-11 (conduct stretches named apart; ProjectPeriod keyed on project_id + period_name; "
+         "schema 4 -> 5) and R-12 (two unimplemented validation rules on PersonPeriodWeight closed; "
+         "V-24 added)."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [30, 16, 14, 88], wrap_cols=(4,))
 for cc in (1, 2, 3, 4):

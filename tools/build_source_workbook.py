@@ -30,7 +30,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 SCHEMA_VERSION = 5
 TEMPLATE_VERSION = "1.6"
-DUMMY_VERSION = "1.7"
+DUMMY_VERSION = "1.8"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -415,8 +415,14 @@ def dummy_data():
         ("ASG-903", "PSN-001", "PRJ-006", "Project oversight", date(2026, 4, 1), date(2027, 3, 31), 0.35),
     ]
 
+    # The key is (assignment_id, period_start) precisely because ONE assignment may
+    # carry SEVERAL non-overlapping windows. ASG-902 exercises that: a spell of leave,
+    # back to normal in between, then a peak. A fixture that only ever showed one window
+    # per assignment left the multi-window path untested, which is how the missing
+    # overlap and referential rules went unnoticed until R-12.
     ppw = [
         ("ASG-902", date(2026, 7, 1), date(2026, 9, 30), 0.20, "Part-time - parental leave"),
+        ("ASG-902", date(2027, 4, 1), date(2027, 6, 30), 0.75, "Covering start-up peak"),
         ("ASG-903", date(2026, 10, 1), date(2026, 12, 31), 0.45, "Covering interim analysis peak"),
     ]
 
