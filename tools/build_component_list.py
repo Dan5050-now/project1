@@ -80,7 +80,7 @@ ws["A1"].font = TITLE_F
 ws["A2"] = "Step 3, task 3.1 — review round 3: three further items applied"
 ws["A2"].font = NOTE_F
 meta = [("Version", f"v{VERSION}"), ("Date", DATE), ("Author", "Claude Code"),
-        ("Reviewer", "Dan — v0.3 reviewed 2026-08-01"),
+        ("Reviewer", "Dan — v0.3 reviewed 2026-08-01, v0.4 reviewed 2026-08-02"),
         ("Prototype", PROTOTYPE),
         ("Governing plan", "PRAP_Development_Plan_v1.7.xlsx (changes R-05..R-10, awaiting signature)"),
         ("Specification", "PRAP_Programming_Specification_v0.6.xlsx (draft)")]
@@ -131,8 +131,7 @@ ws = wb.create_sheet("01_Components")
 ws.sheet_view.showGridLines = False
 ws["A1"] = "Component list — your decisions and what was done"
 ws["A1"].font = TITLE_F
-ws["A2"] = ("44 components. 29 Keep, 9 Change (amber), 6 added by those changes (green). "
-            "Your comments are quoted exactly as written.")
+SUBTITLE_CELL = ws["A2"]          # filled once the component list below is defined
 ws["A2"].font = NOTE_F
 ws.freeze_panes = "A5"
 
@@ -356,6 +355,12 @@ C = [
      "all four sub-tables, and the role-factor and config tables on the new tab. The control leads the "
      "row - see D-18 for why."),
 ]
+# Derived, not typed: the counts have gone stale twice already.
+SUBTITLE_CELL.value = (
+    f"{len(C)} components. {sum(1 for c in C if c[5] == K)} Keep, "
+    f"{sum(1 for c in C if str(c[5]).startswith('Change'))} Change (amber), "
+    f"{sum(1 for c in C if '[NEW]' in c[2])} added by those changes (green). "
+    f"Your comments are quoted exactly as written.")
 rows = [list(c) + [""] for c in C]
 r = table(ws, 4,
           ["ID", "Area", "Component", "What it does", "REQ-IDs",
