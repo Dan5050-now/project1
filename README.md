@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.2 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.3 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -30,7 +30,7 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.2.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.3.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -80,6 +80,11 @@ output/       Exported results and test evidence   (from Step 5)
   previous size; the project timeline scrolls in both directions, so every project in
   the filter is drawn rather than the first 20; and chart text is larger with every
   threshold label moved out of the plot area into a right-hand margin.
+
+  Gate 4 round 2 (app v1.2): the page carries its own provenance at the top — which
+  plan, specification, component list and source template the build implements, plus
+  whether the loaded workbook's schema matches. `check_consistency.py` verifies that
+  claim against the repository, so it cannot go stale unnoticed.
 
 ### Step 3 deliverables (approved)
 

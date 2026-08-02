@@ -55,6 +55,25 @@ h2{font-size:14.5px;margin:0 0 3px}
 .btn.primary[disabled],.btn[disabled]{opacity:.45;cursor:not-allowed}
 .btn.tiny{font-size:10.5px;padding:1px 7px;border-radius:6px}
 .btn.reset{border-color:var(--accent);color:var(--accent)}
+/* Provenance strip: one line by default, the full table on demand. It sits above the
+   findings banner because it describes the application, not the loaded file. */
+#prov{margin:10px 0 0;border:1px solid var(--ring);border-radius:8px;background:var(--surface);
+ font-size:12px}
+#prov > summary{cursor:pointer;padding:7px 12px;color:var(--ink2);list-style:none;
+ display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+#prov > summary::-webkit-details-marker{display:none}
+#prov > summary::after{content:"show detail ▾";margin-left:auto;color:var(--accent);font-size:11px}
+#prov[open] > summary::after{content:"hide detail ▴"}
+#prov > summary:hover{color:var(--ink)}
+#prov .pv{font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums}
+#prov .plabel{color:var(--muted)}
+#prov #provBody{padding:2px 12px 12px}
+#prov table{font-size:11.5px}
+#prov td,#prov th{border:1px solid var(--grid);padding:4px 8px;text-align:left;
+ vertical-align:top}
+#prov thead th{background:var(--page);color:var(--ink2);font-weight:600;font-size:10.5px}
+#prov td.ok{color:var(--good);font-weight:600;white-space:nowrap}
+#prov td.warn{color:var(--underink);font-weight:600;white-space:nowrap}
 .banner{display:flex;align-items:center;gap:10px;margin:12px 0;padding:8px 12px;
  border-radius:8px;background:var(--underbg);border:1px solid var(--ring);font-size:13px}
 .banner.bad{background:var(--overbg)}
@@ -202,6 +221,11 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
 </header>
 
+<details id="prov">
+  <summary id="provSum"></summary>
+  <div id="provBody"></div>
+</details>
+
 <div id="banner"></div>
 <div id="dirty"></div>
 
@@ -258,8 +282,24 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.1";
+const APP_VERSION = "1.2";
 const SCHEMA_EXPECTED = 5;
+
+/* The controlled documents this build was written against (REQ-VC-01: plan,
+   specification and outputs are version-controlled together and cross-referenced).
+   Kept as data in one place, shown on screen, and checked against the repository by
+   tools/check_consistency.py - a provenance label nobody verifies is one that quietly
+   goes stale, which is the whole failure mode it exists to prevent. */
+const BUILT_AGAINST = [
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.3.xlsx",           ver:"2.3",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.3 records Step 4 progress"},
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
+   status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
+  {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
+   status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
+  {what:"Source data template",   file:"PRAP_SourceData_Template_v1.6.xlsx",        ver:"1.6",
+   status:`Schema version ${SCHEMA_EXPECTED} — the layout this application reads`},
+];
 
 /* ============================================================ 1. ZIP + XLSX read
    An .xlsx is a ZIP of XML parts. Read the central directory from the end of the
@@ -1949,6 +1989,7 @@ async function loadFile(file){
     const tzName = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").split("/").pop() || "local";
     el("fileline").innerHTML = `${esc(file.name)} · loaded ${S.loadedAt.toISOString().slice(0,16).replace("T"," ")} `
       + `<span class="tz">(GMT${tz>=0?"+":""}${tz}, ${esc(tzName)})</span>`;
+    renderProvenance();
     const errs = M.findings.filter(f => f.sev === "error").length;
     showBanner(errs ? "bad" : "",
       errs ? `Loaded with problems.` : `Loaded cleanly.`, M.findings);
@@ -1960,6 +2001,37 @@ async function loadFile(file){
 }
 
 el("vers").textContent = `v${APP_VERSION} · expects source schema v${SCHEMA_EXPECTED}`;
+
+/** REQ-VC-01 / REQ-VC-02: what this build was written against, and - once a workbook
+ *  is loaded - whether that workbook agrees with it. */
+function renderProvenance(){
+  const short = BUILT_AGAINST.map(d =>
+    `<span><span class="plabel">${esc(d.what.replace("Programming ","").replace("Source data ",""))}</span> `
+    + `<span class="pv">v${esc(d.ver)}</span></span>`).join("");
+  el("provSum").innerHTML =
+    `<span><span class="plabel">Application</span> <span class="pv">v${APP_VERSION}</span></span>`
+    + `<span class="plabel">built against</span>${short}`;
+
+  const loaded = S.model ? num(S.model.config.schema_version) : null;
+  const rows = BUILT_AGAINST.map(d =>
+    `<tr><td>${esc(d.what)}</td><td><span class="pv">v${esc(d.ver)}</span></td>`
+    + `<td><code>${esc(d.file)}</code></td><td>${esc(d.status)}</td></tr>`).join("");
+  const loadedRow = S.model
+    ? `<tr><td>Loaded workbook</td><td><span class="pv">schema v${loaded ?? "?"}</span></td>`
+      + `<td><code>${esc(S.fileName)}</code></td>`
+      + (String(loaded) === String(SCHEMA_EXPECTED)
+          ? `<td class="ok">✓ matches the schema this application expects</td>`
+          : `<td class="warn">▲ this application expects schema v${SCHEMA_EXPECTED} — see the findings report (V-09)</td>`)
+      + `</tr>`
+    : `<tr><td>Loaded workbook</td><td class="plabel">—</td><td colspan="2" class="plabel">nothing loaded yet</td></tr>`;
+  el("provBody").innerHTML =
+    `<table><thead><tr><th>Controlled document</th><th>Version</th><th>File</th>`
+    + `<th>Status</th></tr></thead><tbody>${rows}${loadedRow}</tbody></table>`
+    + `<p class="note">These are the documents this build implements. The application does not read them —
+       they are recorded here so a file on someone's disk can be traced back to the issue it was built
+       from. tools/check_consistency.py verifies the list against the repository on every run.</p>`;
+}
+renderProvenance();
 el("loadBtn").onclick = el("loadBtn2").onclick = () => el("picker").click();
 el("picker").onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); };
 el("exportBtn").onclick = exportWorkbook;

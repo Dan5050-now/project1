@@ -14,7 +14,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.2.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.3.xlsx"
 SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.0.xlsx"
 TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.6.xlsx"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.8.xlsx"
@@ -169,6 +169,37 @@ for doc, wb in (("plan", plan), ("specification", spec)):
     # the bare 'Conduct' was retired at R-11; it must not survive as a period name
     if re.search(r"'Conduct'|\bConduct(?!\s*\()", txt):
         notes.append(f"{doc} mentions a bare 'Conduct' - check it is prose, not the retired period name")
+
+# ---- 4e. the application's provenance strip vs the repository -------------
+# app/PRAP.html shows which controlled documents it was built against. A label like
+# that is worse than useless once it goes stale, because it is believed. So the files
+# it names must exist, and must be the newest of their kind in the repo.
+APP = ROOT / "app" / "PRAP.html"
+if APP.exists():
+    src = APP.read_text(encoding="utf-8")
+    block = re.search(r"const BUILT_AGAINST = \[(.*?)\n\];", src, re.S)
+    if not block:
+        problems.append("app/PRAP.html has no BUILT_AGAINST block to check")
+    else:
+        claimed = dict(re.findall(r'what:"([^"]+)",\s*file:"([^"]+)"', block.group(1)))
+        if len(claimed) != 4:
+            problems.append(f"app provenance lists {len(claimed)} documents, expected 4")
+        for what, fname in claimed.items():
+            folder = "templates" if "SourceData" in fname else "docs"
+            if not (ROOT / folder / fname).exists():
+                problems.append(f"app provenance names {fname}, which is not in {folder}/")
+                continue
+            # newest of its kind: same stem, highest version
+            stem = re.sub(r"_v[\d.]+\.xlsx$", "", fname)
+            sibs = sorted((ROOT / folder).glob(f"{stem}_v*.xlsx"),
+                          key=lambda q: [int(x) for x in
+                                         re.search(r"_v([\d.]+)\.xlsx$", q.name).group(1).split(".")])
+            if sibs and sibs[-1].name != fname:
+                problems.append(f"app provenance names {fname} for '{what}', but the repository's "
+                                f"newest is {sibs[-1].name}")
+    m = re.search(r"const SCHEMA_EXPECTED = (\d+);", src)
+    if m and int(m.group(1)) != tpl_v:
+        problems.append(f"app expects schema v{m.group(1)}, template is v{tpl_v}")
 
 # ---- 5. every requirement in the plan is traced in the specification ------
 plan_reqs = {str(plan["03_Requirements"].cell(r, 1).value).strip()
