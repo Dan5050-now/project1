@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.10"
+DOC_VERSION = "2.11"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,28 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.10", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.11", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 defect fix round 10, application v1.9. Reviewer reported that dragging the scroll bar of "
+     "a type-ahead value list closed the list, making a list taller than its box impossible to read to "
+     "the bottom of. Two independent causes, both now fixed. (1) A capturing scroll listener closed "
+     "the list on ANY scroll anywhere in the document - including the list's OWN scrolling. It existed "
+     "because the list is a fixed box anchored to its cell and a page scroll would leave it stranded; "
+     "closing was the crude answer. It now ignores its own scrolling and RE-ANCHORS on any other, "
+     "closing only once the cell itself has left the screen. (2) Pressing on the list's scroll bar took "
+     "focus off the cell, and the focus-out handler closed the list underneath the hand scrolling it. "
+     "The press is now held for its whole duration and the caret is restored on release. The list "
+     "closes on exactly the three things asked for: choosing a value, Escape, or a click outside. "
+     "Because Escape leaves the caret in the cell and so fires no focus event, a click in the field "
+     "now re-opens the list. Matching is also improved: tokens match in ANY ORDER, so 'phase 1 onv' "
+     "finds 'ONV-101 Phase 1'; every matched fragment is marked, not just the first; results rank a "
+     "typed prefix above a mere containment; and a query matching nothing now shows the whole "
+     "vocabulary with an explanation instead of vanishing and stranding the reader. That last change "
+     "exposed a pre-existing trap - render() highlighted the first row, so Enter silently swapped in a "
+     "value the user never chose, which had escaped notice only because a query matching nothing used "
+     "to hide the list and put Enter out of its reach. Nothing is highlighted now until an arrow key "
+     "highlights it. No requirement, rule, calculation or schema changed.",
+     "Issued for review"],
+    ["2.10", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 defect fix round 9, application v1.8. Reviewer reported that choosing an assignment_id "
      "on a new Weight-overrides row raised a warning offering to change every other override of the "
      "assignment being moved away from, so a second window could not be added. Cause: the edit path "
@@ -381,7 +402,7 @@ rows = [
      "an assignment that already carries windows now states how many the row joins and names V-06 "
      "and V-24 - an additional window is the normal case, and only an overlapping one is refused, "
      "at Save. No requirement, rule, calculation or schema changed.",
-     "Issued for review"],
+     "Superseded by v2.11"],
     ["2.9", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 refinements round 8, application v1.7. Three changes, none touching a requirement, "
      "rule, calculation or schema. (1) EVERY scroll region now scrolls in BOTH directions and is "
@@ -1246,7 +1267,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-9 applied (app v1.8); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-10 applied (app v1.9); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1329,7 +1350,8 @@ align = [
     ["v2.7", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 6: insert/delete fixed on the four child tables."],
     ["v2.8", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 7: second dummy dataset, 10 projects x 10 people."],
     ["v2.9", "v1.0", "application v1.7", "5", DOC_DATE, "Gate 4 round 8: two-way scrolling everywhere, project by name, allocated assignment_id."],
-    ["v2.10", "v1.0", "application v1.8", "5", DOC_DATE, "Gate 4 round 9: a foreign key no longer cascades; second override windows can be added. 4.9 continues."],
+    ["v2.10", "v1.0", "application v1.8", "5", DOC_DATE, "Gate 4 round 9: a foreign key no longer cascades; second override windows can be added."],
+    ["v2.11", "v1.0", "application v1.9", "5", DOC_DATE, "Gate 4 round 10: the value list survives being scrolled, and matches on tokens. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

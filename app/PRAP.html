@@ -356,7 +356,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.8";
+const APP_VERSION = "1.9";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -365,8 +365,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.10.xlsx",          ver:"2.10",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.10 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.11.xlsx",          ver:"2.11",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.11 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -2702,9 +2702,22 @@ document.addEventListener("click", e => {
   }
 });
 
+// Clicking a cell that ALREADY has the caret fires no focusin, so after Escape has
+// dismissed the list there would be no way to ask for it again without clicking away
+// and back. A click in the field re-opens it; SUGG.open is a no-op if it is already
+// showing for that cell.
+document.addEventListener("click", e => {
+  const td = e.target.closest('td[contenteditable="true"]');
+  if (td) SUGG.open(td);
+});
 document.addEventListener("focusin", e => {
   const td = e.target.closest('td[contenteditable="true"]');
-  if (td){ td.dataset.orig = td.textContent; SUGG.open(td); }
+  if (!td) return;
+  // Only on a FRESH focus. Focus is also restored programmatically after a scrollbar
+  // drag on the suggestion list, and re-recording `orig` there would make Escape revert
+  // to the half-typed text instead of the value the cell started with.
+  if (!SUGG.owns(td)) td.dataset.orig = td.textContent;
+  SUGG.open(td);
 });
 document.addEventListener("focusout", e => {
   const td = e.target.closest('td[contenteditable="true"]');
@@ -2732,36 +2745,103 @@ const SUGG = (() => {
   let cell = null, items = [], idx = -1;
   const api = {holding:false};
 
-  function render(q){
-    const ql = q.trim().toLowerCase();
-    const hits = (ql ? items.filter(v => v.toLowerCase().includes(ql)) : items).slice(0, 60);
-    if (!hits.length){ box.hidden = true; return; }
-    idx = Math.min(Math.max(idx, 0), hits.length - 1);
-    box.innerHTML = hits.map((v, i) => {
-      const at = ql ? v.toLowerCase().indexOf(ql) : -1;
-      const shown = at < 0 ? esc(v)
-        : esc(v.slice(0, at)) + "<mark>" + esc(v.slice(at, at + ql.length)) + "</mark>"
-          + esc(v.slice(at + ql.length));
-      return `<div class="s" role="option" data-v="${att(v)}" aria-selected="${i === idx}">${shown}</div>`;
-    }).join("") + `<div class="hint">${hits.length}${hits.length === 60 ? "+" : ""} match`
-      + `${hits.length === 1 ? "" : "es"} &middot; \u2191\u2193 move &middot; Enter choose &middot; Esc close</div>`;
+  /** Every run of every token, merged, so each matched fragment is marked - not just
+   *  the first one and not just a single contiguous stretch. */
+  function markup(v, toks){
+    const lv = v.toLowerCase(), spans = [];
+    for (const t of toks){
+      for (let i = lv.indexOf(t); i >= 0; i = lv.indexOf(t, i + t.length)) spans.push([i, i + t.length]);
+    }
+    if (!spans.length) return esc(v);
+    spans.sort((a, b) => a[0] - b[0]);
+    const merged = [spans[0]];
+    for (const s of spans.slice(1)){
+      const last = merged[merged.length - 1];
+      if (s[0] <= last[1]) last[1] = Math.max(last[1], s[1]);
+      else merged.push(s);
+    }
+    let out = "", at = 0;
+    for (const [a, z] of merged){
+      out += esc(v.slice(at, a)) + "<mark>" + esc(v.slice(a, z)) + "</mark>";
+      at = z;
+    }
+    return out + esc(v.slice(at));
+  }
+
+  /** Anchor the box to its cell. Separate from render() because a scroll has to
+   *  re-anchor without rebuilding the list - rebuilding would throw away where the
+   *  reader had scrolled to, which is the very thing they were doing. */
+  function place(){
     const r = cell.getBoundingClientRect();
-    box.hidden = false;
     box.style.left = Math.max(8, Math.min(r.left, innerWidth - box.offsetWidth - 8)) + "px";
     box.style.top = (r.bottom + box.offsetHeight > innerHeight - 8
       ? Math.max(8, r.top - box.offsetHeight - 4) : r.bottom + 4) + "px";
   }
 
+  function render(q){
+    // Tokens, matched in ANY ORDER: 'phase 1 onv' should find 'ONV-101 Phase 1'. Someone
+    // searching a list types the parts they remember, not the string as it was written.
+    const ql = q.trim().toLowerCase();
+    const toks = ql.split(/\s+/).filter(Boolean);
+    let hits = items;
+    if (toks.length){
+      // Ranked, because token matching casts a wide net: typing '1' matches every
+      // 'Phase 1' AND every 'ONV-111'. What was typed as a prefix comes first, then what
+      // contains it whole, then the rest - each group in the list's own order, so the
+      // ordering is stable and the thing most likely meant is at the top.
+      const rank = v => {
+        const lv = v.toLowerCase();
+        return lv.startsWith(ql) ? 0 : lv.includes(ql) ? 1 : 2;
+      };
+      hits = items.filter(v => {
+        const lv = v.toLowerCase();
+        return toks.every(t => lv.includes(t));
+      });
+      hits = hits.map((v, i) => [rank(v), i, v]).sort((a, b) => a[0] - b[0] || a[1] - b[1])
+                 .map(x => x[2]);
+    }
+    // Nothing matched is not a reason to take the chooser away - it leaves the reader
+    // with no list and no way back to one. Show the whole vocabulary and say so.
+    const none = toks.length > 0 && hits.length === 0;
+    if (none) hits = items;
+    hits = hits.slice(0, 60);
+    if (!hits.length){ box.hidden = true; return; }
+    // NOTHING is highlighted until an arrow key highlights it. Enter must commit what was
+    // TYPED - highlighting the first row by default would make Enter silently swap in a
+    // value the user never chose, which is exactly what a free-text column must not do.
+    // The old code clamped idx up to 0 here; it only escaped notice because a query that
+    // matched nothing used to hide the list, taking Enter out of its reach.
+    idx = idx < 0 ? -1 : Math.min(idx, hits.length - 1);
+    box.innerHTML = hits.map((v, i) =>
+      `<div class="s" role="option" data-v="${att(v)}" aria-selected="${i === idx}">`
+      + `${none ? esc(v) : markup(v, toks)}</div>`).join("")
+      + `<div class="hint">`
+      + (none ? `nothing matches that \u2014 showing all ${items.length}`
+              : `${hits.length}${hits.length === 60 ? "+" : ""} match${hits.length === 1 ? "" : "es"}`)
+      + ` &middot; \u2191\u2193 then Enter picks one &middot; Enter alone keeps what you typed`
+      + ` &middot; Esc closes</div>`;
+    box.hidden = false;
+    place();
+  }
+
   api.open = td => {
+    // Already open on this cell: leave it exactly as it is. Re-opening would reset the
+    // filter and the scroll position, and this runs again whenever focus is restored
+    // after a scrollbar drag.
+    if (cell === td && !box.hidden) return;
     cell = td; idx = -1;
     const row = (S.model.raw[td.dataset.sheet] || []).find(r => r.__row === +td.dataset.row);
     items = suggestionsFor(td.dataset.sheet, td.dataset.col, row);
     if (!items.length){ box.hidden = true; cell = null; return; }
-    // Opening shows the WHOLE vocabulary. Filtering by the cell's existing value would
-    // narrow it to that one value, which is the opposite of what a chooser is for.
-    render("");
+    // Opening shows the WHOLE vocabulary. Filtering by the value already in the cell
+    // would narrow it to that one value, which is the opposite of what a chooser is for.
+    // Re-opening part-way through typing is the other case, and there the filter is the
+    // point, so it is kept.
+    const typed = td.textContent;
+    render(typed !== (td.dataset.orig ?? "") ? typed : "");
   };
   api.close = () => { box.hidden = true; cell = null; idx = -1; api.holding = false; };
+  api.owns = td => cell === td && !box.hidden;
   api.key = e => {
     if (!cell || box.hidden) return false;
     const opts = [...box.querySelectorAll(".s")];
@@ -2784,15 +2864,37 @@ const SUGG = (() => {
     td.blur();                                   // blur commits through the normal edit path
   }
   box.addEventListener("mousedown", e => {       // before focusout, or the cell is already gone
+    // Held for the whole press, not just for a click on an option. Dragging the list's
+    // OWN scrollbar takes focus off the cell, and the focusout handler would close the
+    // list underneath the hand that is scrolling it. `holding` is what tells it not to.
+    api.holding = true;
     const s = e.target.closest(".s");
-    if (!s) return;
-    e.preventDefault(); api.holding = true; choose(s.dataset.v); api.holding = false;
+    if (s){ e.preventDefault(); choose(s.dataset.v); api.holding = false; }
+  });
+  addEventListener("mouseup", () => {
+    if (!api.holding) return;
+    api.holding = false;
+    // Put the caret back where the user left it, so the arrow keys, Enter and the
+    // eventual commit-on-blur all still work after a scrollbar drag.
+    if (cell && !box.hidden) cell.focus({preventScroll:true});
   });
   document.addEventListener("input", e => {
     const td = e.target.closest('td[contenteditable="true"]');
     if (td && td === cell) render(td.textContent);
   });
-  addEventListener("scroll", () => api.close(), true);
+  /* The box is position:fixed and anchored to its cell, so a scroll that MOVES the cell
+     has to be answered. Scrolling INSIDE the box is not that - it is the reader working
+     through the list, and closing on it makes a list taller than the box impossible to
+     reach the bottom of. So: ignore the box's own scrolling, and elsewhere re-anchor
+     rather than close, closing only once the cell itself has gone off screen. */
+  addEventListener("scroll", e => {
+    if (!cell || box.hidden) return;
+    const t = e.target;
+    if (t === box || (t && t.nodeType === 1 && box.contains(t))) return;
+    const r = cell.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) api.close();
+    else place();
+  }, true);
   return api;
 })();
 
