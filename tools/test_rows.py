@@ -13,6 +13,12 @@ Four things are checked, each on all four tables:
   3. lifecycle - a new row can be filled in, saved, exported, and read back
   4. identity  - an edit stays attached to its own record when a row above it is deleted
 
+Then two more on the Assignments table specifically:
+
+  5. auto key  - + row allocates the next free assignment_id, and two inserts differ
+  6. proxy     - typing a project NAME sets project_id; a name that matches nothing is
+                 refused; editing the identifier still drives the name the other way
+
     python tools/test_rows.py
 """
 
@@ -172,6 +178,73 @@ with sync_playwright() as pw:
     check(after["name"] == target["name"] and after["pid"] == target["pid"]
           and after["date"] == "2029-11-11" and after["marked"] == target["row"],
           "the edit stays on its own record", f"{after} vs {target}")
+
+    print("Assignments: the key is allocated, the project is named")
+    load(pg, DUMMY)
+    pg.click("text=Source data (person)")
+    pg.wait_for_timeout(900)
+    loc = "#t-pers .data-t[data-sheet='Assignment']"
+    before = set(pg.evaluate("S.model.raw.Assignment.map(r => r.assignment_id).filter(Boolean)"))
+    pg.locator(f"{loc} button[data-ins]").last.click()
+    pg.wait_for_timeout(1000)
+    first = pg.evaluate("() => {const r = S.model.raw.Assignment.find(x => x.__new); "
+                        "return r ? {row: r.__row, id: r.assignment_id} : {};}")
+    pg.locator(f"{loc} button[data-ins]").last.click()
+    pg.wait_for_timeout(1000)
+    ids = pg.evaluate("S.model.raw.Assignment.filter(r => r.__new).map(r => r.assignment_id)")
+    check(first.get("id") and first["id"] not in before and len(set(ids)) == len(ids) == 2,
+          "+ row allocates a free assignment_id", f"allocated {ids}")
+
+    def type_into(row, col, text):
+        td = pg.locator(f"{loc} td[data-row='{row}'][data-col='{col}']")
+        td.first.click()
+        pg.wait_for_timeout(150)
+        pg.keyboard.press("Control+A")
+        pg.keyboard.type(text)
+        pg.keyboard.press("Enter")
+        pg.wait_for_timeout(600)
+
+    row = first["row"]
+    want = pg.evaluate("() => {const p = Object.values(S.model.projects)"
+                       ".find(p => p.project_type !== 'Others');"
+                       " return [p.project_name, p.project_id];}")
+    type_into(row, "project_name", want[0])
+    got = pg.evaluate(f"""() => {{const r = S.model.raw.Assignment.find(x => x.__row === {row});
+        const td = document.querySelector(
+          "{loc} td[data-row='{row}'][data-col='project_id']");
+        return {{pid: r.project_id, stored: r.project_name, shown: td && td.textContent}};}}""")
+    check(got["pid"] == want[1] and got["shown"] == want[1] and got["stored"] in (None, ""),
+          "typing a project name sets project_id and stores no copy of the name",
+          f"{want[0]!r} -> {got}")
+
+    type_into(row, "project_name", "No Such Project At All")
+    kept = pg.evaluate(f"S.model.raw.Assignment.find(x => x.__row === {row}).project_id")
+    check(kept == want[1] and "No project is called" in pg.inner_text("#banner"),
+          "a name matching no project is refused and the identifier kept",
+          pg.inner_text("#banner")[:90].replace(chr(10), " "))
+
+    other = pg.evaluate("() => {const p = Object.values(S.model.projects)"
+                        ".filter(p => p.project_type !== 'Others')[1];"
+                        " return [p.project_id, p.project_name];}")
+    type_into(row, "project_id", other[0])
+    shown = pg.locator(f"{loc} td[data-row='{row}'][data-col='project_name']").first.inner_text()
+    check(shown == other[1], "editing the identifier drives the name the other way",
+          f"{other[0]} -> {shown!r}")
+
+    print("every scroll region is bounded on both axes")
+    for tab in ("Overall", "Source data (project)", "Source data (person)",
+                "General assumptions"):
+        pg.click(f"text={tab}")
+        pg.wait_for_timeout(900)
+        bad = pg.evaluate("""() => [...document.querySelectorAll('.scrollx')]
+            .filter(e => e.offsetParent !== null)
+            .map(e => {const c = getComputedStyle(e);
+                       return {cls: e.className, x: c.overflowX, y: c.overflowY,
+                               mh: c.maxHeight};})
+            .filter(r => !['auto','scroll'].includes(r.x)
+                      || !['auto','scroll'].includes(r.y) || r.mh === 'none')""")
+        check(not bad, f"{tab}: both axes scroll in every panel",
+              "" if not bad else str(bad[:2]))
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()

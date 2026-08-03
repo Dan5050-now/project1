@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.8"
+DOC_VERSION = "2.9"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,25 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.8", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.9", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 refinements round 8, application v1.7. Three changes, none touching a requirement, "
+     "rule, calculation or schema. (1) EVERY scroll region now scrolls in BOTH directions and is "
+     "bounded on both axes. A panel bounded on one axis only can still hide content on the other, "
+     "and the reader has no way of telling that it has - there is no scrollbar to suggest anything "
+     "is missing. The findings dialog and the provenance strip were the two regions with no bound "
+     "at all; the three chart panels were bounded sideways only. (2) On the Assignments table the "
+     "project is now identified by NAME: project_name is the field typed into and project_id is "
+     "derived from it, with a type-ahead over the project names. Editing the identifier directly "
+     "still works and the name follows instead - the two are one field seen from two ends. A name "
+     "matching no project is refused, naming near matches; an ambiguous one is refused too, since "
+     "only the identifier is guaranteed unique. The name is never STORED on the assignment row: "
+     "the sheet has no such column, so a copy could not survive an export and re-import, and it "
+     "would be a second version of a fact the Project sheet already owns. (3) '+ row' on the "
+     "Assignments table allocates the next free assignment_id - the smallest unused number in the "
+     "pattern the file already uses, not the largest plus one, so a file whose ids jump to 901 for "
+     "a few hand-placed rows does not start allocating 905.",
+     "Issued for review"],
+    ["2.8", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 7, application unchanged at v1.6. A second dummy dataset at the reviewer's "
      "requested size - 10 projects and 10 people - issued as PRAP_SourceData_Dummy_10x10_v1.0.xlsx "
      "on schema 5, alongside the 62-project set rather than replacing it. The generator now runs "
@@ -378,7 +396,7 @@ rows = [
      "weight overrides, and both allocation thresholds crossed. Its load distribution matches the "
      "large set's (median 0.80 against 0.87 FTE). tools/test_app.py now runs over BOTH fixtures. "
      "No requirement, rule, calculation or schema changed.",
-     "Issued for review"],
+     "Superseded by v2.9"],
     ["2.7", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 defect fix round 6, application v1.6. Reviewer reported that inserting and deleting rows "
      "did not work on Milestones, Periods, Assignments and Weight overrides - the four CHILD tables, "
@@ -1212,7 +1230,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-7 applied (app v1.6); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-8 applied (app v1.7); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1293,7 +1311,8 @@ align = [
     ["v2.5", "v1.0", "application v1.4", "5", "2026-08-02", "Gate 4 round 4: information pop-ups and row deletion."],
     ["v2.6", "v1.0", "application v1.5", "5", DOC_DATE, "Gate 4 round 5: lookup columns, cell values, row actions everywhere, type-ahead."],
     ["v2.7", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 6: insert/delete fixed on the four child tables."],
-    ["v2.8", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 7: second dummy dataset, 10 projects x 10 people. 4.9 continues."],
+    ["v2.8", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 7: second dummy dataset, 10 projects x 10 people."],
+    ["v2.9", "v1.0", "application v1.7", "5", DOC_DATE, "Gate 4 round 8: two-way scrolling everywhere, project by name, allocated assignment_id. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

@@ -123,19 +123,25 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-
  font-variant-numeric:tabular-nums}
 .tile.over .tv{color:var(--crit)}.tile.under .tv{color:var(--underink)}
 .tile .ts{font-size:11px;color:var(--muted)}
-.scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.scrollx.tall{max-height:340px;overflow:auto}
-/* The three Overall sections the reviewer asked to enlarge, and the timeline, which
-   now scrolls vertically as well as horizontally. Capped as a share of the viewport
-   so a tall panel still leaves the next one visible on a laptop screen. */
-.scrollx.xl{max-height:min(700px,72vh);overflow:auto}
+/* EVERY scroll region scrolls in BOTH directions. A panel bounded on one axis only can
+   still hide content on the other, and the reader has no way of telling that it has:
+   there is no scrollbar to suggest anything is missing. So each one is bounded on both,
+   and the cap is a share of the viewport as well as a fixed figure, so a tall panel
+   still leaves the next one visible on a laptop screen. */
+.scrollx{overflow:auto;max-height:min(560px,66vh);-webkit-overflow-scrolling:touch}
+.scrollx.tall{max-height:340px}
+/* The three Overall sections the reviewer asked to enlarge, and the timeline. */
+.scrollx.xl{max-height:min(700px,72vh)}
+/* Charts are drawn at a fixed height, so their box only ever needs to grow sideways -
+   but it is still bounded on both axes, and both scrollbars appear when they are needed. */
+.scrollx.fit{max-height:min(620px,70vh)}
 /* Sticky headers in EVERY scroll region, not just the short ones. A month-column
    heading that scrolls away turns the table into a grid of unlabelled numbers.
    Three layers, and the order matters: the corner cell has to out-rank both the row
    header it sits above and the column header it sits beside, or it is overprinted by
    whichever scrolls under it. */
-.scrollx thead th{position:sticky;top:0;z-index:3;background:var(--page)}
-.scrollx thead th::after{content:"";position:absolute;left:0;right:0;bottom:-1px;
+.scrollx thead th,.dlg-b thead th{position:sticky;top:0;z-index:3;background:var(--page)}
+.scrollx thead th::after,.dlg-b thead th::after{content:"";position:absolute;left:0;right:0;bottom:-1px;
  height:1px;background:var(--base)}
 .grid-t th.rh{z-index:2}
 .scrollx .grid-t thead th.rh{z-index:4}
@@ -244,6 +250,9 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 .drv{font-weight:400;font-size:9px;color:var(--muted);border:1px solid var(--ring);
  border-radius:8px;padding:0 5px;margin-left:4px}
 td.drvcell{font-style:italic}
+/* An entry column reads the opposite way round to a lookup - it is typed into, and it
+   drives another column - so it is marked in the accent colour, not the muted one. */
+.drv.ent{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
 .tip.pinned{pointer-events:auto;border-color:var(--accent);box-shadow:0 8px 28px rgba(0,0,0,.24)}
 .tip .tipclose{display:block;margin-top:6px;padding-top:5px;border-top:1px solid var(--ring);
  color:var(--muted);font-size:10px}
@@ -347,7 +356,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.6";
+const APP_VERSION = "1.7";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -356,8 +365,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.8.xlsx",           ver:"2.8",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.8 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.9.xlsx",           ver:"2.9",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.9 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -1703,8 +1712,75 @@ const LIST_FOR = {
   EDC_system:"EDC_system", DataReviewSystem:"DataReviewSystem", RBQM_system:"RBQM_system",
   milestone_name:"milestone_name",
 };
+/** A column the user TYPES INTO that is not stored on the row it appears in.
+ *
+ *  On the Assignments table the project is identified by project_id, and 'PRJ-014' is
+ *  not what anyone knows a project by. So project_name is the field to fill in, and the
+ *  identifier is derived from it: type a name, and project_id follows. Editing
+ *  project_id directly still works and the name follows instead - the two are one field
+ *  seen from two ends, not a field and a copy of it.
+ *
+ *  The name is never written onto the Assignment row. The Assignment sheet has no such
+ *  column, so a stored copy could not survive an export and re-import, and it would be a
+ *  second version of a fact the Project sheet already owns. */
+const PROXY = {
+  Assignment: {
+    project_name: {
+      into: "project_id",
+      show: r => (S.model.projects[r.project_id] || {}).project_name ?? "",
+      options: () => Object.values(S.model.projects)
+        .map(p => p.project_name).filter(v => v !== null && v !== undefined && v !== "")
+        .map(String).sort(),
+      resolve(name){
+        const want = String(name).trim().toLowerCase();
+        const hits = Object.values(S.model.projects)
+          .filter(p => String(p.project_name ?? "").trim().toLowerCase() === want);
+        if (hits.length === 1) return {value: hits[0].project_id};
+        if (hits.length) return {error: `More than one project is called '${name}'. `
+          + `Enter the project_id instead — that is the field that has to be unique.`};
+        const near = this.options().filter(o => o.toLowerCase().includes(want)).slice(0, 3);
+        return {error: `No project is called '${name}'.`
+          + (near.length ? ` Did you mean ${near.map(o => `'${o}'`).join(", ")}?`
+                         : ` Add the project on the Source data (project) tab first.`)};
+      },
+    },
+  },
+};
+const proxyFor = (sheet, col) => (PROXY[sheet] || {})[col];
+
+/** Sheets whose key is allocated for the user when a row is inserted. An assignment_id
+ *  carries no meaning beyond being unique, so making someone invent one is asking them
+ *  to do the machine's job - and to do it wrong, since the row is rejected at Save if
+ *  the number collides with one already in the file. */
+const AUTO_KEY = new Set(["Assignment"]);
+
+/** The next free identifier in the pattern the sheet already uses.
+ *
+ *  The SMALLEST unused number, not the largest plus one: a file whose ids run 1..46 and
+ *  then jump to 901 for a handful of hand-placed rows would otherwise allocate 905 and
+ *  keep climbing, which reads as a mistake even though it is not one. */
+function nextKey(sheet, col){
+  if (!col) return null;
+  const used = new Set();
+  let prefix = null, width = 3;
+  for (const r of (S.model.raw[sheet] || [])){
+    const v = r[col];
+    if (v === null || v === undefined || String(v).trim() === "") continue;
+    const m = /^(.*?)(\d+)$/.exec(String(v).trim());
+    if (!m) continue;
+    if (prefix === null){ prefix = m[1]; width = m[2].length; }
+    if (m[1] === prefix) used.add(+m[2]);
+  }
+  if (prefix === null) return null;              // nothing to follow - leave it to the user
+  let n = 1;
+  while (used.has(n)) n++;
+  return prefix + String(n).padStart(width, "0");
+}
+
 function suggestionsFor(sheet, col, row){
   const M = S.model;
+  const px = proxyFor(sheet, col);
+  if (px) return px.options();
   const named = LIST_FOR[col];
   if (named && M.lists[named]) return M.lists[named].map(String);
   // period_name and role_name depend on the project's TYPE, so the valid set is not one
@@ -1734,10 +1810,13 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived){
   derived = derived || {};
   const head = `<th class="ins" data-tip="${att(HELP.rowactions)}">Row</th>`
     + cols.map(c => {
-        const h = COLUMN_HELP[c];
-        const d = derived[c] ? " · shown for context, looked up from its master row and not editable" : "";
+        const h = COLUMN_HELP[c], px = proxyFor(sheet, c);
+        const d = derived[c] ? " · shown for context, looked up from its master row and not editable"
+          : px ? ` · type the name here and ${esc(px.into)} follows. Not stored on this row — `
+               + `the master row owns it.` : "";
         return `<th${h || d ? ` class="hasinfo" data-tip="${att(`<b>${esc(c)}</b><br>${(h||"")}${d}`)}"` : ""}>`
-          + `${esc(c)}${derived[c] ? ' <span class="drv">lookup</span>' : ""}</th>`;
+          + `${esc(c)}${derived[c] ? ' <span class="drv">lookup</span>'
+                       : px ? ' <span class="drv ent">sets ' + esc(px.into) + '</span>' : ""}</th>`;
       }).join("");
   const body = rows.map(r => {
     const sel = (selKey && r[selKey] === selVal) ? ' class="sel"' : "";
@@ -1746,6 +1825,15 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived){
         const dv = derived[c](r) ?? "";
         return `<td class="muted drvcell" data-tip="${att(`<b>${esc(c)}</b><br>${esc(dv) || "&mdash;"}`
           + `<br><span class="tr">looked up, not stored on this row</span>`)}">${esc(dv)}</td>`;
+      }
+      const px = proxyFor(sheet, c);
+      if (px){
+        const pv = px.show(r) ?? "";
+        const marked = S.editedCells.has(`${sheet}|${r.__row}|${px.into}`) ? " edited" : "";
+        return `<td class="cell${marked}" contenteditable="true" data-sheet="${att(sheet)}" `
+          + `data-row="${r.__row}" data-col="${att(c)}" data-tip="${att(
+              `<b>${esc(c)}</b><br>${pv === "" ? "<i>empty</i>" : esc(pv)}`
+              + `<br><span class="tr">typing a name here sets ${esc(px.into)}</span>`)}">${esc(pv)}</td>`;
       }
       const v = r[c];
       const disp = v instanceof Date ? ymd(v) : (v === null || v === undefined ? "" : v);
@@ -1828,7 +1916,7 @@ function renderOverall(){
       <div class="scrollx xl">${tableProjects(pids)}</div></div>
     <div class="panel"><h2>Mean load per person</h2>
       <p class="cap">Averaged over the horizon, against the two absolute thresholds.</p>
-      <div class="scrollx">${chartPeople(sids)}</div></div>
+      <div class="scrollx fit">${chartPeople(sids)}</div></div>
     <div class="panel"><h2>Resource by person</h2>
       <p class="cap">Summed across every project. &#9650; above the ceiling, &#9660; below the floor.
         <strong>Click a person name</strong> to expand to their projects and roles.</p>
@@ -1877,7 +1965,7 @@ function projDetail(pid){
         floor, so the reference lines are <strong>relative</strong>: twice and half the average an active
         project draws across the portfolio (${util.portAvg.toFixed(2)} FTE), plus this project's own
         average over its full life (${util.ownAvg.toFixed(2)} FTE). They are context, not pass or fail.</p>
-      <div class="scrollx">${util.svg}</div></div>
+      <div class="scrollx fit">${util.svg}</div></div>
     <div class="two">
       <div class="panel"><h2>Milestones — ${esc(pr.project_name)}</h2>
         <p class="cap">CTA submission and the DB locks set the period boundaries.</p>
@@ -1925,13 +2013,15 @@ function persDetail(sid){
   return `<div class="panel"><h2>Utilisation — ${esc(pe.person_name)} (${esc(sid)})</h2>
       <p class="cap">Monthly load across the horizon. Dashed lines are the ceiling and floor — the same
         two figures for everyone, since both thresholds are absolute.</p>
-      <div class="scrollx">${chartPersonStrip(sid)}</div></div>
+      <div class="scrollx fit">${chartPersonStrip(sid)}</div></div>
     <div class="two">
       <div class="panel"><h2>Assignments — ${esc(sid)}</h2>
+        <p class="cap">Fill in <code>project_name</code> — <code>project_id</code> is derived from it.
+          Editing the identifier directly still works and the name follows instead.
+          <strong>+ row</strong> allocates the next <code>assignment_id</code>.</p>
         ${dataTable("Assignment", asg,
-          ["assignment_id","project_id","project_name","role_name",
-           "assign_start_date","assign_end_date","person_weight"], null, null,
-          {project_name: r => (M.projects[r.project_id] || {}).project_name})}</div>
+          ["assignment_id","project_name","project_id","role_name",
+           "assign_start_date","assign_end_date","person_weight"])}</div>
       <div class="panel"><h2>Weight overrides</h2>
         <p class="cap">Replaces person_weight for the window it covers. One assignment may carry
           several non-overlapping windows.</p>
@@ -2139,6 +2229,20 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
   const M = S.model;
   const target = M.raw[sheet].find(r => r.__row === rowNum);
   if (!target) return;
+
+  // A proxy column is resolved to the identifier it names, and the identifier is what
+  // is written. Everything after this point sees an ordinary edit to an ordinary column.
+  const px = proxyFor(sheet, col);
+  if (px){
+    if (raw.trim() === ""){ col = px.into; raw = ""; }
+    else {
+      const got = px.resolve(raw);
+      if (got.error){ flashBad(tdEl, got.error); return; }
+      if (got.value === target[px.into]){ tdEl.textContent = px.show(target) ?? ""; return; }
+      col = px.into; raw = String(got.value);
+    }
+  }
+
   const spec = SHEET_COLS[sheet];
   let v = raw.trim() === "" ? null : raw.trim();
   if (v !== null && spec.date.includes(col)){
@@ -2473,8 +2577,8 @@ function renderProvenance(){
       + `</tr>`
     : `<tr><td>Loaded workbook</td><td class="plabel">—</td><td colspan="2" class="plabel">nothing loaded yet</td></tr>`;
   el("provBody").innerHTML =
-    `<table><thead><tr><th>Controlled document</th><th>Version</th><th>File</th>`
-    + `<th>Status</th></tr></thead><tbody>${rows}${loadedRow}</tbody></table>`
+    `<div class="scrollx tall"><table><thead><tr><th>Controlled document</th><th>Version</th><th>File</th>`
+    + `<th>Status</th></tr></thead><tbody>${rows}${loadedRow}</tbody></table></div>`
     + `<p class="note">These are the documents this build implements. The application does not read them —
        they are recorded here so a file on someone's disk can be traced back to the issue it was built
        from. tools/check_consistency.py verifies the list against the repository on every run.</p>`;
@@ -2536,6 +2640,10 @@ document.addEventListener("click", e => {
     if (PARENT_OF[sheet]){
       const [col, val] = PARENT_OF[sheet]();
       if (val) blank[col] = val;
+    }
+    if (AUTO_KEY.has(sheet)){
+      const id = nextKey(sheet, KEY_COL[sheet]);
+      if (id) blank[KEY_COL[sheet]] = id;
     }
     rows.splice(i + 1, 0, blank);                        // directly below, not appended
     beginEditSession();
