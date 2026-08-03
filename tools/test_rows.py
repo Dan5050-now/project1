@@ -19,6 +19,13 @@ Then two more on the Assignments table specifically:
   6. proxy     - typing a project NAME sets project_id; a name that matches nothing is
                  refused; editing the identifier still drives the name the other way
 
+And one on Weight overrides:
+
+  7. re-point  - changing assignment_id on an override row moves THAT ROW ONLY. It is a
+                 foreign key, and cascading it would drag the sibling windows of the
+                 assignment being moved away from. A second window on one assignment is
+                 the normal case; only an overlapping one is refused.
+
     python tools/test_rows.py
 """
 
@@ -87,7 +94,8 @@ with sync_playwright() as pw:
     pg = browser.new_page(viewport={"width": 1500, "height": 1000})
     errors = []
     pg.on("pageerror", lambda e: errors.append(str(e)))
-    pg.on("dialog", lambda d: d.accept())
+    prompts = []                       # confirm() dialogs the app raises
+    pg.on("dialog", lambda d: (prompts.append(d.message), d.accept()))
 
     print("app/PRAP.html")
     print("insert and delete")
@@ -230,6 +238,65 @@ with sync_playwright() as pw:
     shown = pg.locator(f"{loc} td[data-row='{row}'][data-col='project_name']").first.inner_text()
     check(shown == other[1], "editing the identifier drives the name the other way",
           f"{other[0]} -> {shown!r}")
+
+    print("Weight overrides: re-pointing a row moves that row only")
+    load(pg, DUMMY)
+    pg.click("text=Source data (person)")
+    pg.wait_for_timeout(900)
+    ploc = "#t-pers .data-t[data-sheet='PersonPeriodWeight']"
+    prompts.clear()
+    start = pg.evaluate("S.model.raw.PersonPeriodWeight.map(r => [r.__row, r.assignment_id])")
+    # the first row's assignment, and a DIFFERENT one that already has a window
+    src = start[0][1]
+    dst = next((a for _, a in start if a != src), None)
+    check(dst is not None, "the fixture has two assignments carrying overrides", str(start))
+    sibs_before = sum(1 for _, a in start if a == src)
+    td = pg.locator(f"{ploc} td[data-row='{start[0][0]}'][data-col='assignment_id']")
+    td.first.click()
+    pg.wait_for_timeout(150)
+    pg.keyboard.press("Control+A")
+    pg.keyboard.type(dst)
+    pg.keyboard.press("Enter")
+    pg.wait_for_timeout(1200)
+    after = pg.evaluate("S.model.raw.PersonPeriodWeight.map(r => [r.__row, r.assignment_id])")
+    left = sum(1 for _, a in after if a == src)
+    check(left == sibs_before - 1 and not prompts,
+          "re-pointing an override row leaves its former siblings alone",
+          f"{src}: {sibs_before} -> {left} rows, {len(prompts)} prompt(s); {after}")
+
+    # and a genuinely overlapping second window is still refused
+    load(pg, DUMMY)
+    pg.click("text=Source data (person)")
+    pg.wait_for_timeout(900)
+    pg.locator(f"{ploc} button[data-ins]").last.click()
+    pg.wait_for_timeout(900)
+    nrow = pg.evaluate("() => S.model.raw.PersonPeriodWeight.find(x => x.__new).__row")
+    host = pg.evaluate("() => {const r = S.model.raw.PersonPeriodWeight.find(x => !x.__new);"
+                       " return [r.assignment_id, r.period_start.toISOString().slice(0,10),"
+                       " r.period_end.toISOString().slice(0,10)];}")
+
+    def ptype(col, text):
+        c = pg.locator(f"{ploc} td[data-row='{nrow}'][data-col='{col}']")
+        c.first.click()
+        pg.wait_for_timeout(140)
+        pg.keyboard.press("Control+A")
+        pg.keyboard.type(text)
+        pg.keyboard.press("Enter")
+        pg.wait_for_timeout(550)
+
+    ptype("assignment_id", host[0])
+    note = pg.inner_text("#banner")
+    check(host[0] in note and "several windows" in note,
+          "picking an assignment that already has windows explains itself",
+          note[:110].replace(chr(10), " "))
+    ptype("period_start", host[1])          # exactly on top of the existing window
+    ptype("period_end", host[2])
+    ptype("weight_override", "0.40")
+    pg.click("#saveBtn")
+    pg.wait_for_timeout(1400)
+    check("Save refused" in pg.inner_text("#banner"),
+          "an overlapping window is still refused at Save",
+          pg.inner_text("#banner")[:110].replace(chr(10), " "))
 
     print("every scroll region is bounded on both axes")
     for tab in ("Overall", "Source data (project)", "Source data (person)",

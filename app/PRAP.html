@@ -356,7 +356,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.7";
+const APP_VERSION = "1.8";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -365,8 +365,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.9.xlsx",           ver:"2.9",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.9 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.10.xlsx",          ver:"2.10",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.10 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -2260,7 +2260,16 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
   // REQ-IMP-10: changing an identifier that other sheets reference cascades to every
   // referencing row, after saying how many will change. Blocking the edit instead would
   // make the field read-only in all but name.
-  if (KEY_COL[sheet] === col && REFS[col] && before !== null && v !== null && v !== before){
+  //
+  // Only on the sheet that OWNS the identifier. KEY_COL names the key column of every
+  // sheet, but on a CHILD sheet that column is a FOREIGN key: PersonPeriodWeight
+  // .assignment_id points at an assignment, it does not define one. Editing it re-points
+  // this one row, and cascading would drag every other row that happens to share the old
+  // value along with it - which on the overrides table means the sibling windows of the
+  // assignment you just moved away from. OWNER is the same map deleteRow already uses
+  // for the same reason.
+  if (KEY_COL[sheet] === col && OWNER[col] === sheet && REFS[col]
+      && before !== null && v !== null && v !== before){
     const hits = [];
     for (const [s2, c2] of REFS[col])
       for (const r of M.raw[s2]) if (r[c2] === before) hits.push([r, c2]);
@@ -2293,6 +2302,21 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
   tdEl.classList.add("edited");
   rebuild(true);
   renderKeepingTab();
+
+  // Pointing a child row at a parent that already has children is the normal way to add
+  // a second override window, not a mistake - so this says what the row now sits beside
+  // rather than asking anything. The rules that DO constrain it are V-06 and V-24, and
+  // they are checked when the row is complete, so name them here while there is still
+  // something to do about it.
+  if (KEY_COL[sheet] === col && OWNER[col] && OWNER[col] !== sheet && v !== null && v !== before){
+    const sibs = M.raw[sheet].filter(r => r[col] === v && r.__row !== rowNum).length;
+    if (sibs) showBanner("", `${v} now carries ${sibs + 1} rows in ${sheet}`
+      + (sheet === "PersonPeriodWeight"
+          ? ` — that is allowed, and is how one assignment carries several windows. They must not
+              overlap and no two may start on the same date (V-06, V-24); both are checked when you
+              press Save.`
+          : `. The other ${sibs} ${sibs === 1 ? "is" : "are"} untouched.`));
+  }
 }
 
 function flashBad(tdEl, msg){

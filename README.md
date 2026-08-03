@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.9 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.10 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -30,7 +30,7 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.9.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.10.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -46,7 +46,7 @@ output/       Exported results and test evidence   (from Step 5)
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -77,6 +77,7 @@ output/       Exported results and test evidence   (from Step 5)
   | Row insert | lands directly below the row acted on |
   | Row insert / delete on the four child tables | `tools/test_rows.py`, and it fails against the build before the fix |
   | Project by name, allocated `assignment_id`, two-way scrolling | same file, and it also fails against the build before it |
+  | Re-pointing an override row moves that row only | same file; the previous build dragged both windows of the old assignment |
 
   Gate 4 round 1 (app v1.1): the three named Overall sections are up to twice their
   previous size; the project timeline scrolls in both directions, so every project in
@@ -101,6 +102,16 @@ output/       Exported results and test evidence   (from Step 5)
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 9 (app v1.8): a reported defect — choosing an `assignment_id` on a new
+  Weight-overrides row warned that it would change every other override of the
+  assignment being moved away from, so a second window could not be added. The edit path
+  cascaded an identifier change whenever the edited column was the sheet's key, but on a
+  **child** sheet that column is a *foreign* key: `PersonPeriodWeight.assignment_id`
+  points at an assignment, it does not define one. The cascade is now confined to the
+  sheet that owns the identifier — the same distinction `deleteRow` has made since round
+  4. In place of the warning, picking an assignment that already carries windows says how
+  many the row joins and names V-06 and V-24.
 
   Gate 4 round 8 (app v1.7): **every** scroll region scrolls in both directions and is
   bounded on both axes — a panel bounded on one axis only can still hide content on the

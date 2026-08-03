@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.9"
+DOC_VERSION = "2.10"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,23 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.9", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.10", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 defect fix round 9, application v1.8. Reviewer reported that choosing an assignment_id "
+     "on a new Weight-overrides row raised a warning offering to change every other override of the "
+     "assignment being moved away from, so a second window could not be added. Cause: the edit path "
+     "cascaded an identifier change whenever the edited column was the sheet's KEY_COL, but on a "
+     "CHILD sheet that column is a FOREIGN key - PersonPeriodWeight.assignment_id points at an "
+     "assignment, it does not define one. Re-pointing one row therefore rewrote every row sharing "
+     "the old value, which on the overrides table is the sibling windows of that same assignment. "
+     "Accepting the prompt destroyed them; declining abandoned the edit, so the assignment could "
+     "not be changed at all and the row stayed on whichever assignment it was seeded with. The "
+     "cascade is now confined to the sheet that OWNS the identifier, using the OWNER map that "
+     "deleteRow has used for the same distinction since round 4. In place of the warning, picking "
+     "an assignment that already carries windows now states how many the row joins and names V-06 "
+     "and V-24 - an additional window is the normal case, and only an overlapping one is refused, "
+     "at Save. No requirement, rule, calculation or schema changed.",
+     "Issued for review"],
+    ["2.9", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 refinements round 8, application v1.7. Three changes, none touching a requirement, "
      "rule, calculation or schema. (1) EVERY scroll region now scrolls in BOTH directions and is "
      "bounded on both axes. A panel bounded on one axis only can still hide content on the other, "
@@ -383,7 +399,7 @@ rows = [
      "Assignments table allocates the next free assignment_id - the smallest unused number in the "
      "pattern the file already uses, not the largest plus one, so a file whose ids jump to 901 for "
      "a few hand-placed rows does not start allocating 905.",
-     "Issued for review"],
+     "Superseded by v2.10"],
     ["2.8", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 7, application unchanged at v1.6. A second dummy dataset at the reviewer's "
      "requested size - 10 projects and 10 people - issued as PRAP_SourceData_Dummy_10x10_v1.0.xlsx "
@@ -1230,7 +1246,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-8 applied (app v1.7); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-9 applied (app v1.8); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1312,7 +1328,8 @@ align = [
     ["v2.6", "v1.0", "application v1.5", "5", DOC_DATE, "Gate 4 round 5: lookup columns, cell values, row actions everywhere, type-ahead."],
     ["v2.7", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 6: insert/delete fixed on the four child tables."],
     ["v2.8", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 7: second dummy dataset, 10 projects x 10 people."],
-    ["v2.9", "v1.0", "application v1.7", "5", DOC_DATE, "Gate 4 round 8: two-way scrolling everywhere, project by name, allocated assignment_id. 4.9 continues."],
+    ["v2.9", "v1.0", "application v1.7", "5", DOC_DATE, "Gate 4 round 8: two-way scrolling everywhere, project by name, allocated assignment_id."],
+    ["v2.10", "v1.0", "application v1.8", "5", DOC_DATE, "Gate 4 round 9: a foreign key no longer cascades; second override windows can be added. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
