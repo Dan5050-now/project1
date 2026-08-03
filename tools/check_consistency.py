@@ -14,10 +14,11 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.7.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.8.xlsx"
 SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.0.xlsx"
 TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.6.xlsx"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.8.xlsx"
+DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.0.xlsx"
 
 problems, notes = [], []
 
@@ -83,6 +84,11 @@ def cfg_version(path):
 tpl_v, dum_v = cfg_version(TEMPLATE), cfg_version(DUMMY)
 if tpl_v != dum_v:
     problems.append(f"template schema_version {tpl_v} != dummy {dum_v}")
+# Every dummy the repository ships must be on the same schema. A second fixture is a
+# second thing that can fall behind, which is the only reason it is worth checking.
+small_v = cfg_version(DUMMY_SMALL)
+if small_v != tpl_v:
+    problems.append(f"template schema_version {tpl_v} != {DUMMY_SMALL.name} {small_v}")
 
 spec = load_workbook(SPEC)
 spec_v = None
@@ -124,7 +130,8 @@ for doc, wb in (("plan", plan), ("specification", spec)):
 # The generators use [NEW]/[CHANGED] markers to drive row highlighting, and strip
 # them on render. One missed strip ships the marker as visible text, so check.
 for label, path in (("plan", PLAN), ("specification", SPEC),
-                    ("template", TEMPLATE), ("dummy", DUMMY)):
+                    ("template", TEMPLATE), ("dummy", DUMMY),
+                    ("small dummy", DUMMY_SMALL)):
     wb_ = load_workbook(path)
     for sh in wb_.sheetnames:
         for c in cells(wb_[sh]):
@@ -218,6 +225,7 @@ print(f"plan       {PLAN.name}")
 print(f"spec       {SPEC.name}")
 print(f"template   {TEMPLATE.name}   schema v{tpl_v}")
 print(f"dummy      {DUMMY.name}   schema v{dum_v}")
+print(f"dummy      {DUMMY_SMALL.name}   schema v{small_v}")
 print(f"types      {types}")
 print(f"columns cross-checked: {sum(len(v) for k, v in documented.items() if k in plan_sheets)}"
       f" across {len(plan_sheets)} sheets")

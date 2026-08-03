@@ -11,11 +11,20 @@ Outputs into templates/:
 The two carry different version numbers because the template's structure is unchanged
 since v1.2; only the dummy dataset was regenerated.
 
-The dummy file is generated deterministically (seeded), so it rebuilds identically.
-It holds 50 clinical trials, 12 'Others' projects and 20 people, and is built to
-exercise the rules rather than merely fill cells: interim DB locks that open a
-'Conduct (interim)' stretch, inspections that open the final period, hand-entered 'Others'
-periods, part-time capacities, weight overrides, and both allocation thresholds.
+The dummy files are generated deterministically (seeded), so every sheet rebuilds
+byte-for-byte. The .xlsx as a whole does not: openpyxl stamps the build time into
+docProps/core.xml, so the container differs while the data does not.
+
+Two sizes are produced, from one generator driven by PROFILES:
+
+    Dummy_v1.8         50 clinical trials + 12 'Others', 20 people - the review set
+    Dummy_10x10_v1.0    8 clinical trials +  2 'Others', 10 people - small enough to
+                        read every row and check the arithmetic by hand
+
+Both are built to exercise the rules rather than merely fill cells: interim DB locks
+that open a 'Conduct (interim)' stretch, inspections that open the final period,
+hand-entered 'Others' periods, part-time capacities, multi-window weight overrides, and
+both allocation thresholds crossed.
 """
 
 import random
@@ -31,6 +40,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 SCHEMA_VERSION = 5
 TEMPLATE_VERSION = "1.6"
 DUMMY_VERSION = "1.8"
+DUMMY_SMALL_VERSION = "1.0"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -266,13 +276,161 @@ def derive_periods(start, end, milestones, inspections):
 # --------------------------------------------------------------------------
 # Dummy dataset
 # --------------------------------------------------------------------------
-def dummy_data():
-    """Deterministic dataset: 50 clinical trials, 12 'Others' projects, 20 people.
+def _extras_large(span):
+    """The hand-placed rows of the 62-project set, kept as the literals they shipped as."""
+    A = [
+        ("ASG-901", "PSN-020", "PRJ-051", "Other staff", date(2026, 1, 1), date(2027, 6, 30), 0.18),
+        ("ASG-902", "PSN-001", "PRJ-002", "Project oversight", date(2026, 4, 1), date(2027, 3, 31), 0.35),
+        ("ASG-903", "PSN-001", "PRJ-006", "Project oversight", date(2026, 4, 1), date(2027, 3, 31), 0.35),
+    ]
+    # The key is (assignment_id, period_start) precisely because ONE assignment may
+    # carry SEVERAL non-overlapping windows. ASG-902 exercises that: a spell of leave,
+    # back to normal in between, then a peak. A fixture that only ever showed one window
+    # per assignment left the multi-window path untested, which is how the missing
+    # overlap and referential rules went unnoticed until R-12.
+    ppw = [
+        ("ASG-902", date(2026, 7, 1), date(2026, 9, 30), 0.20, "Part-time - parental leave"),
+        ("ASG-902", date(2027, 4, 1), date(2027, 6, 30), 0.75, "Covering start-up peak"),
+        ("ASG-903", date(2026, 10, 1), date(2026, 12, 31), 0.45, "Covering interim analysis peak"),
+    ]
+    return A, ppw
 
-    Seeded so the file rebuilds byte-for-byte. Sized to the reviewer's request rather
-    than to REQ-NFR-03's headroom figure - see the README note.
+
+def _extras_small(span):
+    """The same three shapes on the 10-project set, with the dates read off the projects.
+
+    Hard-coded dates would be a hostage to the generated calendar: a project that starts
+    a month later than the literal assumes turns the fixture into a V-07 warning about an
+    assignment running past its project. Deriving them keeps the file clean whatever the
+    seed produces.
     """
-    rng = random.Random(20260801)
+    def window(pid, frm, to):
+        """A stretch inside a project's own dates, given as fractions of its span."""
+        s, e = span[pid]
+        total = (e - s).days
+        a = (s + timedelta(days=int(total * frm))).replace(day=1)
+        b = (s + timedelta(days=int(total * to))).replace(day=1) - timedelta(days=1)
+        return max(a, s), min(b, e)
+
+    # Both 'Others' projects, so the part-timer has a continuous but thin workload:
+    # one short assignment on its own reads as a gap in the data rather than as the
+    # under-allocation it is meant to show.
+    o1_s, o1_e = window("PRJ-009", 0.05, 0.95)
+    o2_s, o2_e = window("PRJ-010", 0.05, 0.95)
+    p1_s, p1_e = window("PRJ-002", 0.10, 0.60)
+    p2_s, p2_e = window("PRJ-006", 0.10, 0.60)
+    A = [
+        ("ASG-901", "PSN-010", "PRJ-009", "Other staff", o1_s, o1_e, 0.18),
+        ("ASG-902", "PSN-001", "PRJ-002", "Project oversight", p1_s, p1_e, 0.35),
+        ("ASG-903", "PSN-001", "PRJ-006", "Project oversight", p2_s, p2_e, 0.35),
+        ("ASG-904", "PSN-010", "PRJ-010", "Other staff", o2_s, o2_e, 0.22),
+    ]
+
+    def third(s, e, k):
+        """The k-th of three equal, non-overlapping windows inside s..e, month-aligned."""
+        n = (e.year - s.year) * 12 + e.month - s.month + 1
+        a = (s + rd(months=(n * k) // 3)).replace(day=1)
+        b = (a + rd(months=max(1, n // 3))).replace(day=1) - timedelta(days=1)
+        return max(a, s), min(b, e)
+
+    w1s, w1e = third(p1_s, p1_e, 0)
+    w2s, w2e = third(p1_s, p1_e, 2)
+    w3s, w3e = third(p2_s, p2_e, 1)
+    ppw = [
+        ("ASG-902", w1s, w1e, 0.20, "Part-time - parental leave"),
+        ("ASG-902", w2s, w2e, 0.75, "Covering start-up peak"),
+        ("ASG-903", w3s, w3e, 0.45, "Covering interim analysis peak"),
+    ]
+    return A, ppw
+
+
+PROFILES = {
+    # The set shipped for Gate 4. Sized to the reviewer's original request rather than
+    # to REQ-NFR-03's headroom figure - see the README note.
+    "dummy": dict(
+        version=DUMMY_VERSION, seed=20260801, n_ct=50, n_other=12,
+        ct_base=date(2025, 1, 1), ot_base=date(2025, 6, 1),
+        ct_spread=41, ot_spread=36, weight=(0.10, 0.17), lead_bonus=0.04,
+        names=["Kim S.", "Park J.", "Lee H.", "Choi M.", "Jung Y.", "Han B.", "Oh K.",
+               "Seo W.", "Yoon T.", "Nam R.", "Ahn D.", "Baek C.", "Shin E.", "Koo J.",
+               "Ryu P.", "Moon A.", "Jang L.", "Hwang N.", "Cho V.", "Song G."],
+        depts=(["Clinical Operations"] * 3 + ["Data Management"] * 4
+               + ["Data Management"] * 5 + ["Programming"] * 4
+               + ["Biostatistics"] * 3 + ["Business Systems"]),
+        primary=(["Project oversight"] * 3 + ["Lead data manager"] * 4
+                 + ["Clinical Data Associator"] * 5 + ["Clinical Database Programmer"] * 4
+                 + ["Data Analyst"] * 3 + ["Other staff"]),
+        capacity={20: 0.60, 4: 0.80},
+        pools={
+            "Project oversight":            ["PSN-001", "PSN-002", "PSN-003"],
+            "Lead data manager":            ["PSN-004", "PSN-005", "PSN-006", "PSN-007"],
+            "Clinical Data Associator":     ["PSN-008", "PSN-009", "PSN-010", "PSN-011", "PSN-012"],
+            "Clinical Database Programmer": ["PSN-013", "PSN-014", "PSN-015", "PSN-016"],
+            "Data Analyst":                 ["PSN-017", "PSN-018", "PSN-019"],
+            "Project lead":                 ["PSN-001", "PSN-004"],
+            "Main staff":                   ["PSN-008", "PSN-013", "PSN-017"],
+            "Other staff":                  ["PSN-011", "PSN-016", "PSN-020"],
+        },
+        light="PSN-020", extras=_extras_large,
+    ),
+    # Ten projects and ten people: small enough to read every row on screen and check
+    # the arithmetic by hand, which the 62-project set is not. Everything the larger set
+    # exercises is still here - both clinical types, all four phases, trials with and
+    # without an interim lock, inspections, hand-entered 'Others' periods, a part-timer,
+    # multi-window overrides, and both allocation thresholds crossed.
+    #
+    # Two deliberate outliers: PSN-009 covers every trial as Data Analyst and goes over
+    # the ceiling, PSN-010 carries one small assignment and sits under the floor. With
+    # ten people and five clinical roles somebody has to double up, so the doubling is
+    # placed where it demonstrates something rather than left to fall out of the sums.
+    # The starts are packed into a narrower span than the large set's, because ten
+    # projects spread over three and a half years would rarely overlap, and overlap is
+    # the thing this application exists to show.
+    "dummy_small": dict(
+        version=DUMMY_SMALL_VERSION, seed=20260803, n_ct=8, n_other=2,
+        # The short internal projects start later than the trials, so they are live
+        # in the middle of the span rather than finished before it - a demo row that
+        # reads 0.00 in the default window teaches nothing.
+        ct_base=date(2025, 1, 1), ot_base=date(2026, 6, 1),
+        ct_spread=12, ot_spread=10, weight=(0.22, 0.34), lead_bonus=0.05,
+        # Someone whose pool is half the size carries twice as many trials, and would
+        # not in practice hold the same share of each. Without this the analyst is over
+        # the ceiling for the whole span, which demonstrates nothing.
+        role_scale={"Data Analyst": 0.55},
+        names=["Kim S.", "Park J.", "Lee H.", "Choi M.", "Jung Y.",
+               "Han B.", "Oh K.", "Seo W.", "Yoon T.", "Nam R."],
+        depts=(["Clinical Operations"] * 2 + ["Data Management"] * 4
+               + ["Programming"] * 2 + ["Biostatistics"] + ["Business Systems"]),
+        primary=(["Project oversight"] * 2 + ["Lead data manager"] * 2
+                 + ["Clinical Data Associator"] * 2 + ["Clinical Database Programmer"] * 2
+                 + ["Data Analyst"] + ["Other staff"]),
+        capacity={10: 0.60, 4: 0.80},
+        pools={
+            "Project oversight":            ["PSN-001", "PSN-002"],
+            "Lead data manager":            ["PSN-003", "PSN-004"],
+            "Clinical Data Associator":     ["PSN-005", "PSN-006"],
+            "Clinical Database Programmer": ["PSN-007", "PSN-008"],
+            "Data Analyst":                 ["PSN-009"],
+            "Project lead":                 ["PSN-001", "PSN-003"],
+            "Main staff":                   ["PSN-005", "PSN-007"],
+            "Other staff":                  ["PSN-006", "PSN-010"],
+        },
+        light="PSN-010", extras=_extras_small,
+    ),
+}
+
+
+def dummy_data(prof):
+    """Deterministic dataset built to a size PROFILE.
+
+    Seeded so each file rebuilds byte-for-byte. The two profiles differ only in how
+    many projects and people they hold and how the work is shared out; the shapes they
+    exercise - interim locks, inspections, hand-entered 'Others' periods, part-time
+    capacities, multi-window overrides, both allocation thresholds - are the same in
+    both, because a small dataset that exercises nothing is not a smaller test, it is
+    a weaker one.
+    """
+    rng = random.Random(prof["seed"])
 
     PRODUCTS = ["Onvelaris", "Cardexa", "Neurexa", "Renvia", "Hepatiq",
                 "Immunex", "Osteva", "Pulmora", "Dermaline", "Glycora"]
@@ -308,14 +466,20 @@ def dummy_data():
                     "Close-out (final)": 1.20, "After Close-out (final)": 0.72},
     }
 
+    N_CT, N_OT = prof["n_ct"], prof["n_other"]
+    OT_NAMES = ['CDISC library migration', 'eTMF rollout', 'EDC vendor evaluation',
+                'SDTM automation', 'Risk dashboard build', 'Archive remediation',
+                'CDR pilot', 'Metadata repository', 'eConsent rollout', 'Query analytics',
+                'Training refresh', 'SOP revision']
+
     # ---- projects -------------------------------------------------------
     projects, ms, inspections = [], {}, {}
 
-    for n in range(1, 51):                                   # 50 clinical trials
+    for n in range(1, N_CT + 1):                             # clinical trials
         pid = f"PRJ-{n:03d}"
         phase = PHASES[(n - 1) % 4]
         product = PRODUCTS[(n - 1) % len(PRODUCTS)]
-        start = date(2025, 1, 1) + rd(months=rng.randint(0, 41))
+        start = prof["ct_base"] + rd(months=rng.randint(0, prof["ct_spread"]))
         months = rng.choice([18, 24, 30, 36, 42])
         end = start + rd(months=months) - timedelta(days=1)
         has_interim = (n % 5) in (0, 1, 2)                   # 60% carry an interim lock
@@ -344,44 +508,28 @@ def dummy_data():
             base = m["final DB lock"]
             inspections[pid] = [base + rd(months=k) for k in (2, 5)][: 1 + (n % 2)]
 
-    for n in range(51, 63):                                  # 12 'Others' projects
+    for n in range(N_CT + 1, N_CT + N_OT + 1):               # 'Others' projects
         pid = f"PRJ-{n:03d}"
-        start = date(2025, 6, 1) + rd(months=rng.randint(0, 36))
+        start = prof["ot_base"] + rd(months=rng.randint(0, prof["ot_spread"]))
         months = rng.choice([6, 9, 12, 18])
         projects.append((
-            pid, f"{['CDISC library migration', 'eTMF rollout', 'EDC vendor evaluation', 'SDTM automation', 'Risk dashboard build', 'Archive remediation', 'CDR pilot', 'Metadata repository', 'eConsent rollout', 'Query analytics', 'Training refresh', 'SOP revision'][n - 51]}",
+            pid, f"{OT_NAMES[n - N_CT - 1]}",
             "Others", "", "", OUTSOURCING[n % 3], "", "", "", "", "", "", "",
             rng.randint(2, 5), start, start + rd(months=months) - timedelta(days=1),
             ["Planned", "Active", "Active", "Completed"][n % 4],
         ))
 
     # ---- people ---------------------------------------------------------
-    NAMES = ["Kim S.", "Park J.", "Lee H.", "Choi M.", "Jung Y.", "Han B.", "Oh K.",
-             "Seo W.", "Yoon T.", "Nam R.", "Ahn D.", "Baek C.", "Shin E.", "Koo J.",
-             "Ryu P.", "Moon A.", "Jang L.", "Hwang N.", "Cho V.", "Song G."]
-    DEPTS = (["Clinical Operations"] * 3 + ["Data Management"] * 4
-             + ["Data Management"] * 5 + ["Programming"] * 4
-             + ["Biostatistics"] * 3 + ["Business Systems"])
-    PRIMARY = (["Project oversight"] * 3 + ["Lead data manager"] * 4
-               + ["Clinical Data Associator"] * 5 + ["Clinical Database Programmer"] * 4
-               + ["Data Analyst"] * 3 + ["Other staff"])
     people = []
-    for i, (nm, dept, role) in enumerate(zip(NAMES, DEPTS, PRIMARY), start=1):
-        cap = 0.60 if i == 20 else (0.80 if i == 4 else 1.00)   # two part-timers
+    for i, (nm, dept, role) in enumerate(zip(prof["names"], prof["depts"],
+                                             prof["primary"]), start=1):
+        cap = prof["capacity"].get(i, 1.00)                  # the rest are full-time
         people.append((f"PSN-{i:03d}", nm, dept, role, cap))
 
-    # Pools sized so each role's 50 trials spread evenly. Internal ('Others')
-    # projects draw on the same group - a 20-person team runs both.
-    by_role = {
-        "Project oversight":            ["PSN-001", "PSN-002", "PSN-003"],
-        "Lead data manager":            ["PSN-004", "PSN-005", "PSN-006", "PSN-007"],
-        "Clinical Data Associator":     ["PSN-008", "PSN-009", "PSN-010", "PSN-011", "PSN-012"],
-        "Clinical Database Programmer": ["PSN-013", "PSN-014", "PSN-015", "PSN-016"],
-        "Data Analyst":                 ["PSN-017", "PSN-018", "PSN-019"],
-        "Project lead":                 ["PSN-001", "PSN-004"],
-        "Main staff":                   ["PSN-008", "PSN-013", "PSN-017"],
-        "Other staff":                  ["PSN-011", "PSN-016", "PSN-020"],
-    }
+    # Pools sized so the trials spread evenly within each role. Internal ('Others')
+    # projects draw on the same group - one team runs both.
+    by_role = prof["pools"]
+    LIGHT = prof["light"]
 
     # ---- assignments ----------------------------------------------------
     # Round-robin within each role pool, so no one carries three times their share.
@@ -394,37 +542,27 @@ def dummy_data():
             pool = by_role.get(role) or by_role["Main staff"]
             person = pool[cursor[role] % len(pool)]
             cursor[role] += 1
-            if person == "PSN-020":                 # kept deliberately light
+            if person == LIGHT:                     # kept deliberately light
                 person = pool[cursor[role] % len(pool)]
                 cursor[role] += 1
             a_start = pstart + rd(months=rng.randint(0, 2))
             a_end = pend - rd(months=rng.randint(0, 2))
             if a_end <= a_start:
                 a_end = pend
-            # many concurrent projects, so each carries a small share
-            w = round(rng.uniform(0.10, 0.17), 2)
+            # the more projects run at once, the smaller each person's share of any one
+            w = round(rng.uniform(*prof["weight"]), 2)
             if role in ("Lead data manager", "Project lead"):
-                w = round(w + 0.04, 2)
+                w = round(w + prof["lead_bonus"], 2)
+            w = round(w * prof.get("role_scale", {}).get(role, 1.00), 2)
             A.append((f"ASG-{len(A) + 1:03d}", person, pid, role, a_start, a_end, w))
 
-    # PSN-020 carries one light assignment, to demonstrate an under-allocation run
-    # on a part-timer. PSN-001 is deliberately pushed over the ceiling for a year.
-    A += [
-        ("ASG-901", "PSN-020", "PRJ-051", "Other staff", date(2026, 1, 1), date(2027, 6, 30), 0.18),
-        ("ASG-902", "PSN-001", "PRJ-002", "Project oversight", date(2026, 4, 1), date(2027, 3, 31), 0.35),
-        ("ASG-903", "PSN-001", "PRJ-006", "Project oversight", date(2026, 4, 1), date(2027, 3, 31), 0.35),
-    ]
-
-    # The key is (assignment_id, period_start) precisely because ONE assignment may
-    # carry SEVERAL non-overlapping windows. ASG-902 exercises that: a spell of leave,
-    # back to normal in between, then a peak. A fixture that only ever showed one window
-    # per assignment left the multi-window path untested, which is how the missing
-    # overlap and referential rules went unnoticed until R-12.
-    ppw = [
-        ("ASG-902", date(2026, 7, 1), date(2026, 9, 30), 0.20, "Part-time - parental leave"),
-        ("ASG-902", date(2027, 4, 1), date(2027, 6, 30), 0.75, "Covering start-up peak"),
-        ("ASG-903", date(2026, 10, 1), date(2026, 12, 31), 0.45, "Covering interim analysis peak"),
-    ]
+    # The light person carries one small assignment, to demonstrate an under-allocation
+    # run on a part-timer. PSN-001 is deliberately pushed over the ceiling for a year.
+    # The dates are taken from the projects themselves so the fixture cannot drift into
+    # a V-07 warning when the sizes change.
+    span = {p[0]: (p[14], p[15]) for p in projects}
+    extra, ppw = prof["extras"](span)
+    A += extra
 
     # Keyed on type as well as phase: a biosimilar trial of a given phase is not the
     # same workload as a new-drug trial of that phase, and the split exists to say so.
@@ -490,6 +628,75 @@ def dummy_data():
             periods.append((pid, "Close", 3, b2 + timedelta(days=1), pend, 0.90))
 
     return projects, ms, periods, pws, roles_tbl, people, A, ppw, inspections
+
+
+def describe(prof, projects, ms, periods, people, A, ppw, inspections):
+    """The 'what is in this file' block, computed from the rows rather than typed.
+
+    The counts in a description like this are exactly the kind that go stale the first
+    time the data is regenerated, and nobody notices because the prose still reads well.
+    """
+    ct = [p for p in projects if p[2] != "Others"]
+    ot = [p for p in projects if p[2] == "Others"]
+    lo = min(p[14] for p in projects)
+    hi = max(p[15] for p in projects)
+    span = (hi.year - lo.year) * 12 + hi.month - lo.month + 1
+    interim = sum(1 for p in ct if "interim DB lock" in ms[p[0]])
+    part = [(s, cap) for s, _, _, _, cap in people if cap < 1.00]
+    counted, roles = {}, {}
+    for a in A:
+        counted[a[1]] = counted.get(a[1], 0) + 1
+        roles.setdefault(a[1], set()).add(a[3])
+    busiest = max(counted, key=lambda k: counted[k])
+    # The deliberate overload is the person the hand-placed rows (ASG-9xx) pile onto -
+    # a fact about how the file was built, unlike 'who has the most rows', which is not
+    # the same thing as who is over the ceiling and must not be stated as if it were.
+    hand = [a[1] for a in A if a[0].startswith("ASG-9") and a[1] != prof["light"]]
+    overloaded = max(set(hand), key=hand.count)
+    n_light = counted.get(prof["light"], 0)
+    windows = {}
+    for w in ppw:
+        windows[w[0]] = windows.get(w[0], 0) + 1
+    phases = sorted({p[4] for p in ct})
+    types = sorted({p[2] for p in ct})
+    return [
+        "",
+        "WHAT IS IN THIS FILE",
+        f"   {len(projects)} projects   {len(ct)} clinical trials "
+        f"(PRJ-001..{len(ct):03d}) + {len(ot)} 'Others' "
+        f"(PRJ-{len(ct)+1:03d}..{len(projects):03d})",
+        f"   {len(people)} people     PSN-001..{len(people):03d}, including "
+        + (", ".join(f"{s} at {c:.2f}" for s, c in part) or "no part-timers")
+        + " capacity",
+        f"   {len(A)} assignments, {sum(len(v) for v in ms.values()) + sum(len(v) for v in inspections.values())} "
+        f"milestones, {len(periods)} periods, spanning {span} months "
+        f"({lo:%b %Y} to {hi:%b %Y})",
+        f"   Types: {', '.join(types)}.  Phases: {', '.join(phases)}.",
+        "",
+        "WHAT IT DEMONSTRATES",
+        f"   - {interim} of the {len(ct)} trials carry an interim DB lock, so each has TWO 'Conduct'",
+        f"     stretches and two close-outs. The other {len(ct) - interim} run Conduct once.",
+        f"   - {len(inspections)} trials record an 'Inspection' after the final DB lock and so carry the",
+        "     seventh period, 'After Close-out (final)'.",
+        f"   - The {len(ot)} 'Others' projects have hand-entered periods and no milestones.",
+        f"   - {overloaded} carries two extra oversight assignments on top of a full round-robin",
+        "     share, and so crosses the 1.50 FTE ceiling at the peaks.",
+        f"   - {busiest} is the busiest by row count, at {counted[busiest]} assignments - every trial, as "
+        f"the only",
+        f"     {sorted(roles[busiest])[0]}. Their share of each is set lower to match.",
+        f"   - {prof['light']} is a part-timer carrying {n_light} light assignment"
+        f"{'' if n_light == 1 else 's'}, so an under-allocation",
+        "     run is raised. With the floor at 0.60 they CAN clear it, but only at full utilisation -",
+        "     V-22 warns if anyone is recorded below the floor and so could never clear it.",
+        f"   - {len(windows)} assignments carry PersonPeriodWeight overrides, one of them with "
+        f"{max(windows.values())} separate",
+        "     windows, which is why that sheet is keyed on assignment_id AND period_start.",
+        "   - The months at either end of the span are naturally light: with few projects",
+        "     overlapping there, most under-allocation runs sit in the ramp-up and wind-down.",
+        "",
+        "   The weights and role factors here are ILLUSTRATIVE, so the numbers can be exercised.",
+        "   Replace them with your own before drawing any conclusion from the output.",
+    ]
 
 
 # --------------------------------------------------------------------------
@@ -563,10 +770,10 @@ def write_sheet(wb, name, rows, example=None, list_ranges=None):
     return ws
 
 
-def add_readme(wb, kind):
+def add_readme(wb, kind, facts=None):
     ws = wb.create_sheet("00_README", 0)
     ws.sheet_view.showGridLines = False
-    ws["A1"] = f"PRAP source data - {kind}"
+    ws["A1"] = f"PRAP source data - {'dummy' if kind in PROFILES else kind}"
     ws["A1"].font = TITLE_F
     ws.column_dimensions["A"].width = 120
 
@@ -649,6 +856,10 @@ def add_readme(wb, kind):
             "      Nothing simulates correctly until those are set.",
             "   3. Enter your projects, people and assignments.",
         ]
+    elif kind != "dummy":
+        # Every count here is read off the rows that were actually generated, so the
+        # description cannot drift from the file it describes.
+        body += facts
     else:
         body += [
             "",
@@ -702,8 +913,8 @@ def build(kind):
         list_ranges[name] = f"Lists!$B${r}:$B${r + len(values) - 1}"
         r += len(values)
 
-    if kind == "dummy":
-        projects, ms, periods, pws, roles, people, A, ppw, inspections = dummy_data()
+    if kind in PROFILES:
+        projects, ms, periods, pws, roles, people, A, ppw, inspections = dummy_data(PROFILES[kind])
         P = {p[0]: p[2] for p in projects}
         proj_rows = [list(p[:16]) + [None] + [p[16]] + [None] * 5 for p in projects]
         mile_rows = []
@@ -722,7 +933,9 @@ def build(kind):
         asg_rows = [[a[0], a[1], None, a[2], a[3], a[4], a[5], a[6], None, None, None] for a in A]
         ppw_rows = [list(x) for x in ppw]
         examples = {k: None for k in SHEETS}
+        facts = describe(PROFILES[kind], projects, ms, periods, people, A, ppw, inspections)
     else:
+        facts = None
         proj_rows = mile_rows = period_rows = pws_rows = role_rows = []
         person_rows = asg_rows = ppw_rows = []
         # one example row per sheet (REQ-IMP-03)
@@ -745,7 +958,7 @@ def build(kind):
             "Config": None,
         }
 
-    add_readme(wb, kind)
+    add_readme(wb, kind, facts)
     write_sheet(wb, "Project", proj_rows, examples["Project"], list_ranges)
     write_sheet(wb, "Milestone", mile_rows, examples["Milestone"], list_ranges)
     write_sheet(wb, "ProjectPeriod", period_rows, examples["ProjectPeriod"], list_ranges)
@@ -779,13 +992,19 @@ def build(kind):
                     value=f'=IFERROR(INDEX(Person!$B:$B,MATCH($B{row},Person!$A:$A,0)),"")')
 
     OUTDIR.mkdir(exist_ok=True)
-    suffix, ver = (("Template", TEMPLATE_VERSION) if kind == "template"
-                   else ("Dummy", DUMMY_VERSION))
+    if kind == "template":
+        suffix, ver = "Template", TEMPLATE_VERSION
+    else:
+        p = PROFILES[kind]
+        # the size is in the file name, because two files both called 'Dummy' with
+        # nothing to tell them apart is how the wrong one gets loaded
+        suffix = "Dummy" if kind == "dummy" else f"Dummy_{p['n_ct'] + p['n_other']}x{len(p['names'])}"
+        ver = p["version"]
     out = OUTDIR / f"PRAP_SourceData_{suffix}_v{ver}.xlsx"
     wb.save(out)
     return out
 
 
 if __name__ == "__main__":
-    for k in ("template", "dummy"):
+    for k in ("template", "dummy", "dummy_small"):
         print("Written:", build(k))

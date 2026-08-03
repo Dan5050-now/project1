@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.7"
+DOC_VERSION = "2.8"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,20 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.7", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.8", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 7, application unchanged at v1.6. A second dummy dataset at the reviewer's "
+     "requested size - 10 projects and 10 people - issued as PRAP_SourceData_Dummy_10x10_v1.0.xlsx "
+     "on schema 5, alongside the 62-project set rather than replacing it. The generator now runs "
+     "from size PROFILES, so one code path produces both and neither can drift from the schema "
+     "the other follows; the 62-project file rebuilds with every sheet byte-identical, confirmed "
+     "by unpacking both .xlsx containers. The small set is not a lighter test: it holds both "
+     "clinical types, all four phases, trials with and without an interim DB lock, inspections "
+     "that open the seventh period, hand-entered 'Others' periods, two part-timers, multi-window "
+     "weight overrides, and both allocation thresholds crossed. Its load distribution matches the "
+     "large set's (median 0.80 against 0.87 FTE). tools/test_app.py now runs over BOTH fixtures. "
+     "No requirement, rule, calculation or schema changed.",
+     "Issued for review"],
+    ["2.7", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 defect fix round 6, application v1.6. Reviewer reported that inserting and deleting rows "
      "did not work on Milestones, Periods, Assignments and Weight overrides - the four CHILD tables, "
      "which are the four rendered filtered to a selected parent. Three defects, all in the shared "
@@ -382,7 +395,7 @@ rows = [
      "different record, and a drafted row could be duplicated. Row identity is now preserved across a "
      "rebuild. A drafted row is exempt from validation while it is being written and is validated when "
      "Save is pressed; a draft that would break a rule is refused by name rather than kept.",
-     "Issued for review"],
+     "Superseded by v2.8"],
     ["2.6", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 refinements round 5, application v1.5. Five changes, none touching a requirement, rule, "
      "calculation or schema. (1) and (2) The Assignments and Weight-overrides tables carry the project "
@@ -1199,7 +1212,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-6 applied (app v1.6); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-7 applied (app v1.6); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1279,7 +1292,8 @@ align = [
     ["v2.4", "v1.0", "application v1.3", "5", "2026-08-02", "Gate 4 round 3: sticky headers, year axis, provisional editing."],
     ["v2.5", "v1.0", "application v1.4", "5", "2026-08-02", "Gate 4 round 4: information pop-ups and row deletion."],
     ["v2.6", "v1.0", "application v1.5", "5", DOC_DATE, "Gate 4 round 5: lookup columns, cell values, row actions everywhere, type-ahead."],
-    ["v2.7", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 6: insert/delete fixed on the four child tables. 4.9 continues."],
+    ["v2.7", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 6: insert/delete fixed on the four child tables."],
+    ["v2.8", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 7: second dummy dataset, 10 projects x 10 people. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

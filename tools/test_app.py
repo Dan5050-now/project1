@@ -20,7 +20,11 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.8.xlsx"
+# Both dummy sizes are checked. The small one is not a lighter version of the same
+# test - it has a different period mix, a different overlap profile and a single-person
+# role pool, so it exercises paths the large set happens not to reach.
+FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.8.xlsx",
+            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.0.xlsx"]
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 sys.path.insert(0, str(ROOT / "tools"))
@@ -68,7 +72,7 @@ def reference_person_months(path):
     return out
 
 
-def main():
+def main(DUMMY):
     failures, notes = [], []
     with sync_playwright() as pw:
         b = pw.chromium.launch(executable_path=CHROME, downloads_path="/tmp")
@@ -129,15 +133,19 @@ def main():
     else:
         notes.append("export passes the Python verifier via openpyxl")
 
-    print("app/PRAP.html")
+    print(f"app/PRAP.html  x  {DUMMY.name}")
     for n_ in notes:
         print("  ok  ", n_)
     for f in failures:
         print("  FAIL", f)
-    print()
-    print("FAILURES: none" if not failures else f"FAILURES ({len(failures)})")
-    return 1 if failures else 0
+    return failures
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    only = [pathlib.Path(a) for a in sys.argv[1:]]
+    all_failures = []
+    for fixture in (only or FIXTURES):
+        all_failures += main(fixture)
+        print()
+    print("FAILURES: none" if not all_failures else f"FAILURES ({len(all_failures)})")
+    sys.exit(1 if all_failures else 0)

@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.7 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.8 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -30,7 +30,7 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.7.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.8.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -46,7 +46,7 @@ output/       Exported results and test evidence   (from Step 5)
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -68,7 +68,7 @@ output/       Exported results and test evidence   (from Step 5)
 
   | Check | Result |
   |---|---|
-  | Calculation vs `verify_source_workbook.py` | **exact match on all 1,225 person-months** |
+  | Calculation vs `verify_source_workbook.py` | **exact match on all 1,225 person-months** (and all 433 of the 10×10 set) |
   | Findings vs the Python verifier | both report zero on the dummy |
   | Export → re-import | identical figures, zero findings |
   | Export read by `openpyxl` (an independent implementation) | passes the full verifier |
@@ -100,6 +100,10 @@ output/       Exported results and test evidence   (from Step 5)
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 7 (app unchanged): a second dummy dataset at 10 projects and 10 people,
+  issued alongside the 62-project set rather than replacing it. One generator, two size
+  profiles. `tools/test_app.py` now runs over both.
 
   Gate 4 round 6 (app v1.6): a reported defect — insert and delete did nothing useful on
   Milestones, Periods, Assignments and Weight overrides. Three faults, all in the shared
@@ -134,13 +138,25 @@ output/       Exported results and test evidence   (from Step 5)
   carries at least one free-text note column (schema version 3).
 - `templates/PRAP_SourceData_Dummy_v1.8.xlsx` — the same structure populated with
   **34 NewDrug CT + 16 Biosimilar CT + 12 `Others` projects and 20 people**
-  (289 assignments, 372 milestones, 308 periods across 73 months). Generated
-  deterministically, so it rebuilds identically.
+  (289 assignments, 372 milestones, 308 periods across 73 months).
+- `templates/PRAP_SourceData_Dummy_10x10_v1.0.xlsx` — the same again at **10 projects
+  and 10 people** (8 clinical trials + 2 `Others`, 50 assignments, 60 milestones,
+  50 periods across 50 months): small enough to read every row on screen and check the
+  arithmetic by hand. It is not a lighter test — it carries both clinical types, all
+  four phases, trials with and without an interim DB lock, inspections that open the
+  seventh period, hand-entered `Others` periods, two part-timers, multi-window weight
+  overrides, and both allocation thresholds crossed. Its load distribution tracks the
+  large set's (median 0.80 against 0.87 FTE).
 
-Validate either with:
+Both come from one generator driven by size profiles, so neither can drift from the
+schema the other follows. The data is seeded: every sheet rebuilds byte-for-byte. The
+`.xlsx` container does not, because openpyxl stamps the build time into
+`docProps/core.xml`.
+
+Validate any of them with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_v1.8.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.0.xlsx
 ```
 
 And check the application against the reference implementation:
@@ -149,9 +165,10 @@ And check the application against the reference implementation:
 python tools/test_app.py
 ```
 
-That drives `app/PRAP.html` in a real browser, compares its calculation with
-`verify_source_workbook.py` cell by cell, exports, re-imports, and puts the export
-through `openpyxl` — a reader that is not ours.
+That drives `app/PRAP.html` in a real browser over **both** dummy datasets, compares
+its calculation with `verify_source_workbook.py` cell by cell, exports, re-imports, and
+puts the export through `openpyxl` — a reader that is not ours. Pass a path to run it
+against one fixture only.
 
 And check that rows can be added and removed on every table:
 
