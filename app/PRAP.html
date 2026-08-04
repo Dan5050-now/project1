@@ -205,8 +205,14 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 .ax.yr{font-size:11px;fill:var(--muted)}
 .bar{fill:var(--s1)}.bar.over{fill:var(--crit)}.bar.under{fill:var(--warn)}
 .band{cursor:pointer}.band:hover{stroke:var(--ink);stroke-width:1.4}
+/* Drawn BEHIND a stack, because being over the ceiling is a property of the month's
+   total and not of any one project in it. */
+.mmark{fill:none;stroke-width:2}
+.mmark.over{stroke:var(--crit)}.mmark.under{stroke:var(--warn)}
 .bandlab{fill:#fff;font-size:10.5px;font-weight:650;pointer-events:none;
  paint-order:stroke;stroke:rgba(0,0,0,.3);stroke-width:2.4px}
+.bandsub{fill:#fff;font-size:9.5px;font-weight:600;pointer-events:none;opacity:.92;
+ paint-order:stroke;stroke:rgba(0,0,0,.3);stroke-width:2.2px;font-variant-numeric:tabular-nums}
 .rowlab{fill:var(--ink);font-size:11.5px;font-weight:600}
 .rowsub{fill:var(--ink2);font-size:10.5px;font-variant-numeric:tabular-nums}
 .ms{fill:var(--ink);stroke:var(--surface);stroke-width:1.2;cursor:pointer}
@@ -235,6 +241,9 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
  color:var(--ink);border:1px solid var(--base);border-radius:8px;padding:8px 10px;
  font-size:11.5px;line-height:1.5;box-shadow:0 6px 22px rgba(0,0,0,.18)}
 .tip b{font-weight:650}.tip .tr{color:var(--muted);font-size:10.5px}
+/* Separates the two halves of a pop-up that answers two questions at once - what this
+   project drew this month, and what the person drew in total. */
+.tip hr{border:0;border-top:1px solid var(--ring);margin:6px 0 5px}
 /* Type-ahead. Anchored to the cell, filtered as you type, arrow keys and Enter to
    choose. It exists because the valid vocabulary lives in the workbook, and nobody
    should have to remember it or open the Lists sheet to check. */
@@ -356,7 +365,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.9";
+const APP_VERSION = "1.10";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -365,8 +374,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.11.xlsx",          ver:"2.11",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.11 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.12.xlsx",          ver:"2.12",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.12 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -1154,6 +1163,9 @@ function coverage(y, m, s, e){
 
 function calculate(M){
   const projMonth = new Map(), persMonth = new Map(), cell = new Map(), who = new Map();
+  // A person-month split by project. persMonth is the total; this is what it is made OF,
+  // which is what the person utilisation chart draws and what its pop-up reads.
+  const persProj = new Map();          // person|month -> Map(project_id -> FTE)
   const add = (map, k, v) => map.set(k, (map.get(k) || 0) + v);
 
   const periodAt = (pid, y, m) => {
@@ -1193,12 +1205,16 @@ function calculate(M){
       add(projMonth, a.project_id + "|" + k, v);
       add(persMonth, a.person_id + "|" + k, v);
       add(cell, [a.project_id, a.person_id, a.role_name, k].join("|"), v);
+      const pk = a.person_id + "|" + k;
+      if (!persProj.has(pk)) persProj.set(pk, new Map());
+      const byp = persProj.get(pk);
+      byp.set(a.project_id, (byp.get(a.project_id) || 0) + v);
       const wk = a.project_id + "|" + k;
       if (!who.has(wk)) who.set(wk, []);
       who.get(wk).push([a.person_id, a.role_name]);
     }
   }
-  return {projMonth, persMonth, cell, who, lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
+  return {projMonth, persMonth, persProj, cell, who, lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }
 
 /* ============================================================ 7. state + filters */
@@ -1288,6 +1304,21 @@ function mix(hex, f){
 }
 const projColour = i => mix(BASE7[i % 7], STEPS[Math.floor(i / 7) % STEPS.length]);
 
+/** A project's colour, fixed for the whole session.
+ *
+ *  Indexed by the project's place in the sorted list of ALL project ids, not by its
+ *  position in whatever is being drawn. A colour that changes with the filter, or that
+ *  means one project on one tab and another project on the next, is worse than no colour
+ *  at all - the reader has to re-learn the key every time the view changes. */
+let PCOL = null;
+function projColourOf(pid){
+  if (!PCOL || PCOL.__for !== S.model){
+    PCOL = {__for: S.model};
+    Object.keys(S.model.projects).sort().forEach((p, i) => { PCOL[p] = projColour(i); });
+  }
+  return PCOL[pid] || "var(--other)";
+}
+
 const PERIOD_HUE = {
   "Before-Start-up":"#adaca6", "Start-up":"#d9472f",
   "Conduct (interim)":"#3fc795", "Close-out (interim)":"#f2b53d",
@@ -1300,7 +1331,11 @@ const bandFill = (n, w, wmax) => mix(PERIOD_HUE[n] || "#adaca6",
 
 /* ============================================================ 9. charts */
 
-function chartGantt(pids){
+/** One row per project: period bands, milestone markers, a year grid.
+ *  `opts.single` lays it out for ONE project - the heading already names it, so the row
+ *  label gutter shrinks and the row itself gets the space instead. */
+function chartGantt(pids, opts){
+  opts = opts || {};
   const M = S.model, C = S.calc;
   if (!pids.length) return `<p class="note">No projects match the current filters.</p>`;
   // The panel now scrolls vertically as well as horizontally, so every project in the
@@ -1315,7 +1350,9 @@ function chartGantt(pids){
   }
   if (!isFinite(lo) || !isFinite(hi)) return `<p class="note">These projects carry no dates.</p>`;
   const span = Math.max(1, (hi - lo) / DAY);
-  const W = 1180, rowh = 42, padL = 220, padT = 34;
+  // One project needs no row label - the panel heading already names it, and the dates go
+  // in the note - so the whole gutter goes to the bands instead.
+  const W = 1180, rowh = opts.single ? 74 : 42, padL = opts.single ? 26 : 220, padT = 34;
   const H = padT + rowh * rows.length + 30, inner = W - padL - 14;
   const x = t => padL + ((t - lo) / DAY / span) * inner;
   let wmax = 0;
@@ -1336,10 +1373,12 @@ function chartGantt(pids){
     const months = (pr.start_date && pr.end_date)
       ? (pr.end_date.getUTCFullYear()-pr.start_date.getUTCFullYear())*12
         + (pr.end_date.getUTCMonth()-pr.start_date.getUTCMonth()) + 1 : 0;
-    o.push(`<text class="rowlab" x="${padL-12}" y="${y+14}" text-anchor="end">`
-      + `${esc(String(pr.project_name).slice(0,26))}</text>`);
-    o.push(`<text class="rowsub" x="${padL-12}" y="${y+27}" text-anchor="end">`
-      + `${ymd(pr.start_date)} &#8594; ${ymd(pr.end_date)} &middot; ${months} months</text>`);
+    if (!opts.single){
+      o.push(`<text class="rowlab" x="${padL-12}" y="${y+14}" text-anchor="end">`
+        + `${esc(String(pr.project_name).slice(0,26))}</text>`);
+      o.push(`<text class="rowsub" x="${padL-12}" y="${y+27}" text-anchor="end">`
+        + `${ymd(pr.start_date)} &#8594; ${ymd(pr.end_date)} &middot; ${months} months</text>`);
+    }
     for (const s of (M.periods[p] || [])){
       if (!s.period_start || !s.period_end) continue;      // a row still being filled in
       const x0 = x(s.period_start.getTime()), x1 = x(s.period_end.getTime());
@@ -1354,6 +1393,9 @@ function chartGantt(pids){
       o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${y+13}" width="${w.toFixed(1)}" `
         + `height="${rowh-20}" fill="${bandFill(s.period_name, num(s.weight)||0, wmax)}" rx="2" `
         + `data-tip="${att(tip)}"></rect>`);
+      if (opts.single && w > 64)
+        o.push(`<text class="bandsub" x="${(x0+w/2).toFixed(1)}" y="${(y+rowh-14).toFixed(1)}" `
+          + `text-anchor="middle">${fte.toFixed(2)} FTE/mo</text>`);
       if (w > s.period_name.length * 5.7 + 12)
         o.push(`<text class="bandlab" x="${(x0+w/2).toFixed(1)}" y="${(y+rowh/2+5).toFixed(1)}" `
           + `text-anchor="middle">${esc(s.period_name)}</text>`);
@@ -1378,8 +1420,8 @@ function chartGantt(pids){
   leg.push('<li><span class="sw tri"></span>milestone</li>');
   leg.push('<li><span class="sw tri key"></span>DB lock &#8212; sets a period boundary</li>');
   leg.push('<li class="hint">darker band = higher period weight</li></ul>');
-  leg.push(`<p class="note">All ${rows.length} project(s) in the current filter, scrolling in `
-    + `both directions inside this panel.</p>`);
+  leg.push(`<p class="note">${opts.note || `All ${rows.length} project(s) in the current filter, `
+    + `scrolling in both directions inside this panel.`}</p>`);
   return o.join("") + leg.join("");
 }
 
@@ -1389,9 +1431,8 @@ function chartStacked(pids){
   for (const p of pids){ tot[p] = 0; for (const k of G) tot[p] += C.projMonth.get(p+"|"+k) || 0; }
   const order = pids.filter(p => tot[p] > 0.004).sort((a,b) => tot[b]-tot[a] || (a<b?-1:1));
   if (!order.length) return `<p class="note">No resource falls inside this horizon.</p>`;
-  const colour = {}; let ci = 0;
-  for (const p of order)
-    colour[p] = M.projects[p].project_type === "Others" ? "var(--other)" : projColour(ci++);
+  const colour = {};
+  for (const p of order) colour[p] = projColourOf(p);
   const W = Math.max(700, 90 + G.length * 74), H = 600, padL = 62, padB = 52, padT = 30;
   const bw = (W - padL - 14) / G.length;
   let vmax = 0;
@@ -1539,27 +1580,87 @@ function chartProjectUtil(pid){
   return {svg:o.join(""), portAvg, ownAvg};
 }
 
+/** The milestones a project passes in one month, as "name (date)" strings. */
+function milestonesIn(pid, k){
+  const y = Math.floor(k / 12), m = k % 12, out = [];
+  for (const [nm, dates] of Object.entries((S.model.milestones[pid] || {})))
+    for (const d of dates)
+      if (d && d.getUTCFullYear() === y && d.getUTCMonth() === m) out.push([nm, d]);
+  return out.sort((a, b) => a[1] - b[1]);
+}
+
+/** Monthly load for one person, each bar split into the projects that make it up.
+ *
+ *  The total on its own answers "is this person over the ceiling"; it cannot answer
+ *  "because of what", which is the question anyone actually has next. Each segment is
+ *  the project's own colour - the same colour it carries on the Overall tab - and its
+ *  pop-up carries both halves: the project side of that month, and the person's total. */
 function chartPersonStrip(sid){
   const M = S.model, C = S.calc, G = grid();
   const vals = G.map(k => C.persMonth.get(sid+"|"+k) || 0);
-  const W = 1080, H = 280, padL = 62, padR = 175;
+  const person = (M.people[sid] || {}).person_name || sid;
+  const cap = num((M.people[sid] || {}).capacity_fte);
+
+  // Stacking order: biggest contributor over the horizon at the bottom, so the bars read
+  // consistently month to month instead of reshuffling wherever a project ends.
+  const totals = new Map();
+  for (const k of G)
+    for (const [p, v] of (C.persProj.get(sid+"|"+k) || new Map()))
+      totals.set(p, (totals.get(p) || 0) + v);
+  const order = [...totals.entries()].filter(([, v]) => v > 0.004)
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).map(x => x[0]);
+
+  const W = 1080, H = 300, padL = 62, padR = 175;
   const vmax = Math.max(Math.max(...vals, M.OVER), 0.01) * 1.15;
   const bw = (W - padL - padR) / Math.max(1, G.length);
   const base = H - 44, top = 26;
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
-    + `aria-label="Monthly load for the selected person against both thresholds">`];
+    + `aria-label="Monthly load for the selected person, split by project, against both thresholds">`];
   o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 3; i++){
     const gv = vmax * i / 3, gy = base - (gv/vmax) * (base-top);
     o.push(`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR+4}" y2="${gy.toFixed(1)}"/>`);
     o.push(`<text class="ax" x="${padL-8}" y="${(gy+3).toFixed(1)}" text-anchor="end">${fmt(gv)}</text>`);
   }
-  vals.forEach((v, i) => {
-    const h = (v/vmax) * (base-top);
-    const cls = v > M.OVER ? "over" : (v > 0 && v < M.UNDER ? "under" : "");
-    o.push(`<rect class="bar ${cls}" x="${(padL+i*bw+2).toFixed(1)}" y="${(base-h).toFixed(1)}" `
-      + `width="${(bw-4).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" `
-      + `data-tip="${att(`${keyToLabel(G[i])} &#183; <b>${fmt(v)} ${unitLabel()}</b>`)}"></rect>`);
+  G.forEach((k, i) => {
+    const total = vals[i];
+    const byp = C.persProj.get(sid+"|"+k) || new Map();
+    const x0 = padL + i * bw + 2, w = bw - 4;
+    // The month's standing, drawn once behind the stack: a segment cannot carry it,
+    // because over-allocation is a property of the TOTAL, not of any one project.
+    if (total > M.OVER || (total > 0 && total < M.UNDER)){
+      const h = (total/vmax) * (base-top);
+      o.push(`<rect class="mmark ${total > M.OVER ? "over" : "under"}" x="${(x0-2).toFixed(1)}" `
+        + `y="${(base-h-3).toFixed(1)}" width="${(w+4).toFixed(1)}" height="${(h+3).toFixed(1)}" rx="3"/>`);
+    }
+    let acc = 0;
+    for (const p of order){
+      const v = byp.get(p) || 0;
+      if (v <= 0.004) continue;
+      const y1 = base - (acc/vmax) * (base-top);
+      acc += v;
+      const y0 = base - (acc/vmax) * (base-top);
+      const ms = milestonesIn(p, k);
+      const share = total > 0 ? (100 * v / total) : 0;
+      const tip = `<b>${esc(M.projects[p].project_name)}</b> `
+        + `<span class="tr">${esc(M.projects[p].project_type)}</span><br>`
+        + `${keyToLabel(k)}<br>`
+        + `Project milestone: ${ms.length
+            ? ms.map(([nm, d]) => `${esc(nm)} <span class="tr">${ymd(d)}</span>`).join("<br>"
+              + "&nbsp;".repeat(10))
+            : `<span class="tr">none this month</span>`}<br>`
+        + `<b>${fmt(v)} ${unitLabel()}</b> on this project `
+        + `<span class="tr">&#183; ${share.toFixed(0)}% of the month</span>`
+        + `<hr><b>${esc(person)}</b> <span class="tr">${esc(sid)}</span><br>`
+        + `Total this month: <b>${fmt(total)} ${unitLabel()}</b>`
+        + `<span class="tr"> across ${byp.size} project${byp.size === 1 ? "" : "s"}`
+        + (cap ? ` &#183; capacity ${cap.toFixed(2)}` : "") + `</span>`
+        + (total > M.OVER ? `<br><span class="tr">above the ${M.OVER.toFixed(2)} ceiling</span>`
+           : total < M.UNDER ? `<br><span class="tr">below the ${M.UNDER.toFixed(2)} floor</span>` : "");
+      o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" `
+        + `width="${w.toFixed(1)}" height="${Math.max(0.8, y1-y0).toFixed(1)}" `
+        + `fill="${projColourOf(p)}" data-tip="${att(tip)}"></rect>`);
+    }
   });
   monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base);
   for (const [v, cls, lab] of [[M.OVER,"th-over",`ceiling ${M.OVER.toFixed(2)}`],
@@ -1570,7 +1671,15 @@ function chartPersonStrip(sid){
     o.push(`<text class="thlab ${cls}" x="${W-padR+8}" y="${(yy+3).toFixed(1)}">${lab}</text>`);
   }
   o.push(`<line class="base" x1="${padL}" y1="${base}" x2="${W-padR+4}" y2="${base}"/></svg>`);
-  return o.join("");
+  if (!order.length)
+    return o.join("") + `<p class="note">This person draws no resource inside the horizon.</p>`;
+  const leg = ['<ul class="legend">'];
+  for (const p of order)
+    leg.push(`<li><span class="sw" style="background:${projColourOf(p)}"></span>`
+      + `${esc(M.projects[p].project_name)}</li>`);
+  leg.push(`<li class="hint">tinted outline = the month's TOTAL is over the ceiling or `
+    + `under the floor</li></ul>`);
+  return o.join("") + leg.join("");
 }
 
 /* ============================================================ 10. tables */
@@ -1960,7 +2069,17 @@ function projDetail(pid){
     .sort((a,b) => (a.milestone_date||0) - (b.milestone_date||0));
   const per = (M.periods[pid] || []);
   const derived = per.some(p => p.__derived);
-  return `<div class="panel"><h2>Utilisation — ${esc(pr.project_name)}</h2>
+  return `<div class="panel"><h2>Project timeline — ${esc(pr.project_name)}</h2>
+      <p class="cap">The same run-chart as the Overall tab, for this project alone: one band per
+        period, coloured by period and shaded darker as the period weight rises, with every
+        milestone marked. The two DB locks are red — they are what the period derivation hangs on.
+        <strong>Hover any band or marker</strong> for its dates, weight and average load.</p>
+      <div class="scrollx fit">${chartGantt([pid], {single:true,
+        note:`${ymd(pr.start_date)} &#8594; ${ymd(pr.end_date)}`
+           + (pr.total_period_months ? ` &middot; ${pr.total_period_months} months` : "")
+           + ` &middot; ${(M.periods[pid] || []).length} period(s). Edit the two tables below and `
+           + `this redraws.`})}</div></div>
+    <div class="panel"><h2>Utilisation — ${esc(pr.project_name)}</h2>
       <p class="cap">Monthly resource for the selected project. A project has no absolute ceiling or
         floor, so the reference lines are <strong>relative</strong>: twice and half the average an active
         project draws across the portfolio (${util.portAvg.toFixed(2)} FTE), plus this project's own
@@ -2011,8 +2130,12 @@ function persDetail(sid){
   const ppw = M.raw.PersonPeriodWeight.filter(w =>
     w.__new || asg.some(a => a.assignment_id === w.assignment_id));
   return `<div class="panel"><h2>Utilisation — ${esc(pe.person_name)} (${esc(sid)})</h2>
-      <p class="cap">Monthly load across the horizon. Dashed lines are the ceiling and floor — the same
-        two figures for everyone, since both thresholds are absolute.</p>
+      <p class="cap">Monthly load across the horizon, <strong>each bar split into the projects that
+        make it up</strong> — the total says whether this person is over the ceiling, the split says
+        because of what. Every project keeps the same colour here as on the Overall tab.
+        <strong>Hover any segment</strong> for that project's milestones and share of the month, and
+        for the person's total. Dashed lines are the ceiling and floor — the same two figures for
+        everyone, since both thresholds are absolute.</p>
       <div class="scrollx fit">${chartPersonStrip(sid)}</div></div>
     <div class="two">
       <div class="panel"><h2>Assignments — ${esc(sid)}</h2>

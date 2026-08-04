@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.11 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.12 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -30,7 +30,7 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.11.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.12.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -46,7 +46,7 @@ output/       Exported results and test evidence   (from Step 5)
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -79,6 +79,7 @@ output/       Exported results and test evidence   (from Step 5)
   | Project by name, allocated `assignment_id`, two-way scrolling | same file, and it also fails against the build before it |
   | Re-pointing an override row moves that row only | same file; the previous build dragged both windows of the old assignment |
   | The value list survives scrolling, matches on tokens | `tools/test_valuelist.py`; 6 of its 14 checks fail against the previous build |
+  | The stacked utilisation segments sum to the person-month the model holds | `tools/test_charts.py`; 6 of its 8 checks fail against the previous build |
 
   Gate 4 round 1 (app v1.1): the three named Overall sections are up to twice their
   previous size; the project timeline scrolls in both directions, so every project in
@@ -103,6 +104,17 @@ output/       Exported results and test evidence   (from Step 5)
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 11 (app v1.10): a **project timeline** run-chart now stands before the
+  Utilisation panel on the project tab — the Overall tab's chart for one project, each
+  band labelled with its average FTE per month. And the person tab's **Utilisation bars
+  are stacked by project**: the total says whether someone is over the ceiling, the split
+  says because of what. Each segment's pop-up answers both halves at once — the project
+  (name, type, the milestones it passes that month, this person's FTE on it and its share
+  of the month) and the person (name, total FTE, how many projects, capacity, threshold
+  crossed). Over- and under-allocation is drawn as an outline *behind* the stack, since
+  it is a property of the month's total, not of any one project in it. Project colours
+  are now fixed for the session, so one project carries one colour everywhere.
 
   Gate 4 round 10 (app v1.9): a reported defect — dragging the scroll bar of a value
   list closed the list, so a list taller than its box could not be read to the bottom.
@@ -219,6 +231,17 @@ python tools/test_valuelist.py
 
 That opens the list, scrolls it by wheel and by dragging its own scroll bar, scrolls the
 page under it, searches it, and closes it every way it can be closed.
+
+And check the two source-data charts against the model behind them:
+
+```bash
+python tools/test_charts.py
+```
+
+That counts the bands and markers on the project timeline against the periods and
+milestones in the data, and adds up the stacked utilisation segments month by month to
+confirm they equal the person-month the calculation holds — a chart that disagrees with
+the table is worse than no chart.
 
 And check the documents still describe the artifacts they claim to:
 

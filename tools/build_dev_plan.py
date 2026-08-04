@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.11"
+DOC_VERSION = "2.12"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,26 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.11", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.12", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 refinements round 11, application v1.10. Two changes, neither touching a requirement, "
+     "rule, calculation or schema. (1) A PROJECT TIMELINE run-chart now stands before the Utilisation "
+     "panel on the project tab - the Overall tab's chart drawn for the selected project alone, with "
+     "one band per period shaded by period weight, every milestone marked, the two DB locks in red, "
+     "and each band labelled with its average FTE per month. The row-label gutter the Overall chart "
+     "needs is dropped, since the panel heading already names the project. (2) The UTILISATION bars on "
+     "the person tab are now STACKED BY PROJECT: one coloured segment per project per month. The total "
+     "says whether someone is over the ceiling; only the split says because of what. Each segment's "
+     "pop-up answers both halves at once - the project (name, type, the milestones that project "
+     "passes THAT month, this person's FTE on it and its share of the month) and the person (name, "
+     "identifier, total FTE that month, how many projects it is spread across, capacity, and which "
+     "threshold if any it crosses). Over- and under-allocation is now drawn as an outline BEHIND the "
+     "stack, because it is a property of the month's total and not of any one project in it. "
+     "Supporting this, project colours are now allocated from the sorted list of ALL project ids and "
+     "held for the session, so one project carries ONE colour everywhere - the Overall stacked chart "
+     "picked its colours from the filtered draw order, which meant the same colour meant different "
+     "projects on different tabs and after every filter change.",
+     "Issued for review"],
+    ["2.11", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 defect fix round 10, application v1.9. Reviewer reported that dragging the scroll bar of "
      "a type-ahead value list closed the list, making a list taller than its box impossible to read to "
      "the bottom of. Two independent causes, both now fixed. (1) A capturing scroll listener closed "
@@ -1267,7 +1286,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-10 applied (app v1.9); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-11 applied (app v1.10); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1351,7 +1370,8 @@ align = [
     ["v2.8", "v1.0", "application v1.6", "5", DOC_DATE, "Gate 4 round 7: second dummy dataset, 10 projects x 10 people."],
     ["v2.9", "v1.0", "application v1.7", "5", DOC_DATE, "Gate 4 round 8: two-way scrolling everywhere, project by name, allocated assignment_id."],
     ["v2.10", "v1.0", "application v1.8", "5", DOC_DATE, "Gate 4 round 9: a foreign key no longer cascades; second override windows can be added."],
-    ["v2.11", "v1.0", "application v1.9", "5", DOC_DATE, "Gate 4 round 10: the value list survives being scrolled, and matches on tokens. 4.9 continues."],
+    ["v2.11", "v1.0", "application v1.9", "5", DOC_DATE, "Gate 4 round 10: the value list survives being scrolled, and matches on tokens."],
+    ["v2.12", "v1.0", "application v1.10", "5", DOC_DATE, "Gate 4 round 11: a per-project timeline, and utilisation stacked by project. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
