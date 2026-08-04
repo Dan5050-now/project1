@@ -263,6 +263,12 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 .drv{font-weight:400;font-size:9px;color:var(--muted);border:1px solid var(--ring);
  border-radius:8px;padding:0 5px;margin-left:4px}
 td.drvcell{font-style:italic}
+/* The selected assignment, restated above the table it governs, so the overrides are
+   never read without knowing which assignment they belong to. */
+.asgline{margin:0 0 6px;padding:6px 9px;border-radius:7px;font-size:11.5px;line-height:1.5;
+ background:color-mix(in srgb,var(--accent) 9%,transparent);
+ border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.asgline.muted{background:none;border-style:dashed;color:var(--muted)}
 /* An entry column reads the opposite way round to a lookup - it is typed into, and it
    drives another column - so it is marked in the accent colour, not the muted one. */
 .drv.ent{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
@@ -369,7 +375,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.11";
+const APP_VERSION = "1.12";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -378,8 +384,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.13.xlsx",          ver:"2.13",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.13 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.14.xlsx",          ver:"2.14",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.14 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -754,7 +760,11 @@ const PARENT_OF = {
   Milestone:          () => ["project_id", S.selProj],
   ProjectPeriod:      () => ["project_id", S.selProj],
   Assignment:         () => ["person_id", S.selPers],
+  // The override table hangs off the SELECTED assignment, so a row created in it belongs
+  // to that assignment - seeding the person's first one would file it under a different
+  // project from the one on screen.
   PersonPeriodWeight: () => {
+    if (S.selAsg) return ["assignment_id", S.selAsg];
     const first = S.model.assignments.find(a => a.person_id === S.selPers);
     return ["assignment_id", first ? first.assignment_id : null];
   },
@@ -1233,7 +1243,7 @@ const S = {
   model:null, calc:null, fileName:"", loadedAt:null,
   from:null, to:null,                       // month keys
   f:{type:"All", phase:"All", proj:"All", pers:"All", role:"All", dept:"All"},
-  tab:"t-overall", expanded:new Set(), selProj:null, selPers:null,
+  tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
   pending:[], saved:0, snapshot:null, editedCells:new Set(), headers:{},
   genView:{pws:"matrix", rf:"matrix", lists:"matrix"},
 };
@@ -2244,11 +2254,12 @@ function persDetail(sid){
   // From raw, not from M.assignments: the model's array is rebuilt by validate() and
   // excludes anything it rejected, so a row being repaired would vanish while edited.
   const asg = childrenOf(M.raw.Assignment, "person_id", sid);
-  // The overrides table is a GRANDCHILD of the person: it hangs off the assignments
-  // above, so it is scoped by their identifiers, not by the person's.
-  const mine = new Set(asg.map(a => a.assignment_id).filter(Boolean));
-  const ppw = M.raw.PersonPeriodWeight.filter(w =>
-    mine.has(w.assignment_id) || (w.__new && !w.assignment_id));
+  // PersonPeriodWeight is a child of ASSIGNMENT, not of person, so it follows the
+  // assignment selected above it - the same relationship Milestones and Periods have to
+  // the project selected above them. Scoping it to the person instead showed every
+  // window this person carries across every project at once, which is a list of things
+  // that have nothing to do with each other.
+  const aid = selectedAssignment(asg);
   return `<div class="panel"><h2>Utilisation — ${esc(pe.person_name)} (${esc(sid)})</h2>
       <p class="cap">Monthly load across the horizon, <strong>each bar split into the projects that
         make it up</strong> — the total says whether this person is over the ceiling, the split says
@@ -2258,28 +2269,69 @@ function persDetail(sid){
         everyone, since both thresholds are absolute.</p>
       <div class="scrollx fit">${chartPersonStrip(sid)}</div></div>
     <div class="two">
-      <div class="panel"><h2>Assignments — ${esc(sid)}</h2>
+      <div class="panel"><h2>Assignments — ${esc(pe.person_name)} (${esc(sid)})</h2>
         <p class="cap">Fill in <code>project_name</code> — <code>project_id</code> is derived from it.
           Editing the identifier directly still works and the name follows instead.
+          <strong>Clicking a row selects it</strong>, which drives the overrides beside it.
           <strong>+ row</strong> allocates the next <code>assignment_id</code>.</p>
         ${dataTable("Assignment", asg,
           ["assignment_id","project_name","project_id","role_name",
-           "assign_start_date","assign_end_date","person_weight"])}</div>
-      <div class="panel"><h2>Weight overrides</h2>
-        <p class="cap">Replaces person_weight for the window it covers. One assignment may carry
-          several non-overlapping windows.</p>
-        ${dataTable("PersonPeriodWeight", ppw,
-          ["assignment_id","project_name","role_name","period_start","period_end",
-           "weight_override","reason"], null, null,
-          {project_name: r => {
-             const a = M.assignments.find(x => x.assignment_id === r.assignment_id);
-             return a ? (M.projects[a.project_id] || {}).project_name : "";
-           },
-           role_name: r => {
-             const a = M.assignments.find(x => x.assignment_id === r.assignment_id);
-             return a ? a.role_name : "";
-           }})}</div>
+           "assign_start_date","assign_end_date","person_weight"], "assignment_id", aid)}</div>
+      <div id="asgDetail">${overridesPanel(sid)}</div>
     </div>`;
+}
+
+/** The overrides beside the Assignments table, in their own element.
+ *
+ *  Separate so that selecting an assignment can redraw THIS and nothing else. Redrawing
+ *  the whole person panel would rebuild the Assignments table too - and clicking a cell
+ *  both selects the row and puts the caret in it, so the cell would be replaced under the
+ *  caret and the edit could never be typed. The project and person tables avoid this by
+ *  living outside the panel they drive; this table drives a panel beside it, so the
+ *  boundary has to be drawn here instead. */
+function overridesPanel(sid){
+  const M = S.model, pe = M.people[sid];
+  const asg = childrenOf(M.raw.Assignment, "person_id", sid);
+  const aid = selectedAssignment(asg);
+  const sel = asg.find(a => a.assignment_id === aid) || null;
+  const ppw = M.raw.PersonPeriodWeight.filter(w =>
+    (aid && w.assignment_id === aid) || (w.__new && !w.assignment_id));
+  const span = sel
+    ? `${ymd(sel.assign_start_date) || "—"} ~ `
+      + `${ymd(sel.assign_end_date)
+           || (sel.project_id && ymd((M.projects[sel.project_id] || {}).end_date)) || "—"}`
+    : "";
+  return `<div class="panel"><h2>Weight overrides — ${esc(pe.person_name)} (${esc(sid)})</h2>
+      ${sel
+        ? `<p class="asgline"><strong>Assignment (${esc(sel.assignment_id ?? "—")})</strong>: `
+          + `${esc((M.projects[sel.project_id] || {}).project_name ?? sel.project_id ?? "—")} / `
+          + `${esc(sel.role_name ?? "—")} / ${span} / weight `
+          + `${sel.person_weight === null || sel.person_weight === undefined
+               ? "—" : Number(sel.person_weight).toFixed(2)}</p>`
+        : `<p class="asgline muted">No assignment selected — click a row in Assignments.</p>`}
+      <p class="cap">Replaces <code>person_weight</code> for the window it covers, for
+        <strong>this assignment only</strong>. One assignment may carry several
+        non-overlapping windows.</p>
+      ${dataTable("PersonPeriodWeight", ppw,
+        ["assignment_id","project_name","role_name","period_start","period_end",
+         "weight_override","reason"], null, null,
+        {project_name: r => {
+           const a = M.assignments.find(x => x.assignment_id === r.assignment_id);
+           return a ? (M.projects[a.project_id] || {}).project_name : "";
+         },
+         role_name: r => {
+           const a = M.assignments.find(x => x.assignment_id === r.assignment_id);
+           return a ? a.role_name : "";
+         }})}</div>`;
+}
+
+/** The assignment the overrides table hangs off: the one clicked, while it is still one
+ *  of the rows on screen, otherwise the first. Held in S rather than derived each time,
+ *  so it survives an edit that re-renders the panel. */
+function selectedAssignment(asg){
+  const ids = asg.map(a => a.assignment_id).filter(Boolean);
+  if (!ids.includes(S.selAsg)) S.selAsg = ids[0] ?? null;
+  return S.selAsg;
 }
 
 function wmatrix(rows, keyOf, labelOf, colKey, valKey){
@@ -2939,8 +2991,17 @@ document.addEventListener("click", e => {
     }
     if (sheet === "Person" && S.selPers !== row.dataset.id){
       S.selPers = row.dataset.id;
+      S.selAsg = null;                   // a different person has different assignments
       for (const tr of row.parentNode.children) tr.classList.toggle("sel", tr === row);
       const d = el("persDetail"); if (d) d.innerHTML = persDetail(S.selPers);
+    }
+    // Selecting an assignment drives the overrides table beside it. Only the panels that
+    // depend on it are redrawn - re-rendering the Assignments table would replace the
+    // cell the click just put the caret in, so the edit could never be typed.
+    if (sheet === "Assignment" && S.selAsg !== row.dataset.id){
+      S.selAsg = row.dataset.id;
+      for (const tr of row.parentNode.children) tr.classList.toggle("sel", tr === row);
+      const d = el("asgDetail"); if (d) d.innerHTML = overridesPanel(S.selPers);
     }
   }
 });

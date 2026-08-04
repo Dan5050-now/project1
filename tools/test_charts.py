@@ -17,6 +17,9 @@
 
   Source data (person)
     d. a row drafted under one person does not appear on another person's tables
+    e. Weight overrides is a child of the selected ASSIGNMENT, not of the person: it
+       shows that assignment's windows and no others, its heading names the person, and
+       it restates the assignment it belongs to
     3. the Utilisation bars are STACKED - one segment per project, not one bar per month
     4. the segments of a month sum to that person-month, and to the same figure the
        Overall tables show. A chart that disagrees with the table is worse than no chart
@@ -317,6 +320,78 @@ with sync_playwright() as pw:
     check(leaked and not leaked["asg"] and not leaked["ppw"],
           "a row drafted under one person does not follow you to the next",
           "" if not leaked else f"on {leaked['sid']}: {leaked['asg']} {leaked['ppw']}")
+
+    print("app/PRAP.html — Weight overrides follows the selected assignment")
+    pg.click("#discardBtn")
+    pg.wait_for_timeout(900)
+    pg.locator("#t-pers .data-t[data-sheet='Person'] tbody tr").first \
+      .locator("td[data-col='person_id']").first.click()
+    pg.wait_for_timeout(900)
+    titles = probe(pg, """() => {
+      const h = t => [...document.querySelectorAll('#t-pers .panel h2')]
+        .find(e => e.textContent.startsWith(t));
+      const pe = S.model.people[S.selPers];
+      return {asg: (h('Assignments')||{}).textContent, ppw: (h('Weight overrides')||{}).textContent,
+              want: `${pe.person_name} (${S.selPers})`};
+    }""")
+    check(titles and titles["asg"].endswith(titles["want"])
+          and titles["ppw"].endswith(titles["want"]),
+          "both headings name the selected person", str(titles))
+
+    rows = pg.locator("#t-pers .data-t[data-sheet='Assignment'] tbody tr")
+    wrong, seen = [], 0
+    for i in range(rows.count()):
+        aid = rows.nth(i).get_attribute("data-id")
+        if not aid:
+            continue
+        rows.nth(i).locator("td[data-col='role_name']").first.click()
+        pg.wait_for_timeout(500)
+        got = probe(pg, """() => {
+          const panel = [...document.querySelectorAll('#t-pers .panel')]
+            .find(e => (e.querySelector('h2')||{}).textContent.startsWith('Weight overrides'));
+          const shown = [...document.querySelectorAll(
+             "#t-pers .data-t[data-sheet='PersonPeriodWeight'] tbody tr")]
+             .map(tr => ((tr.querySelector("td:nth-child(2)")||{}).textContent||"").trim())
+             .filter(t => t && !/^No rows/.test(t));
+          const real = S.model.raw.PersonPeriodWeight
+             .filter(w => w.assignment_id === S.selAsg).map(w => w.assignment_id);
+          const sel = document.querySelector(
+             "#t-pers .data-t[data-sheet='Assignment'] tbody tr.sel");
+          return {selAsg: S.selAsg, shown, real,
+                  line: (panel.querySelector('.asgline')||{}).textContent
+                          .replace(/\s+/g, " ").trim(),
+                  highlighted: sel ? sel.dataset.id : null};
+        }""")
+        seen += 1
+        if not got or got["selAsg"] != aid or got["shown"] != got["real"] \
+           or got["highlighted"] != aid or aid not in got["line"]:
+            wrong.append([aid, got])
+    check(seen > 1 and not wrong,
+          "every assignment shows its own windows, and only those",
+          f"{seen} assignments checked" if not wrong else str(wrong[:1]))
+
+    line = probe(pg, """() => {
+      const panel = [...document.querySelectorAll('#t-pers .panel')]
+        .find(e => (e.querySelector('h2')||{}).textContent.startsWith('Weight overrides'));
+      const a = S.model.raw.Assignment.find(x => x.assignment_id === S.selAsg);
+      return {line: (panel.querySelector('.asgline')||{}).textContent.replace(/\s+/g, " ").trim(),
+              project: (S.model.projects[a.project_id]||{}).project_name, role: a.role_name,
+              weight: a.person_weight === null ? null : Number(a.person_weight).toFixed(2)};
+    }""")
+    check(line and line["project"] in line["line"] and line["role"] in line["line"]
+          and (line["weight"] is None or line["weight"] in line["line"]) and "~" in line["line"],
+          "it restates the assignment: project, role, dates and weight",
+          "" if not line else line["line"][:110])
+
+    # a new override row belongs to the assignment on screen
+    pg.locator("#t-pers .data-t[data-sheet='PersonPeriodWeight'] button[data-ins]").last.click()
+    pg.wait_for_timeout(900)
+    seeded = probe(pg, """() => {const r = S.model.raw.PersonPeriodWeight.find(x => x.__new);
+        return {aid: r && r.assignment_id, sel: S.selAsg};}""")
+    check(seeded and seeded["aid"] == seeded["sel"],
+          "a new override row is seeded with the selected assignment", str(seeded))
+    pg.click("#discardBtn")
+    pg.wait_for_timeout(800)
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()

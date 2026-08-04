@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.13"
+DOC_VERSION = "2.14"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,25 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.13", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.14", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 13, application v1.12. PersonPeriodWeight is treated as what the schema says "
+     "it is - a CHILD of Assignment - so on the person tab it now follows the assignment SELECTED "
+     "above it, exactly as Milestones and Periods follow the project selected above them. Clicking "
+     "a row in Assignments selects it and the overrides table redraws to that assignment's windows "
+     "and no others; a new override row is seeded with the selected assignment rather than the "
+     "person's first, so it is filed under the project on screen. Scoping the table to the PERSON "
+     "instead - which is what round 12 left it doing - listed every window that person carries "
+     "across every project at once, a set of rows with nothing to do with each other. Both headings "
+     "now name the person ('Assignments - Kim S. (PSN-001)'), and the overrides panel restates the "
+     "assignment it belongs to above the table: identifier, project, role, dates and weight. One "
+     "structural change was needed to make this safe: the overrides panel is rendered into its own "
+     "element, because clicking a cell both selects the row and puts the caret in it, and redrawing "
+     "the whole person panel would rebuild the Assignments table under the caret so the edit could "
+     "never be typed. The project and person tables escape this by living outside the panel they "
+     "drive; this table drives a panel beside it. No requirement, rule, calculation or schema "
+     "changed.",
+     "Issued for review"],
+    ["2.13", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 12, application v1.11. Three changes, none touching a requirement, rule, "
      "calculation or schema. (1) The Overall tab's 'Mean load per person' is replaced by "
      "'MONTHLY DEMAND BY PERSON': the same months as 'Monthly demand by project' directly above it, "
@@ -388,7 +406,7 @@ rows = [
      "A draft is now admitted only while its parent key is empty, applied through one helper to all "
      "four child tables. The overrides table is also scoped correctly as a GRANDCHILD of the person: "
      "by the identifiers of the assignments shown above it, not by the person's own.",
-     "Issued for review"],
+     "Superseded by v2.14"],
     ["2.12", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 refinements round 11, application v1.10. Two changes, neither touching a requirement, "
      "rule, calculation or schema. (1) A PROJECT TIMELINE run-chart now stands before the Utilisation "
@@ -1309,7 +1327,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-12 applied (app v1.11); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-13 applied (app v1.12); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1395,7 +1413,8 @@ align = [
     ["v2.10", "v1.0", "application v1.8", "5", DOC_DATE, "Gate 4 round 9: a foreign key no longer cascades; second override windows can be added."],
     ["v2.11", "v1.0", "application v1.9", "5", DOC_DATE, "Gate 4 round 10: the value list survives being scrolled, and matches on tokens."],
     ["v2.12", "v1.0", "application v1.10", "5", DOC_DATE, "Gate 4 round 11: a per-project timeline, and utilisation stacked by project."],
-    ["v2.13", "v1.0", "application v1.11", "5", DOC_DATE, "Gate 4 round 12: demand by person, project utilisation by person, child tables scoped. 4.9 continues."],
+    ["v2.13", "v1.0", "application v1.11", "5", DOC_DATE, "Gate 4 round 12: demand by person, project utilisation by person, child tables scoped."],
+    ["v2.14", "v1.0", "application v1.12", "5", DOC_DATE, "Gate 4 round 13: weight overrides follow the selected assignment. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

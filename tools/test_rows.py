@@ -68,6 +68,29 @@ def check(ok, label, detail=""):
         fails.append(label)
 
 
+def rows_on_screen(pg, loc):
+    """Real rows only. An empty table draws one placeholder row inviting you to add one,
+    and counting that as data makes 0 -> 1 look like no change."""
+    return pg.locator(f"{loc} tbody tr td[data-col]").evaluate_all(
+        "es => new Set(es.map(e => e.dataset.row)).size")
+
+
+def select_assignment_with_overrides(pg):
+    """Weight overrides hangs off the ASSIGNMENT selected above it, so put the assignment
+    that actually carries windows on screen before probing that table."""
+    aid = pg.evaluate("""() => {
+      const mine = new Set(S.model.raw.Assignment
+        .filter(a => a.person_id === S.selPers).map(a => a.assignment_id));
+      const w = S.model.raw.PersonPeriodWeight.find(x => mine.has(x.assignment_id));
+      return w ? w.assignment_id : null;
+    }""")
+    if aid:
+        pg.locator(f"#t-pers .data-t[data-sheet='Assignment'] tbody tr[data-id='{aid}'] "
+                   "td[data-col='role_name']").first.click()
+        pg.wait_for_timeout(700)
+    return aid
+
+
 def load(pg, path):
     pg.goto(APP)
     pg.wait_for_timeout(200)
@@ -104,16 +127,18 @@ with sync_playwright() as pw:
         pg.click(f"text={tab}")
         pg.wait_for_timeout(800)
         loc = f"{pane} .data-t[data-sheet='{sheet}']"
-        shown0 = pg.locator(f"{loc} tbody tr").count()
+        if sheet == "PersonPeriodWeight":
+            select_assignment_with_overrides(pg)
+        shown0 = rows_on_screen(pg, loc)
         model0 = pg.evaluate(f"S.model.raw['{sheet}'].length")
         pg.locator(f"{loc} button[data-ins]").first.click()
         pg.wait_for_timeout(1100)
-        shown1 = pg.locator(f"{loc} tbody tr").count()
+        shown1 = rows_on_screen(pg, loc)
         check(shown1 == shown0 + 1, f"{sheet}: the inserted row is visible",
               f"rows on screen {shown0} -> {shown1}")
         pg.locator(f"{loc} button[data-del]").first.click()
         pg.wait_for_timeout(1100)
-        shown2 = pg.locator(f"{loc} tbody tr").count()
+        shown2 = rows_on_screen(pg, loc)
         model2 = pg.evaluate(f"S.model.raw['{sheet}'].length")
         # one inserted then one deleted lands back on the starting count; taking two
         # rows for one click - the old defect - would land one below it
@@ -244,6 +269,7 @@ with sync_playwright() as pw:
     pg.click("text=Source data (person)")
     pg.wait_for_timeout(900)
     ploc = "#t-pers .data-t[data-sheet='PersonPeriodWeight']"
+    select_assignment_with_overrides(pg)
     prompts.clear()
     start = pg.evaluate("S.model.raw.PersonPeriodWeight.map(r => [r.__row, r.assignment_id])")
     # the first row's assignment, and a DIFFERENT one that already has a window
@@ -263,15 +289,24 @@ with sync_playwright() as pw:
     check(left == sibs_before - 1 and not prompts,
           "re-pointing an override row leaves its former siblings alone",
           f"{src}: {sibs_before} -> {left} rows, {len(prompts)} prompt(s); {after}")
+    # and the move states what the row has joined, rather than warning about it
+    note = pg.inner_text("#banner")
+    check(dst in note and "several windows" in note,
+          "moving a row onto an assignment that already has windows explains itself",
+          note[:110].replace(chr(10), " "))
 
     # and a genuinely overlapping second window is still refused
     load(pg, DUMMY)
     pg.click("text=Source data (person)")
     pg.wait_for_timeout(900)
+    select_assignment_with_overrides(pg)
     pg.locator(f"{ploc} button[data-ins]").last.click()
     pg.wait_for_timeout(900)
     nrow = pg.evaluate("() => S.model.raw.PersonPeriodWeight.find(x => x.__new).__row")
-    host = pg.evaluate("() => {const r = S.model.raw.PersonPeriodWeight.find(x => !x.__new);"
+    # the window to collide with must be one of THIS assignment's, since that is what the
+    # table now shows and what the new row was seeded with
+    host = pg.evaluate("() => {const r = S.model.raw.PersonPeriodWeight"
+                       ".find(x => !x.__new && x.assignment_id === S.selAsg);"
                        " return [r.assignment_id, r.period_start.toISOString().slice(0,10),"
                        " r.period_end.toISOString().slice(0,10)];}")
 
@@ -284,11 +319,6 @@ with sync_playwright() as pw:
         pg.keyboard.press("Enter")
         pg.wait_for_timeout(550)
 
-    ptype("assignment_id", host[0])
-    note = pg.inner_text("#banner")
-    check(host[0] in note and "several windows" in note,
-          "picking an assignment that already has windows explains itself",
-          note[:110].replace(chr(10), " "))
     ptype("period_start", host[1])          # exactly on top of the existing window
     ptype("period_end", host[2])
     ptype("weight_override", "0.40")
