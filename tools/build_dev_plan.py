@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.12"
+DOC_VERSION = "2.13"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,30 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.12", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.13", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 12, application v1.11. Three changes, none touching a requirement, rule, "
+     "calculation or schema. (1) The Overall tab's 'Mean load per person' is replaced by "
+     "'MONTHLY DEMAND BY PERSON': the same months as 'Monthly demand by project' directly above it, "
+     "cut the other way, one stacked band per person with a colour per person. The two charts total "
+     "the same figure every month, because they are the same person-months summed along different "
+     "axes - and that is now an executable check, not a claim. The mean-and-thresholds reading the "
+     "old chart gave is not lost: a segment is OUTLINED where that person's own month crosses the "
+     "ceiling or the floor, so the flag never rests on fill colour, which here already means 'which "
+     "person' (D-04). The 20-person cap from D-14 carries over to the stack and its legend "
+     "(REQ-DSH-09). (2) 'Utilisation' on the project tab is stacked by PERSON on the same terms, "
+     "with each segment's pop-up naming the person, their role on this project, their FTE and share "
+     "of the month, and the project's total. Its relative reference lines are unchanged, and a month "
+     "whose TOTAL crosses one is outlined behind the stack rather than coloured into any one "
+     "person's segment. (3) DEFECT: a row drafted on one person's tab appeared on every other "
+     "person's tab. The child-table filters carried a bare '|| r.__new', added at round 6 so a new "
+     "row would be visible before its key was filled in; being unconditional it admitted every draft "
+     "everywhere. On 'Weight overrides', whose project and role columns are looked up FROM the "
+     "assignment, such a row then described another person's work - the incorrect mapping reported. "
+     "A draft is now admitted only while its parent key is empty, applied through one helper to all "
+     "four child tables. The overrides table is also scoped correctly as a GRANDCHILD of the person: "
+     "by the identifiers of the assignments shown above it, not by the person's own.",
+     "Issued for review"],
+    ["2.12", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 refinements round 11, application v1.10. Two changes, neither touching a requirement, "
      "rule, calculation or schema. (1) A PROJECT TIMELINE run-chart now stands before the Utilisation "
      "panel on the project tab - the Overall tab's chart drawn for the selected project alone, with "
@@ -384,7 +407,7 @@ rows = [
      "held for the session, so one project carries ONE colour everywhere - the Overall stacked chart "
      "picked its colours from the filtered draw order, which meant the same colour meant different "
      "projects on different tabs and after every filter change.",
-     "Issued for review"],
+     "Superseded by v2.13"],
     ["2.11", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 defect fix round 10, application v1.9. Reviewer reported that dragging the scroll bar of "
      "a type-ahead value list closed the list, making a list taller than its box impossible to read to "
@@ -1286,7 +1309,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-11 applied (app v1.10); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-12 applied (app v1.11); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1371,7 +1394,8 @@ align = [
     ["v2.9", "v1.0", "application v1.7", "5", DOC_DATE, "Gate 4 round 8: two-way scrolling everywhere, project by name, allocated assignment_id."],
     ["v2.10", "v1.0", "application v1.8", "5", DOC_DATE, "Gate 4 round 9: a foreign key no longer cascades; second override windows can be added."],
     ["v2.11", "v1.0", "application v1.9", "5", DOC_DATE, "Gate 4 round 10: the value list survives being scrolled, and matches on tokens."],
-    ["v2.12", "v1.0", "application v1.10", "5", DOC_DATE, "Gate 4 round 11: a per-project timeline, and utilisation stacked by project. 4.9 continues."],
+    ["v2.12", "v1.0", "application v1.10", "5", DOC_DATE, "Gate 4 round 11: a per-project timeline, and utilisation stacked by project."],
+    ["v2.13", "v1.0", "application v1.11", "5", DOC_DATE, "Gate 4 round 12: demand by person, project utilisation by person, child tables scoped. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

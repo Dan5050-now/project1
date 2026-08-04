@@ -5,7 +5,18 @@
        project's periods and milestones - the Overall tab's chart for one project
     2. its bands and markers carry the same pop-ups they do on the Overall tab
 
+  Overall
+    a. 'Monthly demand by person' is stacked by PERSON, and totals the same figure every
+       month as 'Monthly demand by project' - they are the same person-months summed
+       along different axes, so any disagreement is a bug in one of them
+    b. each person keeps ONE colour
+
+  Source data (project)
+    c. Utilisation is stacked by PERSON, and each month's segments sum to the
+       project-month the calculation holds
+
   Source data (person)
+    d. a row drafted under one person does not appear on another person's tables
     3. the Utilisation bars are STACKED - one segment per project, not one bar per month
     4. the segments of a month sum to that person-month, and to the same figure the
        Overall tables show. A chart that disagrees with the table is worse than no chart
@@ -55,6 +66,46 @@ with sync_playwright() as pw:
     pg.set_input_files("#picker", str(DUMMY))
     pg.wait_for_timeout(4500)
 
+    print("app/PRAP.html — Overall: monthly demand by person")
+    byperson = probe(pg, """() => {
+      const pick = t => [...document.querySelectorAll('#t-overall .panel')]
+        .find(e => (e.querySelector('h2')||{}).textContent === t);
+      const pers = pick('Monthly demand by person'), proj = pick('Monthly demand by project');
+      if (!pers || !proj) return null;
+      const cols = p => {
+        const by = {};
+        for (const r of p.querySelectorAll('rect.band'))
+          (by[(+r.getAttribute('x')).toFixed(1)] ||= []).push(r);
+        return by;
+      };
+      const A = cols(pers), B = cols(proj);
+      const seg = [...pers.querySelectorAll('rect.band')];
+      // heights are on one scale within a chart, so compare the two charts by TOTAL height
+      const sum = c => Object.fromEntries(Object.entries(c).map(([x, rs]) =>
+        [x, rs.reduce((t, r) => t + (+r.getAttribute('height')), 0)]));
+      const a = sum(A), b = sum(B);
+      const drift = Object.keys(a).filter(x => b[x] === undefined
+        || Math.abs(a[x] - b[x]) > 0.6).map(x => [x, a[x], b[x]]);
+      const perPerson = {};
+      for (const r of seg){
+        const nm = /^<b>(.*?)<\/b>/.exec(r.dataset.tip)[1];
+        (perPerson[nm] ||= new Set()).add(r.getAttribute('fill'));
+      }
+      return {segments: seg.length, months: Object.keys(A).length,
+              deepest: Math.max(...Object.values(A).map(v => v.length)),
+              drift, split: Object.entries(perPerson).filter(([, s]) => s.size > 1).map(x => x[0]),
+              legend: pers.querySelectorAll('.legend li').length};
+    }""")
+    check(byperson and byperson["segments"] > byperson["months"] and byperson["deepest"] > 1,
+          "the Overall person chart is stacked, one segment per person",
+          "" if not byperson else f"{byperson['segments']} segments over {byperson['months']} "
+          f"months, deepest stack {byperson['deepest']}, {byperson['legend']} legend entries")
+    check(byperson and not byperson["drift"],
+          "it totals the same as 'Monthly demand by project', month for month",
+          "" if not byperson else str(byperson["drift"][:2]))
+    check(byperson and not byperson["split"], "each person has one colour",
+          "" if not byperson else str(byperson["split"]))
+
     print("app/PRAP.html — Source data (project): project timeline")
     pg.click("text=Source data (project)")
     pg.wait_for_timeout(1300)
@@ -86,6 +137,35 @@ with sync_playwright() as pw:
           and drawn["locks"] > 0 and drawn["tips"] == want["per"] + want["ms"],
           "it draws every period and every milestone, each with a pop-up",
           f"{drawn} against {want} in the data")
+
+    util = probe(pg, """() => {
+      const p = [...document.querySelectorAll('#t-proj .panel')]
+        .find(e => (e.querySelector('h2')||{}).textContent.startsWith('Utilisation'));
+      const by = {};
+      for (const r of p.querySelectorAll('rect.band'))
+        (by[(+r.getAttribute('x')).toFixed(1)] ||= []).push(r);
+      const bad = [];
+      for (const col of Object.values(by)){
+        const m = /<br>([A-Z][a-z]{2} \d{4}) &middot;|<br>([A-Z][a-z]{2} \d{4}) \u00b7/
+          .exec(col[0].dataset.tip);
+        const month = /([A-Z][a-z]{2} \d{4})/.exec(col[0].dataset.tip);
+        const k = grid().find(g => keyToLabel(g) === month[1]);
+        const real = S.calc.projMonth.get(S.selProj + '|' + k) || 0;
+        let sum = 0;
+        for (const r of col){
+          const own = /<b>([\d.]+) FTE<\/b> on this project/.exec(r.dataset.tip);
+          if (own) sum += parseFloat(own[1]);
+        }
+        if (Math.abs(sum - real) > 0.02) bad.push([month[1], sum, real]);
+      }
+      return {cols: Object.keys(by).length,
+              deepest: Math.max(0, ...Object.values(by).map(v => v.length)), bad,
+              legend: p.querySelectorAll('.legend li').length};
+    }""")
+    check(util and util["deepest"] > 1 and not util["bad"],
+          "project Utilisation is stacked by person, and the segments sum to the project-month",
+          "" if not util else f"deepest stack {util['deepest']} over {util['cols']} months, "
+          f"{util['legend']} legend entries" + (f", drift {util['bad'][:2]}" if util["bad"] else ""))
 
     print("app/PRAP.html — Source data (person): utilisation stacked by project")
     pg.click("text=Source data (person)")
@@ -190,6 +270,53 @@ with sync_playwright() as pw:
     }
     check(all(have.values()), "the pop-up carries both halves",
           ", ".join(k for k, v in have.items() if not v) or tip.replace("\n", " | ")[:120])
+
+    print("app/PRAP.html — Source data (person): the tables are scoped to the person")
+    scoped = probe(pg, """() => {
+      const grab = sh => [...document.querySelectorAll(
+         `#t-pers .data-t[data-sheet='${sh}'] tbody tr`)]
+         .map(tr => ((tr.querySelector("td:nth-child(2)")||{}).textContent || "").trim())
+         .filter(t => t && !/^No rows/.test(t));
+      const mine = sid => new Set(S.model.raw.Assignment
+         .filter(a => a.person_id === sid).map(a => a.assignment_id));
+      const out = [];
+      for (const sid of Object.keys(S.model.people)){
+        S.selPers = sid;
+        document.getElementById("persDetail").innerHTML = persDetail(sid);
+        const m = mine(sid);
+        const asg = grab("Assignment").filter(a => !m.has(a));
+        const ppw = grab("PersonPeriodWeight").filter(a => !m.has(a));
+        if (asg.length || ppw.length) out.push([sid, asg, ppw]);
+      }
+      return out;
+    }""")
+    check(scoped == [], "every person's tables show only their own rows",
+          "" if not scoped else str(scoped[:2]))
+
+    # and a row drafted under one person must not follow you to the next
+    pg.click("text=Source data (person)")
+    pg.wait_for_timeout(1000)
+    for sheet in ("Assignment", "PersonPeriodWeight"):
+        pg.locator(f"#t-pers .data-t[data-sheet='{sheet}'] button[data-ins]").last.click()
+        pg.wait_for_timeout(700)
+    first = pg.evaluate("S.selPers")
+    pg.locator("#t-pers .data-t[data-sheet='Person'] tbody tr").nth(4) \
+      .locator("td[data-col='person_id']").first.click()
+    pg.wait_for_timeout(900)
+    leaked = probe(pg, """() => {
+      const grab = sh => [...document.querySelectorAll(
+         `#t-pers .data-t[data-sheet='${sh}'] tbody tr`)]
+         .map(tr => ((tr.querySelector("td:nth-child(2)")||{}).textContent || "").trim())
+         .filter(t => t && !/^No rows/.test(t));
+      const m = new Set(S.model.raw.Assignment
+         .filter(a => a.person_id === S.selPers).map(a => a.assignment_id));
+      return {sid: S.selPers,
+              asg: grab("Assignment").filter(a => !m.has(a)),
+              ppw: grab("PersonPeriodWeight").filter(a => !m.has(a))};
+    }""")
+    check(leaked and not leaked["asg"] and not leaked["ppw"],
+          "a row drafted under one person does not follow you to the next",
+          "" if not leaked else f"on {leaked['sid']}: {leaked['asg']} {leaked['ppw']}")
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()

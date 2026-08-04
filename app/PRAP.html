@@ -209,6 +209,10 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
    total and not of any one project in it. */
 .mmark{fill:none;stroke-width:2}
 .mmark.over{stroke:var(--crit)}.mmark.under{stroke:var(--warn)}
+/* A segment whose OWN value breaches a threshold, outlined in place - the flag must not
+   rest on fill colour alone, which here already means "which person" (D-04). */
+.band.brOver{stroke:var(--crit);stroke-width:2}
+.band.brUnder{stroke:var(--warn);stroke-width:2}
 .bandlab{fill:#fff;font-size:10.5px;font-weight:650;pointer-events:none;
  paint-order:stroke;stroke:rgba(0,0,0,.3);stroke-width:2.4px}
 .bandsub{fill:#fff;font-size:9.5px;font-weight:600;pointer-events:none;opacity:.92;
@@ -365,7 +369,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.10";
+const APP_VERSION = "1.11";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -374,8 +378,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.12.xlsx",          ver:"2.12",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.12 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.13.xlsx",          ver:"2.13",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.13 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -1166,6 +1170,7 @@ function calculate(M){
   // A person-month split by project. persMonth is the total; this is what it is made OF,
   // which is what the person utilisation chart draws and what its pop-up reads.
   const persProj = new Map();          // person|month -> Map(project_id -> FTE)
+  const projPers = new Map();          // project|month -> Map(person_id -> FTE)
   const add = (map, k, v) => map.set(k, (map.get(k) || 0) + v);
 
   const periodAt = (pid, y, m) => {
@@ -1209,12 +1214,17 @@ function calculate(M){
       if (!persProj.has(pk)) persProj.set(pk, new Map());
       const byp = persProj.get(pk);
       byp.set(a.project_id, (byp.get(a.project_id) || 0) + v);
+      const qk = a.project_id + "|" + k;                 // the same split seen the other way
+      if (!projPers.has(qk)) projPers.set(qk, new Map());
+      const bys = projPers.get(qk);
+      bys.set(a.person_id, (bys.get(a.person_id) || 0) + v);
       const wk = a.project_id + "|" + k;
       if (!who.has(wk)) who.set(wk, []);
       who.get(wk).push([a.person_id, a.role_name]);
     }
   }
-  return {projMonth, persMonth, persProj, cell, who, lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
+  return {projMonth, persMonth, persProj, projPers, cell, who,
+          lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }
 
 /* ============================================================ 7. state + filters */
@@ -1317,6 +1327,19 @@ function projColourOf(pid){
     Object.keys(S.model.projects).sort().forEach((p, i) => { PCOL[p] = projColour(i); });
   }
   return PCOL[pid] || "var(--other)";
+}
+
+/** A person's colour, on the same terms: fixed for the session, keyed on their place in
+ *  the sorted list of ALL people, so one person is one colour on every chart that splits
+ *  by person. Offset into the palette so a person and a project drawn side by side are
+ *  unlikely to collide. */
+let SCOL = null;
+function persColourOf(sid){
+  if (!SCOL || SCOL.__for !== S.model){
+    SCOL = {__for: S.model};
+    Object.keys(S.model.people).sort().forEach((p, i) => { SCOL[p] = projColour(i + 3); });
+  }
+  return SCOL[sid] || "var(--other)";
 }
 
 const PERIOD_HUE = {
@@ -1475,65 +1498,100 @@ function chartStacked(pids){
 }
 
 const padL0 = 60;
+
+/** The people to draw individually, biggest first, with the tail folded into one band.
+ *  A thousand people is inside REQ-NFR-03; a thousand legend entries is not readable, so
+ *  the same cap D-14 set for the old bar chart applies to the stack (REQ-DSH-09). */
+const REST = "__rest";
+function peopleOrder(sids, totalOf, limit){
+  const t = sids.map(s => [s, totalOf(s)]).filter(x => x[1] > 0.004)
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  const head = t.slice(0, limit).map(x => x[0]);
+  return {order: head.concat(t.length > limit ? [REST] : []),
+          rest: t.slice(limit).map(x => x[0]), any: t.length > 0};
+}
+const persName = sid => sid === REST ? "" : (S.model.people[sid] || {}).person_name || sid;
+
+/** Monthly demand, one stacked band per PERSON - the same figures the project chart above
+ *  draws, cut the other way. The two totals agree month for month, because they are the
+ *  same person-months summed along different axes. */
 function chartPeople(sids){
   const M = S.model, C = S.calc, G = grid();
-  const means = sids.map(s => {
-    let t = 0; for (const k of G) t += C.persMonth.get(s+"|"+k) || 0;
-    return [s, G.length ? t / G.length : 0];
-  }).sort((a,b) => b[1]-a[1]);
-  const LIMIT = 20;                                              // REQ-DSH-09 / D-14
-  const shown = means.slice(0, LIMIT);
-  const restAvg = means.length > LIMIT
-    ? means.slice(LIMIT).reduce((s,x) => s + x[1], 0) / (means.length - LIMIT) : null;
-  const bars = shown.concat(restAvg !== null ? [["__rest", restAvg]] : []);
-  if (!bars.length) return `<p class="note">Nobody matches the current filters.</p>`;
-  // The threshold labels live in a right-hand margin, outside the plot. Drawn over the
-  // bars they were unreadable at any size - a halo cannot rescue dark text on a solid
-  // red bar, and making the type bigger only made the collision worse.
-  const padR = 210;
-  const W = Math.max(720, padL0 + padR + bars.length * 46), H = 300, padL = padL0, padB = 56, padT = 30;
-  const bw = (W - padL - padR) / bars.length;
-  const vmax = Math.max(Math.max(...bars.map(b => b[1])), M.OVER) * 1.15 || 1;
-  const scale = (H - padB - padT) / vmax;
+  const LIMIT = 20;
+  const {order, rest, any} = peopleOrder(sids, s => {
+    let t = 0; for (const k of G) t += C.persMonth.get(s+"|"+k) || 0; return t;
+  }, LIMIT);
+  if (!any) return `<p class="note">Nobody draws resource inside this horizon.</p>`;
+  const restSet = new Set(rest);
+
+  const W = Math.max(700, 90 + G.length * 74), H = 600, padL = 62, padB = 52, padT = 30;
+  const bw = (W - padL - 14) / G.length;
+  let vmax = 0;
+  for (const k of G){
+    let sum = 0;
+    for (const s of sids) sum += C.persMonth.get(s+"|"+k) || 0;
+    vmax = Math.max(vmax, sum);
+  }
+  vmax = vmax || 1;
+  const scale = (H - padB - padT) / (vmax * 1.08);
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
-    + `aria-label="Mean monthly load per person against both thresholds">`];
-  for (let i = 0; i <= 3; i++){
-    const v = vmax * i / 3, yy = H - padB - v * scale;
-    o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR+4}" y2="${yy.toFixed(1)}"/>`);
+    + `aria-label="Monthly resource demand, one stacked band per person">`];
+  o.push(`<text class="ax" x="${padL-8}" y="${padT-12}" text-anchor="end">${unitLabel()}</text>`);
+  for (let i = 0; i <= 4; i++){
+    const v = vmax * 1.08 * i / 4, yy = H - padB - v * scale;
+    o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-8}" y2="${yy.toFixed(1)}"/>`);
     o.push(`<text class="ax" x="${padL-8}" y="${(yy+3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`);
   }
-  bars.forEach(([s, v], i) => {
-    const x0 = padL + i * bw + 3, h = v * scale;
-    const rest = s === "__rest";
-    const cls = rest ? "bar" : (v > M.OVER ? "bar over" : (v > 0 && v < M.UNDER ? "bar under" : "bar"));
-    const nm = rest ? `the other ${means.length - LIMIT} people` : ((M.people[s]||{}).person_name || s);
-    const tip = `<b>${esc(nm)}</b>${rest ? "" : ` <span class="tr">${esc(s)}</span>`}<br>`
-      + `mean ${fmt(v)} ${unitLabel()} over the horizon`
-      + (rest ? `<br><span class="tr">shown as one band — see the table below for each of them</span>` : "");
-    o.push(`<rect class="${cls}" x="${x0.toFixed(1)}" y="${(H-padB-h).toFixed(1)}" `
-      + `width="${(bw-8).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" `
-      + `fill="${rest ? "var(--other)" : ""}" data-tip="${att(tip)}"></rect>`);
-    o.push(`<text class="ax" x="${(x0+(bw-8)/2).toFixed(1)}" y="${H-padB+16}" text-anchor="middle">`
-      + `${esc(rest ? "rest" : s.slice(-3))}</text>`);
-    // A breaching bar states its own value, so the flag never rests on colour alone (D-04).
-    if (!rest && (v > M.OVER || (v > 0 && v < M.UNDER)))
-      o.push(`<text class="barlab ${v > M.OVER ? "over" : "under"}" `
-        + `x="${(x0+(bw-8)/2).toFixed(1)}" y="${(H-padB-h-7).toFixed(1)}" text-anchor="middle">`
-        + `${v > M.OVER ? "&#9650;" : "&#9660;"} ${fmt(v)}</text>`);
+  G.forEach((k, i) => {
+    const x0 = padL + i * bw + 3;
+    let month = 0;
+    for (const s of sids) month += C.persMonth.get(s+"|"+k) || 0;
+    let base = H - padB;
+    for (const s of order){
+      const v = s === REST
+        ? rest.reduce((t, r) => t + (C.persMonth.get(r+"|"+k) || 0), 0)
+        : (C.persMonth.get(s+"|"+k) || 0);
+      if (v <= 0.004) continue;
+      const h = v * scale;
+      const projs = [...(C.persProj.get(s+"|"+k) || new Map())]
+        .sort((a, b) => b[1] - a[1]);
+      const cap = s === REST ? null : num((M.people[s] || {}).capacity_fte);
+      const tip = s === REST
+        ? `<b>the other ${rest.length} people</b><br>${keyToLabel(k)} &#183; `
+          + `<b>${fmt(v)} ${unitLabel()}</b> between them`
+          + `<br><span class="tr">shown as one band — see the table below for each of them</span>`
+        : `<b>${esc(persName(s))}</b> <span class="tr">${esc(s)}</span><br>`
+          + `${keyToLabel(k)} &#183; <b>${fmt(v)} ${unitLabel()}</b>`
+          + `<span class="tr"> &#183; ${month > 0 ? (100*v/month).toFixed(0) : 0}% of the month</span>`
+          + (cap ? `<span class="tr"> &#183; capacity ${cap.toFixed(2)}</span>` : "")
+          + (v > M.OVER ? `<br><span class="tr">above the ${M.OVER.toFixed(2)} ceiling</span>`
+             : v < M.UNDER ? `<br><span class="tr">below the ${M.UNDER.toFixed(2)} floor</span>` : "")
+          + `<br>${projs.slice(0,6).map(([q, qv]) =>
+                `&#183; ${esc(M.projects[q].project_name)} <span class="tr">${fmt(qv)}</span>`).join("<br>")}`
+          + (projs.length > 6 ? `<br>&#183; and ${projs.length-6} more` : "")
+          + `<hr>${keyToLabel(k)} across everyone in view: <b>${fmt(month)} ${unitLabel()}</b>`;
+      // A person over the ceiling is outlined, so the flag never rests on colour alone (D-04).
+      const breach = s !== REST && (v > M.OVER || v < M.UNDER);
+      o.push(`<rect class="band${breach ? (v > M.OVER ? " brOver" : " brUnder") : ""}" `
+        + `x="${x0.toFixed(1)}" y="${(base-h).toFixed(1)}" `
+        + `width="${(bw-8).toFixed(1)}" height="${Math.max(0.6,h).toFixed(1)}" `
+        + `fill="${s === REST ? "var(--other)" : persColourOf(s)}" data-tip="${att(tip)}"></rect>`);
+      base -= h;
+    }
   });
-  for (const [v, cls, lab] of [[M.OVER,"th-over",`over-allocation ceiling — ${M.OVER.toFixed(2)}`],
-                               [M.UNDER,"th-under",`under-allocation floor — ${M.UNDER.toFixed(2)}`]]){
-    const yy = H - padB - v * scale;
-    o.push(`<line class="halo" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR+4}" y2="${yy.toFixed(1)}"/>`);
-    o.push(`<line class="${cls}" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR+4}" y2="${yy.toFixed(1)}"/>`);
-    o.push(`<text class="thlab ${cls}" x="${W-padR+10}" y="${(yy+4).toFixed(1)}">${lab}</text>`);
-  }
-  o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-padR+4}" y2="${H-padB}"/></svg>`);
-  if (restAvg !== null)
-    o.push(`<p class="note">${LIMIT} most loaded people shown individually; the remaining `
-      + `${means.length - LIMIT} are one band. ${means.length} bars at this width would be `
-      + `unreadable (REQ-DSH-09).</p>`);
-  return o.join("");
+  monthAxis(o, G, i => padL + i * bw + 3, bw - 8, H - padB + 17, H - padB + 32, padT, H - padB);
+  o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-8}" y2="${H-padB}"/></svg>`);
+  const leg = ['<ul class="legend">'];
+  for (const s of order)
+    leg.push(`<li><span class="sw" style="background:${s === REST ? "var(--other)" : persColourOf(s)}"></span>`
+      + `${esc(s === REST ? `the other ${rest.length} people` : persName(s))}</li>`);
+  leg.push(`<li class="hint">outlined segment = that person is over ${M.OVER.toFixed(2)} or `
+    + `under ${M.UNDER.toFixed(2)} FTE that month</li></ul>`);
+  if (rest.length)
+    leg.push(`<p class="note">${LIMIT} most loaded people shown individually; the remaining `
+      + `${rest.length} are one band. ${rest.length + LIMIT} legend entries at this width would `
+      + `be unreadable (REQ-DSH-09).</p>`);
+  return o.join("") + leg.join("");
 }
 
 function chartProjectUtil(pid){
@@ -1557,14 +1615,51 @@ function chartProjectUtil(pid){
     o.push(`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR+4}" y2="${gy.toFixed(1)}"/>`);
     o.push(`<text class="ax" x="${padL-8}" y="${(gy+3).toFixed(1)}" text-anchor="end">${fmt(gv)}</text>`);
   }
-  vals.forEach((v, i) => {
-    const h = (v/vmax) * (base-top);
-    const cls = v > upper ? "over" : (v > 0 && v < lower ? "under" : "");
-    const tip = `<b>${esc(M.projects[pid].project_name)}</b><br>${keyToLabel(G[i])} &#183; `
-      + `<b>${fmt(v)} ${unitLabel()}</b><br><span class="tr">portfolio average ${portAvg.toFixed(2)} `
-      + `&#183; this project ${ownAvg.toFixed(2)}</span>`;
-    o.push(`<rect class="bar ${cls}" x="${(padL+i*bw+2).toFixed(1)}" y="${(base-h).toFixed(1)}" `
-      + `width="${(bw-4).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" data-tip="${att(tip)}"></rect>`);
+  // Stacked by PERSON. The bar height is the project's month either way; the split says
+  // who it is made of, which is the question the bare bar could not answer. Order is by
+  // total over the horizon so the stack does not reshuffle month to month.
+  const {order, rest} = peopleOrder(Object.keys(M.people), sid => {
+    let t = 0;
+    for (const k of G) t += (C.projPers.get(pid+"|"+k) || new Map()).get(sid) || 0;
+    return t;
+  }, 20);
+  G.forEach((k, i) => {
+    const total = vals[i];
+    const bys = C.projPers.get(pid+"|"+k) || new Map();
+    const x0 = padL + i * bw + 2, w = bw - 4;
+    // The month's standing against the reference lines belongs to the TOTAL, so it is
+    // drawn once behind the stack rather than coloured into any one person's segment.
+    if (total > upper || (total > 0 && total < lower)){
+      const h = (total/vmax) * (base-top);
+      o.push(`<rect class="mmark ${total > upper ? "over" : "under"}" x="${(x0-2).toFixed(1)}" `
+        + `y="${(base-h-3).toFixed(1)}" width="${(w+4).toFixed(1)}" height="${(h+3).toFixed(1)}" rx="3"/>`);
+    }
+    const roles = new Map();
+    for (const [ps, rn] of (C.who.get(pid+"|"+k) || [])) roles.set(ps, rn);
+    let acc = 0;
+    for (const sid of order){
+      const v = sid === REST
+        ? rest.reduce((t, r) => t + (bys.get(r) || 0), 0)
+        : (bys.get(sid) || 0);
+      if (v <= 0.004) continue;
+      const y1 = base - (acc/vmax) * (base-top);
+      acc += v;
+      const y0 = base - (acc/vmax) * (base-top);
+      const tip = sid === REST
+        ? `<b>the other ${rest.length} people</b><br>${keyToLabel(k)} &#183; `
+          + `<b>${fmt(v)} ${unitLabel()}</b> between them`
+        : `<b>${esc(persName(sid))}</b> <span class="tr">${esc(sid)}</span>`
+          + (roles.get(sid) ? `<br><span class="tr">${esc(roles.get(sid))}</span>` : "")
+          + `<br>${keyToLabel(k)} &#183; <b>${fmt(v)} ${unitLabel()}</b> on this project`
+          + `<span class="tr"> &#183; ${total > 0 ? (100*v/total).toFixed(0) : 0}% of the month</span>`
+          + `<hr><b>${esc(M.projects[pid].project_name)}</b><br>`
+          + `Total this month: <b>${fmt(total)} ${unitLabel()}</b>`
+          + `<span class="tr"> across ${bys.size} ${bys.size === 1 ? "person" : "people"} `
+          + `&#183; this project averages ${ownAvg.toFixed(2)}, an active project ${portAvg.toFixed(2)}</span>`;
+      o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" `
+        + `width="${w.toFixed(1)}" height="${Math.max(0.8, y1-y0).toFixed(1)}" `
+        + `fill="${sid === REST ? "var(--other)" : persColourOf(sid)}" data-tip="${att(tip)}"></rect>`);
+    }
   });
   monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base);
   for (const [v, cls, lab] of [[upper,"th-over",`2 × portfolio avg — ${upper.toFixed(2)}`],
@@ -1577,7 +1672,12 @@ function chartProjectUtil(pid){
     o.push(`<text class="thlab ${cls}" x="${W-padR+8}" y="${(yy+3).toFixed(1)}">${lab}</text>`);
   }
   o.push(`<line class="base" x1="${padL}" y1="${base}" x2="${W-padR+4}" y2="${base}"/></svg>`);
-  return {svg:o.join(""), portAvg, ownAvg};
+  const leg = ['<ul class="legend">'];
+  for (const sid of order)
+    leg.push(`<li><span class="sw" style="background:${sid === REST ? "var(--other)" : persColourOf(sid)}"></span>`
+      + `${esc(sid === REST ? `the other ${rest.length} people` : persName(sid))}</li>`);
+  leg.push(`<li class="hint">tinted outline = the month's TOTAL crosses a reference line</li></ul>`);
+  return {svg:o.join("") + (order.length ? leg.join("") : ""), portAvg, ownAvg};
 }
 
 /** The milestones a project passes in one month, as "name (date)" strings. */
@@ -1857,6 +1957,17 @@ const PROXY = {
 };
 const proxyFor = (sheet, col) => (PROXY[sheet] || {})[col];
 
+/** The rows of a child sheet that belong to the selected parent.
+ *
+ *  A row still being DRAFTED is admitted only while its parent key is empty. The moment
+ *  it names a parent it belongs to that parent and to no other. The earlier rule was a
+ *  bare `|| r.__new`, added so a new row would be visible before its key was filled in;
+ *  because it was unconditional it put a row drafted under one person on EVERY other
+ *  person's tab - and on the overrides table, where the project and role columns are
+ *  looked up from the assignment, that row then described someone else's work. */
+const childrenOf = (rows, col, val) =>
+  rows.filter(r => r[col] === val || (r.__new && !r[col]));
+
 /** Sheets whose key is allocated for the user when a row is inserted. An assignment_id
  *  carries no meaning beyond being unique, so making someone invent one is asking them
  *  to do the machine's job - and to do it wrong, since the row is rejected at Save if
@@ -2023,9 +2134,13 @@ function renderOverall(){
       <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
         <strong>Click a project name</strong> to expand it to the people and roles on it.</p>
       <div class="scrollx xl">${tableProjects(pids)}</div></div>
-    <div class="panel"><h2>Mean load per person</h2>
-      <p class="cap">Averaged over the horizon, against the two absolute thresholds.</p>
-      <div class="scrollx fit">${chartPeople(sids)}</div></div>
+    <div class="panel"><h2>Monthly demand by person</h2>
+      <p class="cap">The same months as <strong>Monthly demand by project</strong> above, cut the
+        other way: one stacked band per person. The two charts total the same figure every month,
+        because they are the same person-months summed along different axes. A segment is outlined
+        where that person's own month crosses the ${M.OVER.toFixed(2)} ceiling or the
+        ${M.UNDER.toFixed(2)} floor. <strong>Hover any band</strong> for the projects behind it.</p>
+      <div class="scrollx xl">${chartPeople(sids)}</div></div>
     <div class="panel"><h2>Resource by person</h2>
       <p class="cap">Summed across every project. &#9650; above the ceiling, &#9660; below the floor.
         <strong>Click a person name</strong> to expand to their projects and roles.</p>
@@ -2065,7 +2180,7 @@ function projDetail(pid){
   const util = chartProjectUtil(pid);
   // `|| m.__new` so a row the user just created is visible even before its parent key
   // is filled in. Seeding usually covers it; this covers the case where it cannot.
-  const ms = M.raw.Milestone.filter(m => m.project_id === pid || m.__new)
+  const ms = childrenOf(M.raw.Milestone, "project_id", pid)
     .sort((a,b) => (a.milestone_date||0) - (b.milestone_date||0));
   const per = (M.periods[pid] || []);
   const derived = per.some(p => p.__derived);
@@ -2080,10 +2195,12 @@ function projDetail(pid){
            + ` &middot; ${(M.periods[pid] || []).length} period(s). Edit the two tables below and `
            + `this redraws.`})}</div></div>
     <div class="panel"><h2>Utilisation — ${esc(pr.project_name)}</h2>
-      <p class="cap">Monthly resource for the selected project. A project has no absolute ceiling or
-        floor, so the reference lines are <strong>relative</strong>: twice and half the average an active
-        project draws across the portfolio (${util.portAvg.toFixed(2)} FTE), plus this project's own
-        average over its full life (${util.ownAvg.toFixed(2)} FTE). They are context, not pass or fail.</p>
+      <p class="cap">Monthly resource for the selected project, <strong>each bar split into the
+        people who make it up</strong>. A project has no absolute ceiling or floor, so the reference
+        lines are <strong>relative</strong>: twice and half the average an active project draws across
+        the portfolio (${util.portAvg.toFixed(2)} FTE), plus this project's own average over its full
+        life (${util.ownAvg.toFixed(2)} FTE). They are context, not pass or fail.
+        <strong>Hover any segment</strong> for that person's role and share of the month.</p>
       <div class="scrollx fit">${util.svg}</div></div>
     <div class="two">
       <div class="panel"><h2>Milestones — ${esc(pr.project_name)}</h2>
@@ -2097,7 +2214,7 @@ function projDetail(pid){
              carries none for this project. Adding a row here starts a hand-entered set, which the
              application will then use as given.</p>`
           : ""}
-        ${dataTable("ProjectPeriod", M.raw.ProjectPeriod.filter(x => x.project_id === pid || x.__new),
+        ${dataTable("ProjectPeriod", childrenOf(M.raw.ProjectPeriod, "project_id", pid),
           ["project_id","period_name","period_seq","period_start","period_end","weight","note_1"])}
         </div>
     </div>`;
@@ -2126,9 +2243,12 @@ function persDetail(sid){
   const M = S.model, pe = M.people[sid];
   // From raw, not from M.assignments: the model's array is rebuilt by validate() and
   // excludes anything it rejected, so a row being repaired would vanish while edited.
-  const asg = M.raw.Assignment.filter(a => a.person_id === sid || a.__new);
+  const asg = childrenOf(M.raw.Assignment, "person_id", sid);
+  // The overrides table is a GRANDCHILD of the person: it hangs off the assignments
+  // above, so it is scoped by their identifiers, not by the person's.
+  const mine = new Set(asg.map(a => a.assignment_id).filter(Boolean));
   const ppw = M.raw.PersonPeriodWeight.filter(w =>
-    w.__new || asg.some(a => a.assignment_id === w.assignment_id));
+    mine.has(w.assignment_id) || (w.__new && !w.assignment_id));
   return `<div class="panel"><h2>Utilisation — ${esc(pe.person_name)} (${esc(sid)})</h2>
       <p class="cap">Monthly load across the horizon, <strong>each bar split into the projects that
         make it up</strong> — the total says whether this person is over the ceiling, the split says
