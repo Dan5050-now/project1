@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.15 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.16 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -30,7 +30,7 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.15.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.16.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -46,7 +46,7 @@ output/       Exported results and test evidence   (from Step 5)
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -83,6 +83,7 @@ output/       Exported results and test evidence   (from Step 5)
   | The two Overall charts total the same figure every month | same file; and 5 more of its 14 checks fail against the build before round 12 |
   | Each assignment shows its own override windows, and only those | same file; checked for every assignment of the selected person |
   | Every trend line's total and peak month agree with the model | same file, on all three tabs; and every panel uses one header shape |
+  | Derived columns locked, input columns not | `check_consistency.py`, against the plan's data model; caught in all three ways it can break |
 
   Gate 4 round 1 (app v1.1): the three named Overall sections are up to twice their
   previous size; the project timeline scrolls in both directions, so every project in
@@ -107,6 +108,16 @@ output/       Exported results and test evidence   (from Step 5)
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 15 (app v1.14, template v1.7, dummies v1.9 / v1.1): **derived columns in
+  the source workbook are locked**, with a note on each heading. A green fill is a
+  convention the reader has to have been told about, and the telling is on a README sheet
+  they may never open; a lock is the file itself refusing the edit at the moment it is
+  attempted. The export writes the same locks. `check_consistency.py` verifies all of it
+  against the plan's data model — which surfaced a gap the change had to close:
+  `Milestone.project_name` and `Assignment.person_name` were typed `Text` although the
+  application recomputes both on import and reports disagreement as V-13. They are typed
+  `Derived` now, which is what they have always been.
 
   Gate 4 round 14 (app v1.13): a **line chart** of monthly resource stands as the first
   panel of every data tab — one coloured line per project on Overall and the project tab,
@@ -209,13 +220,22 @@ output/       Exported results and test evidence   (from Step 5)
   covering all 70 requirements. Sheet 10 records the six open points from the v0.3
   review, the answers given, and what each one changed. None open.
 
-- `templates/PRAP_SourceData_Template_v1.6.xlsx` — blank workbook: 10 sheets, headers,
+- `templates/PRAP_SourceData_Template_v1.7.xlsx` — blank workbook: 10 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README. Every sheet
-  carries at least one free-text note column (schema version 3).
-- `templates/PRAP_SourceData_Dummy_v1.8.xlsx` — the same structure populated with
+  carries at least one free-text note column (schema version 5).
+
+  **Derived columns are locked.** Three columns are computed rather than entered —
+  `Project.total_period_months`, `Milestone.project_name`, `Assignment.person_name`. Their
+  cells are locked and every other cell is explicitly unlocked, so typing into one is
+  refused where it happens instead of going wrong later; each carries a note on its
+  heading saying why. There is no password — it is a guard rail, not security — and
+  inserting, deleting and sorting rows all still work. Only adding or removing *columns*
+  is blocked, because the column set is the schema. The application's export writes the
+  same locks, so the guard rail survives a round trip.
+- `templates/PRAP_SourceData_Dummy_v1.9.xlsx` — the same structure populated with
   **34 NewDrug CT + 16 Biosimilar CT + 12 `Others` projects and 20 people**
   (289 assignments, 372 milestones, 308 periods across 73 months).
-- `templates/PRAP_SourceData_Dummy_10x10_v1.0.xlsx` — the same again at **10 projects
+- `templates/PRAP_SourceData_Dummy_10x10_v1.1.xlsx` — the same again at **10 projects
   and 10 people** (8 clinical trials + 2 `Others`, 50 assignments, 60 milestones,
   50 periods across 50 months): small enough to read every row on screen and check the
   arithmetic by hand. It is not a lighter test — it carries both clinical types, all
@@ -232,7 +252,7 @@ schema the other follows. The data is seeded: every sheet rebuilds byte-for-byte
 Validate any of them with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.0.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.1.xlsx
 ```
 
 And check the application against the reference implementation:

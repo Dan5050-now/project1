@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.15"
+DOC_VERSION = "2.16"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,27 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.15", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.16", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 15, application v1.14, template v1.7, dummy v1.9 and 10x10 v1.1. DERIVED "
+     "columns in the source workbook are now distinguished from entry columns by more than a "
+     "colour: their cells are LOCKED, and the column heading carries a note saying what the column "
+     "is, that the lock has no password, and what a hand-typed value would actually do. A green "
+     "fill is a convention the reader must have been told about, and the telling is on a README "
+     "sheet they may never open; a lock is the file itself refusing the edit at the moment it is "
+     "attempted. Every other cell on those sheets is explicitly UNLOCKED, and protection is set so "
+     "that inserting, deleting and sorting rows all still work - only adding or removing COLUMNS is "
+     "blocked, because the column set is the schema. There is no password: it is a guard rail, not "
+     "security, and anyone who genuinely needs to paste a column can turn it off in two clicks. The "
+     "application's EXPORT now writes the same locks and the same sheet protection, so the guard "
+     "rail survives a round trip instead of disappearing the first time a file goes through PRAP. "
+     "check_consistency.py now verifies all of it against the plan's own data model - which "
+     "surfaced a documentation gap the change had to close: Milestone.project_name and "
+     "Assignment.person_name were typed 'Text' in the data model although the application "
+     "recomputes both on import and reports any disagreement as V-13. They are typed 'Derived' now, "
+     "which is what they have always been. No requirement, rule, calculation or schema version "
+     "changed.",
+     "Issued for review"],
+    ["2.15", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 14, application v1.13. (1) A LINE CHART of monthly resource now stands as the "
      "FIRST panel of every data tab - one coloured line per project on Overall and on the project "
      "tab, one per person on the person tab, each keeping the colour it already carries elsewhere. "
@@ -385,7 +405,7 @@ rows = [
      "PAINTED one, so the line hit strips needed pointer-events stated explicitly, and the visible "
      "stroke sits on top of them and had to be taken out of hit testing or it swallowed the pointer "
      "and offered no tip of its own. No requirement, rule, calculation or schema changed.",
-     "Issued for review"],
+     "Superseded by v2.16"],
     ["2.14", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 13, application v1.12. PersonPeriodWeight is treated as what the schema says "
      "it is - a CHILD of Assignment - so on the person tab it now follows the assignment SELECTED "
@@ -872,7 +892,7 @@ r = note(ws, r, "system_prepared_by is dropped at v0.3 (Q-19): the four *_setup 
 r = section(ws, r, "Sheet: Milestone")
 mile = [
     ["project_id", "Text", "Yes", "Foreign key to Project.", "REQ-PRJ-05"],
-    [f"{MARK_NEW}project_name", "Text", "No", "Display convenience added at v0.11. Not authoritative: checked against Project on import and refreshed from it, so a mismatch cannot corrupt the link.", "REQ-PRJ-05"],
+    ["project_name", "Derived", "No", "DERIVED - looked up from Project on import and refreshed from it, so a mismatch cannot corrupt the link. Locked in the template; a value typed here is discarded and the disagreement reported as V-13.", "REQ-PRJ-05"],
     [f"{MARK_CHG}milestone_name", "List", "Yes", "Standard list (10) at v1.1: 'Protocol (v1)', 'CTA submission', 'FPI', 'First SIV', 'LPI', 'interim DB lock cut-off', 'interim DB lock', 'final DB lock cut-off', 'final DB lock', 'Inspection'. FPI returns as the fallback for First SIV; Inspection is new and MAY REPEAT within a project. Held in Lists, not fixed in code.", "REQ-PRJ-05, REQ-PRJ-13"],
     ["milestone_date", "Date", "Yes", "Planned date.", "REQ-PRJ-05"],
     ["milestone_seq", "Integer", "No", "Display order on the timeline.", "REQ-PRJ-05"],
@@ -958,7 +978,7 @@ r = section(ws, r, "Sheet: Assignment")
 asg = [
     ["assignment_id", "Text", "Yes", "Unique key. One row per person + project + role.", "REQ-PSN-07"],
     ["person_id", "Text", "Yes", "Foreign key to Person.", "REQ-PSN-01"],
-    [f"{MARK_NEW}person_name", "Text", "No", "Display convenience added at v0.11. Not authoritative: checked against Person on import and refreshed from it.", "REQ-PSN-01"],
+    ["person_name", "Derived", "No", "DERIVED - looked up from Person on import and refreshed from it. Locked in the template; a value typed here is discarded and the disagreement reported as V-13.", "REQ-PSN-01"],
     ["project_id", "Text", "Yes", "Foreign key to Project.", "REQ-PSN-02"],
     [f"{MARK_CHG}role_name", "Text", "Yes", "Foreign key to RoleFactor, matched on (project's type, role_name); the phase and period are supplied by the project and the month being calculated. Several rows = several roles on one project.", "REQ-PSN-03"],
     ["assign_start_date", "Date", "Yes", "Date the person joins the study.", "REQ-PSN-04"],
@@ -1347,7 +1367,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-14 applied (app v1.13); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-15 applied (app v1.14); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1435,7 +1455,8 @@ align = [
     ["v2.12", "v1.0", "application v1.10", "5", DOC_DATE, "Gate 4 round 11: a per-project timeline, and utilisation stacked by project."],
     ["v2.13", "v1.0", "application v1.11", "5", DOC_DATE, "Gate 4 round 12: demand by person, project utilisation by person, child tables scoped."],
     ["v2.14", "v1.0", "application v1.12", "5", DOC_DATE, "Gate 4 round 13: weight overrides follow the selected assignment."],
-    ["v2.15", "v1.0", "application v1.13", "5", DOC_DATE, "Gate 4 round 14: monthly trend line charts, and one header shape for every panel. 4.9 continues."],
+    ["v2.15", "v1.0", "application v1.13", "5", DOC_DATE, "Gate 4 round 14: monthly trend line charts, and one header shape for every panel."],
+    ["v2.16", "v1.0", "application v1.14", "5", DOC_DATE, "Gate 4 round 15: derived columns locked in the workbook, template v1.7. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

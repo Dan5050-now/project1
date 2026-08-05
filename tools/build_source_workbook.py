@@ -17,8 +17,8 @@ docProps/core.xml, so the container differs while the data does not.
 
 Two sizes are produced, from one generator driven by PROFILES:
 
-    Dummy_v1.8         50 clinical trials + 12 'Others', 20 people - the review set
-    Dummy_10x10_v1.0    8 clinical trials +  2 'Others', 10 people - small enough to
+    Dummy_v1.9         50 clinical trials + 12 'Others', 20 people - the review set
+    Dummy_10x10_v1.1    8 clinical trials +  2 'Others', 10 people - small enough to
                         read every row and check the arithmetic by hand
 
 Both are built to exercise the rules rather than merely fill cells: interim DB locks
@@ -33,14 +33,16 @@ from pathlib import Path
 
 from dateutil.relativedelta import relativedelta as rd
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.comments import Comment
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Protection, Side
+from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 SCHEMA_VERSION = 5
-TEMPLATE_VERSION = "1.6"
-DUMMY_VERSION = "1.8"
-DUMMY_SMALL_VERSION = "1.0"
+TEMPLATE_VERSION = "1.7"
+DUMMY_VERSION = "1.9"
+DUMMY_SMALL_VERSION = "1.1"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -767,6 +769,45 @@ def write_sheet(wb, name, rows, example=None, list_ranges=None):
             letter = get_column_letter(col_index(name, col))
             dv.add(f"{letter}2:{letter}{max(last, 400)}")
 
+    # ---- derived columns: locked, and said so ------------------------------
+    #
+    # A green fill is a convention the reader has to have been told about, and the
+    # telling is on a sheet they may never open. Locking the cells makes the file itself
+    # refuse the edit, at the moment it is attempted, with Excel's own message.
+    #
+    # No password. This is a GUARD RAIL, not security: anyone who genuinely needs to
+    # paste a column can turn protection off in two clicks, and should be able to. What
+    # it stops is the accidental type-over, which is the failure that actually happens -
+    # a hand-typed total that then disagrees with the dates it was supposed to come from,
+    # silently, because nothing recalculates it until the file is opened by something
+    # that does.
+    derived = [i for i, (_, _, k) in enumerate(cols, start=1) if k == "calc"]
+    if derived:
+        spare = max(last, 400)
+        for i, (col, note, kind) in enumerate(cols, start=1):
+            if kind == "calc":
+                continue
+            for r in range(2, spare + 1):
+                ws.cell(row=r, column=i).protection = Protection(locked=False)
+        for i in derived:
+            col = cols[i - 1][0]
+            note = (f"{col} is DERIVED.\n\n"
+                    f"{cols[i - 1][1]}\n\n"
+                    "The cell is locked so it cannot be typed over by accident. Nothing is "
+                    "hidden: Review > Unprotect Sheet turns it off, there is no password. "
+                    "But a value typed here is not recalculated, and the application "
+                    "recomputes this column on import anyway - so a hand-typed one is "
+                    "silently discarded, and any disagreement is reported as V-13.")
+            c = ws.cell(row=1, column=i)
+            c.comment = Comment(note, "PRAP")
+            c.comment.width, c.comment.height = 340, 170
+        # Everything a normal edit needs stays allowed; only the schema itself is fixed.
+        ws.protection = SheetProtection(
+            sheet=True, objects=False, scenarios=False,
+            selectLockedCells=False, selectUnlockedCells=False,
+            formatCells=False, formatColumns=False, formatRows=False,
+            insertRows=False, deleteRows=False, sort=False, autoFilter=False,
+            insertColumns=True, deleteColumns=True, insertHyperlinks=True)
     return ws
 
 
@@ -783,9 +824,24 @@ def add_readme(wb, kind, facts=None):
         "",
         "COLOUR KEY",
         "   Blue    identifier or key column - these link the sheets together.",
-        "   Green   derived by formula. Do not type in these; they recalculate.",
+        "   Green   DERIVED. Do not type in these. They are LOCKED, so the sheet will refuse the",
+        "           edit, and the column heading carries a note saying why. See below.",
         "   Yellow  you must supply this value. The application cannot work it out.",
         "   Grey italic row   an example, in the template only. Delete it before use.",
+        "",
+        "DERIVED COLUMNS ARE LOCKED",
+        "   Three columns are computed, not entered:",
+        "      Project.total_period_months   from start_date and end_date",
+        "      Milestone.project_name        looked up from Project",
+        "      Assignment.person_name        looked up from Person",
+        "   Their cells are locked and every other cell on the sheet is not, so typing into one",
+        "   is refused where it happens rather than going wrong later. There is NO PASSWORD:",
+        "   Review > Unprotect Sheet turns it off if you genuinely need to paste a column.",
+        "   Adding, deleting and sorting rows all still work with protection on; only adding or",
+        "   removing COLUMNS is blocked, because the column set is the schema.",
+        "   What the lock is protecting you from: a value typed into one of these is not",
+        "   recalculated by anything, and the application recomputes the column on import in any",
+        "   case - so a hand-typed one is discarded, and the disagreement is reported as V-13.",
         "",
         "SHEETS",
         "   Project               one row per project.",

@@ -395,7 +395,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.13";
+const APP_VERSION = "1.14";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -404,13 +404,13 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.15.xlsx",          ver:"2.15",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.15 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.16.xlsx",          ver:"2.16",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.16 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
-  {what:"Source data template",   file:"PRAP_SourceData_Template_v1.6.xlsx",        ver:"1.6",
+  {what:"Source data template",   file:"PRAP_SourceData_Template_v1.7.xlsx",        ver:"1.7",
    status:`Schema version ${SCHEMA_EXPECTED} — the layout this application reads`},
 ];
 
@@ -579,7 +579,25 @@ function zipStored(entries){          // [{name, text}] -> Blob
 
 const xesc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-function sheetXml(rows){
+/** The columns this application COMPUTES rather than reads. They are recomputed on every
+ *  import (recomputeDerived), so a value typed into one is discarded and the disagreement
+ *  reported as V-13. The template locks them for that reason, and an export has to carry
+ *  the same lock or the guard rail disappears the first time a file goes round the loop. */
+const DERIVED_COLS = {
+  Project:    ["total_period_months"],
+  Milestone:  ["project_name"],
+  Assignment: ["person_name"],
+};
+
+/* Four cell styles, so a cell can be plain or a date and locked or not. An xf with no
+   <protection> child is LOCKED by default, which is why only the editable ones say so. */
+const ST_PLAIN = 0, ST_DATE = 1, ST_PLAIN_OPEN = 2, ST_DATE_OPEN = 3;
+
+function sheetXml(rows, sheetName){
+  // Header row first: it names the columns, so it is what decides which are locked.
+  const hdr = (rows[0] || []).map(h => String(h ?? "").trim());
+  const derived = new Set(DERIVED_COLS[sheetName] || []);
+  const locked = hdr.map(h => derived.has(h));
   const out = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'];
   rows.forEach((row, r) => {
@@ -587,17 +605,27 @@ function sheetXml(rows){
     row.forEach((v, c) => {
       if (v === null || v === undefined || v === "") return;
       const ref = colName(c) + (r + 1);
+      const open = derived.size && r > 0 && !locked[c];     // the header row stays locked
       if (v instanceof Date){
-        out.push(`<c r="${ref}" s="1"><v>${dateToSerial(v)}</v></c>`);
+        out.push(`<c r="${ref}" s="${open ? ST_DATE_OPEN : ST_DATE}"><v>${dateToSerial(v)}</v></c>`);
       } else if (typeof v === "number" && isFinite(v)){
-        out.push(`<c r="${ref}"><v>${v}</v></c>`);
+        out.push(`<c r="${ref}"${open ? ` s="${ST_PLAIN_OPEN}"` : ""}><v>${v}</v></c>`);
       } else {
-        out.push(`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`);
+        out.push(`<c r="${ref}"${open ? ` s="${ST_PLAIN_OPEN}"` : ""} t="inlineStr">`
+          + `<is><t xml:space="preserve">${xesc(v)}</t></is></c>`);
       }
     });
     out.push('</row>');
   });
-  out.push('</sheetData></worksheet>');
+  out.push('</sheetData>');
+  // No password: a guard rail, not security. Rows can still be added, removed and sorted;
+  // only the column set - which is the schema - is fixed.
+  if (derived.size)
+    out.push('<sheetProtection sheet="1" objects="0" scenarios="0" formatCells="0" '
+      + 'formatColumns="0" formatRows="0" insertRows="0" deleteRows="0" sort="0" '
+      + 'autoFilter="0" insertColumns="1" deleteColumns="1" '
+      + 'selectLockedCells="0" selectUnlockedCells="0"/>');
+  out.push('</worksheet>');
   return out.join("");
 }
 function colName(i){
@@ -643,9 +671,15 @@ function buildXlsx(sheetsObj){
       '<fills count="1"><fill><patternFill patternType="none"/></fill></fills>' +
       '<borders count="1"><border/></borders>' +
       '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-      '<cellXfs count="2">' +
+      '<cellXfs count="4">' +
       '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
       '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
+      // the two unlocked variants: an xf with no <protection> is locked by default, so
+      // only the cells the reader may type into carry one
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyProtection="1">' +
+      '<protection locked="0"/></xf>' +
+      '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" ' +
+      'applyProtection="1"><protection locked="0"/></xf>' +
       '</cellXfs>' +
       // Without a named default style, openpyxl warns and some readers substitute their
       // own. Cheap to include, and it is the difference between a file that opens
@@ -654,7 +688,7 @@ function buildXlsx(sheetsObj){
       '</styleSheet>'},
   ];
   names.forEach((n, i) => entries.push({name:`xl/worksheets/sheet${i+1}.xml`,
-                                        text: sheetXml(sheetsObj[n])}));
+                                        text: sheetXml(sheetsObj[n], n)}));
   return zipStored(entries);
 }
 

@@ -14,11 +14,11 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.15.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.16.xlsx"
 SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.0.xlsx"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.6.xlsx"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.8.xlsx"
-DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.0.xlsx"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.7.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.9.xlsx"
+DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.1.xlsx"
 
 problems, notes = [], []
 
@@ -143,6 +143,60 @@ for label, path in (("plan", PLAN), ("specification", SPEC),
             elif v.startswith("=") and not v[1:2].isalpha():
                 problems.append(f"{label} {sh}!{c.coordinate}: text starting with '=' will "
                                 f"be read as a formula - {v[:60]}")
+
+# ---- 4b2. derived columns are LOCKED, and nothing else is -----------------
+# The green fill marking a derived column is a convention the reader has to have been
+# told about. The lock is the file itself refusing the edit. Both are easy to lose in a
+# regeneration, and neither failure announces itself - the file still opens, still reads,
+# and quietly accepts a hand-typed total that nothing will ever recalculate.
+def derived_of(ws_name, plan_wb):
+    """The columns the plan marks DERIVED for this sheet."""
+    dm_ = plan_wb["04_Data_Model"]
+    out, cur = [], None
+    for r in range(1, dm_.max_row + 1):
+        a_, t_ = dm_.cell(r, 1).value, dm_.cell(r, 2).value
+        if isinstance(a_, str) and a_.startswith("Sheet: "):
+            cur = a_.replace("Sheet: ", "").split(" ")[0].strip()
+        elif cur == ws_name and t_ == "Derived" and isinstance(a_, str) and a_.strip():
+            out.append(a_.strip())
+    return out
+
+
+for label, path in (("template", TEMPLATE), ("dummy", DUMMY), ("small dummy", DUMMY_SMALL)):
+    wb_ = load_workbook(path)
+    for sh in wb_.sheetnames:
+        if sh == "00_README":
+            continue
+        ws = wb_[sh]
+        want = set(derived_of(sh, plan))
+        hdr = [c.value for c in ws[1]]
+        if not want:
+            if ws.protection.sheet:
+                notes.append(f"{label} {sh}: protected but the plan marks no derived column")
+            continue
+        if not ws.protection.sheet:
+            problems.append(f"{label} {sh}: derived column(s) {sorted(want)} but the sheet is "
+                            f"not protected, so nothing stops them being typed over")
+            continue
+        for i, h in enumerate(hdr, start=1):
+            if h is None:
+                continue
+            locked = [bool(ws.cell(row=r, column=i).protection.locked)
+                      for r in range(2, min(ws.max_row, 60) + 1)
+                      if ws.cell(row=r, column=i).value is not None]
+            if not locked:
+                continue
+            if h in want and not all(locked):
+                problems.append(f"{label} {sh}.{h} is DERIVED but not locked in every row")
+            if h not in want and any(locked):
+                problems.append(f"{label} {sh}.{h} is an input column but is locked")
+        for i, h in enumerate(hdr, start=1):
+            if h in want and not ws.cell(row=1, column=i).comment:
+                problems.append(f"{label} {sh}.{h} is locked with no note saying why")
+        for allowed in ("insertRows", "deleteRows", "sort"):
+            if getattr(ws.protection, allowed):
+                problems.append(f"{label} {sh}: protection blocks {allowed}, which an editor needs")
+
 
 # ---- 4c. the spec's Config defaults vs the template's actual values -------
 # The thresholds live in the workbook as data, and the specification quotes them.
