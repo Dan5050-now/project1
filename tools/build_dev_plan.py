@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.14"
+DOC_VERSION = "2.15"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,27 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.14", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.15", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 14, application v1.13. (1) A LINE CHART of monthly resource now stands as the "
+     "FIRST panel of every data tab - one coloured line per project on Overall and on the project "
+     "tab, one per person on the person tab, each keeping the colour it already carries elsewhere. "
+     "The stacked charts say what a month's total is MADE OF; they cannot say whether one series is "
+     "rising or falling, because in a stack every band's baseline moves with the bands beneath it. "
+     "Lines share one baseline, which is the whole reason to draw the same numbers a second way. "
+     "Each line carries its total, mean and peak month, and is capped at the twelve largest by total "
+     "because sixty lines on one axis is a texture, not a reading. On the person chart the "
+     "over-allocation ceiling is marked, since there it applies to a single series' own value. "
+     "(2) A design pass over every section. Summary tiles move to the TOP of the Overall tab: they "
+     "are the headline figures and sat below a chart. Every panel now carries ONE header shape - "
+     "title on the left, what the panel covers on the right - where scope had been stated three "
+     "different ways: inside the caption, in a note under the table, or not at all, so the reader "
+     "had to hunt for it in a different place in each section. Captions are bounded to a readable "
+     "measure. Two long-standing chart faults were fixed on the way: a transparent stroke is not a "
+     "PAINTED one, so the line hit strips needed pointer-events stated explicitly, and the visible "
+     "stroke sits on top of them and had to be taken out of hit testing or it swallowed the pointer "
+     "and offered no tip of its own. No requirement, rule, calculation or schema changed.",
+     "Issued for review"],
+    ["2.14", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 13, application v1.12. PersonPeriodWeight is treated as what the schema says "
      "it is - a CHILD of Assignment - so on the person tab it now follows the assignment SELECTED "
      "above it, exactly as Milestones and Periods follow the project selected above them. Clicking "
@@ -1327,7 +1347,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-13 applied (app v1.12); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-14 applied (app v1.13); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1414,7 +1434,8 @@ align = [
     ["v2.11", "v1.0", "application v1.9", "5", DOC_DATE, "Gate 4 round 10: the value list survives being scrolled, and matches on tokens."],
     ["v2.12", "v1.0", "application v1.10", "5", DOC_DATE, "Gate 4 round 11: a per-project timeline, and utilisation stacked by project."],
     ["v2.13", "v1.0", "application v1.11", "5", DOC_DATE, "Gate 4 round 12: demand by person, project utilisation by person, child tables scoped."],
-    ["v2.14", "v1.0", "application v1.12", "5", DOC_DATE, "Gate 4 round 13: weight overrides follow the selected assignment. 4.9 continues."],
+    ["v2.14", "v1.0", "application v1.12", "5", DOC_DATE, "Gate 4 round 13: weight overrides follow the selected assignment."],
+    ["v2.15", "v1.0", "application v1.13", "5", DOC_DATE, "Gate 4 round 14: monthly trend line charts, and one header shape for every panel. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

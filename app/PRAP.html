@@ -88,10 +88,20 @@ td.ins,th.ins{white-space:nowrap}
 .banner .lk{margin-left:auto;color:var(--accent);cursor:pointer;text-decoration:underline}
 .panel{background:var(--surface);border:1px solid var(--ring);border-radius:10px;
  padding:14px 16px;margin:14px 0}
-.cap{color:var(--ink2);font-size:12px;margin:0 0 10px}
+/* One header shape for every panel: the title on the left, what it covers on the right.
+   Scope used to be stated three different ways - inside the caption, in the note under
+   the chart, or not at all - so the reader had to hunt for it in a different place in
+   each section. */
+.phead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 3px}
+.phead h2{margin:0}
+.phead .scope + .scope{margin-left:0}
+.phead > .scope:first-of-type{margin-left:auto}
+.phead .vtog{margin-left:0}
+.cap{color:var(--ink2);font-size:12px;margin:0 0 10px;max-width:96ch}
 .note{color:var(--muted);font-size:11.5px;font-style:italic;margin:8px 0 0}
 .scope{font-weight:400;font-size:11px;color:var(--muted);border:1px solid var(--ring);
- border-radius:9px;padding:1px 7px;margin-left:6px}
+ border-radius:9px;padding:1px 7px;margin-left:6px;white-space:nowrap}
+.scope.k{color:var(--ink2);border-color:var(--base);font-variant-numeric:tabular-nums}
 .controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
 .ctl{display:flex;flex-direction:column;gap:3px}
 .ctl label{font-size:11px;color:var(--muted)}
@@ -205,6 +215,16 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 .ax.yr{font-size:11px;fill:var(--muted)}
 .bar{fill:var(--s1)}.bar.over{fill:var(--crit)}.bar.under{fill:var(--warn)}
 .band{cursor:pointer}.band:hover{stroke:var(--ink);stroke-width:1.4}
+/* Line charts. The stroke is thin so twelve of them can share one axis; the hit strip
+   under it is not, because a 2px line cannot be hovered deliberately. */
+/* The visible stroke is not the hit target - it sits ON TOP of the strips and would
+   swallow the pointer, and it carries no tip of its own to fall back to. */
+.ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;pointer-events:none}
+.lnhit{fill:none;stroke:transparent;stroke-width:14;cursor:pointer;
+ pointer-events:stroke}   /* a transparent stroke is not a PAINTED one, so say it explicitly */
+.lnhit:hover + .ln{stroke-width:3.5}
+.lndot{pointer-events:none}
+.legend .sw.ln{width:15px;height:3px;border-radius:2px;vertical-align:4px}
 /* Drawn BEHIND a stack, because being over the ceiling is a property of the month's
    total and not of any one project in it. */
 .mmark{fill:none;stroke-width:2}
@@ -375,7 +395,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.12";
+const APP_VERSION = "1.13";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -384,8 +404,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.14.xlsx",          ver:"2.14",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.14 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.15.xlsx",          ver:"2.15",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.15 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -1458,6 +1478,100 @@ function chartGantt(pids, opts){
   return o.join("") + leg.join("");
 }
 
+/** Monthly resource as LINES, one per series.
+ *
+ *  The stacked charts answer "what is the total made of"; a stack cannot answer "is this
+ *  one rising or falling", because every band's baseline moves with the bands beneath it.
+ *  Lines share one baseline, so shape is comparable across series - which is the whole
+ *  reason to draw the same numbers a second way.
+ *
+ *  `items` is [id, label, colour]; `valueAt(id, monthKey)` supplies the figure. Capped at
+ *  LIMIT lines by total, because a chart of sixty lines is a texture, not a reading.
+ */
+const LINE_LIMIT = 12;
+function chartLines(items, valueAt, opts){
+  opts = opts || {};
+  const G = grid();
+  if (!G.length) return `<p class="note">The horizon is empty.</p>`;
+  const totals = items.map(it => [it, G.reduce((t, k) => t + (valueAt(it[0], k) || 0), 0)])
+    .filter(x => x[1] > 0.004).sort((a, b) => b[1] - a[1]);
+  if (!totals.length) return `<p class="note">${esc(opts.empty || "Nothing draws resource inside this horizon.")}</p>`;
+  const shown = totals.slice(0, LINE_LIMIT);
+  const W = Math.max(720, 96 + G.length * 46), H = 300, padL = 62, padR = 16;
+  const padT = 24, padB = 46;
+  const step = (W - padL - padR) / Math.max(1, G.length - 1 || 1);
+  const xOf = i => G.length === 1 ? padL + (W - padL - padR) / 2 : padL + i * step;
+  let vmax = 0;
+  for (const [it] of shown) for (const k of G) vmax = Math.max(vmax, valueAt(it[0], k) || 0);
+  vmax = (vmax || 1) * 1.12;
+  const yOf = v => H - padB - (v / vmax) * (H - padB - padT);
+
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+    + `aria-label="${att(opts.aria || "Monthly resource, one line per series")}">`];
+  o.push(`<text class="ax" x="${padL-8}" y="${padT-8}" text-anchor="end">${unitLabel()}</text>`);
+  for (let i = 0; i <= 4; i++){
+    const v = vmax * i / 4, yy = yOf(v);
+    o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}"/>`);
+    o.push(`<text class="ax" x="${padL-8}" y="${(yy+3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`);
+  }
+  // A reference line only where one applies to a SINGLE series' own value.
+  if (opts.rule){
+    const yy = yOf(opts.rule[0]);
+    if (yy > padT && yy < H - padB){
+      o.push(`<line class="halo" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}"/>`);
+      o.push(`<line class="th-over" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}"/>`);
+      // right-aligned at the plot edge: at the left it sits on top of the first months,
+      // which is where the lines are densest
+      o.push(`<text class="thlab th-over" x="${W-padR-2}" y="${(yy-7).toFixed(1)}" `
+        + `text-anchor="end">${esc(opts.rule[1])}</text>`);
+    }
+  }
+  for (const [[id, label, colour], total] of shown){
+    const pts = G.map((k, i) => `${xOf(i).toFixed(1)},${yOf(valueAt(id, k) || 0).toFixed(1)}`).join(" ");
+    let peak = -1, peakK = null;
+    for (const k of G){ const v = valueAt(id, k) || 0; if (v > peak){ peak = v; peakK = k; } }
+    const tip = `<b>${esc(label)}</b><br>`
+      + `${fmt(total)} ${unitLabel()}-months over ${G.length} months`
+      + `<br><span class="tr">mean ${fmt(total / G.length)} &#183; `
+      + `peak ${fmt(peak)} in ${keyToLabel(peakK)}</span>`;
+    // A hit strip under the stroke: a 2px line is almost impossible to hover deliberately.
+    o.push(`<polyline class="lnhit" points="${pts}" data-tip="${att(tip)}"></polyline>`);
+    o.push(`<polyline class="ln" points="${pts}" stroke="${colour}"></polyline>`);
+    for (const [i, k] of G.entries()){
+      const v = valueAt(id, k) || 0;
+      if (v <= 0.004) continue;
+      o.push(`<circle class="lndot" cx="${xOf(i).toFixed(1)}" cy="${yOf(v).toFixed(1)}" r="2.4" `
+        + `fill="${colour}"></circle>`);
+    }
+  }
+  monthAxis(o, G, i => xOf(i) - step / 2, step, H - padB + 17, H - padB + 32, padT, H - padB);
+  o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}"/></svg>`);
+  const leg = ['<ul class="legend">'];
+  for (const [[, label, colour]] of shown)
+    leg.push(`<li><span class="sw ln" style="background:${colour}"></span>${esc(label)}</li>`);
+  leg.push('</ul>');
+  if (totals.length > shown.length)
+    leg.push(`<p class="note">The ${LINE_LIMIT} largest by total are drawn; ${totals.length - shown.length} `
+      + `more fall below them. Sixty lines on one axis is a texture, not a reading — use the filters `
+      + `above to narrow it, or read the stacked chart for the total.</p>`);
+  return o.join("") + leg.join("");
+}
+
+function projectLines(pids){
+  const C = S.calc, M = S.model;
+  return chartLines(pids.map(p => [p, M.projects[p].project_name, projColourOf(p)]),
+    (p, k) => C.projMonth.get(p+"|"+k) || 0,
+    {aria:"Monthly resource, one line per project",
+     empty:"No project draws resource inside this horizon."});
+}
+function personLines(sids){
+  const C = S.calc, M = S.model;
+  return chartLines(sids.map(s => [s, (M.people[s]||{}).person_name || s, persColourOf(s)]),
+    (s, k) => C.persMonth.get(s+"|"+k) || 0,
+    {aria:"Monthly load, one line per person", rule:[M.OVER, `ceiling ${M.OVER.toFixed(2)}`],
+     empty:"Nobody draws resource inside this horizon."});
+}
+
 function chartStacked(pids){
   const M = S.model, C = S.calc, G = grid();
   const tot = {};
@@ -2129,29 +2243,48 @@ function renderOverall(){
     + `<div class="tv">${c==="over"?"&#9650; ":c==="under"?"&#9660; ":""}${v}</div>`
     + `<div class="ts">${s}</div></div>`).join("");
 
+  const scope = `${G.length} months &#183; ${pids.length} project(s) &#183; ${sids.length} people`;
   el("t-overall").innerHTML =
-    `<div class="panel"><h2>Project timeline</h2>
+    `<div class="tiles">${tiles}</div>
+    <div class="panel">
+      <div class="phead"><h2>Monthly resource trend</h2>
+        <span class="scope k">${scope}</span></div>
+      <p class="cap">One line per project, sharing one baseline. The stacked charts below say what
+        each month's total is made of; only lines say whether a given project is rising or falling,
+        because in a stack every band's baseline moves with the bands beneath it.
+        <strong>Hover any line</strong> for its total, mean and peak month.</p>
+      <div class="scrollx fit">${projectLines(pids)}</div></div>
+    <div class="panel">
+      <div class="phead"><h2>Project timeline</h2>
+        <span class="scope k">${pids.length} project(s)</span></div>
       <p class="cap">One row per project, with its start, end and length under the name. Bands are
         coloured by period and shaded darker as the period weight rises. The two DB locks are red —
         they are what the period derivation hangs on. <strong>Hover any band or marker</strong> for detail.</p>
       <div class="scrollx xl">${chartGantt(pids.slice().sort(byRank))}</div></div>
-    <div class="tiles">${tiles}</div>
-    <div class="panel"><h2>Monthly demand by project</h2>
+    <div class="panel">
+      <div class="phead"><h2>Monthly demand by project</h2>
+        <span class="scope k">${scope}</span></div>
       <p class="cap">One band per project, ordered by total resource with the largest on the baseline.
         <strong>Hover any band</strong> for the project, its ${unitLabel()} that month and who is on it.</p>
       <div class="scrollx xl">${chartStacked(pids)}</div></div>
-    <div class="panel"><h2>Resource by project</h2>
+    <div class="panel">
+      <div class="phead"><h2>Resource by project</h2>
+        <span class="scope k">${pids.length} project(s)</span></div>
       <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
         <strong>Click a project name</strong> to expand it to the people and roles on it.</p>
       <div class="scrollx xl">${tableProjects(pids)}</div></div>
-    <div class="panel"><h2>Monthly demand by person</h2>
+    <div class="panel">
+      <div class="phead"><h2>Monthly demand by person</h2>
+        <span class="scope k">${scope}</span></div>
       <p class="cap">The same months as <strong>Monthly demand by project</strong> above, cut the
         other way: one stacked band per person. The two charts total the same figure every month,
         because they are the same person-months summed along different axes. A segment is outlined
         where that person's own month crosses the ${M.OVER.toFixed(2)} ceiling or the
         ${M.UNDER.toFixed(2)} floor. <strong>Hover any band</strong> for the projects behind it.</p>
       <div class="scrollx xl">${chartPeople(sids)}</div></div>
-    <div class="panel"><h2>Resource by person</h2>
+    <div class="panel">
+      <div class="phead"><h2>Resource by person</h2>
+        <span class="scope k">${sids.length} people</span></div>
       <p class="cap">Summed across every project. &#9650; above the ceiling, &#9660; below the floor.
         <strong>Click a person name</strong> to expand to their projects and roles.</p>
       <div class="scrollx xl">${tablePeople(sids)}</div>
@@ -2177,11 +2310,19 @@ function renderProjTab(){
   const derived = per.some(p => p.__derived);
 
   el("t-proj").innerHTML =
-    `<div class="panel"><h2>Projects</h2>
+    `<div class="panel">
+      <div class="phead"><h2>Monthly resource trend</h2>
+        <span class="scope k">${grid().length} months &#183; ${pids.length} project(s)</span></div>
+      <p class="cap">One line per project, so the project selected below can be read against the
+        others rather than on its own. <strong>Hover any line</strong> for its total, mean and
+        peak month.</p>
+      <div class="scrollx fit">${projectLines(pids)}</div></div>
+    <div class="panel">
+      <div class="phead"><h2>Projects</h2>
+        <span class="scope k">${rows.length} in the current filter</span></div>
       <p class="cap">Every field is editable — click a cell and type. Clicking a row also selects it,
         which drives the panels below. <strong>+ row</strong> inserts directly below that row.</p>
-      ${dataTable("Project", rows, cols, "project_id", pid)}
-      <p class="note">${rows.length} project(s) in the current filter.</p></div>
+      ${dataTable("Project", rows, cols, "project_id", pid)}</div>
     <div id="projDetail">${projDetail(pid)}</div>`;
 }
 
@@ -2194,7 +2335,9 @@ function projDetail(pid){
     .sort((a,b) => (a.milestone_date||0) - (b.milestone_date||0));
   const per = (M.periods[pid] || []);
   const derived = per.some(p => p.__derived);
-  return `<div class="panel"><h2>Project timeline — ${esc(pr.project_name)}</h2>
+  return `<div class="panel">
+      <div class="phead"><h2>Project timeline — ${esc(pr.project_name)}</h2>
+        <span class="scope k">${per.length} period(s) &#183; ${ms.length} milestone(s)</span></div>
       <p class="cap">The same run-chart as the Overall tab, for this project alone: one band per
         period, coloured by period and shaded darker as the period weight rises, with every
         milestone marked. The two DB locks are red — they are what the period derivation hangs on.
@@ -2204,7 +2347,9 @@ function projDetail(pid){
            + (pr.total_period_months ? ` &middot; ${pr.total_period_months} months` : "")
            + ` &middot; ${(M.periods[pid] || []).length} period(s). Edit the two tables below and `
            + `this redraws.`})}</div></div>
-    <div class="panel"><h2>Utilisation — ${esc(pr.project_name)}</h2>
+    <div class="panel">
+      <div class="phead"><h2>Utilisation — ${esc(pr.project_name)}</h2>
+        <span class="scope k">${grid().length} months &#183; stacked by person</span></div>
       <p class="cap">Monthly resource for the selected project, <strong>each bar split into the
         people who make it up</strong>. A project has no absolute ceiling or floor, so the reference
         lines are <strong>relative</strong>: twice and half the average an active project draws across
@@ -2213,10 +2358,14 @@ function projDetail(pid){
         <strong>Hover any segment</strong> for that person's role and share of the month.</p>
       <div class="scrollx fit">${util.svg}</div></div>
     <div class="two">
-      <div class="panel"><h2>Milestones — ${esc(pr.project_name)}</h2>
+      <div class="panel">
+        <div class="phead"><h2>Milestones — ${esc(pr.project_name)}</h2>
+          <span class="scope k">${ms.length} row(s)</span></div>
         <p class="cap">CTA submission and the DB locks set the period boundaries.</p>
         ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_seq","note_1"])}</div>
-      <div class="panel"><h2>Periods — ${esc(pr.project_name)}</h2>
+      <div class="panel">
+        <div class="phead"><h2>Periods — ${esc(pr.project_name)}</h2>
+          <span class="scope k">${per.length} row(s)${derived ? " &#183; derived" : ""}</span></div>
         <p class="cap">${derived ? "Derived from the milestones above." : "As entered in the workbook."}
           Names are unique within a project, so <code>project_id + period_name</code> identifies a row.</p>
         ${derived
@@ -2239,13 +2388,22 @@ function renderPersTab(){
   const cols = ["person_id","person_name","department","primary_role","capacity_fte"];
   const keepP = new Set(sids);
 
+  const prows = M.raw.Person.filter(r => keepP.has(r.person_id) || r.__new);
   el("t-pers").innerHTML =
-    `<div class="panel"><h2>People</h2>
-      <p class="cap">Editable, same rules as the project table — including <strong>+ row</strong>
-        on every row.</p>
-      ${dataTable("Person", M.raw.Person.filter(r => keepP.has(r.person_id) || r.__new),
-                  cols, "person_id", sid)}
-      <p class="note">${sids.length} person/people in the current filter.</p></div>
+    `<div class="panel">
+      <div class="phead"><h2>Monthly load trend</h2>
+        <span class="scope k">${grid().length} months &#183; ${sids.length} people</span></div>
+      <p class="cap">One line per person, sharing one baseline, with the over-allocation ceiling
+        marked. The stacked chart below the selection says what one person's month is made of;
+        these lines say who is rising and who is falling.
+        <strong>Hover any line</strong> for its total, mean and peak month.</p>
+      <div class="scrollx fit">${personLines(sids)}</div></div>
+    <div class="panel">
+      <div class="phead"><h2>People</h2>
+        <span class="scope k">${prows.length} in the current filter</span></div>
+      <p class="cap">Editable, same rules as the project table — clicking a row selects it, and
+        <strong>+ row</strong> inserts directly below.</p>
+      ${dataTable("Person", prows, cols, "person_id", sid)}</div>
     <div id="persDetail">${persDetail(sid)}</div>`;
 }
 
@@ -2260,7 +2418,9 @@ function persDetail(sid){
   // window this person carries across every project at once, which is a list of things
   // that have nothing to do with each other.
   const aid = selectedAssignment(asg);
-  return `<div class="panel"><h2>Utilisation — ${esc(pe.person_name)} (${esc(sid)})</h2>
+  return `<div class="panel">
+      <div class="phead"><h2>Utilisation — ${esc(pe.person_name)} (${esc(sid)})</h2>
+        <span class="scope k">${grid().length} months &#183; stacked by project</span></div>
       <p class="cap">Monthly load across the horizon, <strong>each bar split into the projects that
         make it up</strong> — the total says whether this person is over the ceiling, the split says
         because of what. Every project keeps the same colour here as on the Overall tab.
@@ -2269,7 +2429,9 @@ function persDetail(sid){
         everyone, since both thresholds are absolute.</p>
       <div class="scrollx fit">${chartPersonStrip(sid)}</div></div>
     <div class="two">
-      <div class="panel"><h2>Assignments — ${esc(pe.person_name)} (${esc(sid)})</h2>
+      <div class="panel">
+        <div class="phead"><h2>Assignments — ${esc(pe.person_name)} (${esc(sid)})</h2>
+          <span class="scope k">${asg.length} row(s)</span></div>
         <p class="cap">Fill in <code>project_name</code> — <code>project_id</code> is derived from it.
           Editing the identifier directly still works and the name follows instead.
           <strong>Clicking a row selects it</strong>, which drives the overrides beside it.
@@ -2301,7 +2463,9 @@ function overridesPanel(sid){
       + `${ymd(sel.assign_end_date)
            || (sel.project_id && ymd((M.projects[sel.project_id] || {}).end_date)) || "—"}`
     : "";
-  return `<div class="panel"><h2>Weight overrides — ${esc(pe.person_name)} (${esc(sid)})</h2>
+  return `<div class="panel">
+      <div class="phead"><h2>Weight overrides — ${esc(pe.person_name)} (${esc(sid)})</h2>
+        <span class="scope k">${ppw.length} window(s)</span></div>
       ${sel
         ? `<p class="asgline"><strong>Assignment (${esc(sel.assignment_id ?? "—")})</strong>: `
           + `${esc((M.projects[sel.project_id] || {}).project_name ?? sel.project_id ?? "—")} / `
@@ -2406,21 +2570,27 @@ function renderGenTab(){
         + `<td class="num">${v.length}</td></tr>`).join("")}</tbody></table></div>`;
 
   el("t-gen").innerHTML =
-    `<div class="panel"><h2>Standard period weights <span class="scope">PeriodWeightStandard</span>
-        ${viewToggle("pws")}</h2>
+    `<div class="panel">
+      <div class="phead"><h2>Standard period weights</h2>
+        <span class="scope">PeriodWeightStandard</span>${viewToggle("pws")}</div>
       <p class="cap">The weight every clinical trial period is multiplied by, selected by the project's
         type and clinical phase. The matrix is how a standard reads — across, not down. Switch to
         <strong>Rows &amp; editing</strong> to add, change or delete individual rows.
         <strong>Others</strong> projects take hand-entered weights instead.</p>
       ${pws}</div>
-    <div class="panel"><h2>Role factors <span class="scope">RoleFactor</span>
-        ${viewToggle("rf")}</h2>
+    <div class="panel">
+      <div class="phead"><h2>Role factors</h2>
+        <span class="scope">RoleFactor</span>
+        <span class="scope k">${rfRows.length} row(s)</span>${viewToggle("rf")}</div>
       <p class="cap">What one person in this role costs the project per month, before their own weight
         and the period weight. Keyed on type, phase, period and role — read a row across to see how a
         role's burden moves over the life of a project. ${rfRows.length} rows in all.</p>
       ${rf}</div>
     <div class="two">
-      <div class="panel"><h2>Configuration <span class="scope">Config</span></h2>
+      <div class="panel">
+        <div class="phead"><h2>Configuration</h2>
+          <span class="scope">Config</span>
+          <span class="scope k">${M.raw.Config.length} setting(s)</span></div>
         <p class="cap">The thresholds and settings the whole page reads. Both allocation thresholds are
           absolute — they are not scaled by anyone's capacity.</p>
         ${dataTable("Config", M.raw.Config, ["parameter","value","note"])}
@@ -2428,8 +2598,10 @@ function renderGenTab(){
           <div class="ctl"><label>Display unit</label><select id="unitSel">
             <option${M.UNIT!=="hours"?" selected":""}>FTE</option>
             <option${M.UNIT==="hours"?" selected":""}>hours</option></select></div></div></div>
-      <div class="panel"><h2>Value lists <span class="scope">Lists</span>
-          ${viewToggle("lists")}</h2>
+      <div class="panel">
+        <div class="phead"><h2>Value lists</h2>
+          <span class="scope">Lists</span>
+          <span class="scope k">${Object.keys(grouped).length} list(s)</span>${viewToggle("lists")}</div>
         <p class="cap">What each list-typed column will accept — and what the type-ahead offers you
           while editing. A value outside its list is kept and reported (V-11), never dropped.</p>
         ${lists}</div>

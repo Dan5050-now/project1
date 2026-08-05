@@ -27,6 +27,13 @@
     6. a segment's pop-up carries both halves: the project (name, milestones that month,
        this person's FTE on it) and the person (name, total FTE that month)
 
+  Every tab
+    f. a line chart stands as the FIRST panel, one coloured line per project (or per
+       person on the person tab), and each line's stated total and peak month agree
+       with the model
+    g. every panel carries the same header shape: a title, and what it covers stated
+       on the right
+
     python tools/test_charts.py
 """
 
@@ -43,11 +50,11 @@ CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 fails = []
 
 
-def probe(pg, js, fallback=None):
+def probe(pg, js, arg=None, fallback=None):
     """Evaluate in the page, but report a failure instead of a traceback when the build
     under test simply has not got the thing being asked about."""
     try:
-        return pg.evaluate(js)
+        return pg.evaluate(js, arg) if arg is not None else pg.evaluate(js)
     except Exception as exc:
         print(f"       (page could not answer: {str(exc).splitlines()[0][:90]})")
         return fallback
@@ -392,6 +399,75 @@ with sync_playwright() as pw:
           "a new override row is seeded with the selected assignment", str(seeded))
     pg.click("#discardBtn")
     pg.wait_for_timeout(800)
+
+    print("app/PRAP.html — the monthly trend line chart")
+    for tab, pane, kind in (("Overall", "#t-overall", "project"),
+                            ("Source data (project)", "#t-proj", "project"),
+                            ("Source data (person)", "#t-pers", "person")):
+        pg.click(f"text={tab}")
+        pg.wait_for_timeout(1300)
+        got = probe(pg, """({pane, kind}) => {
+          const first = document.querySelector(pane + " .panel");
+          const svg = first && first.querySelector("svg.chart");
+          if (!svg) return null;
+          const lines = [...svg.querySelectorAll("polyline.ln")];
+          const hits = [...svg.querySelectorAll("polyline.lnhit")];
+          const G = grid();
+          const bad = [];
+          for (const h of hits){
+            const t = h.dataset.tip;
+            const name = /^<b>(.*?)<\/b>/.exec(t)[1];
+            const total = parseFloat(/<b>(?:.*?)<\/b><br>([\d.]+) /.exec(t)[1]);
+            const peakM = /peak [\d.]+ in ([A-Z][a-z]{2} \d{4})/.exec(t)[1];
+            const id = kind === "project"
+              ? Object.keys(S.model.projects).find(q =>
+                  S.model.projects[q].project_name === name)
+              : Object.keys(S.model.people).find(q =>
+                  (S.model.people[q].person_name || q) === name);
+            const at = k => kind === "project"
+              ? (S.calc.projMonth.get(id + "|" + k) || 0)
+              : (S.calc.persMonth.get(id + "|" + k) || 0);
+            const real = G.reduce((x, k) => x + at(k), 0);
+            let peak = -1, pk = null;
+            for (const k of G){ const v = at(k); if (v > peak){ peak = v; pk = k; } }
+            if (!id || Math.abs(real - total) > 0.02 || keyToLabel(pk) !== peakM)
+              bad.push([name, total, real, peakM, pk && keyToLabel(pk)]);
+          }
+          const colour = kind === "project"
+            ? (typeof projColourOf === "function" ? projColourOf : null)
+            : (typeof persColourOf === "function" ? persColourOf : null);
+          const strokes = new Set(lines.map(l => l.getAttribute("stroke")));
+          return {title: (first.querySelector("h2")||{}).textContent,
+                  lines: lines.length, hits: hits.length, dots: svg.querySelectorAll("circle.lndot").length,
+                  distinct: strokes.size, legend: first.querySelectorAll(".legend li").length,
+                  bad};
+        }""", {"pane": pane, "kind": kind})
+        check(got and got["lines"] > 1 and got["lines"] == got["hits"]
+              and got["dots"] > got["lines"] and "trend" in (got["title"] or ""),
+              f"{tab}: the first panel is a line chart, one line per {kind}",
+              "" if not got else f"{got['title']!r}: {got['lines']} lines, {got['dots']} points, "
+              f"{got['legend']} legend entries")
+        check(got and got["distinct"] == got["lines"],
+              f"{tab}: every line has its own colour",
+              "" if not got else f"{got['distinct']} colours for {got['lines']} lines")
+        check(got and not got["bad"],
+              f"{tab}: each line's total and peak month agree with the model",
+              "" if not got else str(got["bad"][:2]))
+
+    shape = probe(pg, """() => {
+      const bad = [];
+      for (const tab of ["t-overall", "t-proj", "t-pers", "t-gen"]){
+        for (const p of document.querySelectorAll("#" + tab + " .panel")){
+          const h = p.querySelector(":scope > .phead > h2, :scope > h2");
+          if (!h){ bad.push([tab, "panel with no heading"]); continue; }
+          if (!h.parentElement.classList.contains("phead"))
+            bad.push([tab, h.textContent.slice(0, 40) + " — heading not in a .phead"]);
+        }
+      }
+      return bad;
+    }""")
+    check(shape == [], "every panel uses the same header shape",
+          "" if not shape else str(shape[:3]))
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()
