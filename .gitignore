@@ -12,3 +12,6 @@ venv/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Scratch files written by the browser test suites on every run
+output/test_rows_export.xlsx
