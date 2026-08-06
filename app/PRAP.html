@@ -125,11 +125,19 @@ body{margin:0;background:var(--page);color:var(--ink);
 .wrap{max-width:1400px;margin:0 auto;padding:20px 24px 72px}
 
 /* --- header ------------------------------------------------------------- */
-header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-bottom:14px}
+/* nowrap while there is room, so the controls stay on one line and the file name is
+   what gives way; wrap only once the viewport is genuinely too narrow for them. */
+header{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;padding-bottom:14px}
+@media (max-width:1100px){header{flex-wrap:wrap}}
+header>h1,header>.vers,header>.btn{flex:none;white-space:nowrap}
 h1{font-size:21px;margin:0;letter-spacing:-.021em;font-weight:650;line-height:1.2}
 h2{font-size:15px;margin:0 0 3px;letter-spacing:-.012em;font-weight:620;line-height:1.3}
 .vers{color:var(--ink2);font-size:11.5px;letter-spacing:0}
-.file{margin-left:auto;color:var(--ink2);font-size:12px;font-variant-numeric:tabular-nums}
+/* The loaded-file line takes whatever is left and gives it back first: it is the one
+   thing in the header that can be truncated without losing a control. Without this the
+   header wraps and the buttons drop to a second row. */
+.file{margin-left:auto;color:var(--ink2);font-size:12px;font-variant-numeric:tabular-nums;
+ flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file .tz{color:var(--muted)}
 
 /* --- buttons: filled, tinted, plain ------------------------------------- */
@@ -482,9 +490,11 @@ dialog::backdrop{background:rgba(0,0,0,.35);
   <h1>Project Resource Assignment Program</h1>
   <span class="vers" id="vers"></span>
   <span class="file" id="fileline">no workbook loaded</span>
-  <input type="file" id="picker" accept=".xlsx" hidden>
+  <input type="file" id="picker" accept=".xlsx,.json" hidden>
   <button class="btn" id="loadBtn">Load workbook</button>
   <button class="btn primary" id="exportBtn" disabled>Export</button>
+  <button class="btn" id="exportJsonBtn" disabled
+    title="The same data as plain text, for another program or an AI agent to read">Export JSON</button>
   <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
 </header>
 
@@ -529,8 +539,9 @@ dialog::backdrop{background:rgba(0,0,0,.35);
 <div id="empty">
   <div class="drop" id="drop">
     <h2>Load a source workbook</h2>
-    <p class="cap">Choose a <code>.xlsx</code> file or drop one here. Nothing leaves this
-      machine — the file is read in the browser and never uploaded.</p>
+    <p class="cap">Choose a <code>.xlsx</code> workbook or a <code>.prap.json</code>
+      interchange file, or drop one here. Nothing leaves this machine — the file is read
+      in the browser and never uploaded.</p>
     <button class="btn primary" id="loadBtn2">Choose file</button>
     <p class="note">Need the layout? Build a blank one with
       <code>python tools/build_source_workbook.py</code>, or start from
@@ -555,7 +566,7 @@ dialog::backdrop{background:rgba(0,0,0,.35);
 
 <script>
 "use strict";
-const APP_VERSION = "1.15";
+const APP_VERSION = "1.16";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -564,14 +575,16 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.17.xlsx",          ver:"2.17",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.17 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.18.xlsx",          ver:"2.18",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.18 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
   {what:"Source data template",   file:"PRAP_SourceData_Template_v1.7.xlsx",        ver:"1.7",
    status:`Schema version ${SCHEMA_EXPECTED} — the layout this application reads`},
+  {what:"AI agent reference",     file:"PRAP_AI_Agent_Guide_v1.0.xlsx",             ver:"1.0",
+   status:"Instructions for another program or AI agent; docs/prap_contract.json is its machine-readable half"},
 ];
 
 /* ============================================================ 1. ZIP + XLSX read
@@ -852,6 +865,80 @@ function buildXlsx(sheetsObj){
   return zipStored(entries);
 }
 
+/* ---------------------------------------------- 2b. the JSON interchange file
+   .xlsx is a ZIP of XML. A person opens it in Excel; a program that is not a
+   spreadsheet - a script, an agent, a language model - mostly cannot open it at all,
+   which made every artifact in this project unreadable to anything but Excel. The same
+   data as plain text closes that: row OBJECTS keyed by column name, dates as
+   yyyy-mm-dd, one file, no library. The application reads it and writes it, so text and
+   workbook are interchangeable in both directions.
+
+   Described in docs/prap_contract.json ("interchange_format") and produced on the
+   command line by tools/prap_io.py. tools/test_interop.py proves the two agree.        */
+
+const JSON_FORMAT = "prap-source-data";
+const JSON_FORMAT_VERSION = 1;
+
+function readPrapJson(text){
+  let doc;
+  try { doc = JSON.parse(text); }
+  catch (e){ throw new Error(`that file is not valid JSON — ${e.message}`); }
+  if (doc.prap_format !== JSON_FORMAT)
+    throw new Error(`not a PRAP interchange file. It must carry "prap_format": `
+      + `"${JSON_FORMAT}" — a workbook exported from this application does.`);
+  if (doc.format_version !== JSON_FORMAT_VERSION)
+    throw new Error(`format_version is ${JSON.stringify(doc.format_version)}; this `
+      + `application reads ${JSON_FORMAT_VERSION}.`);
+  const src = doc.sheets || {};
+  const missing = REQUIRED_SHEETS.filter(s => !Array.isArray(src[s]));
+  if (missing.length)
+    throw new Error(`sheet(s) missing or not an array: ${missing.join(", ")}. All `
+      + `${REQUIRED_SHEETS.length} must be present, even where a sheet has no rows.`);
+  const sheets = {};
+  for (const s of REQUIRED_SHEETS){
+    const hdr = SHEET_HEADERS[s];
+    const rows = [hdr.slice()];
+    src[s].forEach((r, i) => {
+      // A column name outside the schema is refused, not ignored: a mistyped key
+      // silently dropped is a value whoever wrote the file believes they supplied.
+      const bad = Object.keys(r).filter(k => !hdr.includes(k));
+      if (bad.length)
+        throw new Error(`${s} row ${i+1} has unknown column(s) ${bad.join(", ")}. `
+          + `Valid columns: ${hdr.join(", ")}.`);
+      rows.push(hdr.map(h => r[h] === undefined ? null : r[h]));
+    });
+    sheets[s] = rows;
+  }
+  return sheets;
+}
+
+function buildPrapJson(sheetsObj){
+  const out = {};
+  for (const s of REQUIRED_SHEETS){
+    const rows = sheetsObj[s] || [];
+    const hdr = (rows[0] || []).map(h => txt(h));
+    out[s] = rows.slice(1).map(r => {
+      const rec = {};
+      hdr.forEach((h, i) => {
+        let v = r[i];
+        if (v === null || v === undefined || v === "" || !h) return;
+        if (v instanceof Date) v = ymd(v);
+        rec[h] = v;
+      });
+      return rec;
+    });
+  }
+  return JSON.stringify({
+    prap_format: JSON_FORMAT,
+    format_version: JSON_FORMAT_VERSION,
+    schema_version: SCHEMA_EXPECTED,
+    $comment: "PRAP source data as plain text. Drop this file straight back onto "
+      + "app/PRAP.html, or convert it with tools/prap_io.py. Dates are yyyy-mm-dd. "
+      + "Column meanings, value lists and validation rules: docs/prap_contract.json.",
+    sheets: out,
+  }, null, 1) + "\n";
+}
+
 /* ============================================================ 3. dates + parse
    Spec sheet 03: accept an Excel serial or an ISO yyyy-mm-dd string, normalise to a
    date with no time part, and never guess at any other format (REQ-NFR-05).     */
@@ -892,11 +979,47 @@ const SHEET_COLS = {
   Config: {date:[], num:[]},
 };
 const REQUIRED_SHEETS = Object.keys(SHEET_COLS);
+/* The schema's own column order, independent of any one file. A workbook carries its
+   headers, so the application takes them from what it loaded; the JSON interchange file
+   carries row OBJECTS and has no column order at all, so it needs this. It is also the
+   list a JSON file is checked against, which is how a mistyped column name is caught
+   instead of silently ignored. tools/check_consistency.py holds it to the template. */
+const SHEET_HEADERS = {
+  Project:["project_id","project_name","project_type","project_category","clinical_phase",
+    "outsourcing_type","EDC_setup","DataReviewSystem_setup","RBQM_setup","DM_conduct",
+    "EDC_system","DataReviewSystem","RBQM_system","planned_member_count","start_date",
+    "end_date","total_period_months","status","note_1","note_2","note_3","note_4","note_5"],
+  Milestone:["project_id","project_name","milestone_name","milestone_date","milestone_seq","note_1"],
+  ProjectPeriod:["project_id","period_name","period_seq","period_start","period_end","weight","note_1"],
+  PeriodWeightStandard:["project_type","clinical_phase","period_name","weight","note_1"],
+  RoleFactor:["project_type","clinical_phase","period_name","role_name","role_factor","role_note"],
+  Person:["person_id","person_name","department","primary_role","capacity_fte",
+    "employment_start","employment_end","note_1","note_2","note_3","note_4","note_5"],
+  Assignment:["assignment_id","person_id","person_name","project_id","role_name",
+    "assign_start_date","assign_end_date","person_weight","note_1","note_2","note_3"],
+  PersonPeriodWeight:["assignment_id","period_start","period_end","weight_override","reason"],
+  Lists:["list_name","value","note_1"],
+  Config:["parameter","value","note"],
+};
 const CLINICAL_TYPES = new Set(["NewDrug CT","Biosimilar CT"]);
 const CLINICAL_PERIODS = ["Before-Start-up","Start-up","Conduct (interim)","Close-out (interim)",
                           "Conduct (final)","Close-out (final)","After Close-out (final)"];
 const OTHER_PERIODS = ["Planning","Develop","Close"];
 const KEY_MILESTONES = new Set(["interim DB lock","final DB lock"]);
+/* V-14's ordering half. Stated as PAIRS, not as one chain, because the ten milestone
+   names are not totally ordered in a real trial: an INTERIM database lock is precisely
+   the one taken while recruitment is still running, so it may fall either side of LPI,
+   and a chain would report every such trial as an error. Only these pairs are ordered
+   by definition. */
+const MILESTONE_ORDER = [
+  ["Protocol (v1)","CTA submission"], ["CTA submission","First SIV"],
+  ["First SIV","FPI"], ["FPI","LPI"],
+  ["interim DB lock cut-off","interim DB lock"], ["interim DB lock","final DB lock"],
+  ["final DB lock cut-off","final DB lock"], ["CTA submission","final DB lock"],
+];
+// The derivation hangs on these three; out of order between them is an error, because
+// the periods it computes would be wrong rather than merely surprising.
+const DERIVATION_MILESTONES = new Set(["CTA submission","interim DB lock","final DB lock"]);
 // The identifier of each sheet, and everywhere that identifier is referenced.
 // Editing one has to rewrite the others (REQ-IMP-10); a new row without one blocks export.
 const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignment_id",
@@ -1229,6 +1352,40 @@ function validate(M, F){
       if (early.length) add("information","V-21","Milestone","",
         `Project ${pid}: ${early.length} Inspection date(s) on or before the final DB lock are treated `
         + `as markers inside the existing periods and do not open the final period.`);
+    }
+    // V-14, documented in the plan from v1.0 and reported from here on: a milestone
+    // outside its project's own window, and the boundary milestones out of order. The
+    // derivation reads them in sequence, so a swapped pair silently produces periods
+    // nobody meant - which is a wrong answer rather than a visible gap.
+    const proj = M.projects[pid];
+    if (proj && proj.start_date && proj.end_date){
+      for (const [nm, dates] of Object.entries(mm)) for (const dt of dates){
+        if (dt >= proj.start_date && dt <= proj.end_date) continue;
+        // An Inspection after the final DB lock is the one milestone MEANT to sit past
+        // the project end: it opens 'After Close-out (final)' and the derivation extends
+        // the timeline to reach it (V-21). Calling that 'outside the window' would be wrong.
+        if (nm === "Inspection" && lock && dt > lock){
+          add("information","V-14","Milestone","",
+            `Project ${pid}: Inspection on ${ymd(dt)} falls after the project end `
+            + `${ymd(proj.end_date)}; the timeline is extended to cover it and `
+            + `'After Close-out (final)' runs to that date.`);
+          continue;
+        }
+        add("warning","V-14","Milestone","",
+          `Project ${pid}: '${nm}' on ${ymd(dt)} falls outside the project window `
+          + `${ymd(proj.start_date)}..${ymd(proj.end_date)}.`);
+      }
+    }
+    for (const [n1, n2] of MILESTONE_ORDER){
+      if (!(mm[n1] && mm[n1].length && mm[n2] && mm[n2].length)) continue;
+      const d1 = mm[n1][0], d2 = mm[n2][0];
+      if (d2 >= d1) continue;
+      // Out of order between milestones the derivation hangs on is an error; between
+      // two markers it is a data-entry slip worth listing.
+      add(DERIVATION_MILESTONES.has(n1) || DERIVATION_MILESTONES.has(n2)
+          ? "error" : "warning","V-14","Milestone","",
+        `Project ${pid}: '${n2}' (${ymd(d2)}) is before '${n1}' (${ymd(d1)}); the period `
+        + `derivation reads these in order.`);
     }
   }
 
@@ -3075,7 +3232,7 @@ function deleteRow(sheet, rowNum){
     + `This is provisional — 'Leave without change' puts it back.`);
 }
 
-function exportWorkbook(){
+function exportWorkbook(asJson){
   if (S.pending.length){
     showBanner("bad", `Export held — ${S.pending.length} change${S.pending.length===1?" is":"s are"} `
       + `not yet saved. Press Save to keep them, or Leave without change to discard them, then export.`);
@@ -3104,18 +3261,24 @@ function exportWorkbook(){
   }
   const sheets = {};
   for (const s of REQUIRED_SHEETS) sheets[s] = rawToRows(s);
-  const blob = buildXlsx(sheets);
+  const blob = asJson ? new Blob([buildPrapJson(sheets)], {type:"application/json"})
+                      : buildXlsx(sheets);
   const stamp = new Date().toISOString().slice(0,10);
-  const base = (S.fileName || "PRAP_SourceData.xlsx").replace(/\.xlsx$/i, "");
+  const base = (S.fileName || "PRAP_SourceData.xlsx").replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `${base}_${stamp}.xlsx`;                 // never silently overwrite the source
+  // Never silently overwrite the source: the stamp, and a different extension for the
+  // two forms, keep the workbook and its text twin distinguishable on disk.
+  a.download = `${base}_${stamp}${asJson ? ".prap.json" : ".xlsx"}`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   S.saved = 0; S.editedCells.clear();
   for (const s of REQUIRED_SHEETS) for (const r of S.model.raw[s]) delete r.__new;
   renderAll(); showTab(S.tab);
-  showBanner("", `Exported ${a.download}. The source workbook on disk is untouched.`);
+  showBanner("", `Exported ${a.download}. ${asJson
+    ? "The same data as plain text — another program or an AI agent can read it directly, "
+      + "and this application loads it straight back. "
+    : ""}The source file on disk is untouched.`);
 }
 
 /* ============================================================ 13. findings report */
@@ -3203,8 +3366,9 @@ function defaultHorizon(){
 async function loadFile(file){
   try {
     showBanner("", `Reading ${file.name}…`);
-    const buf = await file.arrayBuffer();
-    const sheets = await readWorkbook(buf);
+    const isJson = /\.json$/i.test(file.name);
+    const sheets = isJson ? readPrapJson(await file.text())
+                          : await readWorkbook(await file.arrayBuffer());
     S.headers = {};
     for (const s of REQUIRED_SHEETS)
       S.headers[s] = ((sheets[s] || [])[0] || []).map(h => txt(h)).filter(Boolean);
@@ -3221,7 +3385,8 @@ async function loadFile(file){
     defaultHorizon();
     fillFilters();
     el("empty").hidden = true; el("tabs").hidden = false; el("filterbar").hidden = false;
-    el("editbar").hidden = false; el("exportBtn").disabled = false;
+    el("editbar").hidden = false;
+    el("exportBtn").disabled = el("exportJsonBtn").disabled = false;
     const tz = -new Date().getTimezoneOffset() / 60;
     const tzName = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").split("/").pop() || "local";
     el("fileline").innerHTML = `${esc(file.name)} · loaded ${S.loadedAt.toISOString().slice(0,16).replace("T"," ")} `
@@ -3271,7 +3436,8 @@ function renderProvenance(){
 renderProvenance();
 el("loadBtn").onclick = el("loadBtn2").onclick = () => el("picker").click();
 el("picker").onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); };
-el("exportBtn").onclick = exportWorkbook;
+el("exportBtn").onclick = () => exportWorkbook(false);
+el("exportJsonBtn").onclick = () => exportWorkbook(true);
 el("repClose").onclick = () => el("report").close();
 el("themeBtn").onclick = () => {
   const r = document.documentElement;

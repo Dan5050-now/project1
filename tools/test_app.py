@@ -86,10 +86,17 @@ def main(DUMMY):
         pg.set_input_files("#picker", str(DUMMY))
         pg.wait_for_timeout(4000)
 
-        findings = pg.evaluate("S.model.findings.map(f => f.rule + ': ' + f.msg)")
+        # Informational findings are explanations, not problems: V-14 and V-21 both fire
+        # on these fixtures to say WHY an inspection after the DB lock is legitimate.
+        # Anything above information on a file the verifier calls clean is a failure.
+        findings = pg.evaluate("S.model.findings.filter(f => f.sev !== 'information')"
+                               ".map(f => f.sev + ' ' + f.rule + ': ' + f.msg)")
+        info = pg.evaluate("S.model.findings.filter(f => f.sev === 'information').length")
         if findings:
-            failures.append(f"app reports {len(findings)} findings on a file the verifier calls clean; "
-                            f"first: {findings[0][:110]}")
+            failures.append(f"app reports {len(findings)} findings above information on a file the "
+                            f"verifier calls clean; first: {findings[0][:110]}")
+        else:
+            notes.append(f"no findings above information ({info} informational)")
 
         app_pm = pg.evaluate("() => { const o = {}; "
                              "for (const [k, v] of S.calc.persMonth) o[k] = v; return o; }")
@@ -115,11 +122,11 @@ def main(DUMMY):
         pg2.wait_for_timeout(200)
         pg2.set_input_files("#picker", exported)
         pg2.wait_for_timeout(4000)
-        n = pg2.evaluate("S.model.findings.length")
+        n = pg2.evaluate("S.model.findings.filter(f => f.sev !== 'information').length")
         if n:
-            failures.append(f"the exported file re-imports with {n} findings")
+            failures.append(f"the exported file re-imports with {n} findings above information")
         else:
-            notes.append("export re-imports with zero findings")
+            notes.append("export re-imports with no findings above information")
 
         if errors:
             failures.append(f"page errors: {errors[:2]}")

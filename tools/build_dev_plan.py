@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.17"
+DOC_VERSION = "2.18"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,35 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.17", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.18", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 17, application v1.16. REFERENCE MATERIAL FOR ANOTHER AI SYSTEM, and an "
+     "interoperability audit of everything delivered so far. The audit found one thing, and it was "
+     "structural: of 95 files in the repository, 72 were .xlsx and 2 were Markdown. Every fact this "
+     "project has established - the schema, the value lists, the formula, the twenty-four validation "
+     "rules - existed only inside a ZIP of XML or inside the application's own JavaScript. A person "
+     "with Excel could read all of it; a program, a script or a language model could read none of "
+     "it. Four deliverables close that. (1) docs/prap_contract.json, a machine-readable contract "
+     "carrying the schema, every column with its type and meaning, the value lists, the Config "
+     "parameters, the formula term by term, the period derivation, all twenty-five rules with the "
+     "severity the application actually reports, the interchange format and the task recipes. It is "
+     "GENERATED - from the template builder, from this plan's own rule table, and from the "
+     "application source - so it cannot drift from what it describes. (2) docs/PRAP_AI_Agent_Guide.md, "
+     "the same contract written for a reader in the order an agent needs it, plus the same document "
+     "as a workbook for human review. (3) A JSON INTERCHANGE FORMAT: the whole workbook as row "
+     "objects keyed by column name, dates as yyyy-mm-dd. The application loads it and exports it, "
+     "and tools/prap_io.py converts either way, so an agent that cannot write a ZIP of XML can still "
+     "produce a file PRAP opens. (4) tools/prap_io.py also VALIDATES and CALCULATES from the command "
+     "line, implementing the same rules and the same formula as the page - so an agent can check its "
+     "own draft without a browser. tools/test_interop.py holds the two implementations to each "
+     "other: same findings at the same severities, and every person-month equal to 1e-6, on both "
+     "worked examples. The audit also found a rule the documents promised and the code did not keep: "
+     "V-14 has been in the data model since v1.0 and the application never reported it. It does "
+     "now - a milestone outside its project's window, or a boundary milestone out of order - with "
+     "the one exception that is legitimate rather than merely noisy, an Inspection after the final "
+     "DB lock, reported as information because the derivation deliberately extends the timeline to "
+     "reach it. No requirement, calculation or schema version changed.",
+     "Issued for review"],
+    ["2.17", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 16, application v1.15. A visual design pass over the whole interface, taking "
      "Apple's Human Interface Guidelines as the reference and applying them to a dense data tool. "
      "The stylesheet is rebuilt around TOKENS - one palette, one type scale, one radius scale, one "
@@ -388,7 +416,7 @@ rows = [
      "template v1.6, and #editbar set display:flex from an id selector, which outranks the `hidden` "
      "attribute - so an empty edit bar showed before any workbook was loaded. No requirement, rule, "
      "calculation or schema changed, and every existing selector is retained.",
-     "Issued for review"],
+     "Superseded by v2.18"],
     ["2.16", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 15, application v1.14, template v1.7, dummy v1.9 and 10x10 v1.1. DERIVED "
      "columns in the source workbook are now distinguished from entry columns by more than a "
@@ -1390,7 +1418,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-16 applied (app v1.15); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-17 applied (app v1.16); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1480,7 +1508,8 @@ align = [
     ["v2.14", "v1.0", "application v1.12", "5", DOC_DATE, "Gate 4 round 13: weight overrides follow the selected assignment."],
     ["v2.15", "v1.0", "application v1.13", "5", DOC_DATE, "Gate 4 round 14: monthly trend line charts, and one header shape for every panel."],
     ["v2.16", "v1.0", "application v1.14", "5", DOC_DATE, "Gate 4 round 15: derived columns locked in the workbook, template v1.7."],
-    ["v2.17", "v1.0", "application v1.15", "5", DOC_DATE, "Gate 4 round 16: visual design pass; contrast measured, not judged. 4.9 continues."],
+    ["v2.17", "v1.0", "application v1.15", "5", DOC_DATE, "Gate 4 round 16: visual design pass; contrast measured, not judged."],
+    ["v2.18", "v1.0", "application v1.16", "5", DOC_DATE, "Gate 4 round 17: AI-agent reference, JSON interchange, interoperability audit. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

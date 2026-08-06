@@ -7,6 +7,8 @@ a check, so this is the check.
     python tools/check_consistency.py
 """
 
+import hashlib
+import json
 import re
 import sys
 from pathlib import Path
@@ -14,7 +16,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.17.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.18.xlsx"
 SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.0.xlsx"
 TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.7.xlsx"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.9.xlsx"
@@ -243,8 +245,8 @@ if APP.exists():
         problems.append("app/PRAP.html has no BUILT_AGAINST block to check")
     else:
         claimed = dict(re.findall(r'what:"([^"]+)",\s*file:"([^"]+)"', block.group(1)))
-        if len(claimed) != 4:
-            problems.append(f"app provenance lists {len(claimed)} documents, expected 4")
+        if len(claimed) != 5:
+            problems.append(f"app provenance lists {len(claimed)} documents, expected 5")
         for what, fname in claimed.items():
             folder = "templates" if "SourceData" in fname else "docs"
             if not (ROOT / folder / fname).exists():
@@ -261,6 +263,65 @@ if APP.exists():
     m = re.search(r"const SCHEMA_EXPECTED = (\d+);", src)
     if m and int(m.group(1)) != tpl_v:
         problems.append(f"app expects schema v{m.group(1)}, template is v{tpl_v}")
+
+# ---- 4f. the AI-agent reference vs the artifacts it describes --------------
+# docs/prap_contract.json is what another AI system reads INSTEAD of opening these
+# workbooks. A contract that has drifted from the template is worse than none, because
+# an agent would follow it confidently. It is generated, so the check is that the
+# generated copy in the repository is the one the current sources produce.
+CONTRACT = ROOT / "docs" / "prap_contract.json"
+GUIDE_MD = ROOT / "docs" / "PRAP_AI_Agent_Guide.md"
+MANIFEST = ROOT / "docs" / "PRAP_Manifest.json"
+for p in (CONTRACT, GUIDE_MD, MANIFEST):
+    if not p.exists():
+        problems.append(f"{p.relative_to(ROOT)} is missing - run python tools/build_ai_reference.py")
+
+if CONTRACT.exists():
+    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    if contract["schema_version"] != tpl_v:
+        problems.append(f"the contract says schema v{contract['schema_version']}, "
+                        f"the template is v{tpl_v}")
+    c_cols = {s: [c["name"] for c in v["columns"]] for s, v in contract["sheets"].items()}
+    for sheet, cols in c_cols.items():
+        actual = [c for c in tpl_cols.get(sheet, []) if c]
+        if actual and actual != cols:
+            problems.append(f"the contract's columns for {sheet} are not the template's: "
+                            f"{[c for c in cols if c not in actual] or ''} "
+                            f"{[c for c in actual if c not in cols] or ''}".strip())
+    # Every list the template ships must be in the contract with the same values.
+    tpl_lists = {}
+    for row in tpl["Lists"].iter_rows(min_row=2, values_only=True):
+        if row and row[0]:
+            tpl_lists.setdefault(row[0], []).append(row[1])
+    for name, vals in tpl_lists.items():
+        if contract["value_lists"].get(name) != vals:
+            problems.append(f"value list '{name}' differs between the template and the contract")
+    if set(contract["value_lists"]) != set(tpl_lists):
+        problems.append("the contract and the template do not carry the same set of value lists")
+    # A rule documented in the plan but reported by nothing is a promise to an agent
+    # that the application does not keep.
+    for rid, r in contract["validation_rules"].items():
+        if not r["enforced_by_application"]:
+            problems.append(f"{rid} is documented in the plan but the application never reports it")
+    if APP.exists():
+        m = re.search(r'const APP_VERSION = "([\d.]+)"', src)
+        if m and contract["application"]["version"] != m.group(1):
+            problems.append(f"the contract says app v{contract['application']['version']}, "
+                            f"app/PRAP.html says v{m.group(1)}")
+    notes.append(f"contract: {len(c_cols)} sheets, "
+                 f"{sum(len(v) for v in c_cols.values())} columns, "
+                 f"{len(contract['value_lists'])} value lists, "
+                 f"{len(contract['validation_rules'])} rules - all agree with the template")
+
+if MANIFEST.exists():
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    for entry in manifest["current"]:
+        p = ROOT / entry["path"]
+        if not p.exists():
+            problems.append(f"the manifest points at {entry['path']}, which does not exist")
+        elif entry["sha256"] and hashlib.sha256(p.read_bytes()).hexdigest() != entry["sha256"]:
+            problems.append(f"{entry['path']} has changed since the manifest was built - "
+                            f"run python tools/build_ai_reference.py")
 
 # ---- 5. every requirement in the plan is traced in the specification ------
 plan_reqs = {str(plan["03_Requirements"].cell(r, 1).value).strip()

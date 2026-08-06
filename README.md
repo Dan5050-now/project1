@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.17 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.18 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -20,7 +20,9 @@ is approved.
 ## Repository layout
 
 ```
-docs/         Plan and specification workbooks (.xlsx deliverables)
+docs/         Plan and specification workbooks (.xlsx deliverables), and the
+              AI-agent reference: PRAP_AI_Agent_Guide.md, prap_contract.json,
+              PRAP_Manifest.json
 docs/review/  Reviewer mark-ups, archived as received
 tools/        Generator scripts - the reviewable source for the .xlsx documents
 app/          The application HTML file            (from Step 4)
@@ -28,9 +30,40 @@ templates/    Blank source-data workbook           (from Step 4)
 output/       Exported results and test evidence   (from Step 5)
 ```
 
+## If you are an AI agent, start here
+
+**[`docs/PRAP_AI_Agent_Guide.md`](docs/PRAP_AI_Agent_Guide.md)** — instructions and
+guidelines for using the application and the source-data template, written for a
+language model rather than a person. Its machine-readable half is
+[`docs/prap_contract.json`](docs/prap_contract.json): the schema, every column with its
+type and meaning, the value lists, the `Config` parameters, the formula term by term,
+the period derivation, all 25 validation rules, the interchange format and worked task
+recipes. Both are generated from the template builder, the plan and the application
+source, so neither can drift from what it describes.
+
+You do not drive the application — it has no API. You produce and check the file it
+reads:
+
+```bash
+python tools/prap_io.py to-json  data.xlsx -o data.prap.json   # read it as plain text
+python tools/prap_io.py validate  data.prap.json               # the app's own rules
+python tools/prap_io.py calculate data.prap.json --by person --flags
+python tools/prap_io.py to-xlsx   data.prap.json -o data_draft.xlsx
+```
+
+`prap_io.py` runs the same rules and the same formula as the page, and
+`tools/test_interop.py` proves the two agree — same findings at the same severities,
+every person-month equal to 1e-6, on both worked examples. The application also loads a
+`.prap.json` directly and has an **Export JSON** button, so text and workbook are
+interchangeable in both directions.
+
+[`docs/PRAP_Manifest.json`](docs/PRAP_Manifest.json) says which file is current, with a
+sha256 for each — the repository keeps every superseded version alongside, so resolve a
+document through the manifest rather than by sorting filenames.
+
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.17.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.18.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -46,7 +79,7 @@ output/       Exported results and test evidence   (from Step 5)
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -85,6 +118,10 @@ output/       Exported results and test evidence   (from Step 5)
   | Every trend line's total and peak month agree with the model | same file, on all three tabs; and every panel uses one header shape |
   | Derived columns locked, input columns not | `check_consistency.py`, against the plan's data model; caught in all three ways it can break |
   | Every text colour clears WCAG AA, in both themes | `tools/test_contrast.py`; the previous design had five that did not |
+  | The command line and the browser agree, rule for rule and figure for figure | `tools/test_interop.py`; same findings at the same severities, every person-month equal to 1e-6, on both fixtures |
+  | `xlsx → json → xlsx → json` reproduces every cell | same file; 1,459 and 588 rows |
+  | A mistyped column name is refused, not ignored | same file; both implementations name the column |
+  | The generated contract is the real schema | `check_consistency.py`; columns, value lists and rules held against the template and the plan |
 
   Gate 4 round 1 (app v1.1): the three named Overall sections are up to twice their
   previous size; the project timeline scrolls in both directions, so every project in
@@ -109,6 +146,37 @@ output/       Exported results and test evidence   (from Step 5)
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 17 (app v1.16): **reference material for another AI system**, and an
+  interoperability audit of everything delivered so far. The audit found one structural
+  problem: of the files in this repository, 72 were `.xlsx` and 2 were Markdown. The
+  schema, the value lists, the formula and the twenty-four validation rules existed only
+  inside a ZIP of XML or inside the application's own JavaScript — readable by a person
+  with Excel, and by nothing else. Four things close that.
+
+  - `docs/PRAP_AI_Agent_Guide.md` — the guide an agent reads: what it may change, what
+    it must not, how to check its own work, and what to say when it hands it over. Also
+    issued as `docs/PRAP_AI_Agent_Guide_v1.0.xlsx` for human review.
+  - `docs/prap_contract.json` — the same facts as data: every column with its type and
+    meaning, the value lists, the Config parameters, the formula term by term, the period
+    derivation, all 25 rules with the severity the application actually reports, the
+    interchange format and the task recipes. **Generated** from the template builder, the
+    plan's own rule table and the application source, so it cannot drift.
+  - **A JSON interchange format.** The whole workbook as row objects keyed by column
+    name, dates as `yyyy-mm-dd`. The application loads it and exports it, and
+    `tools/prap_io.py` converts either way — so an agent that cannot write a ZIP of XML
+    can still produce a file PRAP opens.
+  - `tools/prap_io.py` also **validates and calculates** from the command line, running
+    the same rules and the same formula as the page, so an agent can check its own draft
+    without a browser. `tools/test_interop.py` holds the two implementations to each
+    other.
+
+  The audit also found a rule the documents promised and the code did not keep: **V-14**
+  has been in the data model since v1.0 and the application never reported it. It does
+  now — a milestone outside its project's window, or a boundary milestone out of order —
+  with the one exception that is legitimate rather than merely noisy: an `Inspection`
+  after the final DB lock, reported as *information*, because the derivation deliberately
+  extends the timeline to reach it.
 
   Gate 4 round 16 (app v1.15): a **visual design pass** over the whole interface, taking
   Apple's HIG as the reference. The stylesheet is rebuilt around tokens — one palette,
@@ -317,6 +385,20 @@ milestones in the data, and adds up the stacked utilisation segments month by mo
 confirm they equal the person-month the calculation holds — a chart that disagrees with
 the table is worse than no chart.
 
+And check that the command-line tools and the browser still agree, which is the whole
+basis for telling another AI system it can validate a draft without opening the app:
+
+```bash
+python tools/test_interop.py
+```
+
+That round-trips both worked examples `xlsx → json → xlsx → json` and compares every
+cell; loads each form into the real browser and compares the model it builds; holds
+`prap_io.py`'s findings against the page's, rule for rule and severity for severity;
+compares every person-month to 1e-6; re-loads the application's own **Export JSON**;
+and confirms a mistyped column name is *refused and named* by both implementations
+rather than silently dropped.
+
 And check the documents still describe the artifacts they claim to:
 
 ```bash
@@ -326,8 +408,11 @@ python tools/check_consistency.py
 That cross-checks 64 documented columns against the template's real headers, the
 schema version across all four files, the `project_type` values, every `Config`
 default the specification quotes against the value the template actually holds, all 69
-requirements plan-to-specification in both directions, and that no build markers were
-left in a shipped workbook.
+requirements plan-to-specification in both directions, that no build markers were
+left in a shipped workbook, and that `docs/prap_contract.json` still describes the real
+schema — its columns against the template's headers, its value lists against the
+template's `Lists` sheet, its rules against the plan's data model, and every file the
+manifest points at against its recorded sha256.
 
 ## Why the documents are generated from scripts
 
