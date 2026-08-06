@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.16"
+DOC_VERSION = "2.17"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,30 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.16", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.17", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 16, application v1.15. A visual design pass over the whole interface, taking "
+     "Apple's Human Interface Guidelines as the reference and applying them to a dense data tool. "
+     "The stylesheet is rebuilt around TOKENS - one palette, one type scale, one radius scale, one "
+     "motion curve - so that no value is chosen by eye at the point of use, which is what keeps a "
+     "hundred small decisions consistent. Four changes carry most of the difference. (1) MATERIAL: "
+     "white cards on a grey field, separated by soft shadow instead of by a 1px outline round every "
+     "panel; dark mode inverts to lifted grey cards on near-black. (2) VIBRANCY: the two sticky bars "
+     "are translucent and blurred, so content scrolling beneath stays legible as context - at an "
+     "opacity that keeps their own labels readable over a chart, because blur alone is not enough "
+     "when what is underneath is high-contrast. (3) The tab strip becomes a SEGMENTED CONTROL, and "
+     "buttons take Apple's filled / tinted / plain hierarchy; the row actions that appear twice on "
+     "every table row are furniture at rest and take colour only on hover, where blue means 'adds' "
+     "and red means 'removes'. (4) COLOUR MEANS SOMETHING: blue is interactive, red is over the "
+     "ceiling, amber is under the floor, everything else is a grey. Chart series colours are exempt, "
+     "because there the colour IS the data, and they are unchanged. Contrast is now measured rather "
+     "than judged: tools/test_contrast.py composites every text colour onto the surface it actually "
+     "sits on and applies WCAG AA at the rendered size. The previous design had five colours below "
+     "AA; this one has none. Two defects were found and fixed in passing: the drop zone still named "
+     "template v1.6, and #editbar set display:flex from an id selector, which outranks the `hidden` "
+     "attribute - so an empty edit bar showed before any workbook was loaded. No requirement, rule, "
+     "calculation or schema changed, and every existing selector is retained.",
+     "Issued for review"],
+    ["2.16", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 15, application v1.14, template v1.7, dummy v1.9 and 10x10 v1.1. DERIVED "
      "columns in the source workbook are now distinguished from entry columns by more than a "
      "colour: their cells are LOCKED, and the column heading carries a note saying what the column "
@@ -385,7 +408,7 @@ rows = [
      "recomputes both on import and reports any disagreement as V-13. They are typed 'Derived' now, "
      "which is what they have always been. No requirement, rule, calculation or schema version "
      "changed.",
-     "Issued for review"],
+     "Superseded by v2.17"],
     ["2.15", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 14, application v1.13. (1) A LINE CHART of monthly resource now stands as the "
      "FIRST panel of every data tab - one coloured line per project on Overall and on the project "
@@ -1367,7 +1390,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-15 applied (app v1.14); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-16 applied (app v1.15); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1456,7 +1479,8 @@ align = [
     ["v2.13", "v1.0", "application v1.11", "5", DOC_DATE, "Gate 4 round 12: demand by person, project utilisation by person, child tables scoped."],
     ["v2.14", "v1.0", "application v1.12", "5", DOC_DATE, "Gate 4 round 13: weight overrides follow the selected assignment."],
     ["v2.15", "v1.0", "application v1.13", "5", DOC_DATE, "Gate 4 round 14: monthly trend line charts, and one header shape for every panel."],
-    ["v2.16", "v1.0", "application v1.14", "5", DOC_DATE, "Gate 4 round 15: derived columns locked in the workbook, template v1.7. 4.9 continues."],
+    ["v2.16", "v1.0", "application v1.14", "5", DOC_DATE, "Gate 4 round 15: derived columns locked in the workbook, template v1.7."],
+    ["v2.17", "v1.0", "application v1.15", "5", DOC_DATE, "Gate 4 round 16: visual design pass; contrast measured, not judged. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

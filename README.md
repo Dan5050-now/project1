@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.16 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.17 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -30,7 +30,7 @@ output/       Exported results and test evidence   (from Step 5)
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.16.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.17.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -46,7 +46,7 @@ output/       Exported results and test evidence   (from Step 5)
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -84,6 +84,7 @@ output/       Exported results and test evidence   (from Step 5)
   | Each assignment shows its own override windows, and only those | same file; checked for every assignment of the selected person |
   | Every trend line's total and peak month agree with the model | same file, on all three tabs; and every panel uses one header shape |
   | Derived columns locked, input columns not | `check_consistency.py`, against the plan's data model; caught in all three ways it can break |
+  | Every text colour clears WCAG AA, in both themes | `tools/test_contrast.py`; the previous design had five that did not |
 
   Gate 4 round 1 (app v1.1): the three named Overall sections are up to twice their
   previous size; the project timeline scrolls in both directions, so every project in
@@ -108,6 +109,17 @@ output/       Exported results and test evidence   (from Step 5)
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 16 (app v1.15): a **visual design pass** over the whole interface, taking
+  Apple's HIG as the reference. The stylesheet is rebuilt around tokens — one palette,
+  one type scale, one radius scale, one motion curve — so nothing is chosen by eye at the
+  point of use. White cards on a grey field, separated by shadow rather than outline;
+  translucent, blurred sticky bars; a segmented tab control; filled/tinted/plain buttons;
+  and colour that means something (blue interactive, red over the ceiling, amber under
+  the floor). Chart series colours are unchanged — there the colour *is* the data.
+  Contrast is now measured rather than judged: `tools/test_contrast.py` composites every
+  text colour onto the surface it actually sits on and applies WCAG AA at the rendered
+  size. The previous design had five colours below AA; this one has none.
 
   Gate 4 round 15 (app v1.14, template v1.7, dummies v1.9 / v1.1): **derived columns in
   the source workbook are locked**, with a note on each heading. A green fill is a
@@ -284,6 +296,15 @@ python tools/test_valuelist.py
 
 That opens the list, scrolls it by wheel and by dragging its own scroll bar, scrolls the
 page under it, searches it, and closes it every way it can be closed.
+
+And check that no text colour is harder to read than it looks:
+
+```bash
+python tools/test_contrast.py
+```
+
+That composites each colour onto the surface it actually sits on — alpha and all — and
+applies WCAG AA at the size the text is really rendered at, in light and dark.
 
 And check the two source-data charts against the model behind them:
 
