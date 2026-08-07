@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.21"
+DOC_VERSION = "2.22"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,36 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.21", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.22", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 21, application v1.20. A ROW WITH NO IDENTIFIER IS NO LONGER TREATED AS "
+     "A RECORD, which fixes three reported faults that were all one fault. A project saved "
+     "with every field filled in EXCEPT project_id was indexed as M.projects[null] - and "
+     "JavaScript turns a null key into the STRING 'null'. The application then believed in "
+     "a project called 'null'. It became the selection; and the row filter, which keeps a "
+     "row when the set of visible project_ids contains it, compared the set {'null'} "
+     "against the row's actual null and missed - so the Projects table the user had just "
+     "typed into reported 'No rows. Use + row to add one.' The Milestones and Periods "
+     "sections beneath went looking for a parent named 'null', found none, and reported "
+     "the same; a row added there would have been stamped 'null' and lost. A person saved "
+     "without a person_id did exactly the same, which is why the Assignments and Weight "
+     "overrides sections beneath them offered nothing to fill in. One cause, three "
+     "symptoms, on both tabs. The rule now is explicit: a row becomes a RECORD when it "
+     "carries its sheet's identifier and not before. Until then it is not indexed, it is "
+     "reported as an error naming the column to fill in, and Save is refused rather than "
+     "silently creating the phantom - which matches the export guard, that has always "
+     "refused to write such a row. Crucially the row STAYS ON SCREEN, because it is the "
+     "row the user is in the middle of repairing: both the project and people tables keep "
+     "any row that has no identifier alongside the real ones, and a child table now shows "
+     "a row carrying no parent key wherever the user is, since a row that cannot be seen "
+     "cannot be repaired or deleted, only silently dropped. Supplying the identifier "
+     "recovers completely. The same rule went into tools/prap_io.py, so the command line "
+     "and the page still report the same findings. tools/test_nokey.py covers all of it "
+     "for a project, for a person, and for a workbook that already carries such a row; "
+     "four of its eleven checks fail against the previous build, reproducing the reported "
+     "symptoms exactly - '0 rows on screen', projects=['null'], and 'No rows. Use + row to "
+     "add one.' No requirement, calculation or schema version changed.",
+     "Issued for review"],
+    ["2.21", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 20, application v1.19. SCROLL POSITION now survives a re-render. "
      "Committing a cell re-renders the panel it lives in, and a freshly built element "
      "starts at the top left - so filling one cell in a table twenty-two columns wide sent "
@@ -393,7 +422,7 @@ rows = [
      "cell moves the box before the application has run a line - the first draft of the "
      "test was measuring the driver rather than the page. No requirement, rule, "
      "calculation or schema version changed.",
-     "Issued for review"],
+     "Superseded by v2.22"],
     ["2.20", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 19, application v1.18. The four CHILD sections are now on screen from the "
      "moment a blank plan is started, and can be filled in before their parent is saved. "
@@ -1519,7 +1548,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-20 applied (app v1.19); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-21 applied (app v1.20); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1613,7 +1642,8 @@ align = [
     ["v2.18", "v1.0", "application v1.16", "5", DOC_DATE, "Gate 4 round 17: AI-agent reference, JSON interchange, interoperability audit."],
     ["v2.19", "v1.0", "application v1.17", "5", DOC_DATE, "Gate 4 round 18: a plan can be started in the application, with no workbook."],
     ["v2.20", "v1.0", "application v1.18", "5", DOC_DATE, "Gate 4 round 19: the child sections are enterable from the start, before their parent is saved."],
-    ["v2.21", "v1.0", "application v1.19", "5", DOC_DATE, "Gate 4 round 20: scroll position survives a re-render. 4.9 continues."],
+    ["v2.21", "v1.0", "application v1.19", "5", DOC_DATE, "Gate 4 round 20: scroll position survives a re-render."],
+    ["v2.22", "v1.0", "application v1.20", "5", DOC_DATE, "Gate 4 round 21: a row with no identifier is not a record. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

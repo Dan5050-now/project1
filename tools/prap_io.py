@@ -79,6 +79,19 @@ class Problem(Exception):
     """A file we refuse to read, as opposed to a finding about data we did read."""
 
 
+def _key(row, col):
+    """Whether a row carries its identifier. Blank means it is not a record yet."""
+    v = row.get(col)
+    return not (v is None or str(v).strip() == "")
+
+
+def no_key(M, sheet, row, col, owns):
+    M.add("error", "V-08", sheet, row["__row"],
+          f"A row on {sheet} has no {col}. Nothing can reference it, its {owns} have "
+          f"nothing to attach to, and it would be lost when the file is read back. "
+          f"Fill in {col} or delete the row.")
+
+
 # =============================================================== 1. reading
 def _as_date(v, where):
     if v is None or v == "":
@@ -349,11 +362,21 @@ class Model:
 
         self.projects, self.people = {}, {}
         for p in sheets["Project"]:
+            # A row with no identifier is not a record: nothing can reference it, its
+            # children have nothing to attach to, and it cannot survive a round trip.
+            # Indexing it anyway is what let the application believe in a project called
+            # "null" and then hide every real row behind it.
+            if not _key(p, "project_id"):
+                no_key(self, "Project", p, "project_id", "milestones and periods")
+                continue
             if p.get("project_id") in self.projects:
                 self.add("error", "V-08", "Project", p["__row"],
                          f"project_id {p['project_id']} appears more than once.")
             self.projects[p.get("project_id")] = p
         for p in sheets["Person"]:
+            if not _key(p, "person_id"):
+                no_key(self, "Person", p, "person_id", "assignments")
+                continue
             if p.get("person_id") in self.people:
                 self.add("error", "V-08", "Person", p["__row"],
                          f"person_id {p['person_id']} appears more than once.")
@@ -540,6 +563,9 @@ def validate(M):
     seen = set()
     for a in M.raw["Assignment"]:
         aid = a.get("assignment_id")
+        if not _key(a, "assignment_id"):
+            no_key(M, "Assignment", a, "assignment_id", "weight overrides")
+            continue
         if aid in seen:
             M.add("error", "V-08", "Assignment", a["__row"],
                   f"assignment_id {aid} appears more than once.")

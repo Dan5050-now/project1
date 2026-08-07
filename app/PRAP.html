@@ -598,7 +598,7 @@ dialog::backdrop{background:rgba(0,0,0,.35);
 
 <script>
 "use strict";
-const APP_VERSION = "1.19";
+const APP_VERSION = "1.20";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -607,8 +607,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.21.xlsx",          ver:"2.21",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.21 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.22.xlsx",          ver:"2.22",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.22 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -1233,6 +1233,33 @@ const HELP = {
     + "A delete is never cascaded. Provisional like any other change — 'Leave without change' puts it back.",
 };
 
+/* A row becomes a RECORD when it carries its sheet's identifier, and not before.
+ *
+ * This had teeth. A project saved with every field filled in EXCEPT project_id used to be
+ * indexed as M.projects[null] - which JavaScript turns into the string key "null". The
+ * application then believed in a project called "null": it appeared in the filter, it
+ * became the selection, and the row filter `keep.has(r.project_id)` compared the set
+ * {"null"} against the row's actual null and missed - so the table the user had just
+ * typed into reported "No rows. Use + row to add one." Its milestones and periods went
+ * looking for a parent named "null" and found none, and a row added there was stamped
+ * with "null" too. The same happened to a person with no person_id, which is why the
+ * Assignments table beneath them offered nothing to fill in.
+ *
+ * So: a row with no identifier is not indexed, is reported, and STAYS ON SCREEN, because
+ * it is the row the user is in the middle of repairing. */
+const hasKey = (sheet, r) => {
+  const k = KEY_COL[sheet];
+  if (!k) return true;
+  const v = r[k];
+  return !(v === null || v === undefined || String(v).trim() === "");
+};
+function noKey(F, sheet, r, col, owns){
+  F.push({sev:"error", rule:"V-08", sheet, row:r.__row,
+    msg:`A row on ${sheet} has no ${col}. Nothing can reference it, its ${owns} have `
+      + `nothing to attach to, and it would be lost when the file is read back. Fill in `
+      + `${col} or delete the row.`});
+}
+
 const OWNER = {project_id:"Project", person_id:"Person", assignment_id:"Assignment"};
 /* A child table is shown filtered to the parent selected above it. A new row therefore
    has to INHERIT that parent, or it fails the very filter that decides whether it is
@@ -1392,11 +1419,13 @@ function buildModel(sheets){
                               : `Columns added after version ${SCHEMA_EXPECTED} will be ignored — consider updating the application.`)});
 
   for (const p of raw.Project){
+    if (!hasKey("Project", p)){ noKey(F, "Project", p, "project_id", "milestones and periods"); continue; }
     if (M.projects[p.project_id]) F.push({sev:"error", rule:"V-08", sheet:"Project", row:p.__row,
       msg:`project_id ${p.project_id} appears more than once.`});
     M.projects[p.project_id] = p;
   }
   for (const p of raw.Person){
+    if (!hasKey("Person", p)){ noKey(F, "Person", p, "person_id", "assignments"); continue; }
     if (M.people[p.person_id]) F.push({sev:"error", rule:"V-08", sheet:"Person", row:p.__row,
       msg:`person_id ${p.person_id} appears more than once.`});
     M.people[p.person_id] = p;
@@ -1586,6 +1615,9 @@ function validate(M, F){
     // A row the user is still creating is INCOMPLETE, not invalid (spec sheet 07). It
     // starts being checked once it carries an identifier.
     if (a.__new && !a.assignment_id) continue;
+    // Saved without one, it is the same broken record as a project without a project_id:
+    // no override can attach to it, and it cannot survive a round trip.
+    if (!hasKey("Assignment", a)){ noKey(F, "Assignment", a, "assignment_id", "weight overrides"); continue; }
     if (seen.has(a.assignment_id))
       add("error","V-08","Assignment",a.__row,`assignment_id ${a.assignment_id} appears more than once.`);
     seen.add(a.assignment_id);
@@ -2604,8 +2636,14 @@ const proxyFor = (sheet, col) => (PROXY[sheet] || {})[col];
  *  because it was unconditional it put a row drafted under one person on EVERY other
  *  person's tab - and on the overrides table, where the project and role columns are
  *  looked up from the assignment, that row then described someone else's work. */
+/* A child table is shown filtered to the parent selected above it. A row that carries
+   NO parent key belongs to no parent, so no filter would ever show it - and a row that
+   cannot be seen cannot be repaired or deleted, only silently dropped on the next round
+   trip. It is shown wherever the user is instead, which is the only place they can act
+   on it. (Drafts are the common case: a row seeded with its parent covers most of them,
+   this covers the rest, and a keyless row that reached the file covers the last.) */
 const childrenOf = (rows, col, val) =>
-  rows.filter(r => r[col] === val || (r.__new && !r[col]));
+  rows.filter(r => r[col] === val || !r[col]);
 
 /** Sheets whose key is allocated for the user when a row is inserted. An assignment_id
  *  carries no meaning beyond being unique, so making someone invent one is asking them
@@ -2842,7 +2880,9 @@ function renderProjTab(){
     // Drafts are counted separately because a row still being typed has not been parsed
     // into M.projects yet - it exists only in raw, and it is exactly the row the user is
     // looking at, so it has to be on screen even though nothing "matches".
-    const drafts = M.raw.Project.filter(r => r.__new);
+    // `|| !hasKey` so a row saved without a project_id is still here: it is not a record,
+    // so nothing above matched it, but it is exactly the row that needs repairing.
+    const drafts = M.raw.Project.filter(r => r.__new || !hasKey("Project", r));
     // The draft becomes the selection, so a milestone added below inherits its
     // project_id - PARENT_OF seeds from S.selProj, and without this the child row would
     // be created with no parent at all.
@@ -2869,7 +2909,8 @@ function renderProjTab(){
   if (!S.selProj || !pids.includes(S.selProj)) S.selProj = pids[0];
   const pid = S.selProj, pr = M.projects[pid];
   const keep = new Set(pids);
-  const rows = M.raw.Project.filter(r => keep.has(r.project_id) || r.__new);
+  const rows = M.raw.Project.filter(r => keep.has(r.project_id) || r.__new
+                                      || !hasKey("Project", r));
   const util = chartProjectUtil(pid);
   const ms = M.raw.Milestone.filter(m => m.project_id === pid)
     .sort((a,b) => a.milestone_date - b.milestone_date);
@@ -3036,7 +3077,7 @@ function renderPersTab(){
   const sids = listedPeople().sort();
   const cols = entryCols("Person");
   if (!sids.length){
-    const drafts = M.raw.Person.filter(r => r.__new);
+    const drafts = M.raw.Person.filter(r => r.__new || !hasKey("Person", r));
     // As on the project tab: the draft becomes the selection, so an assignment added
     // below inherits its person_id instead of being created with no parent.
     const draft = drafts.find(r => r.person_id) || drafts[0] || null;
@@ -3063,7 +3104,8 @@ function renderPersTab(){
   const sid = S.selPers, pe = M.people[sid];
   const keepP = new Set(sids);
 
-  const prows = M.raw.Person.filter(r => keepP.has(r.person_id) || r.__new);
+  const prows = M.raw.Person.filter(r => keepP.has(r.person_id) || r.__new
+                                      || !hasKey("Person", r));
   el("t-pers").innerHTML =
     `<div class="panel">
       <div class="phead"><h2>Monthly load trend</h2>

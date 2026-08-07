@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.21 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.22 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -63,7 +63,7 @@ document through the manifest rather than by sorting filenames.
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.21.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.22.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -79,7 +79,7 @@ document through the manifest rather than by sorting filenames.
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.20.xlsx`, `_v2.19.xlsx`, `_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.21.xlsx`, `_v2.20.xlsx`, `_v2.19.xlsx`, `_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -123,6 +123,7 @@ document through the manifest rather than by sorting filenames.
   | All four child sections are on screen before anything exists | same file; and a child row entered under an *unsaved* parent still inherits its foreign key |
   | An override replaces the person weight for its months and no others | same file; three months move to 0.70, the other 24 do not move |
   | A commit never moves a scroll position | `tools/test_scroll.py`; 5 of its 11 checks fail against the previous build |
+  | A row with no identifier never becomes a record called `"null"` | `tools/test_nokey.py`; 4 of its 11 checks fail against the previous build, reproducing the reported symptoms exactly |
   | Every figure in a hand-built plan matches the formula worked by hand | same file, on all 27 person-months |
   | The blank start's reference grid has no gaps | same file; 56 standard weights and 289 role factors, so nothing falls back to 1.00 unnoticed |
   | The command line and the browser agree, rule for rule and figure for figure | `tools/test_interop.py`; same findings at the same severities, every person-month equal to 1e-6, on both fixtures |
@@ -153,6 +154,31 @@ document through the manifest rather than by sorting filenames.
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 21 (app v1.20): **a row with no identifier is no longer treated as a
+  record** — one cause behind three reported faults.
+
+  A project saved with every field filled in *except* `project_id` was indexed as
+  `M.projects[null]`, and JavaScript turns a null key into the **string** `"null"`. The
+  application then believed in a project called `"null"`: it became the selection, and the
+  row filter — which keeps a row when the set of visible `project_id`s contains it —
+  compared the set `{"null"}` against the row's actual `null` and missed. So the Projects
+  table the user had just typed into reported *"No rows. Use + row to add one."* The
+  Milestones and Periods sections beneath went looking for a parent named `"null"`, found
+  none, and said the same. A person saved without a `person_id` did exactly the same,
+  which is why the Assignments and Weight overrides sections beneath them offered nothing
+  to fill in.
+
+  The rule is now explicit: **a row becomes a record when it carries its sheet's
+  identifier, and not before.** Until then it is not indexed, it is reported as an error
+  naming the column to fill in, and **Save is refused** rather than silently creating the
+  phantom — which matches the export guard, that has always refused to write such a row.
+  Crucially the row *stays on screen*, because it is the row being repaired: both master
+  tables keep any keyless row alongside the real ones, and a child table now shows a row
+  carrying no parent key wherever the user is — a row that cannot be seen cannot be
+  repaired or deleted, only silently dropped. Supplying the identifier recovers
+  completely. The same rule went into `tools/prap_io.py`, so the command line and the page
+  still report the same findings.
 
   Gate 4 round 20 (app v1.19): **scroll position survives a re-render.** Committing a cell
   re-renders the panel it lives in, and a freshly built element starts at the top left — so
@@ -480,6 +506,16 @@ That counts the bands and markers on the project timeline against the periods an
 milestones in the data, and adds up the stacked utilisation segments month by month to
 confirm they equal the person-month the calculation holds — a chart that disagrees with
 the table is worse than no chart.
+
+And check that a half-filled row cannot turn into a phantom record:
+
+```bash
+python tools/test_nokey.py
+```
+
+That covers a project, a person, and a workbook that already carries such a row. Four of
+its eleven checks fail against the previous build, reproducing the reported symptoms
+exactly — *0 rows on screen*, `projects=['null']`, and *"No rows. Use + row to add one."*
 
 And check that nothing but the user moves a scroll position:
 
