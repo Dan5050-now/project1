@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.20 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.21 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -63,7 +63,7 @@ document through the manifest rather than by sorting filenames.
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.20.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.21.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -79,7 +79,7 @@ document through the manifest rather than by sorting filenames.
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.19.xlsx`, `_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.20.xlsx`, `_v2.19.xlsx`, `_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -122,6 +122,7 @@ document through the manifest rather than by sorting filenames.
   | A whole plan can be built by hand, with no workbook at all | `tools/test_blank.py`; it clicks **Start blank** and enters a project, its milestones, a person, an assignment and a weight override |
   | All four child sections are on screen before anything exists | same file; and a child row entered under an *unsaved* parent still inherits its foreign key |
   | An override replaces the person weight for its months and no others | same file; three months move to 0.70, the other 24 do not move |
+  | A commit never moves a scroll position | `tools/test_scroll.py`; 5 of its 11 checks fail against the previous build |
   | Every figure in a hand-built plan matches the formula worked by hand | same file, on all 27 person-months |
   | The blank start's reference grid has no gaps | same file; 56 standard weights and 289 role factors, so nothing falls back to 1.00 unnoticed |
   | The command line and the browser agree, rule for rule and figure for figure | `tools/test_interop.py`; same findings at the same severities, every person-month equal to 1e-6, on both fixtures |
@@ -152,6 +153,23 @@ document through the manifest rather than by sorting filenames.
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 20 (app v1.19): **scroll position survives a re-render.** Committing a cell
+  re-renders the panel it lives in, and a freshly built element starts at the top left — so
+  filling one cell in a table twenty-two columns wide sent every scroll box back to the
+  first row and the first column, and the next cell you meant to fill was off screen again.
+  On a dashboard that is invisible; during data entry it costs a re-scroll for *every*
+  cell. It surfaced as soon as a plan could be typed in from scratch, because that is the
+  first time anyone fills cells one after another.
+
+  Every scroll offset is now captured and put back around each re-render, along with the
+  page's own position — which a re-render can also move, because the edit banner changes
+  height between "no changes" and "*n* changes not yet saved". The key has to survive the
+  DOM being rebuilt: a data table names itself by its sheet, and everything else (the
+  charts) is keyed by where it sits among the other keyless boxes in its own pane. The
+  same wrapper covers the three other partial redraws — selecting a parent row, selecting
+  an assignment, and the matrix/rows toggle. **Changing tab still goes to the top**, because
+  that is the user moving somewhere else rather than the page moving underneath them.
 
   Gate 4 round 19 (app v1.18): **the four child sections are enterable from the start.**
   Round 18 made a plan enterable but only in one order — the project tab showed the
@@ -462,6 +480,20 @@ That counts the bands and markers on the project timeline against the periods an
 milestones in the data, and adds up the stacked utilisation segments month by month to
 confirm they equal the person-month the calculation holds — a chart that disagrees with
 the table is worse than no chart.
+
+And check that nothing but the user moves a scroll position:
+
+```bash
+python tools/test_scroll.py
+```
+
+That checks all four commit paths (Enter, blur, insert, Save), the page's own scroll, a
+row 900px down a 289-row table, and that the cell just filled is still on screen
+afterwards. Five of its eleven checks fail against the previous build. The test itself
+needed care: Playwright's own click scrolls its target into view first, and Chromium's
+`scrollIntoView` scrolls *every* scrollable ancestor — so a naive click on an off-screen
+cell moves the box before the application has run a line, and the first draft was
+measuring the driver rather than the page.
 
 And check that a plan can be built from nothing at all, which is the path with no file
 behind it to fall back on:

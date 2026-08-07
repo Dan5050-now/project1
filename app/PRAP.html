@@ -598,7 +598,7 @@ dialog::backdrop{background:rgba(0,0,0,.35);
 
 <script>
 "use strict";
-const APP_VERSION = "1.18";
+const APP_VERSION = "1.19";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -607,8 +607,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.20.xlsx",          ver:"2.20",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.20 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.21.xlsx",          ver:"2.21",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.21 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -3657,9 +3657,51 @@ function renderReport(findings){
 
 /* ============================================================ 14. wiring */
 
+/* Re-rendering a panel replaces its DOM, and a fresh element starts at the top left.
+   On a dashboard that is invisible. During data entry it is the difference between a
+   usable table and an unusable one: commit one cell in a table twenty-two columns wide
+   and every scroll box snaps back to the first row and the first column, so the next
+   cell you meant to fill is off screen again. Every cell costs a re-scroll.
+
+   Nothing but the user should move a scroll position, so it is captured and put back
+   around every re-render. Changing tab still goes to the top, because that is the user
+   moving somewhere else rather than the page moving underneath them.
+
+   The key has to survive the DOM being rebuilt. A data table names itself by its sheet;
+   everything else - the charts - is keyed by where it sits among the other keyless boxes
+   in its own pane, which is stable for as long as the panels are. */
+function scrollBoxes(){
+  const out = new Map(), seen = {};
+  for (const box of document.querySelectorAll(".scrollx")){
+    const t = box.querySelector("table.data-t[data-sheet]");
+    let key;
+    if (t) key = "t:" + t.dataset.sheet;
+    else {
+      const id = (box.closest("section.tab") || {}).id || "doc";
+      seen[id] = (seen[id] || 0) + 1;
+      key = id + ":" + seen[id];
+    }
+    out.set(key, box);
+  }
+  return out;
+}
+function keepScroll(fn){
+  const was = new Map();
+  for (const [k, box] of scrollBoxes())
+    if (box.scrollLeft || box.scrollTop) was.set(k, [box.scrollLeft, box.scrollTop]);
+  const y = window.scrollY;
+  fn();
+  for (const [k, box] of scrollBoxes()){
+    const p = was.get(k);
+    if (p){ box.scrollLeft = p[0]; box.scrollTop = p[1]; }
+  }
+  // The page itself moves too, because a re-render can change the height of the banner
+  // above everything else. Clamped by the browser if the page got shorter.
+  if (y && window.scrollY !== y) window.scrollTo({top:y});
+}
+
 function renderKeepingTab(){
-  renderAll();
-  showTab(S.tab);
+  keepScroll(() => { renderAll(); showTab(S.tab); });
 }
 function showTab(id){
   S.tab = id;
@@ -3860,7 +3902,7 @@ document.addEventListener("click", e => {
   if (vt){
     const [id, mode] = vt.dataset.setview.split("|");
     S.genView[id] = mode;
-    renderGenTab();
+    keepScroll(renderGenTab);
     return;
   }
   const ins = e.target.closest("[data-ins]");
@@ -3895,7 +3937,7 @@ document.addEventListener("click", e => {
     return;
   }
   const row = e.target.closest(".data-t tbody tr");
-  if (row && row.dataset.id){
+  if (row && row.dataset.id) keepScroll(() => {
     const sheet = row.closest(".data-t").dataset.sheet;
     // Re-render the DEPENDENT panels only. Re-rendering the table itself would replace
     // the cell the click just put the caret in, so the edit could never be typed.
@@ -3918,7 +3960,7 @@ document.addEventListener("click", e => {
       for (const tr of row.parentNode.children) tr.classList.toggle("sel", tr === row);
       const d = el("asgDetail"); if (d) d.innerHTML = overridesPanel(S.selPers);
     }
-  }
+  });
 });
 
 // Clicking a cell that ALREADY has the caret fires no focusin, so after Escape has

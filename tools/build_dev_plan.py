@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.20"
+DOC_VERSION = "2.21"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,35 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.20", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.21", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 20, application v1.19. SCROLL POSITION now survives a re-render. "
+     "Committing a cell re-renders the panel it lives in, and a freshly built element "
+     "starts at the top left - so filling one cell in a table twenty-two columns wide sent "
+     "every scroll box back to the first row and the first column, and the next cell the "
+     "user meant to fill was off screen again. On a dashboard that is invisible; during "
+     "data entry it costs a re-scroll for every single cell, which is the difference "
+     "between a usable table and an unusable one. It showed up as soon as a plan could be "
+     "typed in from scratch (round 18) because that is the first time anyone fills in "
+     "cells one after another. Every scroll offset on the page is now captured and put "
+     "back around each re-render, along with the page's own scroll position, which a "
+     "re-render can also move because the edit banner changes height between 'no changes' "
+     "and 'n changes not yet saved'. The key has to survive the DOM being rebuilt: a data "
+     "table names itself by its sheet, and everything else - the charts - is keyed by "
+     "where it sits among the other keyless boxes in its own pane. The same wrapper covers "
+     "the three other places that redraw part of the page: selecting a parent row, "
+     "selecting an assignment, and the matrix/rows toggle on General assumptions. Changing "
+     "TAB still takes the page to the top, because that is the user moving somewhere else "
+     "rather than the page moving underneath them. tools/test_scroll.py drives the real "
+     "browser and checks all four commit paths, the page scroll, a row 900px down a "
+     "289-row table, and that the cell just filled is still on screen afterwards; five of "
+     "its eleven checks fail against the previous build. The test itself needed care: "
+     "Playwright's own click scrolls its target into view first, and Chromium's "
+     "scrollIntoView scrolls EVERY scrollable ancestor, so a naive click on an off-screen "
+     "cell moves the box before the application has run a line - the first draft of the "
+     "test was measuring the driver rather than the page. No requirement, rule, "
+     "calculation or schema version changed.",
+     "Issued for review"],
+    ["2.20", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 19, application v1.18. The four CHILD sections are now on screen from the "
      "moment a blank plan is started, and can be filled in before their parent is saved. "
      "Round 18 made a plan enterable but only in one order: the project tab showed the "
@@ -396,7 +424,7 @@ rows = [
      "override window to prove the fourth section works and REPLACES the person weight for "
      "its three months and no others. No requirement, rule, calculation or schema version "
      "changed.",
-     "Issued for review"],
+     "Superseded by v2.21"],
     ["2.19", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 18, application v1.17. A PLAN CAN NOW BE STARTED IN THE APPLICATION "
      "ITSELF. The landing screen offers two ways in, given equal weight: load a source "
@@ -1491,7 +1519,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-19 applied (app v1.18); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-20 applied (app v1.19); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1584,7 +1612,8 @@ align = [
     ["v2.17", "v1.0", "application v1.15", "5", DOC_DATE, "Gate 4 round 16: visual design pass; contrast measured, not judged."],
     ["v2.18", "v1.0", "application v1.16", "5", DOC_DATE, "Gate 4 round 17: AI-agent reference, JSON interchange, interoperability audit."],
     ["v2.19", "v1.0", "application v1.17", "5", DOC_DATE, "Gate 4 round 18: a plan can be started in the application, with no workbook."],
-    ["v2.20", "v1.0", "application v1.18", "5", DOC_DATE, "Gate 4 round 19: the child sections are enterable from the start, before their parent is saved. 4.9 continues."],
+    ["v2.20", "v1.0", "application v1.18", "5", DOC_DATE, "Gate 4 round 19: the child sections are enterable from the start, before their parent is saved."],
+    ["v2.21", "v1.0", "application v1.19", "5", DOC_DATE, "Gate 4 round 20: scroll position survives a re-render. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
