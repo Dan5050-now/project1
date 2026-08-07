@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.18"
+DOC_VERSION = "2.19"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,49 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.18", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.19", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 18, application v1.17. A PLAN CAN NOW BE STARTED IN THE APPLICATION "
+     "ITSELF. The landing screen offers two ways in, given equal weight: load a source "
+     "workbook, or start blank and type. 'Start blank' opens every tab and every section "
+     "an upload opens - it is the same code path, so it is not a lesser mode with its own "
+     "rules - and the plan it produces exports to the same .xlsx as any other. A blank "
+     "start is not an EMPTY workbook: with no Lists sheet there would be no vocabulary, so "
+     "every typed value would be reported as unrecognised (V-11) and no field could offer "
+     "a choice, and with no Config there would be no thresholds. It therefore begins from "
+     "the reference content of the delivered template, embedded in the HTML by "
+     "tools/build_app_seed.py and held to the template by check_consistency.py. The "
+     "PeriodWeightStandard and RoleFactor grids are NOT embedded: the application builds "
+     "them from the value lists it was just seeded with - 56 standard weights and 289 role "
+     "factors, every combination a project can reach - so a company that adds a role to "
+     "Lists gets it without anybody regenerating anything. Every seeded figure is a "
+     "placeholder 1.00 that says so on its own row, because an invented weight that looks "
+     "like a company standard is worse than an obvious placeholder: only one of the two "
+     "gets questioned. Four things had to be fixed before the path worked at all, each "
+     "found by walking it rather than by reading it. (1) A DEADLOCK at the first save: a "
+     "clinical trial saved before its milestones exist raises V-16 by definition, and its "
+     "milestones cannot be entered until it is saved, because the milestone table hangs "
+     "off a SELECTED project. The save guard now treats V-12 and V-16 as INCOMPLETENESS "
+     "rather than error - the same line the specification already draws for drafts - names "
+     "what is still missing in the banner, and refuses everything else exactly as before. "
+     "(2) A row still being typed is not yet parsed into the model, so on a plan with no "
+     "saved projects the Projects table said 'nothing matches the filters' and hid the "
+     "very row the user was filling in. (3) The first assignment was the one row the "
+     "application refused to name, having named every one after it: nextKey had nothing to "
+     "copy a house style from, so the sheets that allocate their own keys now carry a "
+     "pattern to start from. (4) FIVE PROJECT COLUMNS HAD NO HOME ANYWHERE IN THE "
+     "APPLICATION. The project and people tables showed a curated subset, which was "
+     "survivable while every plan arrived as a workbook filled in elsewhere; it is not "
+     "survivable now that a plan can be built here, because DataReviewSystem_setup could "
+     "never be entered and V-10 would warn about it forever. Both tables now carry every "
+     "column the schema lets a user type into. Also: a person with no assignment yet is "
+     "listed on the person tab, which is the state everybody is in for the minute after "
+     "they are created; and the default horizon no longer anchors to year 0 when nothing "
+     "has been calculated. tools/test_blank.py never touches a fixture - it clicks Start "
+     "blank and builds a plan the way a person would, then checks every monthly figure "
+     "against the formula worked by hand. No requirement, rule, calculation or schema "
+     "version changed.",
+     "Issued for review"],
+    ["2.18", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 17, application v1.16. REFERENCE MATERIAL FOR ANOTHER AI SYSTEM, and an "
      "interoperability audit of everything delivered so far. The audit found one thing, and it was "
      "structural: of 95 files in the repository, 72 were .xlsx and 2 were Markdown. Every fact this "
@@ -393,7 +435,7 @@ rows = [
      "the one exception that is legitimate rather than merely noisy, an Inspection after the final "
      "DB lock, reported as information because the derivation deliberately extends the timeline to "
      "reach it. No requirement, calculation or schema version changed.",
-     "Issued for review"],
+     "Superseded by v2.19"],
     ["2.17", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 16, application v1.15. A visual design pass over the whole interface, taking "
      "Apple's Human Interface Guidelines as the reference and applying them to a dense data tool. "
@@ -1418,7 +1460,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-17 applied (app v1.16); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-18 applied (app v1.17); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1509,7 +1551,8 @@ align = [
     ["v2.15", "v1.0", "application v1.13", "5", DOC_DATE, "Gate 4 round 14: monthly trend line charts, and one header shape for every panel."],
     ["v2.16", "v1.0", "application v1.14", "5", DOC_DATE, "Gate 4 round 15: derived columns locked in the workbook, template v1.7."],
     ["v2.17", "v1.0", "application v1.15", "5", DOC_DATE, "Gate 4 round 16: visual design pass; contrast measured, not judged."],
-    ["v2.18", "v1.0", "application v1.16", "5", DOC_DATE, "Gate 4 round 17: AI-agent reference, JSON interchange, interoperability audit. 4.9 continues."],
+    ["v2.18", "v1.0", "application v1.16", "5", DOC_DATE, "Gate 4 round 17: AI-agent reference, JSON interchange, interoperability audit."],
+    ["v2.19", "v1.0", "application v1.17", "5", DOC_DATE, "Gate 4 round 18: a plan can be started in the application, with no workbook. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

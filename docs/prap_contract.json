@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.16",
+  "version": "1.17",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -13,11 +13,18 @@
   "writes": [
    "Excel .xlsx source workbook",
    "PRAP JSON interchange file (.prap.json)"
-  ]
+  ],
+  "ways_in": {
+   "load_a_file": "Drop a .xlsx workbook or a .prap.json file on the page. This is the path for anything you produce.",
+   "start_blank": "'Start blank' begins a plan with nothing in it but the standard value lists and settings, and opens every tab for typing. It is how someone plans from scratch without a workbook.",
+   "what_blank_contains": "The Lists and Config sheets of the delivered template, plus a complete PeriodWeightStandard and RoleFactor grid built from those lists - every (type, phase, period) and (type, phase, period, role) combination, so nothing silently falls back to 1.00 and V-23 never fires.",
+   "placeholders": "Every seeded weight and role factor is 1.00 and says so in its note. They are NOT a company standard. If a user hands you a plan started this way, check whether those figures are still 1.00 before reading the FTE totals as real - until they are set, the load reduces to person_weight x month_coverage.",
+   "both_end_the_same": "A plan started blank exports to the same .xlsx and the same .prap.json as any other, so nothing downstream needs to know which way it began."
+  }
  },
  "schema_version": 5,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.18.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.19.xlsx",
   "programming_specification": "docs/PRAP_Programming_Specification_v1.0.xlsx",
   "ui_component_list": "docs/PRAP_UI_Component_List_v1.0.xlsx",
   "source_data_template": "templates/PRAP_SourceData_Template_v1.7.xlsx",
@@ -1205,6 +1212,19 @@
    ],
    "do_not": [
     "do not re-derive the formula yourself; use calculate, so your answer and the dashboard cannot disagree"
+   ]
+  },
+  {
+   "task": "Continue a plan somebody started inside the application",
+   "when": "The user hands you a workbook they built by typing into PRAP rather than one exported from a system of record.",
+   "steps": [
+    "Check the reference tables FIRST: python tools/prap_io.py to-json <file.xlsx> -o plan.prap.json, then look at PeriodWeightStandard and RoleFactor. A plan started blank seeds every one of them at 1.00 with a note saying so.",
+    "If they are still 1.00, say so before quoting any figure. The load formula then reduces to person_weight x month_coverage, which is a real number but not a resourced estimate.",
+    "Offer to fill them in from whatever the user can tell you about their own standards, one (type, phase, period) at a time. Do not invent them.",
+    "Everything else is an ordinary workbook - the same schema, the same rules."
+   ],
+   "do_not": [
+    "do not treat a seeded 1.00 as a measured value, and do not quietly replace it with a number of your own"
    ]
   },
   {

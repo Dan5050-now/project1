@@ -469,6 +469,20 @@ td.drvcell{font-style:italic}
 .drop.on{border-color:var(--accent);border-style:solid;
  background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
 .drop h2{font-size:17px;margin-bottom:8px;letter-spacing:-.015em}
+/* Two ways in, side by side and given equal weight: one is not a fallback for the
+   other. The dashed border stays on the file card because it is also a drop target;
+   the blank card is solid, because there is nothing to drop on it. */
+#empty .lead{max-width:760px;margin:4px auto 20px;text-align:center;color:var(--ink2);
+ font-size:13.5px;line-height:1.55}
+.choose{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch}
+@media (max-width:860px){.choose{grid-template-columns:1fr}}
+.choose .drop{padding:34px 26px 28px;display:flex;flex-direction:column;
+ align-items:center;justify-content:flex-start}
+.drop.start{border-style:solid;border-color:var(--grid)}
+.drop .tag{display:inline-block;font-size:10.5px;font-weight:640;letter-spacing:.06em;
+ text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.choose .btn{margin-top:6px}
+.choose .note{margin-top:auto;padding-top:14px}
 
 /* --- the findings dialog --------------------------------------------------- */
 dialog{border:0;border-radius:var(--r-xl);background:var(--surface);
@@ -537,15 +551,33 @@ dialog::backdrop{background:rgba(0,0,0,.35);
 </nav>
 
 <div id="empty">
-  <div class="drop" id="drop">
-    <h2>Load a source workbook</h2>
-    <p class="cap">Choose a <code>.xlsx</code> workbook or a <code>.prap.json</code>
-      interchange file, or drop one here. Nothing leaves this machine — the file is read
-      in the browser and never uploaded.</p>
-    <button class="btn primary" id="loadBtn2">Choose file</button>
-    <p class="note">Need the layout? Build a blank one with
-      <code>python tools/build_source_workbook.py</code>, or start from
-      <code>PRAP_SourceData_Template_v1.7.xlsx</code>.</p>
+  <p class="lead">Two ways in. Either works, and you can move between them — a plan
+    started here exports to the same workbook, and a workbook loaded here can be edited
+    the same way.</p>
+  <div class="choose">
+    <div class="drop" id="drop">
+      <span class="tag">From a file</span>
+      <h2>Load a source workbook</h2>
+      <p class="cap">Choose a <code>.xlsx</code> workbook or a <code>.prap.json</code>
+        interchange file, or drop one here. Nothing leaves this machine — the file is read
+        in the browser and never uploaded.</p>
+      <button class="btn primary" id="loadBtn2">Choose file</button>
+      <p class="note">Need the layout? Build one with
+        <code>python tools/build_source_workbook.py</code>, or start from
+        <code>PRAP_SourceData_Template_v1.7.xlsx</code>.</p>
+    </div>
+    <div class="drop start" id="startCard">
+      <span class="tag">From nothing</span>
+      <h2>Start a new plan here</h2>
+      <p class="cap">Opens every tab empty, ready to type into. The standard value lists
+        and settings are already in place, so each field offers its own choices; the
+        projects and people are yours to enter. Export to <code>.xlsx</code> when you are
+        ready — the plan is a workbook like any other.</p>
+      <button class="btn primary" id="startBtn">Start blank</button>
+      <p class="note">Period weights and role factors start at a placeholder
+        <strong>1.00</strong>. Set them on <strong>General assumptions</strong> before
+        reading the figures as real.</p>
+    </div>
   </div>
 </div>
 
@@ -566,7 +598,7 @@ dialog::backdrop{background:rgba(0,0,0,.35);
 
 <script>
 "use strict";
-const APP_VERSION = "1.16";
+const APP_VERSION = "1.17";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -575,8 +607,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.18.xlsx",          ver:"2.18",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.18 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.19.xlsx",          ver:"2.19",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.19 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -878,6 +910,120 @@ function buildXlsx(sheetsObj){
 
 const JSON_FORMAT = "prap-source-data";
 const JSON_FORMAT_VERSION = 1;
+
+/* -------------------------------------------- 2c. starting from nothing at all
+   Not everyone arrives with a workbook. Someone sketching a plan for the first time
+   has the projects in their head and nothing on disk, and telling them to go and
+   generate a template first is a wall in front of the only thing they wanted to do.
+
+   A blank start is not an EMPTY workbook. With no `Lists` there is no vocabulary, so
+   every value typed is reported as unrecognised (V-11) and no field can offer a
+   choice; with no `Config` there are no thresholds. So a blank start begins from the
+   reference content of the delivered template - the value lists and the settings -
+   and nothing else. The projects, people and assignments are what the user is here
+   to enter.                                                                        */
+
+/* SEED-BEGIN — generated by tools/build_app_seed.py from PRAP_SourceData_Template_v1.7.xlsx.
+   The reference content of a blank start: the value lists and the settings, and
+   nothing else. Do not edit by hand — rebuild it, or check_consistency.py fails.
+   The weight and role-factor grids are NOT here: blankSheets() builds them from
+   these lists, so a company that adds a role gets it without a regeneration. */
+const SEED_LISTS = [
+  ["project_type","NewDrug CT",null],
+  ["project_type","Biosimilar CT",null],
+  ["project_type","Others",null],
+  ["clinical_phase","Phase 1",null],
+  ["clinical_phase","Phase 2",null],
+  ["clinical_phase","Phase 3",null],
+  ["clinical_phase","Phase 4",null],
+  ["outsourcing_type","Full outsourcing",null],
+  ["outsourcing_type","Partial outsourcing",null],
+  ["outsourcing_type","Full In-house",null],
+  ["setup_party","by CRO",null],
+  ["setup_party","by SB",null],
+  ["EDC_system","Veeva EDC",null],
+  ["EDC_system","Rave",null],
+  ["EDC_system","eSOURCE",null],
+  ["DataReviewSystem","Veeva DQS",null],
+  ["DataReviewSystem","Medidata CDS",null],
+  ["DataReviewSystem","No system (manual)",null],
+  ["RBQM_system","CluePoints",null],
+  ["RBQM_system","Medidata CDS",null],
+  ["RBQM_system","No system (manual)",null],
+  ["project_status","Planned",null],
+  ["project_status","Active",null],
+  ["project_status","On hold",null],
+  ["project_status","Completed",null],
+  ["milestone_name","Protocol (v1)",null],
+  ["milestone_name","CTA submission",null],
+  ["milestone_name","FPI",null],
+  ["milestone_name","First SIV",null],
+  ["milestone_name","LPI",null],
+  ["milestone_name","interim DB lock cut-off",null],
+  ["milestone_name","interim DB lock",null],
+  ["milestone_name","final DB lock cut-off",null],
+  ["milestone_name","final DB lock",null],
+  ["milestone_name","Inspection",null],
+  ["period_name_clinical","Before-Start-up",null],
+  ["period_name_clinical","Start-up",null],
+  ["period_name_clinical","Conduct (interim)",null],
+  ["period_name_clinical","Close-out (interim)",null],
+  ["period_name_clinical","Conduct (final)",null],
+  ["period_name_clinical","Close-out (final)",null],
+  ["period_name_clinical","After Close-out (final)",null],
+  ["period_name_others","Planning",null],
+  ["period_name_others","Develop",null],
+  ["period_name_others","Close",null],
+  ["role_clinical","Project oversight",null],
+  ["role_clinical","Lead data manager",null],
+  ["role_clinical","Clinical Data Associator",null],
+  ["role_clinical","Clinical Database Programmer",null],
+  ["role_clinical","Data Analyst",null],
+  ["role_others","Project lead",null],
+  ["role_others","Main staff",null],
+  ["role_others","Other staff",null],
+];
+const SEED_CONFIG = [
+  ["schema_version",5,"Structure version of this workbook. The application warns on a mismatch."],
+  ["fte_hours_per_month",160,"Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month."],
+  ["over_allocation_fte",1.5,"A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01)."],
+  ["under_allocation_fte",0.6,"A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01)."],
+  ["under_allocation_min_months",3,"Consecutive months below the threshold before a run is flagged."],
+  ["default_horizon_months",24,"Months shown when the dashboard opens."],
+  ["capacity_unit","FTE","Display unit: 'FTE' or 'percent'."],
+];
+/* SEED-END */
+
+const PLACEHOLDER = "Placeholder 1.00 — replace with your own figure";
+
+function blankSheets(){
+  const sheets = {};
+  for (const s of REQUIRED_SHEETS) sheets[s] = [SHEET_HEADERS[s].slice()];
+  for (const r of SEED_LISTS) sheets.Lists.push(r.slice());
+  for (const r of SEED_CONFIG) sheets.Config.push(r.slice());
+
+  /* The reference grids are BUILT from the lists just seeded rather than embedded, so a
+     company that adds a role or a phase to `Lists` gets that combination here too,
+     without anyone regenerating the application. Every figure starts at 1.00 and says
+     so: an invented weight that looks like a company standard is worse than an obvious
+     placeholder, because only one of the two gets questioned. */
+  const listOf = n => SEED_LISTS.filter(r => r[0] === n).map(r => r[1]);
+  const types = listOf("project_type");
+  const ct = types.filter(t => CLINICAL_TYPES.has(t));
+  const other = types.filter(t => !CLINICAL_TYPES.has(t));
+  const phases = listOf("clinical_phase");
+  const cPeriods = listOf("period_name_clinical"), oPeriods = listOf("period_name_others");
+  const cRoles = listOf("role_clinical"), oRoles = listOf("role_others");
+
+  for (const t of ct) for (const ph of phases) for (const p of cPeriods)
+    sheets.PeriodWeightStandard.push([t, ph, p, 1.00, PLACEHOLDER]);
+  for (const t of ct) for (const ph of phases) for (const p of cPeriods) for (const rn of cRoles)
+    sheets.RoleFactor.push([t, ph, p, rn, 1.00, PLACEHOLDER]);
+  // 'Others' projects carry no clinical phase, so their factors are keyed without one.
+  for (const t of other) for (const p of oPeriods) for (const rn of oRoles)
+    sheets.RoleFactor.push([t, null, p, rn, 1.00, PLACEHOLDER]);
+  return sheets;
+}
 
 function readPrapJson(text){
   let doc;
@@ -1611,7 +1757,7 @@ function calculate(M){
 /* ============================================================ 7. state + filters */
 
 const S = {
-  model:null, calc:null, fileName:"", loadedAt:null,
+  model:null, calc:null, fileName:"", loadedAt:null, blank:false,
   from:null, to:null,                       // month keys
   f:{type:"All", phase:"All", proj:"All", pers:"All", role:"All", dept:"All"},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
@@ -1640,6 +1786,21 @@ function activePeople(){
     if (S.f.dept !== "All" && p.department !== S.f.dept) continue;
     if (S.f.role !== "All" && !M.assignments.some(a => a.person_id === sid && a.role_name === S.f.role)) continue;
     if (!M.assignments.some(a => a.person_id === sid && projs.has(a.project_id))) continue;
+    out.push(sid);
+  }
+  return out;
+}
+/* Everyone the PERSON TAB should list, which is not the same as everyone drawing load.
+   activePeople() answers "who is on a project in view" and is what the dashboard needs.
+   On a data-entry tab that rule hides the person you have just created, because they
+   have no assignment yet - and a row you cannot see is a row you cannot fill in. */
+function listedPeople(){
+  const M = S.model, out = [];
+  for (const [sid, p] of Object.entries(M.people)){
+    if (S.f.pers !== "All" && sid !== S.f.pers) continue;
+    if (S.f.dept !== "All" && p.department !== S.f.dept) continue;
+    if (S.f.role !== "All" && !M.assignments.some(a => a.person_id === sid && a.role_name === S.f.role))
+      continue;
     out.push(sid);
   }
   return out;
@@ -2447,7 +2608,18 @@ const childrenOf = (rows, col, val) =>
  *  carries no meaning beyond being unique, so making someone invent one is asking them
  *  to do the machine's job - and to do it wrong, since the row is rejected at Save if
  *  the number collides with one already in the file. */
+/* Every column of a sheet the user may type into: the schema's own order, minus the
+   derived ones. The project and people tables used to show a curated subset, which reads
+   more calmly - and means five Project columns have no home anywhere in the application.
+   That was survivable while every plan arrived as a workbook someone had filled in
+   elsewhere. It is not survivable now that a plan can be BUILT here: a field with no home
+   is a field that can never be entered, and V-10 would warn about it forever. */
+const entryCols = sheet =>
+  SHEET_HEADERS[sheet].filter(c => !(DERIVED_COLS[sheet] || []).includes(c));
+
 const AUTO_KEY = new Set(["Assignment"]);
+// Where to start when the sheet is empty and there is no house style to copy.
+const FIRST_KEY = {Assignment:["ASG-", 3]};
 
 /** The next free identifier in the pattern the sheet already uses.
  *
@@ -2466,7 +2638,15 @@ function nextKey(sheet, col){
     if (prefix === null){ prefix = m[1]; width = m[2].length; }
     if (m[1] === prefix) used.add(+m[2]);
   }
-  if (prefix === null) return null;              // nothing to follow - leave it to the user
+  if (prefix === null){
+    // Nothing to follow. In a loaded workbook that means the sheet is empty and the
+    // house style is unknown, so the user names the row. But in a plan started blank
+    // EVERY sheet starts empty, and the first assignment would then be the one row the
+    // application refuses to name - having named every one after it. So the sheets that
+    // allocate their own keys carry a pattern to start from.
+    const p = FIRST_KEY[sheet];
+    return p ? p[0] + String(1).padStart(p[1], "0") : null;
+  }
   let n = 1;
   while (used.has(n)) n++;
   return prefix + String(n).padStart(width, "0");
@@ -2646,12 +2826,32 @@ function renderOverall(){
 function renderProjTab(){
   const M = S.model;
   const pids = activeProjects().sort(byRank);
-  if (!pids.length){ el("t-proj").innerHTML = `<div class="panel"><p class="note">No projects match the current filters.</p></div>`; return; }
+  const cols = entryCols("Project");
+  if (!pids.length){
+    // Nothing in the plan is a different situation from nothing matching the filters,
+    // and only one of them is fixed by adding a row. Offer the row where it would help.
+    // Drafts are counted separately because a row still being typed has not been parsed
+    // into M.projects yet - it exists only in raw, and it is exactly the row the user is
+    // looking at, so it has to be on screen even though nothing "matches".
+    const drafts = M.raw.Project.filter(r => r.__new);
+    el("t-proj").innerHTML = Object.keys(M.projects).length
+      ? `<div class="panel"><p class="note">No projects match the current filters. `
+        + `<strong>Reset filters</strong> above to see them all.</p></div>`
+      : `<div class="panel">
+          <div class="phead"><h2>Projects</h2>
+            <span class="scope k">${drafts.length ? `${drafts.length} being entered`
+                                                  : "nothing yet"}</span></div>
+          <p class="cap">${drafts.length
+            ? `Fill the row in, then press <strong>Save</strong> — milestones, periods and
+               the timeline appear as soon as the project has an identifier and is saved.`
+            : `There are no projects in this plan. <strong>+ row</strong> adds the first one.`}
+            A clinical trial needs at least the identifier, name, type, phase and the two
+            dates: the phase is what selects the standard period weights.</p>
+          ${dataTable("Project", drafts, cols, "project_id", null)}</div>`;
+    return;
+  }
   if (!S.selProj || !pids.includes(S.selProj)) S.selProj = pids[0];
   const pid = S.selProj, pr = M.projects[pid];
-  const cols = ["project_id","project_name","project_type","project_category","clinical_phase",
-                "outsourcing_type","EDC_setup","EDC_system","planned_member_count",
-                "start_date","end_date","status"];
   const keep = new Set(pids);
   const rows = M.raw.Project.filter(r => keep.has(r.project_id) || r.__new);
   const util = chartProjectUtil(pid);
@@ -2732,11 +2932,30 @@ function projDetail(pid){
 
 function renderPersTab(){
   const M = S.model;
-  const sids = activePeople().sort();
-  if (!sids.length){ el("t-pers").innerHTML = `<div class="panel"><p class="note">Nobody matches the current filters.</p></div>`; return; }
+  // listedPeople, not activePeople: somebody entered but not yet assigned to anything
+  // still belongs on the tab where you assign them.
+  const sids = listedPeople().sort();
+  const cols = entryCols("Person");
+  if (!sids.length){
+    const drafts = M.raw.Person.filter(r => r.__new);
+    el("t-pers").innerHTML = Object.keys(M.people).length
+      ? `<div class="panel"><p class="note">Nobody matches the current filters. `
+        + `<strong>Reset filters</strong> above to see everyone.</p></div>`
+      : `<div class="panel">
+          <div class="phead"><h2>People</h2>
+            <span class="scope k">${drafts.length ? `${drafts.length} being entered`
+                                                  : "nothing yet"}</span></div>
+          <p class="cap">${drafts.length
+            ? `Fill the row in, then press <strong>Save</strong> — assignments appear as
+               soon as the person has an identifier and is saved.`
+            : `There is nobody in this plan yet. <strong>+ row</strong> adds the first
+               person.`} Their assignments — which project, which role, how much of them —
+            are entered below, once a person is selected.</p>
+          ${dataTable("Person", drafts, cols, "person_id", null)}</div>`;
+    return;
+  }
   if (!S.selPers || !sids.includes(S.selPers)) S.selPers = sids[0];
   const sid = S.selPers, pe = M.people[sid];
-  const cols = ["person_id","person_name","department","primary_role","capacity_fte"];
   const keepP = new Set(sids);
 
   const prows = M.raw.Person.filter(r => keepP.has(r.person_id) || r.__new);
@@ -2788,8 +3007,9 @@ function persDetail(sid){
           <strong>Clicking a row selects it</strong>, which drives the overrides beside it.
           <strong>+ row</strong> allocates the next <code>assignment_id</code>.</p>
         ${dataTable("Assignment", asg,
-          ["assignment_id","project_name","project_id","role_name",
-           "assign_start_date","assign_end_date","person_weight"], "assignment_id", aid)}</div>
+          ["assignment_id","project_name","project_id","role_name","assign_start_date",
+           "assign_end_date","person_weight","note_1","note_2","note_3"],
+          "assignment_id", aid)}</div>
       <div id="asgDetail">${overridesPanel(sid)}</div>
     </div>`;
 }
@@ -2983,22 +3203,37 @@ function beginEditSession(){
  *  that grace ends: a draft that now has content is promoted to an ordinary row and
  *  checked like one, and if that turns up an error the save is refused rather than
  *  quietly keeping a bad record. */
+/* Errors that say "something which is NOT on this row is missing yet".
+   A clinical trial saved before its milestones exist raises both of these by definition
+   - and its milestones cannot be entered until it is saved, because the milestone table
+   hangs off a SELECTED project. Refusing the save there is a deadlock: the row cannot be
+   kept until its children exist, and its children cannot be created until it is kept.
+   The specification already draws this line for drafts - a row still being built is
+   INCOMPLETE, not invalid - so these stay in the findings report and are named in the
+   banner; they simply do not refuse the save. Every other error still does, because
+   every other error is something wrong with the row in front of you. */
+const INCOMPLETE_RULES = new Set(["V-12","V-16"]);
+const blocking = f => (f.sev === "error" || f.sev === "fatal") && !INCOMPLETE_RULES.has(f.rule);
+
 function saveEdits(){
   if (!S.pending.length) return;
   const drafts = [];
   for (const s of REQUIRED_SHEETS)
     for (const r of S.model.raw[s]) if (r.__new && !isBlankRow(s, r)) drafts.push(r);
+  let pending = [];
   if (drafts.length){
     for (const r of drafts) delete r.__new;
     const probe = rebuild();
-    const errs = probe.findings.filter(f => f.sev === "error" || f.sev === "fatal");
-    const was = (S.model.findings || []).filter(f => f.sev === "error" || f.sev === "fatal");
+    const errs = probe.findings.filter(blocking);
+    const was = (S.model.findings || []).filter(blocking);
     if (errs.length > was.length){
       for (const r of drafts) r.__new = true;
       showBanner("bad", `Save refused — the new row${drafts.length===1?"" :"s"} would break a rule: `
         + `${errs[errs.length-1].msg} Correct it, or delete the row, then save.`);
       return;
     }
+    pending = probe.findings.filter(f => INCOMPLETE_RULES.has(f.rule)
+      && !(S.model.findings || []).some(g => g.rule === f.rule && g.msg === f.msg));
     rebuild(true);
     renderKeepingTab();
   }
@@ -3007,7 +3242,10 @@ function saveEdits(){
   S.snapshot = null;
   renderDirty();
   showBanner("", `Saved ${S.saved} change${S.saved===1?"":"s"} to the working data. `
-    + `They will be written to the file when you press Export. The workbook on disk is `
+    + (pending.length
+        ? `Still to come: ${pending[0].msg} `
+        : "")
+    + `They will be written to the file when you press Export. The file on disk is `
     + `still untouched until then.`);
 }
 function discardEdits(){
@@ -3356,11 +3594,57 @@ function writeHorizon(){
 function defaultHorizon(){
   const M = S.model, C = S.calc;
   const now = new Date();
-  let from = monthKey(now.getUTCFullYear(), now.getUTCMonth());
+  const today = monthKey(now.getUTCFullYear(), now.getUTCMonth());
+  const span = Math.max(1, M.HORIZON);
+  // Nothing draws resource yet - a plan started blank, or a file with no assignments.
+  // C.lo and C.hi are both 0 then, and anchoring to them would open the page in year 0.
+  if (!C.hi){ S.from = today; S.to = today + span - 1; writeHorizon(); return; }
+  let from = today;
   if (from < C.lo || from > C.hi) from = C.lo;          // demo data may not span today
   S.from = from;
-  S.to = Math.min(C.hi, from + Math.max(1, M.HORIZON) - 1);
+  S.to = Math.min(C.hi, from + span - 1);
   writeHorizon();
+}
+
+/** Take a parsed set of sheets as the workbook now on screen.
+ *
+ *  Shared by every way in - an .xlsx, a .prap.json, and a plan started blank - so a
+ *  blank start is not a lesser mode with its own rules. It opens exactly the tabs an
+ *  upload opens, validates by the same rules and exports through the same path; the
+ *  only difference is what is in the sheets when it begins.
+ */
+function adopt(sheets, name, opts){
+  opts = opts || {};
+  S.headers = {};
+  for (const s of REQUIRED_SHEETS)
+    S.headers[s] = ((sheets[s] || [])[0] || []).map(h => txt(h)).filter(Boolean);
+  const M = buildModel(sheets);
+  if (M.fatal){
+    showBanner("bad", "The workbook could not be loaded.", M.findings);
+    renderReport(M.findings); el("report").showModal();
+    return false;
+  }
+  S.model = M; S.calc = calculate(M);
+  S.fileName = name; S.loadedAt = new Date(); S.blank = !!opts.blank;
+  S.pending = []; S.saved = 0; S.snapshot = null;
+  S.editedCells.clear(); S.expanded.clear();
+  S.selProj = null; S.selPers = null; S.selAsg = null;
+  defaultHorizon();
+  fillFilters();
+  el("empty").hidden = true; el("tabs").hidden = false; el("filterbar").hidden = false;
+  el("editbar").hidden = false;
+  el("exportBtn").disabled = el("exportJsonBtn").disabled = false;
+  const tz = -new Date().getTimezoneOffset() / 60;
+  const tzName = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").split("/").pop() || "local";
+  const stamp = S.loadedAt.toISOString().slice(0,16).replace("T"," ");
+  el("fileline").innerHTML = `${esc(name)} · ${opts.blank ? "started" : "loaded"} ${stamp} `
+    + `<span class="tz">(GMT${tz>=0?"+":""}${tz}, ${esc(tzName)})</span>`;
+  renderProvenance();
+  const errs = M.findings.filter(f => f.sev === "error").length;
+  showBanner(errs ? "bad" : "", opts.banner || (errs ? "Loaded with problems." : "Loaded cleanly."),
+             M.findings);
+  renderAll(); showTab(opts.tab || S.tab);
+  return true;
 }
 
 async function loadFile(file){
@@ -3369,35 +3653,28 @@ async function loadFile(file){
     const isJson = /\.json$/i.test(file.name);
     const sheets = isJson ? readPrapJson(await file.text())
                           : await readWorkbook(await file.arrayBuffer());
-    S.headers = {};
-    for (const s of REQUIRED_SHEETS)
-      S.headers[s] = ((sheets[s] || [])[0] || []).map(h => txt(h)).filter(Boolean);
-    const M = buildModel(sheets);
-    if (M.fatal){
-      showBanner("bad", "The workbook could not be loaded.", M.findings);
-      renderReport(M.findings); el("report").showModal();
-      return;
-    }
-    S.model = M; S.calc = calculate(M);
-    S.fileName = file.name; S.loadedAt = new Date();
-    S.pending = []; S.saved = 0; S.snapshot = null;
-    S.editedCells.clear(); S.expanded.clear(); S.selProj = null; S.selPers = null;
-    defaultHorizon();
-    fillFilters();
-    el("empty").hidden = true; el("tabs").hidden = false; el("filterbar").hidden = false;
-    el("editbar").hidden = false;
-    el("exportBtn").disabled = el("exportJsonBtn").disabled = false;
-    const tz = -new Date().getTimezoneOffset() / 60;
-    const tzName = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").split("/").pop() || "local";
-    el("fileline").innerHTML = `${esc(file.name)} · loaded ${S.loadedAt.toISOString().slice(0,16).replace("T"," ")} `
-      + `<span class="tz">(GMT${tz>=0?"+":""}${tz}, ${esc(tzName)})</span>`;
-    renderProvenance();
-    const errs = M.findings.filter(f => f.sev === "error").length;
-    showBanner(errs ? "bad" : "",
-      errs ? `Loaded with problems.` : `Loaded cleanly.`, M.findings);
-    renderAll(); showTab(S.tab);
+    adopt(sheets, file.name);
   } catch (e){
     showBanner("bad", `Could not read that file: ${e.message}`);
+    console.error(e);
+  }
+}
+
+/** Begin a plan with nothing in it but the standard vocabulary and settings. */
+function startBlank(){
+  try {
+    adopt(blankSheets(), "New plan (not yet exported)", {
+      blank: true,
+      // The project tab, not Overall: Overall would open on an empty dashboard, and the
+      // first thing to do is enter a project.
+      tab: "t-proj",
+      banner: "New plan started. Add your first project below — then its milestones, "
+        + "your people, and who works on what. Period weights and role factors are "
+        + "placeholders at 1.00 until you set them on General assumptions. Nothing is on "
+        + "disk until you press Export.",
+    });
+  } catch (e){
+    showBanner("bad", `Could not start a new plan: ${e.message}`);
     console.error(e);
   }
 }
@@ -3435,6 +3712,7 @@ function renderProvenance(){
 }
 renderProvenance();
 el("loadBtn").onclick = el("loadBtn2").onclick = () => el("picker").click();
+el("startBtn").onclick = startBlank;
 el("picker").onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); };
 el("exportBtn").onclick = () => exportWorkbook(false);
 el("exportJsonBtn").onclick = () => exportWorkbook(true);

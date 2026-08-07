@@ -1,0 +1,284 @@
+"""Build a plan from nothing, entirely through the application, and check it is real.
+
+The landing screen now offers two ways in: load a source workbook, or start blank and
+type. The second one is the one that can quietly not work, because every panel below the
+first table is drawn from a SELECTED parent, and at the start there is no parent to
+select - so a row that cannot be added, or a person who disappears the moment they are
+created, would leave the user staring at a page with no way forward.
+
+So this test never touches a fixture. It clicks Start blank and then does what a person
+would do, in the order they would do it:
+
+  1. the blank start opens every tab, with the standard lists and settings in place and
+     no projects, people or assignments
+  2. the reference grids are complete - every (type, phase, period) and every
+     (type, phase, period, role) an assignment could reach, so nothing falls back to 1.00
+     silently and V-23 never fires
+  3. a project can be added and filled in, with nothing selected beforehand
+  4. its milestones can be added, and the seven clinical periods DERIVE from them
+  5. a person can be added - and is still listed while they have no assignment at all,
+     which is the state everybody is in for the minute after they are created
+  6. an assignment can be added, and the plan starts producing figures
+  7. those figures match the formula computed by hand, to the cent
+  8. Save commits, Export produces a workbook, and re-loading it reproduces the plan
+
+    python tools/test_blank.py
+"""
+
+import calendar
+import pathlib
+import sys
+import tempfile
+from datetime import date
+
+from playwright.sync_api import sync_playwright
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+APP = (ROOT / "app" / "PRAP.html").as_uri()
+CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
+TMP = pathlib.Path(tempfile.mkdtemp(prefix="prap_blank_"))
+
+PROJECT = {"project_id": "PRJ-001", "project_name": "Trial One", "project_type": "NewDrug CT",
+           "project_category": "Compound A", "clinical_phase": "Phase 2",
+           "outsourcing_type": "Partial outsourcing", "EDC_setup": "by SB",
+           "DataReviewSystem_setup": "by CRO", "RBQM_setup": "by SB",
+           "EDC_system": "Rave", "planned_member_count": "3",
+           "start_date": "2027-01-01", "end_date": "2029-06-30", "status": "Planned"}
+MILESTONES = [{"milestone_name": "Protocol (v1)", "milestone_date": "2027-01-15",
+               "milestone_seq": "1"},
+              {"milestone_name": "CTA submission", "milestone_date": "2027-03-01",
+               "milestone_seq": "2"},
+              {"milestone_name": "First SIV", "milestone_date": "2027-07-01",
+               "milestone_seq": "3"},
+              {"milestone_name": "final DB lock", "milestone_date": "2029-03-31",
+               "milestone_seq": "4"}]
+PERSON = {"person_id": "PSN-001", "person_name": "Alex R.", "department": "Data Management",
+          "primary_role": "Lead data manager", "capacity_fte": "1.00"}
+ASSIGNMENT = {"project_name": "Trial One", "role_name": "Lead data manager",
+              "assign_start_date": "2027-04-10", "assign_end_date": "2029-06-30",
+              "person_weight": "0.40"}
+
+fails = []
+
+
+def check(ok, label, detail=""):
+    print(f"  {'ok  ' if ok else 'FAIL'} {label}{'   ' + detail if detail else ''}")
+    if not ok:
+        fails.append(label)
+
+
+def rows_on_screen(pg, loc):
+    """Real rows only - the empty table draws a placeholder inviting you to add one."""
+    return pg.locator(f"{loc} tbody tr td[data-col]").evaluate_all(
+        "es => new Set(es.map(e => e.dataset.row)).size")
+
+
+def add_row(pg, loc, values):
+    """Click + row, then type into the row it created. Enter commits; Escape reverts."""
+    pg.locator(f"{loc} button[data-ins]").last.click()
+    pg.wait_for_timeout(900)
+    row = pg.locator(f"{loc} tbody tr td[data-col]").evaluate_all(
+        "es => Math.max(...es.map(e => +e.dataset.row))")
+    for col, v in values.items():
+        td = pg.locator(f"{loc} td[data-row='{row}'][data-col='{col}']")
+        if td.count() == 0:
+            continue                       # a seeded parent key is not editable here
+        td.first.click()
+        pg.wait_for_timeout(120)
+        pg.keyboard.press("Control+A")
+        pg.keyboard.type(str(v))
+        pg.keyboard.press("Enter")
+        pg.wait_for_timeout(320)
+    return row
+
+
+def save(pg):
+    pg.click("#saveBtn")
+    pg.wait_for_timeout(1400)
+    return pg.inner_text("#banner")
+
+
+def coverage(y, m, s, e):
+    days = calendar.monthrange(y, m)[1]
+    lo, hi = max(date(y, m, 1), s), min(date(y, m, days), e)
+    return 0.0 if hi < lo else ((hi - lo).days + 1) / days
+
+
+with sync_playwright() as pw:
+    browser = pw.chromium.launch(executable_path=CHROME, downloads_path=str(TMP))
+    ctx = browser.new_context(accept_downloads=True)
+    pg = ctx.new_page()
+    errors = []
+    pg.on("pageerror", lambda e: errors.append(str(e)))
+    pg.on("dialog", lambda d: d.accept())
+
+    print("app/PRAP.html — a plan built from nothing")
+    pg.goto(APP)
+    pg.wait_for_timeout(300)
+
+    both = pg.eval_on_selector_all("#empty .drop h2", "es => es.map(e => e.textContent.trim())")
+    check(len(both) == 2 and not pg.eval_on_selector("#startBtn", "e => e.disabled"),
+          "the landing screen offers both ways in", " / ".join(both))
+
+    pg.click("#startBtn")
+    pg.wait_for_timeout(2500)
+    rows = pg.evaluate("() => {const o = {}; for (const s of REQUIRED_SHEETS) "
+                       "o[s] = S.model.raw[s].length; return o;}")
+    opened = pg.evaluate("() => ({tabs: !el('tabs').hidden, filters: !el('filterbar').hidden, "
+                         "edit: !el('editbar').hidden, empty: el('empty').hidden, "
+                         "exp: !el('exportBtn').disabled, tab: S.tab})")
+    check(all(opened[k] for k in ("tabs", "filters", "edit", "empty", "exp"))
+          and rows["Lists"] > 0 and rows["Config"] > 0
+          and rows["Project"] == 0 and rows["Person"] == 0 and rows["Assignment"] == 0,
+          "Start blank opens every tab, with the lists and settings and nothing else",
+          f"{rows['Lists']} list values, {rows['Config']} settings, "
+          f"0 projects / people / assignments, opens on {opened['tab']}")
+
+    grids = pg.evaluate("""() => {
+      const M = S.model, phases = M.lists.clinical_phase || [];
+      const cper = M.lists.period_name_clinical || [], oper = M.lists.period_name_others || [];
+      const crole = M.lists.role_clinical || [], orole = M.lists.role_others || [];
+      const types = M.lists.project_type || [];
+      const ct = types.filter(t => CLINICAL_TYPES.has(t)), ot = types.filter(t => !CLINICAL_TYPES.has(t));
+      let pwsMissing = 0, rfMissing = 0;
+      for (const t of ct) for (const ph of phases) for (const p of cper){
+        if (M.pws[[t, ph, p]] === undefined) pwsMissing++;
+        for (const rn of crole) if (M.rf[[t, ph, p, rn]] === undefined) rfMissing++;
+      }
+      for (const t of ot) for (const p of oper) for (const rn of orole)
+        if (M.rf[[t, null, p, rn]] === undefined) rfMissing++;
+      return {pws: Object.keys(M.pws).length, rf: Object.keys(M.rf).length,
+              pwsMissing, rfMissing};
+    }""")
+    check(grids["pwsMissing"] == 0 and grids["rfMissing"] == 0,
+          "the weight and role-factor grids cover every combination a project can reach",
+          f"{grids['pws']} standard weights, {grids['rf']} role factors, "
+          f"{grids['pwsMissing'] + grids['rfMissing']} gaps")
+
+    # ---- 3. the first project, with nothing selected beforehand ---------------
+    pg.click("text=Source data (project)")
+    pg.wait_for_timeout(900)
+    loc = "#t-proj .data-t[data-sheet='Project']"
+    check(pg.locator(f"{loc} button[data-ins]").count() == 1,
+          "an empty Projects table still offers + row")
+    add_row(pg, loc, PROJECT)
+    banner = save(pg)
+    got = pg.evaluate("() => {const p = S.model.projects['PRJ-001']; return p ? "
+                      "{name: p.project_name, type: p.project_type, phase: p.clinical_phase, "
+                      " months: p.total_period_months} : null;}")
+    check(got and got["name"] == "Trial One" and got["type"] == "NewDrug CT"
+          and got["months"] == 30,
+          "the first project can be entered and saved with nothing selected first",
+          f"{got}  ·  {banner.strip()[:60]}")
+
+    # ---- 4. milestones, and the periods they derive ---------------------------
+    mloc = "#t-proj .data-t[data-sheet='Milestone']"
+    for m in MILESTONES:
+        add_row(pg, mloc, m)
+    save(pg)
+    per = pg.evaluate("() => (S.model.periods['PRJ-001'] || []).map(s => "
+                      "[s.period_name, s.__derived === true])")
+    check(len(per) >= 4 and all(d for _, d in per)
+          and per[0][0] == "Before-Start-up" and per[-1][0] == "Close-out (final)",
+          "the periods derive from the milestones just typed in",
+          f"{len(per)} periods: {', '.join(n for n, _ in per)}")
+
+    # ---- 5. a person, who must stay visible while unassigned ------------------
+    pg.click("text=Source data (person)")
+    pg.wait_for_timeout(900)
+    ploc = "#t-pers .data-t[data-sheet='Person']"
+    check(pg.locator(f"{ploc} button[data-ins]").count() == 1,
+          "an empty People table still offers + row")
+    add_row(pg, ploc, PERSON)
+    save(pg)
+    pg.wait_for_timeout(600)
+    shown = rows_on_screen(pg, ploc)
+    sel = pg.evaluate("S.selPers")
+    check(shown == 1 and sel == "PSN-001",
+          "a person with no assignment yet is still listed, and selected",
+          f"{shown} row(s) on screen, selected {sel}")
+
+    # ---- 6. the assignment, and the first real figures ------------------------
+    aloc = "#t-pers .data-t[data-sheet='Assignment']"
+    add_row(pg, aloc, ASSIGNMENT)
+    banner = save(pg)
+    a = pg.evaluate("() => {const a = S.model.raw.Assignment[0]; return a ? "
+                    "{id: a.assignment_id, pid: a.project_id, person: a.person_id, "
+                    " role: a.role_name, w: a.person_weight} : null;}")
+    check(a and a["pid"] == "PRJ-001" and a["person"] == "PSN-001"
+          and a["id"] and a["w"] == 0.4,
+          "an assignment can be added by typing the project NAME, and the key is allocated",
+          f"{a}")
+
+    findings = pg.evaluate("S.model.findings.filter(f => f.sev === 'error' "
+                           "|| f.sev === 'warning').map(f => f.sev + ' ' + f.rule + ': ' + f.msg)")
+    check(not findings, "the hand-built plan validates with no errors and no warnings",
+          findings[0][:110] if findings else "0 findings above information")
+
+    # ---- 7. the figures, against the formula worked by hand -------------------
+    pg.click("text=Overall")
+    pg.wait_for_timeout(1200)
+    got = pg.evaluate("""() => {
+      const out = {};
+      for (const [k, v] of S.calc.persMonth) out[k] = v;
+      return {pm: out, over: S.model.OVER, hours: S.model.HOURS};
+    }""")
+    # ymd() rather than the Date itself: a Date crosses evaluate() as a datetime whose
+    # tz handling would be one more thing to get right for no gain.
+    periods = pg.evaluate("() => (S.model.periods['PRJ-001'] || []).map(s => "
+                          "[s.period_name, ymd(s.period_start), ymd(s.period_end), s.weight])")
+    start, end = date(2027, 4, 10), date(2029, 6, 30)
+    segs = [(n, date.fromisoformat(a), date.fromisoformat(b), w) for n, a, b, w in periods]
+
+    def expect(y, m):
+        cov = coverage(y, m, start, end)
+        if cov <= 0:
+            return 0.0
+        first = date(y, m, 1)
+        seg = next((s for s in segs if s[1] <= first <= s[2]), None)
+        pw = (seg[3] if seg else 1.0) or 1.0
+        return pw * 1.00 * 0.40 * cov          # role factor is the placeholder 1.00
+
+    bad = []
+    for k, v in got["pm"].items():
+        key = int(k.split("|")[1])
+        y, m = key // 12, key % 12 + 1
+        want = expect(y, m)
+        if abs(want - v) > 1e-9:
+            bad.append(f"{y}-{m:02d}: app {v:.6f} vs {want:.6f}")
+    check(len(got["pm"]) == 27 and not bad,
+          "every monthly figure equals the formula worked by hand",
+          f"{len(got['pm'])} person-months" + (f"; {bad[:2]}" if bad else "; e.g. Apr 2027 "
+          f"{got['pm'][[k for k in got['pm'] if k.endswith('|' + str(2027 * 12 + 3))][0]]:.4f} FTE"))
+
+    # ---- 8. export, and read it back -----------------------------------------
+    with pg.expect_download() as dl:
+        pg.click("#exportBtn")
+    out = TMP / "blank_plan.xlsx"
+    dl.value.save_as(out)
+    pg2 = ctx.new_page()
+    pg2.on("pageerror", lambda e: errors.append(str(e)))
+    pg2.goto(APP)
+    pg2.wait_for_timeout(300)
+    pg2.set_input_files("#picker", str(out))
+    pg2.wait_for_timeout(4000)
+    back = pg2.evaluate("() => ({rows: {Project: S.model.raw.Project.length, "
+                        "Milestone: S.model.raw.Milestone.length, "
+                        "Person: S.model.raw.Person.length, "
+                        "Assignment: S.model.raw.Assignment.length}, "
+                        "pm: (() => {const o = {}; for (const [k, v] of S.calc.persMonth) o[k] = v; "
+                        "return o;})(), "
+                        "bad: S.model.findings.filter(f => f.sev !== 'information').length})")
+    same = (back["rows"] == {"Project": 1, "Milestone": 4, "Person": 1, "Assignment": 1}
+            and set(back["pm"]) == set(got["pm"])
+            and all(abs(back["pm"][k] - got["pm"][k]) < 1e-9 for k in got["pm"]))
+    check(same and back["bad"] == 0,
+          "the exported workbook reproduces the plan exactly",
+          f"{out.stat().st_size:,} bytes, {back['rows']}, {back['bad']} findings above information")
+
+    check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
+    browser.close()
+
+print()
+print("FAILURES: " + (", ".join(fails) if fails else "none"))
+sys.exit(1 if fails else 0)

@@ -16,7 +16,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.18.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.19.xlsx"
 SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.0.xlsx"
 TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.7.xlsx"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.9.xlsx"
@@ -263,6 +263,40 @@ if APP.exists():
     m = re.search(r"const SCHEMA_EXPECTED = (\d+);", src)
     if m and int(m.group(1)) != tpl_v:
         problems.append(f"app expects schema v{m.group(1)}, template is v{tpl_v}")
+
+# ---- 4e2. the blank-start seed vs the template it was taken from ----------
+# A plan started inside the application begins from the template's reference content -
+# the value lists and the settings - embedded in the HTML. Embedded means copied, and a
+# copy that falls behind the template would give someone starting a new plan a different
+# vocabulary from someone who loaded a workbook, which is exactly the kind of divergence
+# nothing would announce.
+sys.path.insert(0, str(ROOT / "tools"))
+import build_app_seed                                              # noqa: E402
+
+if APP.exists():
+    seeded = build_app_seed.embedded(src)
+    if seeded is None:
+        problems.append("app/PRAP.html has no SEED_LISTS / SEED_CONFIG block - "
+                        "run python tools/build_app_seed.py")
+    else:
+        want = build_app_seed.seed_rows(TEMPLATE)
+        for sheet in ("Lists", "Config"):
+            got = [[None if v == "" else v for v in r] for r in seeded[sheet]]
+            exp = [[None if v == "" else v for v in r] for r in want[sheet]]
+            if got != exp:
+                problems.append(f"the blank-start seed for {sheet} does not match "
+                                f"{TEMPLATE.name} ({len(got)} rows vs {len(exp)}) - "
+                                f"run python tools/build_app_seed.py")
+        # The weight and role-factor grids are BUILT from those lists rather than
+        # embedded, so what has to hold is that the lists the builder reads all exist.
+        names = {r[0] for r in seeded["Lists"]}
+        for needed in ("project_type", "clinical_phase", "period_name_clinical",
+                       "period_name_others", "role_clinical", "role_others"):
+            if needed not in names:
+                problems.append(f"the blank-start seed has no '{needed}' list, so a new "
+                                f"plan could not build its reference grid")
+        notes.append(f"blank-start seed: {len(seeded['Lists'])} list values and "
+                     f"{len(seeded['Config'])} settings, matching {TEMPLATE.name}")
 
 # ---- 4f. the AI-agent reference vs the artifacts it describes --------------
 # docs/prap_contract.json is what another AI system reads INSTEAD of opening these

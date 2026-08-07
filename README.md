@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.18 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.19 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -63,7 +63,7 @@ document through the manifest rather than by sorting filenames.
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.18.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.19.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -79,7 +79,7 @@ document through the manifest rather than by sorting filenames.
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -88,8 +88,9 @@ document through the manifest rather than by sorting filenames.
 ### Step 4 deliverable — the application
 
 - `app/PRAP.html` — **the application.** One file, offline, no network and no install.
-  Open it in a browser, choose a `.xlsx`, and it parses, validates, derives periods,
-  calculates, renders four tabs and exports back to `.xlsx`.
+  Open it in a browser and take either way in: **load a source workbook**
+  (`.xlsx` or `.prap.json`), or **start blank** and type the plan in. Both open the same
+  four tabs, run the same rules and export to the same `.xlsx`.
 
   It carries its own `.xlsx` reader and writer. An `.xlsx` is a ZIP of XML; the browser
   supplies `DecompressionStream` for the deflate entries and `DOMParser` for the XML,
@@ -118,6 +119,9 @@ document through the manifest rather than by sorting filenames.
   | Every trend line's total and peak month agree with the model | same file, on all three tabs; and every panel uses one header shape |
   | Derived columns locked, input columns not | `check_consistency.py`, against the plan's data model; caught in all three ways it can break |
   | Every text colour clears WCAG AA, in both themes | `tools/test_contrast.py`; the previous design had five that did not |
+  | A whole plan can be built by hand, with no workbook at all | `tools/test_blank.py`; it clicks **Start blank** and enters a project, its milestones, a person and an assignment |
+  | Every figure in a hand-built plan matches the formula worked by hand | same file, on all 27 person-months |
+  | The blank start's reference grid has no gaps | same file; 56 standard weights and 289 role factors, so nothing falls back to 1.00 unnoticed |
   | The command line and the browser agree, rule for rule and figure for figure | `tools/test_interop.py`; same findings at the same severities, every person-month equal to 1e-6, on both fixtures |
   | `xlsx → json → xlsx → json` reproduces every cell | same file; 1,459 and 588 rows |
   | A mistyped column name is refused, not ignored | same file; both implementations name the column |
@@ -146,6 +150,49 @@ document through the manifest rather than by sorting filenames.
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 18 (app v1.17): **a plan can now be started in the application itself.**
+  The landing screen offers two ways in, given equal weight — load a source workbook, or
+  start blank and type. **Start blank** opens every tab and section an upload opens (it is
+  the same code path, so it is not a lesser mode with its own rules), and the plan it
+  produces exports to the same `.xlsx` as any other.
+
+  A blank start is *not* an empty workbook. With no `Lists` sheet there is no vocabulary,
+  so every typed value is reported as unrecognised (V-11) and no field can offer a choice;
+  with no `Config` there are no thresholds. So it begins from the reference content of the
+  delivered template — embedded by `tools/build_app_seed.py`, held to the template by
+  `check_consistency.py`. The `PeriodWeightStandard` and `RoleFactor` grids are *not*
+  embedded: the application builds them from the value lists it was just seeded with (56
+  standard weights, 289 role factors, every combination a project can reach), so a company
+  that adds a role to `Lists` gets it without anybody regenerating anything. Every seeded
+  figure is a placeholder **1.00** that says so on its own row — an invented weight that
+  looks like a company standard is worse than an obvious placeholder, because only one of
+  the two gets questioned.
+
+  Four things had to be fixed before the path worked at all, each found by walking it
+  rather than by reading it:
+
+  - **A deadlock at the first save.** A clinical trial saved before its milestones exist
+    raises V-16 by definition — and its milestones cannot be entered until it is saved,
+    because the milestone table hangs off a *selected* project. The save guard now treats
+    V-12 and V-16 as **incompleteness** rather than error (the same line the specification
+    already draws for drafts), names what is still missing in the banner, and refuses
+    everything else exactly as before.
+  - **A row still being typed is not yet parsed into the model**, so on a plan with no
+    saved projects the Projects table said "nothing matches the filters" and hid the very
+    row the user was filling in.
+  - **The first assignment was the one row the application refused to name**, having named
+    every one after it: `nextKey` had no house style to copy, so the sheets that allocate
+    their own keys now carry a pattern to start from.
+  - **Five `Project` columns had no home anywhere in the application.** The project and
+    people tables showed a curated subset — survivable while every plan arrived as a
+    workbook filled in elsewhere, not survivable now that a plan can be built here, because
+    `DataReviewSystem_setup` could never be entered and V-10 would warn about it forever.
+    Both tables now carry every column the schema lets a user type into.
+
+  Also: a person with no assignment yet is listed on the person tab — the state everybody
+  is in for the minute after they are created — and the default horizon no longer anchors
+  to year 0 when nothing has been calculated.
 
   Gate 4 round 17 (app v1.16): **reference material for another AI system**, and an
   interoperability audit of everything delivered so far. The audit found one structural
@@ -384,6 +431,18 @@ That counts the bands and markers on the project timeline against the periods an
 milestones in the data, and adds up the stacked utilisation segments month by month to
 confirm they equal the person-month the calculation holds — a chart that disagrees with
 the table is worse than no chart.
+
+And check that a plan can be built from nothing at all, which is the path with no file
+behind it to fall back on:
+
+```bash
+python tools/test_blank.py
+```
+
+That never touches a fixture. It clicks **Start blank** and does what a person would do,
+in the order they would do it — a project, its milestones, a person, an assignment — then
+checks the periods derived, that every one of the 27 monthly figures equals the formula
+worked by hand, and that the exported workbook reproduces the plan on re-import.
 
 And check that the command-line tools and the browser still agree, which is the whole
 basis for telling another AI system it can validate a draft without opening the app:

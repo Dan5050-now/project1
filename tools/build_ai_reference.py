@@ -142,6 +142,10 @@ def guide_markdown(C):
     w("- The application is **one HTML file**. Opening it in a browser is the whole "
       "installation. It makes no network requests, so a file dropped on it never "
       "leaves the machine.")
+    w("- **There are two ways in**, and the second one changes what you may assume about "
+      "a file you are handed:")
+    for k, v in C["application"]["ways_in"].items():
+        w(f"  - *{k.replace('_', ' ')}* — {v}")
     w("- **The workbook is the record.** Edits inside the application are provisional "
       "until Save, and are written nowhere until Export — which produces a *new* file "
       "stamped with the date (§6).")
@@ -605,6 +609,12 @@ def guide_workbook(C, path):
           "prap_io.py implements the same rules and formula as the application, and "
           "tools/test_interop.py proves the two agree on both worked examples.",
           ["To check", "Run"], [[k, v] for k, v in C["verification"].items()], [46, 74])
+
+    sheet(wb, "10b_Ways_in", "How a plan gets into the application",
+          "The second one changes what you may assume about a file you are handed.",
+          ["", "What"],
+          [[k.replace("_", " "), v] for k, v in C["application"]["ways_in"].items()],
+          [26, 96])
 
     sheet(wb, "11_Documents", "Which file is current",
           "The repository keeps every issue. Pick from docs/PRAP_Manifest.json rather "
