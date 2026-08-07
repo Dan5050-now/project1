@@ -598,7 +598,7 @@ dialog::backdrop{background:rgba(0,0,0,.35);
 
 <script>
 "use strict";
-const APP_VERSION = "1.17";
+const APP_VERSION = "1.18";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -607,8 +607,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.19.xlsx",          ver:"2.19",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.19 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.20.xlsx",          ver:"2.20",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.20 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -1248,7 +1248,10 @@ const PARENT_OF = {
   // project from the one on screen.
   PersonPeriodWeight: () => {
     if (S.selAsg) return ["assignment_id", S.selAsg];
-    const first = S.model.assignments.find(a => a.person_id === S.selPers);
+    // From raw, not from M.assignments: the validated array excludes anything still
+    // being entered, so on a plan being typed from scratch the only assignment on
+    // screen would not be found, and the override would be created parentless.
+    const first = S.model.raw.Assignment.find(a => a.person_id === S.selPers && a.assignment_id);
     return ["assignment_id", first ? first.assignment_id : null];
   },
 };
@@ -2681,7 +2684,7 @@ function suggestionsFor(sheet, col, row){
 /** One editable table.
  *  `derived` maps a display-only column to a lookup - shown for context, never typed
  *  into, because the master row is the truth and V-13 exists to say so. */
-function dataTable(sheet, rows, cols, selKey, selVal, derived){
+function dataTable(sheet, rows, cols, selKey, selVal, derived, lock){
   derived = derived || {};
   const head = `<th class="ins" data-tip="${att(HELP.rowactions)}">Row</th>`
     + cols.map(c => {
@@ -2724,10 +2727,16 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived){
       + `<button class="btn tiny danger" data-del="${att(sheet)}" data-row="${r.__row}"`
       + ` data-tip="${att(HELP.del)}">Delete</button></td>${tds}</tr>`;
   }).join("");
-  const empty = rows.length ? "" :
-    `<tr><td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="0" `
-    + `data-tip="${att(HELP.insert)}">+ row</button></td>`
-    + `<td class="muted" colspan="${cols.length}">No rows. Use <strong>+ row</strong> to add one.</td></tr>`;
+  // A locked table has a reason instead of a + row: a child row whose parent does not
+  // exist yet has nothing to attach to, and would be dropped when the file is read back.
+  // Saying so where the button would have been beats offering a button that creates a
+  // row nobody can rescue.
+  const empty = rows.length ? "" : lock
+    ? `<tr><td class="ins muted">—</td>`
+      + `<td class="muted" colspan="${cols.length}">${esc(lock)}</td></tr>`
+    : `<tr><td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="0" `
+      + `data-tip="${att(HELP.insert)}">+ row</button></td>`
+      + `<td class="muted" colspan="${cols.length}">No rows. Use <strong>+ row</strong> to add one.</td></tr>`;
   return `<div class="scrollx tall"><table class="data-t" data-sheet="${att(sheet)}">`
     + `<thead><tr>${head}</tr></thead><tbody>${body}${empty}</tbody></table></div>`;
 }
@@ -2834,6 +2843,11 @@ function renderProjTab(){
     // into M.projects yet - it exists only in raw, and it is exactly the row the user is
     // looking at, so it has to be on screen even though nothing "matches".
     const drafts = M.raw.Project.filter(r => r.__new);
+    // The draft becomes the selection, so a milestone added below inherits its
+    // project_id - PARENT_OF seeds from S.selProj, and without this the child row would
+    // be created with no parent at all.
+    const draft = drafts.find(r => r.project_id) || drafts[0] || null;
+    S.selProj = draft && draft.project_id ? draft.project_id : null;
     el("t-proj").innerHTML = Object.keys(M.projects).length
       ? `<div class="panel"><p class="note">No projects match the current filters. `
         + `<strong>Reset filters</strong> above to see them all.</p></div>`
@@ -2842,12 +2856,14 @@ function renderProjTab(){
             <span class="scope k">${drafts.length ? `${drafts.length} being entered`
                                                   : "nothing yet"}</span></div>
           <p class="cap">${drafts.length
-            ? `Fill the row in, then press <strong>Save</strong> — milestones, periods and
-               the timeline appear as soon as the project has an identifier and is saved.`
+            ? `Fill the row in, then press <strong>Save</strong> — the timeline and the
+               utilisation chart appear once the project is saved. The two tables below can
+               be filled in as soon as it has an identifier.`
             : `There are no projects in this plan. <strong>+ row</strong> adds the first one.`}
             A clinical trial needs at least the identifier, name, type, phase and the two
             dates: the phase is what selects the standard period weights.</p>
-          ${dataTable("Project", drafts, cols, "project_id", null)}</div>`;
+          ${dataTable("Project", drafts, cols, "project_id", null)}</div>
+        ${scratchProject(draft)}`;
     return;
   }
   if (!S.selProj || !pids.includes(S.selProj)) S.selProj = pids[0];
@@ -2930,6 +2946,89 @@ function projDetail(pid){
     </div>`;
 }
 
+/* The child sections while their parent is still being typed.
+ *
+ *  The full detail panel needs a parent RECORD: dates for the timeline, a name for every
+ *  heading, a calculation to draw. A row still being entered has none of that - it is not
+ *  even parsed into the model yet. But the SECTIONS have to be on screen from the start.
+ *  A plan is entered top down, and a Milestones table that only appears once the project
+ *  is saved reads as a Milestones table that does not exist; someone building their first
+ *  plan has no way to know it is coming.
+ *
+ *  So the tables are drawn from the beginning, scoped to the draft's own identifier the
+ *  moment it has one, and locked with the reason until it does.
+ */
+function scratchProject(draft){
+  const M = S.model;
+  const pid = draft ? draft.project_id : null;
+  const who = draft && draft.project_name ? ` — ${esc(draft.project_name)}`
+            : pid ? ` — ${esc(pid)}` : "";
+  const lock = pid ? null
+    : (draft ? "Give the project above a project_id first — a milestone attaches to it by "
+             + "that identifier, and a row with nothing to attach to is dropped when the "
+             + "file is read back."
+             : "Add a project above first. Milestones and periods belong to one.");
+  const ms = pid ? childrenOf(M.raw.Milestone, "project_id", pid)
+                 : [];
+  const per = pid ? childrenOf(M.raw.ProjectPeriod, "project_id", pid) : [];
+  return `<div class="two">
+      <div class="panel">
+        <div class="phead"><h2>Milestones${who}</h2>
+          <span class="scope k">${ms.length} row(s)</span></div>
+        <p class="cap">CTA submission and a DB lock are the two the period derivation hangs
+          on — enter those and the seven clinical periods are computed for you. The other
+          eight names are markers.</p>
+        ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_seq","note_1"],
+                    null, null, null, lock)}</div>
+      <div class="panel">
+        <div class="phead"><h2>Periods${who}</h2>
+          <span class="scope k">${per.length} row(s)</span></div>
+        <p class="cap">Leave this empty for a clinical trial and let the milestones derive it.
+          An <code>Others</code> project is not derived — enter Planning / Develop / Close
+          here yourself, with no gap and no overlap.</p>
+        ${dataTable("ProjectPeriod", per,
+          ["project_id","period_name","period_seq","period_start","period_end","weight","note_1"],
+          null, null, null, lock)}</div>
+    </div>`;
+}
+
+function scratchPerson(draft){
+  const M = S.model;
+  const sid = draft ? draft.person_id : null;
+  const who = draft && draft.person_name ? ` — ${esc(draft.person_name)}`
+            : sid ? ` — ${esc(sid)}` : "";
+  const lock = sid ? null
+    : (draft ? "Give the person above a person_id first — an assignment attaches to it by "
+             + "that identifier."
+             : "Add a person above first. An assignment is one person on one project.");
+  const asg = sid ? childrenOf(M.raw.Assignment, "person_id", sid) : [];
+  const aid = selectedAssignment(asg);
+  const ppw = aid ? M.raw.PersonPeriodWeight.filter(w =>
+    w.assignment_id === aid || (w.__new && !w.assignment_id)) : [];
+  return `<div class="two">
+      <div class="panel">
+        <div class="phead"><h2>Assignments${who}</h2>
+          <span class="scope k">${asg.length} row(s)</span></div>
+        <p class="cap">One row per person + project + role. Type the project NAME and
+          <code>project_id</code> follows. <strong>+ row</strong> allocates the next
+          <code>assignment_id</code>, and clicking a row selects it for the overrides beside.</p>
+        ${dataTable("Assignment", asg,
+          ["assignment_id","project_name","project_id","role_name","assign_start_date",
+           "assign_end_date","person_weight","note_1","note_2","note_3"],
+          "assignment_id", aid, null, lock)}</div>
+      <div class="panel">
+        <div class="phead"><h2>Weight overrides${who}</h2>
+          <span class="scope k">${ppw.length} window(s)</span></div>
+        <p class="cap">Only needed where someone's share of a project CHANGES for a stretch of
+          months. The window <strong>replaces</strong> <code>person_weight</code> for the months
+          it covers — it does not multiply it — and belongs to the assignment selected beside.</p>
+        ${dataTable("PersonPeriodWeight", ppw,
+          ["assignment_id","period_start","period_end","weight_override","reason"],
+          null, null, null,
+          aid ? null : "Add an assignment beside first — an override belongs to one.")}</div>
+    </div>`;
+}
+
 function renderPersTab(){
   const M = S.model;
   // listedPeople, not activePeople: somebody entered but not yet assigned to anything
@@ -2938,6 +3037,10 @@ function renderPersTab(){
   const cols = entryCols("Person");
   if (!sids.length){
     const drafts = M.raw.Person.filter(r => r.__new);
+    // As on the project tab: the draft becomes the selection, so an assignment added
+    // below inherits its person_id instead of being created with no parent.
+    const draft = drafts.find(r => r.person_id) || drafts[0] || null;
+    S.selPers = draft && draft.person_id ? draft.person_id : null;
     el("t-pers").innerHTML = Object.keys(M.people).length
       ? `<div class="panel"><p class="note">Nobody matches the current filters. `
         + `<strong>Reset filters</strong> above to see everyone.</p></div>`
@@ -2946,12 +3049,14 @@ function renderPersTab(){
             <span class="scope k">${drafts.length ? `${drafts.length} being entered`
                                                   : "nothing yet"}</span></div>
           <p class="cap">${drafts.length
-            ? `Fill the row in, then press <strong>Save</strong> — assignments appear as
-               soon as the person has an identifier and is saved.`
+            ? `Fill the row in, then press <strong>Save</strong> — the utilisation chart
+               appears once the person is saved. The two tables below can be filled in as
+               soon as they have an identifier.`
             : `There is nobody in this plan yet. <strong>+ row</strong> adds the first
                person.`} Their assignments — which project, which role, how much of them —
-            are entered below, once a person is selected.</p>
-          ${dataTable("Person", drafts, cols, "person_id", null)}</div>`;
+            are entered below.</p>
+          ${dataTable("Person", drafts, cols, "person_id", null)}</div>
+        ${scratchPerson(draft)}`;
     return;
   }
   if (!S.selPers || !sids.includes(S.selPers)) S.selPers = sids[0];

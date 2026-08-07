@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.19 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.20 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -63,7 +63,7 @@ document through the manifest rather than by sorting filenames.
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.19.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.20.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -79,7 +79,7 @@ document through the manifest rather than by sorting filenames.
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.19.xlsx`, `_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -119,7 +119,9 @@ document through the manifest rather than by sorting filenames.
   | Every trend line's total and peak month agree with the model | same file, on all three tabs; and every panel uses one header shape |
   | Derived columns locked, input columns not | `check_consistency.py`, against the plan's data model; caught in all three ways it can break |
   | Every text colour clears WCAG AA, in both themes | `tools/test_contrast.py`; the previous design had five that did not |
-  | A whole plan can be built by hand, with no workbook at all | `tools/test_blank.py`; it clicks **Start blank** and enters a project, its milestones, a person and an assignment |
+  | A whole plan can be built by hand, with no workbook at all | `tools/test_blank.py`; it clicks **Start blank** and enters a project, its milestones, a person, an assignment and a weight override |
+  | All four child sections are on screen before anything exists | same file; and a child row entered under an *unsaved* parent still inherits its foreign key |
+  | An override replaces the person weight for its months and no others | same file; three months move to 0.70, the other 24 do not move |
   | Every figure in a hand-built plan matches the formula worked by hand | same file, on all 27 person-months |
   | The blank start's reference grid has no gaps | same file; 56 standard weights and 289 role factors, so nothing falls back to 1.00 unnoticed |
   | The command line and the browser agree, rule for rule and figure for figure | `tools/test_interop.py`; same findings at the same severities, every person-month equal to 1e-6, on both fixtures |
@@ -150,6 +152,35 @@ document through the manifest rather than by sorting filenames.
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 19 (app v1.18): **the four child sections are enterable from the start.**
+  Round 18 made a plan enterable but only in one order — the project tab showed the
+  Projects table alone until a project had been saved, and the person tab the People table
+  alone. Both were literally true (the detail panels need a parent *record*, and a row
+  still being typed is not even parsed into the model), but the consequence was that
+  Milestones, Periods, Assignments and Weight overrides were invisible to anyone building
+  their first plan. **A section that appears only after you have done something else reads
+  as a section that does not exist.**
+
+  So the tables are drawn from the start, in the same two-column arrangement they have
+  when a workbook is loaded, in three states:
+
+  - **No parent at all** — locked, with the reason where the **+ row** button would be. A
+    child row whose parent does not exist has nothing to attach to and would be dropped
+    when the file is read back; saying so beats offering a button that creates a row
+    nobody can rescue.
+  - **The parent row carries an identifier** (*before* it is saved) — unlocked and scoped
+    to it, so a plan can be entered the way a person thinks about one: the project and its
+    milestones together, the person and their assignments together, each committed in a
+    single **Save**.
+  - **The parent is saved** — the full detail panel as before, timeline and charts included.
+
+  Two fixes were needed for that to work. The draft row now becomes the tab's *selection*,
+  since child rows inherit their parent key from the selection and without it they were
+  created parentless. And the fallback that finds the assignment for a new override row
+  now reads the raw sheet rather than the validated array — the validated array excludes
+  anything still being entered, so on a plan being typed from scratch the only assignment
+  on screen was not found.
 
   Gate 4 round 18 (app v1.17): **a plan can now be started in the application itself.**
   The landing screen offers two ways in, given equal weight — load a source workbook, or
@@ -440,9 +471,12 @@ python tools/test_blank.py
 ```
 
 That never touches a fixture. It clicks **Start blank** and does what a person would do,
-in the order they would do it — a project, its milestones, a person, an assignment — then
-checks the periods derived, that every one of the 27 monthly figures equals the formula
-worked by hand, and that the exported workbook reproduces the plan on re-import.
+in the order they would do it — a project, its milestones *before* the project is saved, a
+person, an assignment *before* the person is saved, and a weight override window. It
+checks each child inherited the right foreign key, that the periods derived, that every
+one of the 27 monthly figures equals the formula worked by hand, that the override
+replaces the weight for its three months and no others, and that the exported workbook
+reproduces the plan on re-import.
 
 And check that the command-line tools and the browser still agree, which is the whole
 basis for telling another AI system it can validate a draft without opening the app:

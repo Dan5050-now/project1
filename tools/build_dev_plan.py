@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.19"
+DOC_VERSION = "2.20"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,38 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.19", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.20", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 19, application v1.18. The four CHILD sections are now on screen from the "
+     "moment a blank plan is started, and can be filled in before their parent is saved. "
+     "Round 18 made a plan enterable but only in one order: the project tab showed the "
+     "Projects table alone until a project had been saved, and the person tab the People "
+     "table alone. Both were literally true - the detail panels need a parent RECORD, with "
+     "dates for the timeline and a name for every heading, and a row still being typed is "
+     "not even parsed into the model - but the consequence was that Milestones, Periods, "
+     "Assignments and Weight overrides were invisible to anyone building their first plan. "
+     "A section that appears only after you have done something else reads as a section "
+     "that does not exist. So the tables are drawn from the start, in the same two-column "
+     "arrangement they have when a workbook is loaded, and they behave in three states. "
+     "With no parent at all they are LOCKED and carry the reason where the '+ row' button "
+     "would be, because a child row whose parent does not exist has nothing to attach to "
+     "and would be dropped when the file is read back - saying so beats offering a button "
+     "that creates a row nobody can rescue. The moment the parent row carries an "
+     "IDENTIFIER - before it is saved - they unlock and scope themselves to it, so a plan "
+     "can be entered the way a person actually thinks about one: the project and its "
+     "milestones together, the person and their assignments together, each committed in a "
+     "single Save. Two fixes were needed for that to work. The draft row now becomes the "
+     "tab's selection, since child rows inherit their parent key from the selection and "
+     "without it they were created parentless. And the fallback that finds the assignment "
+     "for a new override row now reads the raw sheet rather than the validated array: the "
+     "validated array excludes anything still being entered, so on a plan being typed from "
+     "scratch the only assignment on screen was not found. tools/test_blank.py now enters "
+     "the milestones BEFORE saving the project and the assignment BEFORE saving the "
+     "person, checks each child inherited the right foreign key, and adds a weight "
+     "override window to prove the fourth section works and REPLACES the person weight for "
+     "its three months and no others. No requirement, rule, calculation or schema version "
+     "changed.",
+     "Issued for review"],
+    ["2.19", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 18, application v1.17. A PLAN CAN NOW BE STARTED IN THE APPLICATION "
      "ITSELF. The landing screen offers two ways in, given equal weight: load a source "
      "workbook, or start blank and type. 'Start blank' opens every tab and every section "
@@ -407,7 +438,7 @@ rows = [
      "blank and builds a plan the way a person would, then checks every monthly figure "
      "against the formula worked by hand. No requirement, rule, calculation or schema "
      "version changed.",
-     "Issued for review"],
+     "Superseded by v2.20"],
     ["2.18", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 17, application v1.16. REFERENCE MATERIAL FOR ANOTHER AI SYSTEM, and an "
      "interoperability audit of everything delivered so far. The audit found one thing, and it was "
@@ -1460,7 +1491,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-18 applied (app v1.17); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-19 applied (app v1.18); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1552,7 +1583,8 @@ align = [
     ["v2.16", "v1.0", "application v1.14", "5", DOC_DATE, "Gate 4 round 15: derived columns locked in the workbook, template v1.7."],
     ["v2.17", "v1.0", "application v1.15", "5", DOC_DATE, "Gate 4 round 16: visual design pass; contrast measured, not judged."],
     ["v2.18", "v1.0", "application v1.16", "5", DOC_DATE, "Gate 4 round 17: AI-agent reference, JSON interchange, interoperability audit."],
-    ["v2.19", "v1.0", "application v1.17", "5", DOC_DATE, "Gate 4 round 18: a plan can be started in the application, with no workbook. 4.9 continues."],
+    ["v2.19", "v1.0", "application v1.17", "5", DOC_DATE, "Gate 4 round 18: a plan can be started in the application, with no workbook."],
+    ["v2.20", "v1.0", "application v1.18", "5", DOC_DATE, "Gate 4 round 19: the child sections are enterable from the start, before their parent is saved. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

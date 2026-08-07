@@ -57,6 +57,11 @@ PERSON = {"person_id": "PSN-001", "person_name": "Alex R.", "department": "Data 
 ASSIGNMENT = {"project_name": "Trial One", "role_name": "Lead data manager",
               "assign_start_date": "2027-04-10", "assign_end_date": "2029-06-30",
               "person_weight": "0.40"}
+# A stretch where this person's share of the project changes. The override REPLACES the
+# 0.40 for the months it covers - it does not multiply it - which is the single thing
+# about PersonPeriodWeight most likely to be got wrong.
+OVERRIDE = {"period_start": "2027-08-01", "period_end": "2027-10-31",
+            "weight_override": "0.70", "reason": "Covering the start-up peak"}
 
 fails = []
 
@@ -96,6 +101,10 @@ def save(pg):
     pg.click("#saveBtn")
     pg.wait_for_timeout(1400)
     return pg.inner_text("#banner")
+
+
+def month_key(y, m):
+    return y * 12 + m - 1
 
 
 def coverage(y, m, s, e):
@@ -155,27 +164,62 @@ with sync_playwright() as pw:
           f"{grids['pws']} standard weights, {grids['rf']} role factors, "
           f"{grids['pwsMissing'] + grids['rfMissing']} gaps")
 
-    # ---- 3. the first project, with nothing selected beforehand ---------------
+    # ---- 3. every section is on screen before anything exists -----------------
+    # A plan is entered top down. A Milestones table that only appears once the project
+    # is saved reads as a Milestones table that does not exist, and someone building a
+    # first plan has no way to know it is coming.
+    pg.click("text=Source data (project)")
+    pg.wait_for_timeout(900)
+    proj_panels = pg.eval_on_selector_all("#t-proj .panel h2", "es => es.map(e => e.textContent.trim())")
+    pg.click("text=Source data (person)")
+    pg.wait_for_timeout(900)
+    pers_panels = pg.eval_on_selector_all("#t-pers .panel h2", "es => es.map(e => e.textContent.trim())")
+    check(proj_panels == ["Projects", "Milestones", "Periods"]
+          and pers_panels == ["People", "Assignments", "Weight overrides"],
+          "every data-entry section is on screen from the start, with nothing in the plan",
+          f"{proj_panels} / {pers_panels}")
+
+    locked = pg.evaluate("""() => {
+      const of = sel => {
+        const t = document.querySelector(sel);
+        return t ? {ins: t.querySelectorAll('button[data-ins]').length,
+                    why: (t.querySelector('td.muted[colspan]') || {}).textContent || ''} : null;
+      };
+      return {ms: of("#t-proj .data-t[data-sheet='Milestone']"),
+              asg: of("#t-pers .data-t[data-sheet='Assignment']")};
+    }""")
+    check(locked["asg"]["ins"] == 0 and "person_id" in locked["asg"]["why"].replace("Add a person above first. An assignment is one person on one project.", "person_id"),
+          "a child table with no parent yet is locked, and says why instead of offering + row",
+          locked["asg"]["why"][:70])
+
     pg.click("text=Source data (project)")
     pg.wait_for_timeout(900)
     loc = "#t-proj .data-t[data-sheet='Project']"
     check(pg.locator(f"{loc} button[data-ins]").count() == 1,
           "an empty Projects table still offers + row")
     add_row(pg, loc, PROJECT)
+
+    # ---- 4. milestones under a project that is not saved yet ------------------
+    mloc = "#t-proj .data-t[data-sheet='Milestone']"
+    check(pg.locator(f"{mloc} button[data-ins]").count() == 1,
+          "the Milestones table unlocks as soon as the project has an identifier — "
+          "before it is saved")
+    for m in MILESTONES:
+        add_row(pg, mloc, m)
+    parents = pg.evaluate("S.model.raw.Milestone.map(r => r.project_id)")
+    check(parents == ["PRJ-001"] * len(MILESTONES),
+          "a milestone entered under an unsaved project still inherits its project_id",
+          f"{parents}")
+
     banner = save(pg)
     got = pg.evaluate("() => {const p = S.model.projects['PRJ-001']; return p ? "
                       "{name: p.project_name, type: p.project_type, phase: p.clinical_phase, "
                       " months: p.total_period_months} : null;}")
     check(got and got["name"] == "Trial One" and got["type"] == "NewDrug CT"
           and got["months"] == 30,
-          "the first project can be entered and saved with nothing selected first",
+          "the project and its milestones save together, in one action",
           f"{got}  ·  {banner.strip()[:60]}")
 
-    # ---- 4. milestones, and the periods they derive ---------------------------
-    mloc = "#t-proj .data-t[data-sheet='Milestone']"
-    for m in MILESTONES:
-        add_row(pg, mloc, m)
-    save(pg)
     per = pg.evaluate("() => (S.model.periods['PRJ-001'] || []).map(s => "
                       "[s.period_name, s.__derived === true])")
     check(len(per) >= 4 and all(d for _, d in per)
@@ -190,18 +234,24 @@ with sync_playwright() as pw:
     check(pg.locator(f"{ploc} button[data-ins]").count() == 1,
           "an empty People table still offers + row")
     add_row(pg, ploc, PERSON)
-    save(pg)
+
+    # ---- 6. the assignment, entered before the person is saved ----------------
+    aloc = "#t-pers .data-t[data-sheet='Assignment']"
+    check(pg.locator(f"{aloc} button[data-ins]").count() == 1,
+          "the Assignments table unlocks as soon as the person has an identifier — "
+          "before they are saved")
+    add_row(pg, aloc, ASSIGNMENT)
+    owner = pg.evaluate("S.model.raw.Assignment.map(r => r.person_id)")
+    check(owner == ["PSN-001"],
+          "an assignment entered under an unsaved person still inherits their person_id",
+          f"{owner}")
+    banner = save(pg)
     pg.wait_for_timeout(600)
     shown = rows_on_screen(pg, ploc)
     sel = pg.evaluate("S.selPers")
     check(shown == 1 and sel == "PSN-001",
-          "a person with no assignment yet is still listed, and selected",
+          "the person is listed and selected once saved",
           f"{shown} row(s) on screen, selected {sel}")
-
-    # ---- 6. the assignment, and the first real figures ------------------------
-    aloc = "#t-pers .data-t[data-sheet='Assignment']"
-    add_row(pg, aloc, ASSIGNMENT)
-    banner = save(pg)
     a = pg.evaluate("() => {const a = S.model.raw.Assignment[0]; return a ? "
                     "{id: a.assignment_id, pid: a.project_id, person: a.person_id, "
                     " role: a.role_name, w: a.person_weight} : null;}")
@@ -251,6 +301,28 @@ with sync_playwright() as pw:
           f"{len(got['pm'])} person-months" + (f"; {bad[:2]}" if bad else "; e.g. Apr 2027 "
           f"{got['pm'][[k for k in got['pm'] if k.endswith('|' + str(2027 * 12 + 3))][0]]:.4f} FTE"))
 
+    # ---- 7b. the fourth section: a weight override on that assignment ---------
+    pg.click("text=Source data (person)")
+    pg.wait_for_timeout(900)
+    wloc = "#t-pers .data-t[data-sheet='PersonPeriodWeight']"
+    check(pg.locator(f"{wloc} button[data-ins]").count() == 1,
+          "the Weight overrides table is enterable once an assignment exists")
+    add_row(pg, wloc, OVERRIDE)
+    save(pg)
+    w = pg.evaluate("() => {const w = S.model.raw.PersonPeriodWeight[0]; return w ? "
+                    "{aid: w.assignment_id, ov: w.weight_override} : null;}")
+    after = pg.evaluate("() => {const o = {}; for (const [k, v] of S.calc.persMonth) o[k] = v; return o;}")
+    covered = [month_key(2027, m) for m in (8, 9, 10)]
+    moved = {k: round(after[f"PSN-001|{k}"], 4) for k in covered if f"PSN-001|{k}" in after}
+    untouched = [k for k in got["pm"] if int(k.split("|")[1]) not in covered
+                 and abs(after.get(k, 0) - got["pm"][k]) > 1e-9]
+    check(w and w["aid"] == "ASG-001" and w["ov"] == 0.7
+          and all(abs(v - 0.70) < 1e-9 for v in moved.values()) and not untouched,
+          "the override attaches to the selected assignment and REPLACES the weight for "
+          "its months only",
+          f"{w}; the three covered months are now {sorted(set(moved.values()))} FTE, "
+          f"{len(untouched)} other months changed")
+
     # ---- 8. export, and read it back -----------------------------------------
     with pg.expect_download() as dl:
         pg.click("#exportBtn")
@@ -265,13 +337,15 @@ with sync_playwright() as pw:
     back = pg2.evaluate("() => ({rows: {Project: S.model.raw.Project.length, "
                         "Milestone: S.model.raw.Milestone.length, "
                         "Person: S.model.raw.Person.length, "
-                        "Assignment: S.model.raw.Assignment.length}, "
+                        "Assignment: S.model.raw.Assignment.length, "
+                        "PersonPeriodWeight: S.model.raw.PersonPeriodWeight.length}, "
                         "pm: (() => {const o = {}; for (const [k, v] of S.calc.persMonth) o[k] = v; "
                         "return o;})(), "
                         "bad: S.model.findings.filter(f => f.sev !== 'information').length})")
-    same = (back["rows"] == {"Project": 1, "Milestone": 4, "Person": 1, "Assignment": 1}
-            and set(back["pm"]) == set(got["pm"])
-            and all(abs(back["pm"][k] - got["pm"][k]) < 1e-9 for k in got["pm"]))
+    same = (back["rows"] == {"Project": 1, "Milestone": 4, "Person": 1, "Assignment": 1,
+                             "PersonPeriodWeight": 1}
+            and set(back["pm"]) == set(after)
+            and all(abs(back["pm"][k] - after[k]) < 1e-9 for k in after))
     check(same and back["bad"] == 0,
           "the exported workbook reproduces the plan exactly",
           f"{out.stat().st_size:,} bytes, {back['rows']}, {back['bad']} findings above information")
