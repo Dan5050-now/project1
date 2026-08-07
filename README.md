@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.22 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.23 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -63,7 +63,7 @@ document through the manifest rather than by sorting filenames.
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.22.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.23.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -79,7 +79,7 @@ document through the manifest rather than by sorting filenames.
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.21.xlsx`, `_v2.20.xlsx`, `_v2.19.xlsx`, `_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.22.xlsx`, `_v2.21.xlsx`, `_v2.20.xlsx`, `_v2.19.xlsx`, `_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -124,6 +124,9 @@ document through the manifest rather than by sorting filenames.
   | An override replaces the person weight for its months and no others | same file; three months move to 0.70, the other 24 do not move |
   | A commit never moves a scroll position | `tools/test_scroll.py`; 5 of its 11 checks fail against the previous build |
   | A row with no identifier never becomes a record called `"null"` | `tools/test_nokey.py`; 4 of its 11 checks fail against the previous build, reproducing the reported symptoms exactly |
+  | A new row arrives with the next id and a neutral 1.00 weight | `tools/test_newrow.py`; ids one past the highest, `milestone_seq` within its own project |
+  | A row of nothing but supplied values is still empty | same file; Save will not promote it and Export will not write it |
+  | Every scroll region shades the edges that have more | same file; and the shade goes the moment that edge is reached |
   | Every figure in a hand-built plan matches the formula worked by hand | same file, on all 27 person-months |
   | The blank start's reference grid has no gaps | same file; 56 standard weights and 289 role factors, so nothing falls back to 1.00 unnoticed |
   | The command line and the browser agree, rule for rule and figure for figure | `tools/test_interop.py`; same findings at the same severities, every person-month equal to 1e-6, on both fixtures |
@@ -154,6 +157,35 @@ document through the manifest rather than by sorting filenames.
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 22 (app v1.21): **what a new row arrives with, and whether you can tell
+  there is more to see.**
+
+  - **Identifiers are allocated on insert** for `project_id`, `person_id` and
+    `milestone_seq` as well as `assignment_id` — **one past the highest** already in the
+    sheet, so a row added today reads as the newest. `milestone_seq` counts within its own
+    *project*, not across the file, because that is the list it orders. (The old rule took
+    the smallest *unused* number, which was about tidiness; a gap left by a deleted row
+    now stays a gap, as an identifier sequence does everywhere else.)
+  - **Weights start at 1.00** — `ProjectPeriod.weight`, `Person.capacity_fte`,
+    `Assignment.person_weight`, `PersonPeriodWeight.weight_override`. 1.00 is the neutral
+    multiplier, and the alternative is not "no value" but **zero**: an empty weight reads
+    as 0.00 in the calculation, so a row left alone contributed nothing at all and nothing
+    on screen said so. A row that contributes too much gets noticed; one that contributes
+    nothing does not.
+  - **Scroll regions now say which way there is more.** Every section was already bounded
+    on both axes, but `scrollbar-width:thin` bought a browser *overlay* bar that occupies
+    no layout space and fades when idle — measured, `offsetWidth === clientWidth` — so a
+    table with eleven columns off to the right looked exactly like one with none. The bar
+    is now a real 12px with a visible thumb; and because overlay scrollbars are the default
+    on some platforms whatever the CSS asks for, each region **also** carries a soft shade
+    on any edge that has content beyond it, drawn over the box so table rows cannot paint
+    on top of it, and removed the moment that edge is reached.
+
+  The first two needed a second concept alongside "blank": a row carrying only the values
+  the *application* put there is still an empty row, so **Save does not promote it and
+  Export will not write it** — otherwise every insert would immediately become a
+  half-record complaining about what it is missing.
 
   Gate 4 round 21 (app v1.20): **a row with no identifier is no longer treated as a
   record** — one cause behind three reported faults.
@@ -506,6 +538,12 @@ That counts the bands and markers on the project timeline against the periods an
 milestones in the data, and adds up the stacked utilisation segments month by month to
 confirm they equal the person-month the calculation holds — a chart that disagrees with
 the table is worse than no chart.
+
+And check what a new row arrives with, and that every panel says where the rest of it is:
+
+```bash
+python tools/test_newrow.py
+```
 
 And check that a half-filled row cannot turn into a phantom record:
 

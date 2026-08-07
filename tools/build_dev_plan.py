@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.22"
+DOC_VERSION = "2.23"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,42 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.22", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.23", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 22, application v1.21. Three changes to what a new row arrives with, and "
+     "to whether the reader can tell there is more to see. (1) IDENTIFIERS are now "
+     "allocated on insert for project_id, person_id and milestone_seq as well as "
+     "assignment_id, and the rule is ONE PAST THE HIGHEST already in the sheet rather than "
+     "the smallest unused. The old rule was about tidiness - a file whose ids ran 1..46 "
+     "and then jumped to 901 for a few hand-placed rows would not start climbing from 902; "
+     "the new one is about being able to tell at a glance which rows were added today, and "
+     "a gap left by a deleted row now stays a gap, which is how an identifier sequence "
+     "behaves everywhere else. milestone_seq counts within its own PROJECT, not across the "
+     "file, because that is the list it orders. (2) WEIGHTS start at 1.00: "
+     "ProjectPeriod.weight, Person.capacity_fte, Assignment.person_weight and "
+     "PersonPeriodWeight.weight_override. 1.00 is the neutral multiplier, and the "
+     "alternative is not 'no value' but ZERO - an empty weight reads as 0.00 in the "
+     "calculation, so a row left alone contributed nothing at all and nothing on screen "
+     "said so. A row that contributes too much is noticed; a row that contributes nothing "
+     "is not. This required a second concept alongside 'blank': a row carrying only the "
+     "values the APPLICATION put there is still an empty row, so Save does not promote it "
+     "and Export refuses to write it - otherwise every insert would immediately become a "
+     "half-record complaining about what it is missing. (3) SCROLL REGIONS now say which "
+     "way there is more. Every section was already bounded on both axes, but "
+     "scrollbar-width:thin bought a browser OVERLAY bar that occupies no layout space and "
+     "fades when idle - measured, offsetWidth === clientWidth - so a table with eleven "
+     "columns off to the right looked exactly like a table with none. The bar is now a "
+     "real 12px with a visible thumb; and because overlay scrollbars are the default on "
+     "some platforms whatever the CSS asks for, each region ALSO carries a soft shade on "
+     "any edge that has content beyond it, drawn over the box so table rows cannot paint "
+     "on top of it, and removed the moment that edge is reached so it always means 'more "
+     "this way'. tools/test_newrow.py covers all three. Two existing tests had to change, "
+     "and both were encoding old behaviour rather than finding new faults: test_rows was "
+     "promoting an override row with no window and no weight in it, which isSkeleton now "
+     "declines to do, and test_nokey could no longer reach a keyless row by skipping the "
+     "identifier - the application supplies one - so it clears it explicitly instead. No "
+     "requirement, rule, calculation or schema version changed.",
+     "Issued for review"],
+    ["2.22", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 21, application v1.20. A ROW WITH NO IDENTIFIER IS NO LONGER TREATED AS "
      "A RECORD, which fixes three reported faults that were all one fault. A project saved "
      "with every field filled in EXCEPT project_id was indexed as M.projects[null] - and "
@@ -394,7 +429,7 @@ rows = [
      "four of its eleven checks fail against the previous build, reproducing the reported "
      "symptoms exactly - '0 rows on screen', projects=['null'], and 'No rows. Use + row to "
      "add one.' No requirement, calculation or schema version changed.",
-     "Issued for review"],
+     "Superseded by v2.23"],
     ["2.21", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 20, application v1.19. SCROLL POSITION now survives a re-render. "
      "Committing a cell re-renders the panel it lives in, and a freshly built element "
@@ -1548,7 +1583,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-21 applied (app v1.20); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-22 applied (app v1.21); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1643,7 +1678,8 @@ align = [
     ["v2.19", "v1.0", "application v1.17", "5", DOC_DATE, "Gate 4 round 18: a plan can be started in the application, with no workbook."],
     ["v2.20", "v1.0", "application v1.18", "5", DOC_DATE, "Gate 4 round 19: the child sections are enterable from the start, before their parent is saved."],
     ["v2.21", "v1.0", "application v1.19", "5", DOC_DATE, "Gate 4 round 20: scroll position survives a re-render."],
-    ["v2.22", "v1.0", "application v1.20", "5", DOC_DATE, "Gate 4 round 21: a row with no identifier is not a record. 4.9 continues."],
+    ["v2.22", "v1.0", "application v1.20", "5", DOC_DATE, "Gate 4 round 21: a row with no identifier is not a record."],
+    ["v2.23", "v1.0", "application v1.21", "5", DOC_DATE, "Gate 4 round 22: allocated ids, neutral weights, and scroll regions that say there is more. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

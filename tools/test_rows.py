@@ -155,6 +155,18 @@ with sync_playwright() as pw:
         pg.click(f"text={tab}")
         pg.wait_for_timeout(800)
         loc = f"{pane} .data-t[data-sheet='{sheet}']"
+        # Overrides hang off the SELECTED assignment, so point the selection at the one
+        # this row is going to name. Without that, typing its assignment_id re-points the
+        # row to an assignment that is not on screen and it leaves the panel mid-fill -
+        # correct behaviour (that is what the re-pointing section below proves), but it
+        # meant the rest of the row was never typed. The previous build then promoted a
+        # window with no dates and no weight in it; isSkeleton now declines to, which is
+        # what surfaced this.
+        if sheet == "PersonPeriodWeight":
+            want = values["assignment_id"]
+            pg.locator(f"{pane} .data-t[data-sheet='Assignment'] tbody tr[data-id='{want}'] "
+                       "td[data-col='role_name']").first.click()
+            pg.wait_for_timeout(700)
         expected[sheet] = pg.evaluate(f"S.model.raw['{sheet}'].length") + 1
         pg.locator(f"{loc} button[data-ins]").last.click()
         pg.wait_for_timeout(900)

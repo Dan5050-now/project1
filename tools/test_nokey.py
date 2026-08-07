@@ -58,13 +58,19 @@ def add_row(pg, loc, values):
 
 
 def cell(pg, loc, row, col, v):
+    """Type v into a cell. An empty v CLEARS it, which is how a keyless row is reached
+    now that + row allocates an identifier for you - a user who types over the suggested
+    id and leaves it blank, or a workbook that arrived with the column empty."""
     td = pg.locator(f"{loc} td[data-row='{row}'][data-col='{col}']")
     if td.count() == 0:
         return
     td.first.click()
     pg.wait_for_timeout(140)
     pg.keyboard.press("Control+A")
-    pg.keyboard.type(str(v))
+    if str(v) == "":
+        pg.keyboard.press("Delete")
+    else:
+        pg.keyboard.type(str(v))
     pg.keyboard.press("Enter")
     pg.wait_for_timeout(320)
 
@@ -103,9 +109,9 @@ with sync_playwright() as pw:
     pg.click("text=Source data (project)")
     pg.wait_for_timeout(900)
     P = "#t-proj .data-t[data-sheet='Project']"
-    row = add_row(pg, P, {"project_name": "Trial One", "project_type": "NewDrug CT",
-                          "clinical_phase": "Phase 2", "start_date": "2027-01-01",
-                          "end_date": "2029-06-30"})
+    row = add_row(pg, P, {"project_id": "", "project_name": "Trial One",
+                          "project_type": "NewDrug CT", "clinical_phase": "Phase 2",
+                          "start_date": "2027-01-01", "end_date": "2029-06-30"})
     pg.click("#saveBtn")
     pg.wait_for_timeout(1600)
     banner = pg.inner_text("#banner")
@@ -147,7 +153,8 @@ with sync_playwright() as pw:
     pg.click("text=Source data (person)")
     pg.wait_for_timeout(900)
     PER = "#t-pers .data-t[data-sheet='Person']"
-    prow = add_row(pg, PER, {"person_name": "Alex R.", "department": "Data Management",
+    prow = add_row(pg, PER, {"person_id": "", "person_name": "Alex R.",
+                             "department": "Data Management",
                              "primary_role": "Lead data manager", "capacity_fte": "1.00"})
     pg.click("#saveBtn")
     pg.wait_for_timeout(1600)

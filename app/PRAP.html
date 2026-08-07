@@ -59,6 +59,7 @@
   --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
   --hairline:rgba(60,60,67,.16);
+  --shade:rgba(60,60,67,.30);
 
   /* --- radius: Apple's continuous-corner scale --------------------------- */
   --r-xs:5px;--r-sm:7px;--r-md:10px;--r-lg:14px;--r-xl:18px;
@@ -80,7 +81,8 @@
   --good:#30d158;--warn:#ff9f0a;--crit:#ff6961;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
   --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
-  --hairline:rgba(235,235,245,.18);}}
+  --hairline:rgba(235,235,245,.18);
+  --shade:rgba(0,0,0,.55);}}
 :root[data-theme="dark"]{
   --page:#000000;--surface:#1c1c1e;--raised:#2c2c2e;
   --ink:#f5f5f7;--ink2:rgba(235,235,245,.70);--muted:rgba(235,235,245,.55);
@@ -90,7 +92,8 @@
   --good:#30d158;--warn:#ff9f0a;--crit:#ff6961;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
   --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
-  --hairline:rgba(235,235,245,.18);}
+  --hairline:rgba(235,235,245,.18);
+  --shade:rgba(0,0,0,.55);}
 :root[data-theme="light"]{
   --page:#f2f2f7;--surface:#ffffff;--raised:#ffffff;
   --ink:#1d1d1f;--ink2:rgba(60,60,67,.78);--muted:rgba(60,60,67,.72);
@@ -101,7 +104,8 @@
   --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
   --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
-  --hairline:rgba(60,60,67,.16);}
+  --hairline:rgba(60,60,67,.16);
+  --shade:rgba(60,60,67,.30);}
 
 *{box-sizing:border-box}
 /* The `hidden` attribute is only display:none at UA-stylesheet weight, so any rule
@@ -274,7 +278,40 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var
    and the cap is a share of the viewport as well as a fixed figure, so a tall panel
    still leaves the next one visible on a laptop screen. */
 .scrollx{overflow:auto;max-height:min(560px,66vh);-webkit-overflow-scrolling:touch;
- border-radius:var(--r-sm);scrollbar-width:thin}
+ border-radius:var(--r-sm)}
+/* And every scroll region says so. `scrollbar-width:thin` looked neat and cost the whole
+   point of bounding the panels: the browser drew an OVERLAY bar that occupies no layout
+   space and fades out when idle, so a table with eleven columns off to the right looked
+   exactly like a table with none - measured, offsetWidth === clientWidth. The bar is now
+   a real 12px, always present while there is anywhere to scroll to, which is the only
+   thing on screen that says "there is more this way". Chromium ignores ::-webkit-scrollbar
+   unless scrollbar-width is auto, so it is left unset here and scrollbar-color carries
+   Firefox instead. */
+.scrollx{scrollbar-color:var(--base) transparent}
+.scrollx::-webkit-scrollbar{width:12px;height:12px}
+.scrollx::-webkit-scrollbar-track{background:var(--fill);border-radius:8px}
+.scrollx::-webkit-scrollbar-thumb{background:var(--base);border-radius:8px;
+ border:3px solid transparent;background-clip:padding-box}
+.scrollx::-webkit-scrollbar-thumb:hover{background:var(--ink2)}
+.scrollx::-webkit-scrollbar-corner{background:transparent}
+
+/* And a cue that does not depend on the browser drawing a bar at all. Overlay scrollbars
+   - the default on macOS, and on some Chromium builds - stay hidden until you are already
+   scrolling, which is exactly when you no longer need telling. So each scroll region also
+   carries a soft shade on any edge that has content beyond it: four edges, switched
+   independently, drawn in a wrapper OVER the box so that table rows, which have their own
+   background, cannot paint on top of it. The shade goes when you reach that edge, so it
+   always means "more this way" and never decorates a panel that is fully in view. */
+.cue{position:relative;--cl:transparent;--cr:transparent;--cu:transparent;--cd:transparent}
+.cue::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+ border-radius:var(--r-sm);
+ box-shadow:inset 26px 0 18px -20px var(--cl), inset -26px 0 18px -20px var(--cr),
+            inset 0 26px 18px -20px var(--cu), inset 0 -26px 18px -20px var(--cd);
+ transition:box-shadow var(--dur) var(--ease)}
+.cue.l{--cl:var(--shade)}
+.cue.r{--cr:var(--shade)}
+.cue.u{--cu:var(--shade)}
+.cue.d{--cd:var(--shade)}
 .scrollx.tall{max-height:340px}
 /* The three Overall sections the reviewer asked to enlarge, and the timeline. */
 .scrollx.xl{max-height:min(700px,72vh)}
@@ -598,7 +635,7 @@ dialog::backdrop{background:rgba(0,0,0,.35);
 
 <script>
 "use strict";
-const APP_VERSION = "1.20";
+const APP_VERSION = "1.21";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -607,8 +644,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.22.xlsx",          ver:"2.22",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.22 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.23.xlsx",          ver:"2.23",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.23 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -2658,15 +2695,20 @@ const childrenOf = (rows, col, val) =>
 const entryCols = sheet =>
   SHEET_HEADERS[sheet].filter(c => !(DERIVED_COLS[sheet] || []).includes(c));
 
-const AUTO_KEY = new Set(["Assignment"]);
-// Where to start when the sheet is empty and there is no house style to copy.
-const FIRST_KEY = {Assignment:["ASG-", 3]};
+const AUTO_KEY = new Set(["Project","Person","Assignment"]);
+// Where to start when the sheet is empty and there is no house style to copy - which is
+// every sheet, in a plan started blank.
+const FIRST_KEY = {Project:["PRJ-", 3], Person:["PSN-", 3], Assignment:["ASG-", 3]};
 
-/** The next free identifier in the pattern the sheet already uses.
+/** The next identifier in the pattern the sheet already uses: the LARGEST number in it,
+ *  plus one.
  *
- *  The SMALLEST unused number, not the largest plus one: a file whose ids run 1..46 and
- *  then jump to 901 for a handful of hand-placed rows would otherwise allocate 905 and
- *  keep climbing, which reads as a mistake even though it is not one. */
+ *  It used to allocate the smallest UNUSED number, so that a file whose ids ran 1..46 and
+ *  then jumped to 901 for a handful of hand-placed rows would not start climbing from
+ *  902. That reasoning was about tidiness; running one past the end is about being able
+ *  to tell at a glance which rows you added today, and it is what was asked for. A gap
+ *  left by a deleted row now stays a gap, which is the ordinary behaviour of an
+ *  identifier sequence anywhere else. */
 function nextKey(sheet, col){
   if (!col) return null;
   const used = new Set();
@@ -2688,9 +2730,63 @@ function nextKey(sheet, col){
     const p = FIRST_KEY[sheet];
     return p ? p[0] + String(1).padStart(p[1], "0") : null;
   }
-  let n = 1;
-  while (used.has(n)) n++;
+  const n = Math.max(0, ...used) + 1;
+  // A sequence that has outgrown its width keeps counting rather than truncating.
   return prefix + String(n).padStart(width, "0");
+}
+
+/* What a new row starts with, beyond its identifier and its parent key.
+ *
+ *  Two kinds of value, for two reasons.
+ *
+ *  A SEQUENCE continues its parent's own numbering, so the row lands at the end of the
+ *  list it belongs to rather than at position "blank", which sorts first.
+ *
+ *  A WEIGHT starts at 1.00, because 1.00 is the neutral multiplier: a period nobody has
+ *  weighted yet must not silently scale the load up or down, a person is available for
+ *  one full FTE until told otherwise, and someone put on a project is on it fully until
+ *  someone says what share. Starting them empty means starting them at ZERO, since an
+ *  empty weight reads as 0.00 in the calculation - a row that quietly contributes
+ *  nothing is worse than one that contributes too much, because nothing draws the eye. */
+const NEW_ROW = {
+  Milestone:          {milestone_seq: () => nextSeq("Milestone", "milestone_seq",
+                                                    "project_id", S.selProj)},
+  ProjectPeriod:      {weight: 1.00},
+  Person:             {capacity_fte: 1.00},
+  Assignment:         {person_weight: 1.00},
+  PersonPeriodWeight: {weight_override: 1.00},
+};
+
+/** One past the highest sequence number among a parent's own children. */
+function nextSeq(sheet, col, parentCol, parentVal){
+  let max = 0;
+  for (const r of (S.model.raw[sheet] || [])){
+    if (parentCol && parentVal !== null && parentVal !== undefined
+        && r[parentCol] !== parentVal) continue;
+    const n = num(r[col]);
+    if (n !== null && n !== undefined && isFinite(n)) max = Math.max(max, n);
+  }
+  return max + 1;
+}
+
+/** The columns a new row is given without the user typing anything: its identifier, its
+ *  parent key, and the defaults above. A row carrying ONLY those is still an empty row -
+ *  the application filled it in, not the user - so it stays out of validation and out of
+ *  the export until something else is entered. */
+function autoFilled(sheet){
+  const out = new Set(Object.keys(NEW_ROW[sheet] || {}));
+  if (KEY_COL[sheet]) out.add(KEY_COL[sheet]);
+  const p = PARENT_OF[sheet];
+  if (p) out.add(p()[0]);
+  return out;
+}
+function isSkeleton(sheet, r){
+  const auto = autoFilled(sheet);
+  return (S.headers[sheet] || []).every(h => {
+    if (auto.has(h)) return true;
+    const v = r[h];
+    return v === null || v === undefined || String(v).trim() === "";
+  });
 }
 
 function suggestionsFor(sheet, col, row){
@@ -3366,7 +3462,10 @@ function saveEdits(){
   if (!S.pending.length) return;
   const drafts = [];
   for (const s of REQUIRED_SHEETS)
-    for (const r of S.model.raw[s]) if (r.__new && !isBlankRow(s, r)) drafts.push(r);
+    // isSkeleton, not isBlankRow: an inserted row now arrives with an identifier and a
+    // neutral weight already in it, so "blank" would never be true again and a row the
+    // user has not touched would be promoted and then reported for what it is missing.
+    for (const r of S.model.raw[s]) if (r.__new && !isSkeleton(s, r)) drafts.push(r);
   let pending = [];
   if (drafts.length){
     for (const r of drafts) delete r.__new;
@@ -3632,16 +3731,16 @@ function exportWorkbook(asJson){
     for (const r of S.model.raw[s]){
       if (!r.__new) continue;
       if (!r[key]){ incomplete.push(`${s} (${key} is empty)`); continue; }
-      // A child row seeded with its parent and nothing else is an empty record, and the
-      // parent key alone would not make it one on re-import either.
-      const filled = (S.headers[s] || []).some(h => h !== key && r[h] !== null
-        && r[h] !== undefined && String(r[h]).trim() !== "");
-      if (!filled) incomplete.push(`${s} (a new row has only ${key} filled in)`);
+      // A row carrying nothing but what the application put there is an empty record,
+      // and the identifier alone would not make it one on re-import either.
+      if (isSkeleton(s, r))
+        incomplete.push(`${s} (a new row has nothing in it but the values the `
+          + `application supplied)`);
     }
   }
   if (incomplete.length){
-    showBanner("bad", `Export blocked — ${incomplete.length} new row(s) have no identifier: `
-      + `${[...new Set(incomplete)].join("; ")}. Fill it in or delete the row.`);
+    showBanner("bad", `Export blocked — ${incomplete.length} new row(s) would be lost `
+      + `on re-import: ${[...new Set(incomplete)].join("; ")}. Fill them in or delete them.`);
     return;
   }
   const sheets = {};
@@ -3733,6 +3832,7 @@ function keepScroll(fn){
     if (box.scrollLeft || box.scrollTop) was.set(k, [box.scrollLeft, box.scrollTop]);
   const y = window.scrollY;
   fn();
+  cueScrollers();
   for (const [k, box] of scrollBoxes()){
     const p = was.get(k);
     if (p){ box.scrollLeft = p[0]; box.scrollTop = p[1]; }
@@ -3740,6 +3840,35 @@ function keepScroll(fn){
   // The page itself moves too, because a re-render can change the height of the banner
   // above everything else. Clamped by the browser if the page got shorter.
   if (y && window.scrollY !== y) window.scrollTo({top:y});
+}
+
+/** Wrap every scroll region in its edge-cue element, and keep the cue current.
+ *
+ *  Done here rather than in each of the fifteen places that emit a `.scrollx`, because a
+ *  render replaces the DOM wholesale and the wrapper would have to be re-emitted every
+ *  time anyway. The listener is attached once per box and the box is re-created on each
+ *  render, so there is nothing to remove. */
+function cueScrollers(){
+  for (const box of document.querySelectorAll(".scrollx")){
+    let wrap = box.parentElement;
+    if (!wrap || !wrap.classList.contains("cue")){
+      wrap = document.createElement("div");
+      wrap.className = "cue";
+      box.parentNode.insertBefore(wrap, box);
+      wrap.appendChild(box);
+      box.addEventListener("scroll", () => paintCue(box), {passive:true});
+    }
+    paintCue(box);
+  }
+}
+function paintCue(box){
+  const w = box.parentElement;
+  if (!w || !w.classList.contains("cue")) return;
+  const x = box.scrollWidth - box.clientWidth, y = box.scrollHeight - box.clientHeight;
+  w.classList.toggle("l", box.scrollLeft > 1);
+  w.classList.toggle("r", x - box.scrollLeft > 1);
+  w.classList.toggle("u", box.scrollTop > 1);
+  w.classList.toggle("d", y - box.scrollTop > 1);
 }
 
 function renderKeepingTab(){
@@ -3750,6 +3879,9 @@ function showTab(id){
   for (const b of document.querySelectorAll("nav button"))
     b.setAttribute("aria-selected", String(b.dataset.tab === id));
   for (const s of document.querySelectorAll("section.tab")) s.hidden = (s.id !== id);
+  // A hidden pane measures zero, so its cues were computed against nothing. Redo them
+  // now that this one is on screen.
+  for (const box of document.querySelectorAll(`#${id} .scrollx`)) paintCue(box);
 }
 
 function fillFilters(){
@@ -3833,6 +3965,7 @@ function adopt(sheets, name, opts){
   showBanner(errs ? "bad" : "", opts.banner || (errs ? "Loaded with problems." : "Loaded cleanly."),
              M.findings);
   renderAll(); showTab(opts.tab || S.tab);
+  cueScrollers();
   return true;
 }
 
@@ -3963,6 +4096,9 @@ document.addEventListener("click", e => {
       const id = nextKey(sheet, KEY_COL[sheet]);
       if (id) blank[KEY_COL[sheet]] = id;
     }
+    for (const [col, v] of Object.entries(NEW_ROW[sheet] || {}))
+      if (S.headers[sheet] && S.headers[sheet].includes(col))
+        blank[col] = typeof v === "function" ? v() : v;
     rows.splice(i + 1, 0, blank);                        // directly below, not appended
     beginEditSession();
     S.pending.push({sheet, row:blank.__row, col:"(new row)", from:null, to:""});
