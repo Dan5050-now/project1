@@ -43,6 +43,8 @@ PROJECT = {"project_id": "PRJ-001", "project_name": "Trial One", "project_type":
            "outsourcing_type": "Partial outsourcing", "EDC_setup": "by SB",
            "DataReviewSystem_setup": "by CRO", "RBQM_setup": "by SB",
            "EDC_system": "Rave", "planned_member_count": "3",
+           # Deliberately wider than the milestones: Save pulls the window in to the
+           # span they describe, which is 2027-01-15 .. 2029-03-31, i.e. 27 months.
            "start_date": "2027-01-01", "end_date": "2029-06-30", "status": "Planned"}
 MILESTONES = [{"milestone_name": "Protocol (v1)", "milestone_date": "2027-01-15",
                "milestone_seq": "1"},
@@ -54,8 +56,11 @@ MILESTONES = [{"milestone_name": "Protocol (v1)", "milestone_date": "2027-01-15"
                "milestone_seq": "4"}]
 PERSON = {"person_id": "PSN-001", "person_name": "Alex R.", "department": "Data Management",
           "primary_role": "Lead data manager", "capacity_fte": "1.00"}
+# The assignment ends with the project. Since Save derives the project window from the
+# milestones, a project now ends at its LAST MILESTONE - so an assignment running past
+# that is over-running the project and is reported as V-07, correctly.
 ASSIGNMENT = {"project_name": "Trial One", "role_name": "Lead data manager",
-              "assign_start_date": "2027-04-10", "assign_end_date": "2029-06-30",
+              "assign_start_date": "2027-04-10", "assign_end_date": "2029-03-31",
               "person_weight": "0.40"}
 # A stretch where this person's share of the project changes. The override REPLACES the
 # 0.40 for the months it covers - it does not multiply it - which is the single thing
@@ -216,8 +221,9 @@ with sync_playwright() as pw:
                       "{name: p.project_name, type: p.project_type, phase: p.clinical_phase, "
                       " months: p.total_period_months} : null;}")
     check(got and got["name"] == "Trial One" and got["type"] == "NewDrug CT"
-          and got["months"] == 30,
-          "the project and its milestones save together, in one action",
+          and got["months"] == 27,
+          "the project and its milestones save together, and the window is derived from "
+          "them: 2027-01-15 .. 2029-03-31, 27 months",
           f"{got}  ·  {banner.strip()[:60]}")
 
     per = pg.evaluate("() => (S.model.periods['PRJ-001'] || []).map(s => "
@@ -277,7 +283,7 @@ with sync_playwright() as pw:
     # tz handling would be one more thing to get right for no gain.
     periods = pg.evaluate("() => (S.model.periods['PRJ-001'] || []).map(s => "
                           "[s.period_name, ymd(s.period_start), ymd(s.period_end), s.weight])")
-    start, end = date(2027, 4, 10), date(2029, 6, 30)
+    start, end = date(2027, 4, 10), date(2029, 3, 31)
     segs = [(n, date.fromisoformat(a), date.fromisoformat(b), w) for n, a, b, w in periods]
 
     def expect(y, m):
@@ -296,7 +302,7 @@ with sync_playwright() as pw:
         want = expect(y, m)
         if abs(want - v) > 1e-9:
             bad.append(f"{y}-{m:02d}: app {v:.6f} vs {want:.6f}")
-    check(len(got["pm"]) == 27 and not bad,
+    check(len(got["pm"]) == 24 and not bad,
           "every monthly figure equals the formula worked by hand",
           f"{len(got['pm'])} person-months" + (f"; {bad[:2]}" if bad else "; e.g. Apr 2027 "
           f"{got['pm'][[k for k in got['pm'] if k.endswith('|' + str(2027 * 12 + 3))][0]]:.4f} FTE"))

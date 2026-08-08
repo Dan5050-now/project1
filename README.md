@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.23 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.24 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -63,7 +63,7 @@ document through the manifest rather than by sorting filenames.
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.23.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.24.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -79,7 +79,7 @@ document through the manifest rather than by sorting filenames.
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.22.xlsx`, `_v2.21.xlsx`, `_v2.20.xlsx`, `_v2.19.xlsx`, `_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.23.xlsx`, `_v2.22.xlsx`, `_v2.21.xlsx`, `_v2.20.xlsx`, `_v2.19.xlsx`, `_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -127,6 +127,8 @@ document through the manifest rather than by sorting filenames.
   | A new row arrives with the next id and a neutral 1.00 weight | `tools/test_newrow.py`; ids one past the highest, `milestone_seq` within its own project |
   | A row of nothing but supplied values is still empty | same file; Save will not promote it and Export will not write it |
   | Every scroll region shades the edges that have more | same file; and the shade goes the moment that edge is reached |
+  | Save derives the project window and team size from the rows beneath | `tools/test_derive.py`; 7 of its 10 checks fail against the previous build |
+  | An override window names its project and role before the assignment is saved | same file |
   | Every figure in a hand-built plan matches the formula worked by hand | same file, on all 27 person-months |
   | The blank start's reference grid has no gaps | same file; 56 standard weights and 289 role factors, so nothing falls back to 1.00 unnoticed |
   | The command line and the browser agree, rule for rule and figure for figure | `tools/test_interop.py`; same findings at the same severities, every person-month equal to 1e-6, on both fixtures |
@@ -157,6 +159,36 @@ document through the manifest rather than by sorting filenames.
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 23 (app v1.22): **four values that were typed by hand while the rows
+  underneath already said what they should be.**
+
+  - **A project's window is recalculated on Save**: `start_date` becomes the earliest of
+    its milestone dates, `end_date` the latest, and `total_period_months` follows.
+  - **`planned_member_count` becomes the number of distinct people assigned** — people,
+    not assignment rows, since one person may hold several.
+  - **A new row in Periods takes the next `period_seq`** for that project. (The request
+    named a `period_id`; the sheet has none — it is keyed on `project_id + period_name`
+    per change R-11, and `period_seq` is the field that carries the order.)
+  - **A weight-override window shows the project and role of its assignment even before
+    that assignment is saved.** It read them from the validated model, which excludes
+    anything still being entered, so both columns went blank until Save — and they exist
+    precisely so that, while typing, you can confirm the window is attached to the right
+    piece of work.
+
+  The first two happen at **Save**, not at load: doing them at load would rewrite a
+  workbook produced elsewhere the moment somebody opened it, and the delivered examples
+  set a project start before its first milestone quite legitimately. Two guards keep the
+  change from destroying information — a project with no milestone dates keeps the window
+  that was typed, and a project with no assignments keeps the team size that was typed,
+  because *"nobody is assigned yet"* is not the statement *"this needs nobody"*.
+
+  **One consequence is worth stating.** A project now ends at its last milestone, so work
+  that legitimately continues past the final DB lock — close-out, archiving, an inspection
+  — has to be carried by a milestone if it is to sit inside the window, and an assignment
+  running past it is reported as V-07. The period derivation already allowed for that
+  headroom by running `Close-out (final)` to the later of the DB lock and the project end;
+  deriving the end from the milestones removes it.
 
   Gate 4 round 22 (app v1.21): **what a new row arrives with, and whether you can tell
   there is more to see.**
@@ -538,6 +570,19 @@ That counts the bands and markers on the project timeline against the periods an
 milestones in the data, and adds up the stacked utilisation segments month by month to
 confirm they equal the person-month the calculation holds — a chart that disagrees with
 the table is worse than no chart.
+
+And check what Save recalculates from the rows beneath a project:
+
+```bash
+python tools/test_derive.py
+```
+
+That builds a project whose typed window is deliberately wrong, adds four milestones, and
+checks the window is pulled to their span and `total_period_months` follows; that
+`planned_member_count` becomes the number of distinct people assigned; that both are left
+alone when there is nothing to derive them from; and that an override window names its
+project and role while the assignment above it is still a draft. Seven of its ten checks
+fail against the previous build.
 
 And check what a new row arrives with, and that every panel says where the rest of it is:
 

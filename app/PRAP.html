@@ -635,7 +635,7 @@ dialog::backdrop{background:rgba(0,0,0,.35);
 
 <script>
 "use strict";
-const APP_VERSION = "1.21";
+const APP_VERSION = "1.22";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -644,8 +644,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.23.xlsx",          ver:"2.23",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.23 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.24.xlsx",          ver:"2.24",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.24 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -2751,7 +2751,12 @@ function nextKey(sheet, col){
 const NEW_ROW = {
   Milestone:          {milestone_seq: () => nextSeq("Milestone", "milestone_seq",
                                                     "project_id", S.selProj)},
-  ProjectPeriod:      {weight: 1.00},
+  // ProjectPeriod has no period_id: the sheet is keyed on (project_id, period_name) and
+  // period_seq is what carries the ORDER. So that is the number allocated here, one past
+  // the highest in this project, exactly as milestone_seq is.
+  ProjectPeriod:      {period_seq: () => nextSeq("ProjectPeriod", "period_seq",
+                                                 "project_id", S.selProj),
+                       weight: 1.00},
   Person:             {capacity_fte: 1.00},
   Assignment:         {person_weight: 1.00},
   PersonPeriodWeight: {weight_override: 1.00},
@@ -3160,8 +3165,16 @@ function scratchPerson(draft){
           months. The window <strong>replaces</strong> <code>person_weight</code> for the months
           it covers — it does not multiply it — and belongs to the assignment selected beside.</p>
         ${dataTable("PersonPeriodWeight", ppw,
-          ["assignment_id","period_start","period_end","weight_override","reason"],
-          null, null, null,
+          ["assignment_id","project_name","role_name","period_start","period_end",
+           "weight_override","reason"], null, null,
+          {project_name: r => {
+             const a = assignmentById(r.assignment_id);
+             return a ? projectNameOf(a.project_id) : "";
+           },
+           role_name: r => {
+             const a = assignmentById(r.assignment_id);
+             return a ? (a.role_name ?? "") : "";
+           }},
           aid ? null : "Add an assignment beside first — an override belongs to one.")}</div>
     </div>`;
 }
@@ -3294,14 +3307,27 @@ function overridesPanel(sid){
         ["assignment_id","project_name","role_name","period_start","period_end",
          "weight_override","reason"], null, null,
         {project_name: r => {
-           const a = M.assignments.find(x => x.assignment_id === r.assignment_id);
-           return a ? (M.projects[a.project_id] || {}).project_name : "";
+           const a = assignmentById(r.assignment_id);
+           return a ? projectNameOf(a.project_id) : "";
          },
          role_name: r => {
-           const a = M.assignments.find(x => x.assignment_id === r.assignment_id);
-           return a ? a.role_name : "";
+           const a = assignmentById(r.assignment_id);
+           return a ? (a.role_name ?? "") : "";
          }})}</div>`;
 }
+
+/* The assignment a window points at, and the project it names — read from RAW rather
+   than from the validated model.
+   M.assignments excludes anything still being entered, and M.projects excludes a project
+   that has not been saved, so the two lookup columns beside a window went blank until the
+   user pressed Save on the table above. Those columns exist precisely so that, while
+   typing, you can see the window is attached to the right piece of work; blank at exactly
+   that moment is when they are least useful. */
+const assignmentById = aid =>
+  (S.model.raw.Assignment || []).find(a => a.assignment_id === aid) || null;
+const projectNameOf = pid =>
+  (S.model.projects[pid] || {}).project_name
+  || ((S.model.raw.Project || []).find(p => p.project_id === pid) || {}).project_name || "";
 
 /** The assignment the overrides table hangs off: the one clicked, while it is still one
  *  of the rows on screen, otherwise the first. Held in S rather than derived each time,
@@ -3458,8 +3484,57 @@ function beginEditSession(){
 const INCOMPLETE_RULES = new Set(["V-12","V-16"]);
 const blocking = f => (f.sev === "error" || f.sev === "fatal") && !INCOMPLETE_RULES.has(f.rule);
 
+/* What Save recalculates from the rows beneath a project.
+ *
+ *  A project's WINDOW is the span its milestones describe, and its PLANNED TEAM SIZE is
+ *  the number of distinct people assigned to it. Both were typed by hand and could drift
+ *  from the rows that actually say what they are.
+ *
+ *  Done at Save rather than at load, deliberately. Doing it on load would rewrite dates in
+ *  a workbook somebody produced elsewhere, the moment they opened it, without their having
+ *  asked for anything - and the delivered examples set a project start before its first
+ *  milestone quite legitimately. At Save it is a consequence of an edit the user just
+ *  made, and the banner names every value it changed.
+ *
+ *  Two guards, both about not destroying information:
+ *    - a project with NO milestone dates keeps the window that was typed, because there
+ *      is nothing to derive it from;
+ *    - a project with NO assignments keeps the team size that was typed, because "nobody
+ *      is assigned yet" is not the same statement as "this needs nobody".
+ */
+function deriveFromChildren(){
+  const M = S.model, changed = [], undo = [];
+  const set = (row, col, v, label) => {
+    undo.push([row, col, row[col]]);
+    row[col] = v;
+    changed.push(label);
+  };
+  for (const p of M.raw.Project){
+    const pid = p.project_id;
+    if (!pid) continue;
+    const dates = M.raw.Milestone
+      .filter(m => m.project_id === pid && m.milestone_date instanceof Date)
+      .map(m => m.milestone_date.getTime());
+    if (dates.length){
+      const lo = new Date(Math.min(...dates)), hi = new Date(Math.max(...dates));
+      if (!(p.start_date instanceof Date) || +p.start_date !== +lo)
+        set(p, "start_date", lo, `${pid} start ${ymd(lo)}`);
+      if (!(p.end_date instanceof Date) || +p.end_date !== +hi)
+        set(p, "end_date", hi, `${pid} end ${ymd(hi)}`);
+    }
+    const team = new Set(M.raw.Assignment
+      .filter(a => a.project_id === pid && a.person_id).map(a => a.person_id));
+    if (team.size && num(p.planned_member_count) !== team.size)
+      set(p, "planned_member_count", team.size, `${pid} team ${team.size}`);
+  }
+  return {changed, undo};
+}
+
 function saveEdits(){
   if (!S.pending.length) return;
+  // Before the check, so that what is validated is what will be kept; put back with the
+  // drafts if the save is refused.
+  const derived = deriveFromChildren();
   const drafts = [];
   for (const s of REQUIRED_SHEETS)
     // isSkeleton, not isBlankRow: an inserted row now arrives with an identifier and a
@@ -3474,6 +3549,7 @@ function saveEdits(){
     const was = (S.model.findings || []).filter(blocking);
     if (errs.length > was.length){
       for (const r of drafts) r.__new = true;
+      for (const [row, col, was_] of derived.undo) row[col] = was_;    // and the derivation
       showBanner("bad", `Save refused — the new row${drafts.length===1?"" :"s"} would break a rule: `
         + `${errs[errs.length-1].msg} Correct it, or delete the row, then save.`);
       return;
@@ -3482,12 +3558,19 @@ function saveEdits(){
       && !(S.model.findings || []).some(g => g.rule === f.rule && g.msg === f.msg));
     rebuild(true);
     renderKeepingTab();
+  } else if (derived.changed.length){
+    rebuild(true);
+    renderKeepingTab();
   }
   S.saved += S.pending.length;
   S.pending = [];
   S.snapshot = null;
   renderDirty();
   showBanner("", `Saved ${S.saved} change${S.saved===1?"":"s"} to the working data. `
+    + (derived.changed.length
+        ? `Recalculated from the rows beneath: ${derived.changed.slice(0, 6).join(", ")}`
+          + `${derived.changed.length > 6 ? ` and ${derived.changed.length - 6} more` : ""}. `
+        : "")
     + (pending.length
         ? `Still to come: ${pending[0].msg} `
         : "")

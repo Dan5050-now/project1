@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.23"
+DOC_VERSION = "2.24"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,40 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.23", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.24", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 23, application v1.22. Four values that were typed by hand while the rows "
+     "underneath already said what they should be. (1) A project's WINDOW is now recalculated "
+     "on Save: start_date becomes the earliest of its milestone dates and end_date the latest, "
+     "and total_period_months follows without anyone touching it. (2) planned_member_count "
+     "becomes the number of DISTINCT people assigned to the project - people, not assignment "
+     "rows, since one person may hold several. Both are done at SAVE rather than at load, "
+     "deliberately: doing them at load would rewrite a workbook produced elsewhere the moment "
+     "somebody opened it, and the delivered examples set a project start before its first "
+     "milestone quite legitimately. At Save it is a consequence of an edit just made, and the "
+     "banner names every value it changed. Two guards keep the change from destroying "
+     "information: a project with NO milestone dates keeps the window that was typed, because "
+     "there is nothing to derive it from; and a project with NO assignments keeps the team "
+     "size that was typed, because 'nobody is assigned yet' is not the statement 'this needs "
+     "nobody'. ONE CONSEQUENCE IS WORTH STATING: a project now ends at its last milestone, so "
+     "work that legitimately continues past the final DB lock - close-out, archiving, an "
+     "inspection - has to be carried by a milestone if it is to be inside the window, and an "
+     "assignment running past it is reported as V-07. The period derivation already allowed "
+     "for that headroom by running Close-out (final) to the later of the DB lock and the "
+     "project end; deriving the end from the milestones removes it. (3) A new row in Periods "
+     "is given the next PERIOD_SEQ for its project. The request named a 'period_id': the sheet "
+     "has none, it is keyed on (project_id, period_name) per change R-11, and period_seq is "
+     "the field that carries the order - so that is the number allocated, one past the highest "
+     "in that project, exactly as milestone_seq is. (4) A weight-override window now shows the "
+     "PROJECT and ROLE of its assignment even when that assignment has not been saved. It read "
+     "them from the validated model, which excludes anything still being entered, so the two "
+     "lookup columns went blank until Save - and they exist precisely so that, while typing, "
+     "the user can confirm the window is attached to the right piece of work. They are read "
+     "from the raw sheets now, and the same two columns were added to the scratch panel that "
+     "a plan started blank uses. tools/test_derive.py covers all four; seven of its ten checks "
+     "fail against the previous build. No requirement, rule, calculation or schema version "
+     "changed.",
+     "Issued for review"],
+    ["2.23", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 22, application v1.21. Three changes to what a new row arrives with, and "
      "to whether the reader can tell there is more to see. (1) IDENTIFIERS are now "
      "allocated on insert for project_id, person_id and milestone_seq as well as "
@@ -400,7 +433,7 @@ rows = [
      "declines to do, and test_nokey could no longer reach a keyless row by skipping the "
      "identifier - the application supplies one - so it clears it explicitly instead. No "
      "requirement, rule, calculation or schema version changed.",
-     "Issued for review"],
+     "Superseded by v2.24"],
     ["2.22", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 21, application v1.20. A ROW WITH NO IDENTIFIER IS NO LONGER TREATED AS "
      "A RECORD, which fixes three reported faults that were all one fault. A project saved "
@@ -1583,7 +1616,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-22 applied (app v1.21); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-23 applied (app v1.22); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1679,7 +1712,8 @@ align = [
     ["v2.20", "v1.0", "application v1.18", "5", DOC_DATE, "Gate 4 round 19: the child sections are enterable from the start, before their parent is saved."],
     ["v2.21", "v1.0", "application v1.19", "5", DOC_DATE, "Gate 4 round 20: scroll position survives a re-render."],
     ["v2.22", "v1.0", "application v1.20", "5", DOC_DATE, "Gate 4 round 21: a row with no identifier is not a record."],
-    ["v2.23", "v1.0", "application v1.21", "5", DOC_DATE, "Gate 4 round 22: allocated ids, neutral weights, and scroll regions that say there is more. 4.9 continues."],
+    ["v2.23", "v1.0", "application v1.21", "5", DOC_DATE, "Gate 4 round 22: allocated ids, neutral weights, and scroll regions that say there is more."],
+    ["v2.24", "v1.0", "application v1.22", "5", DOC_DATE, "Gate 4 round 23: the project window and team size derived from the rows beneath. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],
