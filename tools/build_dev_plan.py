@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.25"
+DOC_VERSION = "2.26"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,39 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.25", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.26", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 25, application v1.24. (1) EVERY FILTER NOW TAKES SEVERAL VALUES AT ONCE. "
+     "Each is a drop-down of tick boxes built on <details>, which gives open, close, keyboard "
+     "operation and focus for nothing; a plain <select multiple> would have cost seven tall "
+     "boxes across the bar and asked the reader to know that ctrl-click means 'and also'. "
+     "Nothing ticked means All, which is what the closed control says, so the bar reads as it "
+     "did with single selects; one ticked reads as that value, more than one as a count with "
+     "the full list on hover. Values within one filter are an OR - ticking a second project "
+     "type WIDENS the view - while the filters remain an AND with each other, which is the "
+     "only reading that makes 'NewDrug CT and Others, in-house' mean anything. Each has its "
+     "own Clear; Reset still empties them all; and a value that has gone from the file is "
+     "dropped from the selection, since the page must not stay filtered by something the "
+     "reader can no longer see. (2) AUTO DERIVATION in the Periods section builds a project's "
+     "periods from its milestones by the rule on sheet 05, and (3) BLANK LIST in the "
+     "Milestones section lays out the ten standard milestone names with their dates empty, so "
+     "only the dates have to be typed. Both produce ORDINARY ROWS - provisional until Save, "
+     "editable and deletable afterwards, subject to every rule - because the point is to save "
+     "the typing, not to take the decision away. Auto derivation reads the milestones from the "
+     "raw sheet so a set just typed and not yet saved still counts, which is the ordinary case "
+     "when the two buttons are used one after the other; it asks before replacing an existing "
+     "set; and it refuses what it cannot do, naming the reason: an 'Others' project (the rule "
+     "hangs on CTA submission and the DB locks) or a trial missing either of those (V-16). "
+     "Blank list does not repeat a name already listed, since a second 'CTA submission' is the "
+     "duplicate V-20 exists to catch. A LATENT CRASH was found while testing them and fixed: "
+     "clicking a row that had not been saved yet made its identifier the selection, and the "
+     "detail panels below need a RECORD - dates, a name, a calculation - which a draft has "
+     "none of. projDetail threw, taking the whole re-render with it, so the click appeared to "
+     "do nothing at all. Both detail panels now fall back to the scratch panels built for "
+     "exactly that state. tools/test_generate.py checks the derivation against the rule term "
+     "by term on a project built to exercise every branch. No requirement, rule, calculation "
+     "or schema version changed.",
+     "Issued for review"],
+    ["2.25", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 24, application v1.23. Three changes to the filter bar and to what the "
      "unsaved-change counter can tell you. (1) OUTSOURCING TYPE joins the filter conditions, "
      "driving the same machinery as the other six - the charts, both Overall tables and the "
@@ -390,7 +422,7 @@ rows = [
      "recorded underneath. Every pending entry now carries the time it was made, which nothing "
      "did before. tools/test_filters.py covers all three. No requirement, rule, calculation or "
      "schema version changed.",
-     "Issued for review"],
+     "Superseded by v2.26"],
     ["2.24", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 23, application v1.22. Four values that were typed by hand while the rows "
      "underneath already said what they should be. (1) A project's WINDOW is now recalculated "
@@ -1641,7 +1673,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-24 applied (app v1.23); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-25 applied (app v1.24); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1739,7 +1771,8 @@ align = [
     ["v2.22", "v1.0", "application v1.20", "5", DOC_DATE, "Gate 4 round 21: a row with no identifier is not a record."],
     ["v2.23", "v1.0", "application v1.21", "5", DOC_DATE, "Gate 4 round 22: allocated ids, neutral weights, and scroll regions that say there is more."],
     ["v2.24", "v1.0", "application v1.22", "5", DOC_DATE, "Gate 4 round 23: the project window and team size derived from the rows beneath."],
-    ["v2.25", "v1.0", "application v1.23", "5", DOC_DATE, "Gate 4 round 24: outsourcing filter, a horizon that follows the filters, and a change log. 4.9 continues."],
+    ["v2.25", "v1.0", "application v1.23", "5", DOC_DATE, "Gate 4 round 24: outsourcing filter, a horizon that follows the filters, and a change log."],
+    ["v2.26", "v1.0", "application v1.24", "5", DOC_DATE, "Gate 4 round 25: multi-value filters, and the two generators on the project tab. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

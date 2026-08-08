@@ -224,6 +224,37 @@ td.ins,th.ins{white-space:nowrap}
  font-family:inherit;line-height:1.4}
 .ctl select:hover,.ctl input:hover{border-color:var(--accent)}
 
+/* --- a filter that takes several values at once --------------------------
+   Built on <details> rather than as a widget: the browser gives open/close,
+   keyboard operation and focus for nothing, and a plain <select multiple> would
+   have cost seven tall boxes across the bar and asked the reader to know that
+   ctrl-click means "and also". Nothing ticked means ALL, which is the state the
+   summary reports, so the bar reads the same as it did with single selects. */
+.ms{position:relative}
+.ms>summary{list-style:none;cursor:pointer;border:1px solid var(--base);
+ background:var(--surface);color:var(--ink);border-radius:var(--r-sm);
+ padding:5px 26px 5px 9px;font-size:12.5px;line-height:1.4;min-width:112px;
+ max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms>summary::-webkit-details-marker{display:none}
+.ms>summary::after{content:"";position:absolute;right:9px;top:12px;
+ border:4px solid transparent;border-top-color:var(--ink2)}
+.ms>summary:hover{border-color:var(--accent)}
+.ms[open]>summary{border-color:var(--accent)}
+.ms>summary.on{font-weight:560;color:var(--accent);border-color:var(--accent)}
+.msp{position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:100%;
+ max-height:280px;overflow:auto;background:var(--raised);border:1px solid var(--base);
+ border-radius:var(--r-md);box-shadow:var(--shadow-lift);padding:5px;
+ scrollbar-color:var(--base) transparent}
+.msp::-webkit-scrollbar{width:12px}
+.msp::-webkit-scrollbar-track{background:var(--fill);border-radius:8px}
+.msp::-webkit-scrollbar-thumb{background:var(--base);border-radius:8px;
+ border:3px solid transparent;background-clip:padding-box}
+.msp label{display:flex;align-items:center;gap:7px;padding:4px 8px;font-size:12.5px;
+ border-radius:var(--r-xs);cursor:pointer;white-space:nowrap}
+.msp label:hover{background:var(--fill)}
+.msp input{margin:0}
+.msp .msclear{width:100%;margin-bottom:3px}
+
 /* --- sticky bars: vibrancy ----------------------------------------------
    Translucent and blurred rather than opaque, so the content scrolling under
    them stays readable as context. This is the one place the resemblance is
@@ -582,13 +613,20 @@ dialog.big .dlg-b{max-height:84vh}
     <div class="ctl"><label>From</label><input id="fFrom" size="8"></div>
     <div class="ctl"><label>To</label><input id="fTo" size="8"></div>
     <div class="ctl"><label>&nbsp;</label><button class="btn" id="fAll">Expand to all projects</button></div>
-    <div class="ctl"><label>Project type</label><select id="fType"></select></div>
-    <div class="ctl"><label>Clinical phase</label><select id="fPhase"></select></div>
-    <div class="ctl"><label>Outsourcing</label><select id="fOut"></select></div>
-    <div class="ctl"><label>Project</label><select id="fProj"></select></div>
-    <div class="ctl"><label>Person</label><select id="fPers"></select></div>
-    <div class="ctl"><label>Role</label><select id="fRole"></select></div>
-    <div class="ctl"><label>Department</label><select id="fDept"></select></div>
+    <div class="ctl"><label>Project type</label>
+      <details class="ms" id="fType"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Clinical phase</label>
+      <details class="ms" id="fPhase"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Outsourcing</label>
+      <details class="ms" id="fOut"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Project</label>
+      <details class="ms" id="fProj"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Person</label>
+      <details class="ms" id="fPers"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Role</label>
+      <details class="ms" id="fRole"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Department</label>
+      <details class="ms" id="fDept"><summary>All</summary><div class="msp"></div></details></div>
     <div class="ctl"><label>&nbsp;</label><button class="btn reset" id="fReset">Reset filters</button></div>
   </div>
 </div>
@@ -665,7 +703,7 @@ dialog.big .dlg-b{max-height:84vh}
 
 <script>
 "use strict";
-const APP_VERSION = "1.23";
+const APP_VERSION = "1.24";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -674,8 +712,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.25.xlsx",          ver:"2.25",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.25 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.26.xlsx",          ver:"2.26",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.26 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -1296,6 +1334,18 @@ const HELP = {
   insert:"<b>Insert a row</b><br>Adds a blank row directly below this one, so it lands where you are "
     + "looking rather than at the bottom of the table. A row with no identifier will block the export "
     + "until you fill one in.",
+  blankms:"<b>Blank list</b><br>Lays out the standard milestone names for this project with "
+    + "their dates left empty, so only the dates have to be typed. Names already listed are "
+    + "not repeated, and any you do not need can be deleted. The rows are ordinary rows - "
+    + "provisional until Save, like anything else.",
+  autoper:"<b>Auto derivation</b><br>Builds this project's periods from its milestones, by "
+    + "the rule in the development plan: Start-up opens the day after Protocol (v1) or a "
+    + "month before CTA submission, closes at First SIV or four months later; an interim DB "
+    + "lock splits the conduct stretch in two; Close-out (final) starts three months before "
+    + "the final DB lock; and an Inspection after that lock opens After Close-out (final). "
+    + "Each period takes the standard weight for this project's type and phase. They are "
+    + "ORDINARY ROWS afterwards - edit any of them, and Save when you are happy. Needs CTA "
+    + "submission and a DB lock (V-16), and applies to clinical trials only.",
   del:"<b>Delete this row</b><br>Refused if anything still references it, naming what does (V-17). "
     + "A delete is never cascaded. Provisional like any other change — 'Leave without change' puts it back.",
 };
@@ -1861,23 +1911,31 @@ function calculate(M){
 const S = {
   model:null, calc:null, fileName:"", loadedAt:null, blank:false,
   from:null, to:null,                       // month keys
-  f:{type:"All", phase:"All", out:"All", proj:"All", pers:"All", role:"All", dept:"All"},
+  // Each filter holds a SET of chosen values. Empty means "All" - which is both the
+  // natural reading of "nothing narrowed" and what keeps every predicate below short.
+  f:{type:new Set(), phase:new Set(), out:new Set(), proj:new Set(),
+     pers:new Set(), role:new Set(), dept:new Set()},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
   pending:[], saved:0, snapshot:null, editedCells:new Set(), headers:{},
   genView:{pws:"matrix", rf:"matrix", lists:"matrix"},
 };
 
+/** A filter with nothing ticked narrows nothing. */
+const anyOf = (set, v) => !set.size || set.has(v);
+
 function activeProjects(){
   const M = S.model, out = [];
   for (const [pid, p] of Object.entries(M.projects)){
-    if (S.f.type !== "All" && p.project_type !== S.f.type) continue;
-    if (S.f.phase !== "All" && p.clinical_phase !== S.f.phase) continue;
-    if (S.f.out !== "All" && p.outsourcing_type !== S.f.out) continue;
-    if (S.f.proj !== "All" && pid !== S.f.proj) continue;
-    if (S.f.pers !== "All" && !M.assignments.some(a => a.project_id === pid && a.person_id === S.f.pers)) continue;
-    if (S.f.role !== "All" && !M.assignments.some(a => a.project_id === pid && a.role_name === S.f.role)) continue;
-    if (S.f.dept !== "All" && !M.assignments.some(a => a.project_id === pid &&
-        (M.people[a.person_id] || {}).department === S.f.dept)) continue;
+    if (!anyOf(S.f.type, p.project_type)) continue;
+    if (!anyOf(S.f.phase, p.clinical_phase)) continue;
+    if (!anyOf(S.f.out, p.outsourcing_type)) continue;
+    if (!anyOf(S.f.proj, pid)) continue;
+    if (S.f.pers.size && !M.assignments.some(a => a.project_id === pid && S.f.pers.has(a.person_id)))
+      continue;
+    if (S.f.role.size && !M.assignments.some(a => a.project_id === pid && S.f.role.has(a.role_name)))
+      continue;
+    if (S.f.dept.size && !M.assignments.some(a => a.project_id === pid &&
+        S.f.dept.has((M.people[a.person_id] || {}).department))) continue;
     out.push(pid);
   }
   return out;
@@ -1885,9 +1943,10 @@ function activeProjects(){
 function activePeople(){
   const M = S.model, projs = new Set(activeProjects()), out = [];
   for (const [sid, p] of Object.entries(M.people)){
-    if (S.f.pers !== "All" && sid !== S.f.pers) continue;
-    if (S.f.dept !== "All" && p.department !== S.f.dept) continue;
-    if (S.f.role !== "All" && !M.assignments.some(a => a.person_id === sid && a.role_name === S.f.role)) continue;
+    if (!anyOf(S.f.pers, sid)) continue;
+    if (!anyOf(S.f.dept, p.department)) continue;
+    if (S.f.role.size && !M.assignments.some(a => a.person_id === sid && S.f.role.has(a.role_name)))
+      continue;
     if (!M.assignments.some(a => a.person_id === sid && projs.has(a.project_id))) continue;
     out.push(sid);
   }
@@ -1900,9 +1959,9 @@ function activePeople(){
 function listedPeople(){
   const M = S.model, out = [];
   for (const [sid, p] of Object.entries(M.people)){
-    if (S.f.pers !== "All" && sid !== S.f.pers) continue;
-    if (S.f.dept !== "All" && p.department !== S.f.dept) continue;
-    if (S.f.role !== "All" && !M.assignments.some(a => a.person_id === sid && a.role_name === S.f.role))
+    if (!anyOf(S.f.pers, sid)) continue;
+    if (!anyOf(S.f.dept, p.department)) continue;
+    if (S.f.role.size && !M.assignments.some(a => a.person_id === sid && S.f.role.has(a.role_name)))
       continue;
     out.push(sid);
   }
@@ -3068,6 +3127,13 @@ function renderProjTab(){
 
 function projDetail(pid){
   const M = S.model, pr = M.projects[pid];
+  /* Clicking a row that has not been saved yet makes its identifier the selection, and
+     the model does not know that identifier: the timeline and the utilisation chart need
+     a RECORD - dates, a name, a calculation - and a draft has none of that. It used to
+     throw here, which took the whole re-render with it and left the tab as it was, so
+     the click appeared to do nothing at all. Fall back to the panels a plan being typed
+     from scratch uses, which are built for exactly this state. */
+  if (!pr) return scratchProject(M.raw.Project.find(r => r.project_id === pid) || null);
   const util = chartProjectUtil(pid);
   // `|| m.__new` so a row the user just created is visible even before its parent key
   // is filled in. Seeding usually covers it; this covers the case where it cannot.
@@ -3100,11 +3166,17 @@ function projDetail(pid){
     <div class="two">
       <div class="panel">
         <div class="phead"><h2>Milestones — ${esc(pr.project_name)}</h2>
+          <button class="btn tiny" data-act="blankms" data-pid="${att(pid)}"
+            data-tip="${att(HELP.blankms)}">Blank list</button>
           <span class="scope k">${ms.length} row(s)</span></div>
-        <p class="cap">CTA submission and the DB locks set the period boundaries.</p>
+        <p class="cap">CTA submission and the DB locks set the period boundaries.
+          <strong>Blank list</strong> lays out the standard milestone names with their dates
+          empty, so only the dates have to be typed.</p>
         ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_seq","note_1"])}</div>
       <div class="panel">
         <div class="phead"><h2>Periods — ${esc(pr.project_name)}</h2>
+          <button class="btn tiny" data-act="autoper" data-pid="${att(pid)}"
+            data-tip="${att(HELP.autoper)}">Auto derivation</button>
           <span class="scope k">${per.length} row(s)${derived ? " &#183; derived" : ""}</span></div>
         <p class="cap">${derived ? "Derived from the milestones above." : "As entered in the workbook."}
           Names are unique within a project, so <code>project_id + period_name</code> identifies a row.</p>
@@ -3147,6 +3219,8 @@ function scratchProject(draft){
   return `<div class="two">
       <div class="panel">
         <div class="phead"><h2>Milestones${who}</h2>
+          ${pid ? `<button class="btn tiny" data-act="blankms" data-pid="${att(pid)}"
+            data-tip="${att(HELP.blankms)}">Blank list</button>` : ""}
           <span class="scope k">${ms.length} row(s)</span></div>
         <p class="cap">CTA submission and a DB lock are the two the period derivation hangs
           on — enter those and the seven clinical periods are computed for you. The other
@@ -3155,6 +3229,8 @@ function scratchProject(draft){
                     null, null, null, lock)}</div>
       <div class="panel">
         <div class="phead"><h2>Periods${who}</h2>
+          ${pid ? `<button class="btn tiny" data-act="autoper" data-pid="${att(pid)}"
+            data-tip="${att(HELP.autoper)}">Auto derivation</button>` : ""}
           <span class="scope k">${per.length} row(s)</span></div>
         <p class="cap">Leave this empty for a clinical trial and let the milestones derive it.
           An <code>Others</code> project is not derived — enter Planning / Develop / Close
@@ -3266,6 +3342,7 @@ function renderPersTab(){
 
 function persDetail(sid){
   const M = S.model, pe = M.people[sid];
+  if (!pe) return scratchPerson(M.raw.Person.find(r => r.person_id === sid) || null);
   // From raw, not from M.assignments: the model's array is rebuilt by validate() and
   // excludes anything it rejected, so a row being repaired would vanish while edited.
   const asg = childrenOf(M.raw.Assignment, "person_id", sid);
@@ -3968,6 +4045,109 @@ function renderChanges(){
   cueScrollers();
 }
 
+/* --------------------------------------------- the two generators on the project tab
+   Both produce ORDINARY ROWS. Nothing here is locked, computed on the fly or special in
+   any way afterwards: the point is to save the typing, not to take the decision away.
+   Both are provisional like every other edit, so 'Leave without change' undoes them. */
+
+/** A blank row for `sheet`, with its parent key already on it. */
+function newRow(sheet, seed){
+  const rows = S.model.raw[sheet];
+  const r = {__row: rows.reduce((n, x) => Math.max(n, x.__row), 0) + 1, __new:true};
+  for (const h of (S.headers[sheet] || [])) r[h] = null;
+  Object.assign(r, seed);
+  rows.push(r);
+  return r;
+}
+
+/** The standard milestone names, laid out with their dates empty. */
+function blankMilestones(pid){
+  const M = S.model;
+  const names = M.lists.milestone_name || [];
+  if (!names.length){
+    showBanner("bad", "The Lists sheet carries no milestone_name values, so there is no "
+      + "standard list to lay out. Add them on General assumptions.");
+    return;
+  }
+  // Names already there are not repeated - the button is for filling the gaps, and a
+  // second 'CTA submission' would be a duplicate the file has a rule against (V-20).
+  const have = new Set(M.raw.Milestone.filter(m => m.project_id === pid)
+    .map(m => m.milestone_name));
+  const add = names.filter(n => !have.has(n));
+  if (!add.length){
+    showBanner("", `Every standard milestone is already listed for ${pid}. Nothing added.`);
+    return;
+  }
+  beginEditSession();
+  let seq = nextSeq("Milestone", "milestone_seq", "project_id", pid);
+  for (const n of add){
+    const r = newRow("Milestone", {project_id:pid, milestone_name:n, milestone_seq:seq++});
+    S.pending.push({at:new Date(), sheet:"Milestone", row:r.__row, col:"(new row)",
+                    from:null, to:n});
+  }
+  renderKeepingTab();
+  showBanner("", `Added ${add.length} standard milestone${add.length===1?"":"s"} to ${pid}, `
+    + `with the dates blank. Fill in the dates that apply and delete the rows that do not — `
+    + `a milestone with no date is ignored by the calculation either way.`);
+}
+
+/** This project's periods, built from its milestones by the rule in the plan. */
+function autoPeriods(pid){
+  const M = S.model, pr = M.projects[pid];
+  if (!pr){
+    showBanner("bad", `${pid} has not been saved yet. Save the project first — the `
+      + `derivation reads its start and end dates.`);
+    return;
+  }
+  if (!CLINICAL_TYPES.has(pr.project_type)){
+    showBanner("bad", `${pid} is a '${pr.project_type}' project. The derivation is defined `
+      + `for clinical trials only, because it hangs on CTA submission and the DB locks. `
+      + `Enter Planning / Develop / Close by hand, with no gap and no overlap.`);
+    return;
+  }
+  // From RAW, so a set of milestones just typed and not yet saved still counts - which is
+  // the ordinary case, since the two buttons are meant to be used one after the other.
+  const ms = {};
+  for (const m of M.raw.Milestone)
+    if (m.project_id === pid && m.milestone_name && m.milestone_date instanceof Date)
+      (ms[m.milestone_name] ||= []).push(m.milestone_date);
+  for (const k of Object.keys(ms)) ms[k].sort((a, b) => a - b);
+
+  const segs = derivePeriods(pr, ms);
+  if (!segs){
+    showBanner("bad", `Cannot derive periods for ${pid}: the rule needs a 'CTA submission' `
+      + `date and at least one DB lock (V-16). Add those milestones above, then try again.`);
+    return;
+  }
+  const existing = M.raw.ProjectPeriod.filter(r => r.project_id === pid);
+  if (existing.length && !confirm(
+      `${pid} already has ${existing.length} period row(s).\n\n`
+      + `Replace them with the ${segs.length} derived from its milestones?\n`
+      + `This is provisional — 'Leave without change' puts them back.`)) return;
+
+  beginEditSession();
+  for (const r of existing){
+    M.raw.ProjectPeriod.splice(M.raw.ProjectPeriod.indexOf(r), 1);
+    S.pending.push({at:new Date(), sheet:"ProjectPeriod", row:r.__row, col:"(deleted row)",
+                    from:r.period_name, to:null});
+  }
+  for (const d of segs){
+    const r = newRow("ProjectPeriod", {
+      project_id:pid, period_name:d.period_name, period_seq:d.period_seq,
+      period_start:d.period_start, period_end:d.period_end,
+      weight: M.pws[[pr.project_type, pr.clinical_phase, d.period_name]] ?? 1.00});
+    S.pending.push({at:new Date(), sheet:"ProjectPeriod", row:r.__row, col:"(new row)",
+                    from:null, to:`${d.period_name} ${ymd(d.period_start)}..${ymd(d.period_end)}`});
+  }
+  renderKeepingTab();
+  const w = M.pws[[pr.project_type, pr.clinical_phase, segs[0].period_name]] === undefined
+    ? " No standard weights exist for this type and phase, so every period is at 1.00 —"
+      + " set them on General assumptions."
+    : ` Each period carries the standard weight for ${pr.project_type} / ${pr.clinical_phase}.`;
+  showBanner("", `Derived ${segs.length} periods for ${pid} from its milestones.${w} `
+    + `They are ordinary rows — edit any of them, then Save.`);
+}
+
 /* ============================================================ 14. wiring */
 
 /* Re-rendering a panel replaces its DOM, and a fresh element starts at the top left.
@@ -4056,11 +4236,21 @@ function showTab(id){
   for (const box of document.querySelectorAll(`#${id} .scrollx`)) paintCue(box);
 }
 
+const FILTER_KEY = {fType:"type", fPhase:"phase", fOut:"out", fProj:"proj",
+                    fPers:"pers", fRole:"role", fDept:"dept"};
+
 function fillFilters(){
   const M = S.model;
   const set = (id, vals) => {
-    const s = el(id);
-    s.innerHTML = ['All', ...vals].map(v => `<option${v===s.value?" selected":""}>${esc(v)}</option>`).join("");
+    const d = el(id), keep = S.f[FILTER_KEY[id]];
+    // A value that has gone from the file cannot stay selected, or the page would be
+    // filtered by something the reader can no longer see or clear.
+    for (const v of [...keep]) if (!vals.includes(v)) keep.delete(v);
+    d.querySelector(".msp").innerHTML =
+      `<button class="btn tiny msclear" data-msclear="${att(id)}">Clear</button>`
+      + vals.map(v => `<label><input type="checkbox" value="${att(v)}"`
+          + `${keep.has(v) ? " checked" : ""}>${esc(v)}</label>`).join("");
+    msSummary(d);
   };
   set("fType", [...new Set(Object.values(M.projects).map(p => p.project_type))].filter(Boolean));
   set("fPhase", [...new Set(Object.values(M.projects).map(p => p.clinical_phase))].filter(Boolean));
@@ -4070,10 +4260,20 @@ function fillFilters(){
   set("fRole", [...new Set(M.assignments.map(a => a.role_name))].filter(Boolean).sort());
   set("fDept", [...new Set(Object.values(M.people).map(p => p.department))].filter(Boolean).sort());
 }
+
+/** What the closed control says: All, the single value, or how many were chosen. */
+function msSummary(d){
+  const on = [...d.querySelectorAll("input:checked")].map(i => i.value);
+  const sum = d.querySelector("summary");
+  sum.textContent = on.length === 0 ? "All"
+                  : on.length === 1 ? on[0]
+                  : `${on.length} selected`;
+  sum.title = on.length > 1 ? on.join(", ") : "";
+  sum.classList.toggle("on", on.length > 0);
+}
 function readFilters(){
-  S.f = {type:el("fType").value, phase:el("fPhase").value, out:el("fOut").value,
-         proj:el("fProj").value, pers:el("fPers").value, role:el("fRole").value,
-         dept:el("fDept").value};
+  for (const [id, key] of Object.entries(FILTER_KEY))
+    S.f[key] = new Set([...el(id).querySelectorAll("input:checked")].map(i => i.value));
   const pk = s => { const m = String(s).match(/^(\d{4})-(\d{2})$/); return m ? (+m[1])*12 + (+m[2]-1) : null; };
   const a = pk(el("fFrom").value), b = pk(el("fTo").value);
   if (a !== null) S.from = a;
@@ -4269,14 +4469,38 @@ const drop = el("drop");
   e.preventDefault(); drop.classList.remove("on"); }));
 drop.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
 
-for (const id of ["fType","fPhase","fOut","fProj","fPers","fRole","fDept"])
-  el(id).addEventListener("change", () => { readFilters(); fitHorizon(); renderKeepingTab(); });
+for (const id of Object.keys(FILTER_KEY))
+  el(id).addEventListener("change", () => {
+    msSummary(el(id)); readFilters(); fitHorizon(); renderKeepingTab(); });
+
+/* Clear one filter without hunting for the ticks that are still on. */
+document.addEventListener("click", e => {
+  const c = e.target.closest("[data-msclear]");
+  if (!c) return;
+  const d = el(c.dataset.msclear);
+  for (const i of d.querySelectorAll("input")) i.checked = false;
+  msSummary(d); readFilters(); fitHorizon(); renderKeepingTab();
+});
+/* One open at a time, and clicking anywhere else puts them all away - <details> keeps
+   itself open otherwise, and seven panels left hanging over the page would bury it. */
+document.addEventListener("click", e => {
+  for (const d of document.querySelectorAll("details.ms"))
+    if (d.open && !d.contains(e.target)) d.open = false;
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  for (const d of document.querySelectorAll("details.ms")) d.open = false;
+});
 for (const id of ["fFrom","fTo"])
   el(id).addEventListener("change", () => { readFilters(); renderKeepingTab(); });
 el("fAll").onclick = () => { S.from = S.calc.lo; S.to = S.calc.hi;
   if (S.to - S.from > 120) S.to = S.from + 120; writeHorizon(); renderKeepingTab(); };
 el("fReset").onclick = () => {
-  for (const id of ["fType","fPhase","fOut","fProj","fPers","fRole","fDept"]) el(id).value = "All";
+  for (const id of Object.keys(FILTER_KEY)){
+    for (const i of el(id).querySelectorAll("input")) i.checked = false;
+    el(id).open = false;
+    msSummary(el(id));
+  }
   defaultHorizon(); readFilters(); renderKeepingTab();
 };
 
@@ -4294,6 +4518,13 @@ document.addEventListener("click", e => {
     const [id, mode] = vt.dataset.setview.split("|");
     S.genView[id] = mode;
     keepScroll(renderGenTab);
+    return;
+  }
+  const act = e.target.closest("[data-act]");
+  if (act){
+    e.stopPropagation();
+    if (act.dataset.act === "blankms") blankMilestones(act.dataset.pid);
+    if (act.dataset.act === "autoper") autoPeriods(act.dataset.pid);
     return;
   }
   const ins = e.target.closest("[data-ins]");

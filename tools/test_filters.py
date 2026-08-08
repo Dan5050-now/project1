@@ -2,9 +2,9 @@
 
 Two changes and one guard.
 
-  1. OUTSOURCING TYPE joins the filter conditions. It drives the same machinery as the
-     others - the charts, both Overall tables and the source-data tabs - and Reset puts
-     it back with the rest.
+  1. OUTSOURCING TYPE joins the filter conditions, and every filter now takes SEVERAL
+     values at once. Nothing ticked means All, one ticked reads as that value, more than
+     one reads as a count; Clear empties one filter and Reset empties them all.
 
   2. The HORIZON follows the filters. Narrow to one project type and the window is still
      the one the whole portfolio needed, so a two-year span goes mostly empty and the
@@ -63,6 +63,28 @@ def span(pg):
       return isFinite(lo) ? [f(lo), f(hi)] : null;}""")
 
 
+def pick(pg, fid, *values):
+    """Tick values in one filter. The control is a <details> holding checkboxes, so it
+    has to be opened before they can be clicked."""
+    pg.click(f"#{fid} summary")
+    pg.wait_for_timeout(300)
+    for v in values:
+        pg.check(f"#{fid} .msp input[value='{v}']")
+        pg.wait_for_timeout(900)
+    pg.click("h1")                       # anywhere outside puts the panel away
+    pg.wait_for_timeout(400)
+
+
+def unpick(pg, fid, *values):
+    pg.click(f"#{fid} summary")
+    pg.wait_for_timeout(300)
+    for v in values:
+        pg.uncheck(f"#{fid} .msp input[value='{v}']")
+        pg.wait_for_timeout(900)
+    pg.click("h1")
+    pg.wait_for_timeout(400)
+
+
 def edit(pg, col, text):
     td = pg.locator(f"{P} td[data-col='{col}']").first
     td.click()
@@ -92,46 +114,70 @@ with sync_playwright() as pw:
         print("\nFAILURES: the filter does not exist in this build")
         browser.close()
         sys.exit(1)
-    opts = pg.eval_on_selector_all("#fOut option", "es => es.map(e => e.textContent)")
+    opts = pg.eval_on_selector_all("#fOut .msp input", "es => es.map(e => e.value)")
     real = pg.evaluate("[...new Set(Object.values(S.model.projects)"
                        ".map(p => p.outsourcing_type))].filter(Boolean)")
-    check(opts[0] == "All" and sorted(opts[1:]) == sorted(real),
+    check(sorted(opts) == sorted(real) and pg.inner_text("#fOut summary").strip() == "All",
           "Outsourcing joins the filter bar, offering exactly the values in the file",
           ", ".join(opts))
 
     all_projects = pg.evaluate("activeProjects().length")
-    pg.select_option("#fOut", "Full In-house")
-    pg.wait_for_timeout(1400)
+    pick(pg, "fOut", "Full In-house")
     narrowed = pg.evaluate("() => ({n: activeProjects().length, "
                            "all: activeProjects().every(p => "
                            "S.model.projects[p].outsourcing_type === 'Full In-house')})")
-    check(narrowed["n"] and narrowed["n"] < all_projects and narrowed["all"],
-          "choosing one narrows the page to projects of that type",
+    check(narrowed["n"] and narrowed["n"] < all_projects and narrowed["all"]
+          and pg.inner_text("#fOut summary").strip() == "Full In-house",
+          "choosing one narrows the page to projects of that type, and it says which",
           f"{all_projects} projects -> {narrowed['n']}")
+
+    # ---- 1b. several values at once ------------------------------------------
+    pick(pg, "fOut", "Full outsourcing")
+    two = pg.evaluate("""() => ({n: activeProjects().length, chosen: [...S.f.out],
+        all: activeProjects().every(p => S.f.out.has(
+             S.model.projects[p].outsourcing_type))})""")
+    check(two["n"] > narrowed["n"] and two["all"] and len(two["chosen"]) == 2
+          and pg.inner_text("#fOut summary").strip() == "2 selected",
+          "a second value WIDENS the same filter — the two are an OR, not an AND",
+          f"{narrowed['n']} -> {two['n']} projects; summary reads "
+          f"{pg.inner_text('#fOut summary').strip()!r}")
+
+    unpick(pg, "fOut", "Full outsourcing")
 
     # ---- 2. the horizon follows ----------------------------------------------
     check(list(horizon(pg)) == span(pg),
           "and the horizon is pulled in to the months those projects reach",
           f"{horizon(pg)} vs the model's {span(pg)}")
 
-    pg.select_option("#fType", "NewDrug CT")
-    pg.wait_for_timeout(1400)
+    pick(pg, "fType", "NewDrug CT")
     check(list(horizon(pg)) == span(pg),
           "a second filter re-fits it again, against both conditions together",
           f"{horizon(pg)}, {pg.evaluate('activeProjects()')}")
 
     # ---- 3. the guards --------------------------------------------------------
     before = horizon(pg)
-    pg.select_option("#fType", "Biosimilar CT")     # with Full In-house: matches nothing
-    pg.wait_for_timeout(1400)
+    unpick(pg, "fType", "NewDrug CT")
+    pick(pg, "fType", "Biosimilar CT")     # with Full In-house: matches nothing
     check(pg.evaluate("activeProjects().length") == 0 and horizon(pg) == before,
           "a combination that matches nothing leaves the window where it was",
           f"{before} kept, {pg.evaluate('activeProjects().length')} projects match")
 
+    # Clear empties one filter without hunting for the ticks still on.
+    pg.click("#fOut summary")
+    pg.wait_for_timeout(300)
+    pg.click("#fOut [data-msclear]")
+    pg.wait_for_timeout(1200)
+    check(pg.evaluate("S.f.out.size") == 0
+          and pg.inner_text("#fOut summary").strip() == "All"
+          and pg.evaluate("S.f.type.size") == 1,
+          "Clear empties that one filter and leaves the others alone",
+          f"out={pg.evaluate('[...S.f.out]')}, type={pg.evaluate('[...S.f.type]')}")
+
     pg.click("#fReset")
     pg.wait_for_timeout(1300)
-    check(pg.evaluate("S.f.out") == "All" and pg.eval_on_selector("#fOut", "e => e.value") == "All",
-          "Reset filters puts outsourcing back with the rest")
+    check(pg.evaluate("REQUIRED_SHEETS && Object.values(S.f).every(v => v.size === 0)")
+          and pg.inner_text("#fType summary").strip() == "All",
+          "Reset filters empties every one of them")
 
     pg.fill("#fFrom", "2027-01")
     pg.dispatch_event("#fFrom", "change")

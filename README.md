@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.25 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.26 records Step 4 progress |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -63,7 +63,7 @@ document through the manifest rather than by sorting filenames.
 
 ## Documents
 
-- `docs/PRAP_Development_Plan_v2.25.xlsx` — **current.** 70 requirements, 24 validation
+- `docs/PRAP_Development_Plan_v2.26.xlsx` — **current.** 70 requirements, 24 validation
   rules, source schema version 5. Records Step 4 progress against the approved baseline.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -79,7 +79,7 @@ document through the manifest rather than by sorting filenames.
   lock milestones emphasised, and a project utilisation graph added as REQ-DSH-12).
 - `docs/PRAP_Development_Plan_v1.3.xlsx` — **the approved baseline** (Dan, 2026-08-01);
   65 requirements, 21 validation rules, 11 engineering decisions.
-- `docs/PRAP_Development_Plan_v2.24.xlsx`, `_v2.23.xlsx`, `_v2.22.xlsx`, `_v2.21.xlsx`, `_v2.20.xlsx`, `_v2.19.xlsx`, `_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
+- `docs/PRAP_Development_Plan_v2.25.xlsx`, `_v2.24.xlsx`, `_v2.23.xlsx`, `_v2.22.xlsx`, `_v2.21.xlsx`, `_v2.20.xlsx`, `_v2.19.xlsx`, `_v2.18.xlsx`, `_v2.17.xlsx`, `_v2.16.xlsx`, `_v2.15.xlsx`, `_v2.14.xlsx`, `_v2.13.xlsx`, `_v2.12.xlsx`, `_v2.11.xlsx`, `_v2.10.xlsx`, `_v2.9.xlsx`, `_v2.8.xlsx`, `_v2.7.xlsx`, `_v2.6.xlsx`, `_v1.9.xlsx`, `_v1.8.xlsx`, `_v1.7.xlsx`, `_v1.6.xlsx`, `_v1.5.xlsx`, `_v1.4.xlsx`, `_v1.2.xlsx`, `_v1.1.xlsx`, `_v1.0.xlsx` — superseded.
 - `docs/PRAP_Development_Plan_v0.4.xlsx` … `_v0.1.xlsx` — superseded drafts.
 - `docs/review/` — reviewer mark-ups, kept unedited so the review trail is auditable.
 - `docs/STEP2_OPEN_POINTS.md` — points raised while building the template, for the
@@ -131,6 +131,9 @@ document through the manifest rather than by sorting filenames.
   | An override window names its project and role before the assignment is saved | same file |
   | The horizon re-fits to whatever the filters leave, and stays put when they leave nothing | `tools/test_filters.py` |
   | Every pending change is listed with its time, place and before/after | same file |
+  | A filter takes several values, and they are an OR within one filter | `tools/test_filters.py` |
+  | Auto derivation matches the plan's rule term by term | `tools/test_generate.py`, on a project built to exercise every branch |
+  | What the two generators produce stays editable, and is undone by Leave without change | same file |
   | Every figure in a hand-built plan matches the formula worked by hand | same file, on all 27 person-months |
   | The blank start's reference grid has no gaps | same file; 56 standard weights and 289 role factors, so nothing falls back to 1.00 unnoticed |
   | The command line and the browser agree, rule for rule and figure for figure | `tools/test_interop.py`; same findings at the same severities, every person-month equal to 1e-6, on both fixtures |
@@ -161,6 +164,34 @@ document through the manifest rather than by sorting filenames.
   alone; every cell shows its value and its column's meaning on hover; row actions on
   the Periods and General-assumptions tables, with a matrix/rows toggle where a matrix
   row is several workbook rows; and **type-ahead** on every column with a vocabulary.
+
+  Gate 4 round 25 (app v1.24): **multi-value filters, and two generators on the project
+  tab.**
+
+  - **Every filter now takes several values at once** — a drop-down of tick boxes built on
+    `<details>`, which gives open, close, keyboard operation and focus for nothing. Nothing
+    ticked means **All**; one reads as that value; more reads as a count with the full list
+    on hover. Values *within* one filter are an **OR** (ticking a second project type
+    widens the view) while the filters remain an **AND** with each other. Each has its own
+    **Clear**, and **Reset** still empties them all.
+  - **Auto derivation** in the Periods section builds a project's periods from its
+    milestones by the rule on sheet 05 of the plan.
+  - **Blank list** in the Milestones section lays out the ten standard milestone names
+    with their dates empty, so only the dates have to be typed.
+
+  Both generators produce **ordinary rows** — provisional until Save, editable and
+  deletable afterwards, subject to every rule — because the point is to save the typing,
+  not to take the decision away. Auto derivation reads the milestones from the raw sheet,
+  so a set just typed and not yet saved still counts; it asks before replacing an existing
+  set; and it refuses what it cannot do, naming the reason (an `Others` project, or a
+  trial missing CTA submission or a DB lock — V-16). Blank list does not repeat a name
+  already listed, since a second `CTA submission` is the duplicate V-20 exists to catch.
+
+  **A latent crash was found while testing them and fixed.** Clicking a row that had not
+  been saved yet made its identifier the selection, and the detail panels below need a
+  *record* — dates, a name, a calculation — which a draft has none of. `projDetail` threw,
+  taking the whole re-render with it, so the click appeared to do nothing at all. Both
+  detail panels now fall back to the scratch panels built for exactly that state.
 
   Gate 4 round 24 (app v1.23): **the filter bar, and what the unsaved-change counter can
   tell you.**
@@ -595,6 +626,16 @@ That counts the bands and markers on the project timeline against the periods an
 milestones in the data, and adds up the stacked utilisation segments month by month to
 confirm they equal the person-month the calculation holds — a chart that disagrees with
 the table is worse than no chart.
+
+And check the two generators on the project tab:
+
+```bash
+python tools/test_generate.py
+```
+
+That builds a project whose milestones exercise every branch of the rule — a protocol
+date, a First SIV, an interim lock earlier than the final one, and an inspection after it
+— and checks each of the seven periods it derives against the rule, term by term.
 
 And check the filter bar, the horizon that follows it, and the change log:
 
