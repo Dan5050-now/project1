@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.24"
+DOC_VERSION = "2.25"
 DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
@@ -366,7 +366,32 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.24", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.25", DOC_DATE, "Claude Code", "Pending",
+     "Gate 4 round 24, application v1.23. Three changes to the filter bar and to what the "
+     "unsaved-change counter can tell you. (1) OUTSOURCING TYPE joins the filter conditions, "
+     "driving the same machinery as the other six - the charts, both Overall tables and the "
+     "source-data tabs - and Reset puts it back with the rest. (2) THE HORIZON NOW FOLLOWS THE "
+     "FILTERS. Narrowing to one project type left the window the whole portfolio needed, so a "
+     "two-year span went mostly empty and the reader was looking at a chart of nothing with no "
+     "way to tell whether that was the answer or the view. Changing a filter now pulls From and "
+     "To in to the months the surviving rows actually reach. Two things are deliberately left "
+     "alone: a combination that matches NOTHING keeps the window where it was, because jumping "
+     "to an arbitrary span would hide the reason the screen is empty; and typing in From or To "
+     "is the user moving the window themselves, so the re-fit runs only when a filter DROPDOWN "
+     "moves. (3) A SHOW DETAILS button beside the counter opens every change waiting to be "
+     "saved, as a table: the time it happened, which tab, which section, which row, which item, "
+     "what it was before and what it is now. Newest first, because the question it answers is "
+     "almost always 'what did I just do' - the edit you are unsure about is the one you made a "
+     "moment ago - and the first row is tinted for the same reason. The dialog closes, goes "
+     "full screen for a log too wide or too long for the ordinary box, and scrolls with the "
+     "same visible bar and edge shading as every other scroll region. The section column shows "
+     "the name the panel goes by on screen rather than the sheet name, because the point of the "
+     "log is being able to walk back to the thing you changed; the sheet is still what is "
+     "recorded underneath. Every pending entry now carries the time it was made, which nothing "
+     "did before. tools/test_filters.py covers all three. No requirement, rule, calculation or "
+     "schema version changed.",
+     "Issued for review"],
+    ["2.24", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 23, application v1.22. Four values that were typed by hand while the rows "
      "underneath already said what they should be. (1) A project's WINDOW is now recalculated "
      "on Save: start_date becomes the earliest of its milestone dates and end_date the latest, "
@@ -398,7 +423,7 @@ rows = [
      "a plan started blank uses. tools/test_derive.py covers all four; seven of its ten checks "
      "fail against the previous build. No requirement, rule, calculation or schema version "
      "changed.",
-     "Issued for review"],
+     "Superseded by v2.25"],
     ["2.23", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 22, application v1.21. Three changes to what a new row arrives with, and "
      "to whether the reader can tell there is more to see. (1) IDENTIFIERS are now "
@@ -1616,7 +1641,7 @@ wbs = [
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
     ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.6.xlsx", "Complete"],
-    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-23 applied (app v1.22); GATE 4 open"],
+    ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-24 applied (app v1.23); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
     ["5", "5.1", "Full pass over the traceability matrix: every Must requirement demonstrated.", "Completed traceability matrix", "Not started"],
@@ -1713,7 +1738,8 @@ align = [
     ["v2.21", "v1.0", "application v1.19", "5", DOC_DATE, "Gate 4 round 20: scroll position survives a re-render."],
     ["v2.22", "v1.0", "application v1.20", "5", DOC_DATE, "Gate 4 round 21: a row with no identifier is not a record."],
     ["v2.23", "v1.0", "application v1.21", "5", DOC_DATE, "Gate 4 round 22: allocated ids, neutral weights, and scroll regions that say there is more."],
-    ["v2.24", "v1.0", "application v1.22", "5", DOC_DATE, "Gate 4 round 23: the project window and team size derived from the rows beneath. 4.9 continues."],
+    ["v2.24", "v1.0", "application v1.22", "5", DOC_DATE, "Gate 4 round 23: the project window and team size derived from the rows beneath."],
+    ["v2.25", "v1.0", "application v1.23", "5", DOC_DATE, "Gate 4 round 24: outsourcing filter, a horizon that follows the filters, and a change log. 4.9 continues."],
     ["", "", "", "", "", ""],
 ]
 r = table(ws, r, ["Plan version", "Specification version", "Application version", "Schema version", "Date", "Note"],

@@ -1,0 +1,209 @@
+"""The filter bar: what it can narrow by, and what the horizon does when it moves.
+
+Two changes and one guard.
+
+  1. OUTSOURCING TYPE joins the filter conditions. It drives the same machinery as the
+     others - the charts, both Overall tables and the source-data tabs - and Reset puts
+     it back with the rest.
+
+  2. The HORIZON follows the filters. Narrow to one project type and the window is still
+     the one the whole portfolio needed, so a two-year span goes mostly empty and the
+     reader is looking at a chart of nothing with no way to tell whether that is the
+     answer or the view. Changing a filter now pulls From and To in to the months the
+     surviving rows actually reach.
+
+  3. Except when nothing survives. A filter matching no project leaves the window where
+     it was, because jumping to an arbitrary span would hide the reason the screen is
+     empty. And typing in From or To is the user moving the window themselves - that is
+     left alone.
+
+And the change log:
+
+  4. A button beside the unsaved-change counter opens every pending change - when, which
+     tab, which section, which row, which item, what it was and what it is now - newest
+     first, in a dialog that closes, goes full screen, and scrolls.
+
+    python tools/test_filters.py
+"""
+
+import pathlib
+import sys
+
+from playwright.sync_api import sync_playwright
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+APP = (ROOT / "app" / "PRAP.html").as_uri()
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.1.xlsx"
+CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
+P = "#t-proj .data-t[data-sheet='Project']"
+
+fails = []
+
+
+def check(ok, label, detail=""):
+    print(f"  {'ok  ' if ok else 'FAIL'} {label}{'   ' + detail if detail else ''}")
+    if not ok:
+        fails.append(label)
+
+
+def horizon(pg):
+    return pg.evaluate("() => [el('fFrom').value, el('fTo').value]")
+
+
+def span(pg):
+    """The months the surviving rows really reach, computed from the model, not the UI."""
+    return pg.evaluate("""() => {
+      const pids = new Set(activeProjects()), sids = new Set(activePeople());
+      let lo = Infinity, hi = -Infinity;
+      const scan = (m, keep) => { for (const [k, v] of m){ if (!(v > 1e-9)) continue;
+        const i = k.lastIndexOf('|'); if (!keep.has(k.slice(0, i))) continue;
+        const n = +k.slice(i + 1); if (n < lo) lo = n; if (n > hi) hi = n; } };
+      scan(S.calc.projMonth, pids); scan(S.calc.persMonth, sids);
+      const f = k => `${Math.floor(k/12)}-${String(k%12+1).padStart(2,'0')}`;
+      return isFinite(lo) ? [f(lo), f(hi)] : null;}""")
+
+
+def edit(pg, col, text):
+    td = pg.locator(f"{P} td[data-col='{col}']").first
+    td.click()
+    pg.wait_for_timeout(160)
+    pg.keyboard.press("Control+A")
+    pg.keyboard.type(text)
+    pg.keyboard.press("Enter")
+    pg.wait_for_timeout(450)
+
+
+with sync_playwright() as pw:
+    browser = pw.chromium.launch(executable_path=CHROME)
+    pg = browser.new_page(viewport={"width": 1500, "height": 950})
+    errors = []
+    pg.on("pageerror", lambda e: errors.append(str(e)))
+    pg.on("dialog", lambda d: d.accept())
+
+    print("app/PRAP.html — filters, horizon, and the change log")
+    pg.goto(APP)
+    pg.wait_for_timeout(300)
+    pg.set_input_files("#picker", str(DUMMY))
+    pg.wait_for_timeout(4500)
+
+    # ---- 1. outsourcing type -------------------------------------------------
+    if pg.locator("#fOut").count() == 0:
+        check(False, "Outsourcing joins the filter bar", "there is no #fOut control at all")
+        print("\nFAILURES: the filter does not exist in this build")
+        browser.close()
+        sys.exit(1)
+    opts = pg.eval_on_selector_all("#fOut option", "es => es.map(e => e.textContent)")
+    real = pg.evaluate("[...new Set(Object.values(S.model.projects)"
+                       ".map(p => p.outsourcing_type))].filter(Boolean)")
+    check(opts[0] == "All" and sorted(opts[1:]) == sorted(real),
+          "Outsourcing joins the filter bar, offering exactly the values in the file",
+          ", ".join(opts))
+
+    all_projects = pg.evaluate("activeProjects().length")
+    pg.select_option("#fOut", "Full In-house")
+    pg.wait_for_timeout(1400)
+    narrowed = pg.evaluate("() => ({n: activeProjects().length, "
+                           "all: activeProjects().every(p => "
+                           "S.model.projects[p].outsourcing_type === 'Full In-house')})")
+    check(narrowed["n"] and narrowed["n"] < all_projects and narrowed["all"],
+          "choosing one narrows the page to projects of that type",
+          f"{all_projects} projects -> {narrowed['n']}")
+
+    # ---- 2. the horizon follows ----------------------------------------------
+    check(list(horizon(pg)) == span(pg),
+          "and the horizon is pulled in to the months those projects reach",
+          f"{horizon(pg)} vs the model's {span(pg)}")
+
+    pg.select_option("#fType", "NewDrug CT")
+    pg.wait_for_timeout(1400)
+    check(list(horizon(pg)) == span(pg),
+          "a second filter re-fits it again, against both conditions together",
+          f"{horizon(pg)}, {pg.evaluate('activeProjects()')}")
+
+    # ---- 3. the guards --------------------------------------------------------
+    before = horizon(pg)
+    pg.select_option("#fType", "Biosimilar CT")     # with Full In-house: matches nothing
+    pg.wait_for_timeout(1400)
+    check(pg.evaluate("activeProjects().length") == 0 and horizon(pg) == before,
+          "a combination that matches nothing leaves the window where it was",
+          f"{before} kept, {pg.evaluate('activeProjects().length')} projects match")
+
+    pg.click("#fReset")
+    pg.wait_for_timeout(1300)
+    check(pg.evaluate("S.f.out") == "All" and pg.eval_on_selector("#fOut", "e => e.value") == "All",
+          "Reset filters puts outsourcing back with the rest")
+
+    pg.fill("#fFrom", "2027-01")
+    pg.dispatch_event("#fFrom", "change")
+    pg.wait_for_timeout(1000)
+    check(horizon(pg)[0] == "2027-01",
+          "typing in From is the user moving the window, and is left alone",
+          f"{horizon(pg)}")
+
+    # ---- 4. the change log ----------------------------------------------------
+    pg.click("text=Source data (project)")
+    pg.wait_for_timeout(1200)
+    check(pg.eval_on_selector("#chgBtn", "e => e.disabled"),
+          "with nothing pending, the details button is disabled")
+
+    edit(pg, "project_name", "ONV-101 Phase 1 (rev)")
+    edit(pg, "project_category", "Onvelaris II")
+    pg.locator(f"{P} button[data-ins]").first.click()
+    pg.wait_for_timeout(1000)
+    n = pg.evaluate("S.pending.length")
+    check(n == 3 and not pg.eval_on_selector("#chgBtn", "e => e.disabled"),
+          "three changes later it is enabled", f"{n} pending")
+
+    pg.click("#chgBtn")
+    pg.wait_for_timeout(800)
+    rows = pg.eval_on_selector_all(
+        "#chgBody tbody tr",
+        "es => es.map(e => [...e.querySelectorAll('td')].map(t => t.textContent.trim()))")
+    head = pg.eval_on_selector_all("#chgBody thead th", "es => es.map(e => e.textContent)")
+    check(pg.eval_on_selector("#changes", "e => e.open") and len(rows) == 3
+          and head == ["time", "tab", "section", "row", "item", "before", "after"],
+          "the dialog opens and lists every pending change with all six details",
+          f"{len(rows)} rows, columns {head}")
+
+    newest, oldest = rows[0], rows[-1]
+    check(newest[4] == "(new row)" and oldest[4] == "project_name"
+          and oldest[5] == "ONV-101 Phase 1" and oldest[6] == "ONV-101 Phase 1 (rev)",
+          "newest first, and each row reads before -> after",
+          f"newest {newest[4]!r}; oldest {oldest[5]!r} -> {oldest[6]!r}")
+
+    check(all(r[0] and ":" in r[0] for r in rows) and all(r[1] and r[2] for r in rows),
+          "every row carries the time it happened, its tab and its section",
+          f"e.g. {newest[0]} · {newest[1]} · {newest[2]} · row {newest[3]}")
+
+    pg.click("#chgBig")
+    pg.wait_for_timeout(600)
+    big = pg.evaluate("""() => {const d = el('changes');
+        return {cls: d.classList.contains('big'), w: d.getBoundingClientRect().width,
+                label: el('chgBig').textContent};}""")
+    pg.click("#chgBig")
+    pg.wait_for_timeout(600)
+    small = pg.evaluate("el('changes').getBoundingClientRect().width")
+    check(big["cls"] and big["w"] > small and big["label"] == "Exit full screen",
+          "full screen widens it, and the button offers the way back",
+          f"{small:.0f}px -> {big['w']:.0f}px")
+
+    scrolls = pg.evaluate("""() => {const b = el('chgBody');
+        return getComputedStyle(b).overflowY === 'auto' || getComputedStyle(b).overflowY === 'scroll';}""")
+    check(scrolls, "the body scrolls, so a long log stays readable")
+
+    pg.click("#chgClose")
+    pg.wait_for_timeout(500)
+    check(not pg.eval_on_selector("#changes", "e => e.open"), "Close closes it")
+
+    pg.click("#discardBtn")
+    pg.wait_for_timeout(1400)
+    check(pg.evaluate("S.pending.length") == 0
+          and pg.eval_on_selector("#chgBtn", "e => e.disabled"),
+          "and once the changes are gone, so is the button")
+
+    check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
+    browser.close()
+
+print()
+print("FAILURES: " + (", ".join(fails) if fails else "none"))
+sys.exit(1 if fails else 0)

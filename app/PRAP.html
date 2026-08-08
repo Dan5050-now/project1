@@ -528,7 +528,26 @@ dialog::backdrop{background:rgba(0,0,0,.35);
  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 .dlg-h{display:flex;align-items:center;gap:10px;padding:14px 18px;
  border-bottom:1px solid var(--hairline)}
-.dlg-b{padding:14px 18px;max-height:64vh;overflow:auto;scrollbar-width:thin}
+.dlg-b{padding:14px 18px;max-height:64vh;overflow:auto}
+/* The dialog's own scroll region gets the same visible bar as every other one - a change
+   log is exactly the kind of list that runs off the bottom. */
+.dlg-b{scrollbar-color:var(--base) transparent}
+.dlg-b::-webkit-scrollbar{width:12px;height:12px}
+.dlg-b::-webkit-scrollbar-track{background:var(--fill);border-radius:8px}
+.dlg-b::-webkit-scrollbar-thumb{background:var(--base);border-radius:8px;
+ border:3px solid transparent;background-clip:padding-box}
+.dlg-b::-webkit-scrollbar-thumb:hover{background:var(--ink2)}
+/* Full screen, for a log long enough or wide enough that the ordinary box fights it. */
+dialog.big{max-width:none;width:97vw}
+dialog.big .dlg-b{max-height:84vh}
+/* A change log reads as before -> after, so the two are set apart from each other and
+   from everything else: what it WAS is quiet and struck through, what it IS now is not. */
+.chg td{vertical-align:top}
+.chg .was{color:var(--muted);text-decoration:line-through}
+.chg .now{color:var(--ink);font-weight:560}
+.chg .empty{color:var(--muted);font-style:italic;text-decoration:none}
+.chg .when{color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.chg tbody tr:first-child td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
 .sev{font-size:10px;font-weight:650;border-radius:var(--r-xs);padding:2px 7px;
  text-transform:uppercase;letter-spacing:.04em}
 .sev.fatal,.sev.error{background:var(--overbg);color:var(--crit)}
@@ -565,6 +584,7 @@ dialog::backdrop{background:rgba(0,0,0,.35);
     <div class="ctl"><label>&nbsp;</label><button class="btn" id="fAll">Expand to all projects</button></div>
     <div class="ctl"><label>Project type</label><select id="fType"></select></div>
     <div class="ctl"><label>Clinical phase</label><select id="fPhase"></select></div>
+    <div class="ctl"><label>Outsourcing</label><select id="fOut"></select></div>
     <div class="ctl"><label>Project</label><select id="fProj"></select></div>
     <div class="ctl"><label>Person</label><select id="fPers"></select></div>
     <div class="ctl"><label>Role</label><select id="fRole"></select></div>
@@ -576,6 +596,9 @@ dialog::backdrop{background:rgba(0,0,0,.35);
 <div id="editbar" hidden>
   <span class="guide" id="guide"></span>
   <span id="editstate"></span>
+  <button class="btn" id="chgBtn" disabled
+    title="Every change waiting to be saved: what changed, where, and what it was before"
+    >Show details</button>
   <button class="btn primary" id="saveBtn" disabled>Save</button>
   <button class="btn" id="discardBtn" disabled>Leave without change</button>
 </div>
@@ -633,9 +656,16 @@ dialog::backdrop{background:rgba(0,0,0,.35);
   <div class="dlg-b" id="repBody"></div>
 </dialog>
 
+<dialog id="changes">
+  <div class="dlg-h"><strong id="chgTitle">Unsaved changes</strong>
+    <button class="btn" style="margin-left:auto" id="chgBig">Full screen</button>
+    <button class="btn" id="chgClose">Close</button></div>
+  <div class="dlg-b" id="chgBody"></div>
+</dialog>
+
 <script>
 "use strict";
-const APP_VERSION = "1.22";
+const APP_VERSION = "1.23";
 const SCHEMA_EXPECTED = 5;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -644,8 +674,8 @@ const SCHEMA_EXPECTED = 5;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.24.xlsx",          ver:"2.24",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.24 records Step 4 progress"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.25.xlsx",          ver:"2.25",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.25 records Step 4 progress"},
   {what:"Programming specification", file:"PRAP_Programming_Specification_v1.0.xlsx", ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
@@ -1831,7 +1861,7 @@ function calculate(M){
 const S = {
   model:null, calc:null, fileName:"", loadedAt:null, blank:false,
   from:null, to:null,                       // month keys
-  f:{type:"All", phase:"All", proj:"All", pers:"All", role:"All", dept:"All"},
+  f:{type:"All", phase:"All", out:"All", proj:"All", pers:"All", role:"All", dept:"All"},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
   pending:[], saved:0, snapshot:null, editedCells:new Set(), headers:{},
   genView:{pws:"matrix", rf:"matrix", lists:"matrix"},
@@ -1842,6 +1872,7 @@ function activeProjects(){
   for (const [pid, p] of Object.entries(M.projects)){
     if (S.f.type !== "All" && p.project_type !== S.f.type) continue;
     if (S.f.phase !== "All" && p.clinical_phase !== S.f.phase) continue;
+    if (S.f.out !== "All" && p.outsourcing_type !== S.f.out) continue;
     if (S.f.proj !== "All" && pid !== S.f.proj) continue;
     if (S.f.pers !== "All" && !M.assignments.some(a => a.project_id === pid && a.person_id === S.f.pers)) continue;
     if (S.f.role !== "All" && !M.assignments.some(a => a.project_id === pid && a.role_name === S.f.role)) continue;
@@ -3594,7 +3625,8 @@ function renderDirty(){
   const n = S.pending.length, bar = el("editbar");
   bar.hidden = !S.model;
   bar.classList.toggle("dirty", n > 0);
-  el("saveBtn").disabled = el("discardBtn").disabled = (n === 0);
+  el("saveBtn").disabled = el("discardBtn").disabled = el("chgBtn").disabled = (n === 0);
+  if (!n && el("changes").open) el("changes").close();   // nothing left to show
   el("editstate").textContent = n
     ? `${n} unsaved change${n===1?"":"s"}`
     : (S.saved ? `${S.saved} saved change${S.saved===1?"":"s"} · nothing pending`
@@ -3666,7 +3698,7 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
       return;
     }
     for (const [r, c2] of hits) r[c2] = v;               // one atomic step
-    if (hits.length) S.pending.push({sheet:"(cascade)", row:"", col,
+    if (hits.length) S.pending.push({at:new Date(), sheet:"(cascade)", row:"", col,
                                      from:before, to:v, n:hits.length});
   }
   target[col] = v;
@@ -3682,7 +3714,7 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
     flashBad(tdEl, newErrors[newErrors.length - 1].msg);
     return;
   }
-  S.pending.push({sheet, row:rowNum, col, from:before, to:v});
+  S.pending.push({at:new Date(), sheet, row:rowNum, col, from:before, to:v});
   S.editedCells.add(`${sheet}|${rowNum}|${col}`);
   tdEl.classList.add("edited");
   rebuild(true);
@@ -3792,7 +3824,8 @@ function deleteRow(sheet, rowNum){
   beginEditSession();
   rows.splice(i, 1);
   for (const k of [...S.editedCells]) if (k.startsWith(`${sheet}|${rowNum}|`)) S.editedCells.delete(k);
-  S.pending.push({sheet, row:rowNum, col:"(deleted row)", from:val ?? "(blank row)", to:null});
+  S.pending.push({at:new Date(), sheet, row:rowNum, col:"(deleted row)",
+                  from:val ?? "(blank row)", to:null});
   rebuild(true);
   renderKeepingTab();
   showBanner("", `Deleted ${val ? `${val} from ${sheet}` : `a blank row from ${sheet}`}. `
@@ -3877,6 +3910,62 @@ function renderReport(findings){
         + `<td>${esc(f.sheet)}</td><td>${f.row || ""}</td>`
         + `<td style="white-space:normal">${esc(f.msg)}</td></tr>`).join("")}</tbody></table>`
     : `<p class="cap">Nothing to report — the workbook passed every rule.</p>`;
+}
+
+/* The name a sheet goes by on screen. The pending list records the SHEET a change
+   landed on, which is the right key to keep, but "PersonPeriodWeight" is not what the
+   panel over that table is called - and the whole point of the log is being able to walk
+   back to the thing you changed. */
+const SECTION = {
+  Project:"Projects", Milestone:"Milestones", ProjectPeriod:"Periods",
+  Person:"People", Assignment:"Assignments", PersonPeriodWeight:"Weight overrides",
+  PeriodWeightStandard:"Standard period weights", RoleFactor:"Role factors",
+  Lists:"Value lists", Config:"Configuration",
+  "(cascade)":"Carried through automatically",
+};
+const TAB_OF = {
+  Project:"Source data (project)", Milestone:"Source data (project)",
+  ProjectPeriod:"Source data (project)", Person:"Source data (person)",
+  Assignment:"Source data (person)", PersonPeriodWeight:"Source data (person)",
+  PeriodWeightStandard:"General assumptions", RoleFactor:"General assumptions",
+  Lists:"General assumptions", Config:"General assumptions",
+};
+
+/** Every change waiting to be saved, newest first.
+ *
+ *  Newest first because the question this answers is almost always "what did I just do" -
+ *  the edit you are unsure about is the one you made a moment ago, not the one from ten
+ *  minutes back. The first row is tinted for the same reason.
+ */
+function renderChanges(){
+  const rows = S.pending.slice().reverse();
+  const val = v => {
+    if (v === null || v === undefined || v === "") return `<span class="empty">(empty)</span>`;
+    if (v instanceof Date) return esc(ymd(v));
+    return esc(v);
+  };
+  const when = d => d instanceof Date
+    ? `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`
+      + `:${String(d.getSeconds()).padStart(2,"0")}`
+    : "";
+  el("chgTitle").textContent = `Unsaved changes — ${S.pending.length}`;
+  el("chgBody").innerHTML = rows.length
+    ? `<p class="cap">Newest first. Nothing here has reached the file: <strong>Save</strong>
+        keeps them in the working data, <strong>Leave without change</strong> puts every one
+        of them back, and neither writes to disk until you press Export.</p>
+       <div class="scrollx"><table class="data-t chg">
+        <thead><tr><th>time</th><th>tab</th><th>section</th><th>row</th><th>item</th>
+          <th>before</th><th>after</th></tr></thead>
+        <tbody>${rows.map(c =>
+        `<tr><td class="when">${when(c.at)}</td>`
+        + `<td>${esc(TAB_OF[c.sheet] || "")}</td>`
+        + `<td>${esc(SECTION[c.sheet] || c.sheet)}</td>`
+        + `<td class="num">${c.row === "" || c.row === undefined ? "" : c.row}</td>`
+        + `<td><code>${esc(c.col)}</code></td>`
+        + `<td class="was">${val(c.from)}</td>`
+        + `<td class="now">${val(c.to)}</td></tr>`).join("")}</tbody></table></div>`
+    : `<p class="cap">Nothing is waiting to be saved.</p>`;
+  cueScrollers();
 }
 
 /* ============================================================ 14. wiring */
@@ -3975,14 +4064,16 @@ function fillFilters(){
   };
   set("fType", [...new Set(Object.values(M.projects).map(p => p.project_type))].filter(Boolean));
   set("fPhase", [...new Set(Object.values(M.projects).map(p => p.clinical_phase))].filter(Boolean));
+  set("fOut", [...new Set(Object.values(M.projects).map(p => p.outsourcing_type))].filter(Boolean));
   set("fProj", Object.keys(M.projects).sort());
   set("fPers", Object.keys(M.people).sort());
   set("fRole", [...new Set(M.assignments.map(a => a.role_name))].filter(Boolean).sort());
   set("fDept", [...new Set(Object.values(M.people).map(p => p.department))].filter(Boolean).sort());
 }
 function readFilters(){
-  S.f = {type:el("fType").value, phase:el("fPhase").value, proj:el("fProj").value,
-         pers:el("fPers").value, role:el("fRole").value, dept:el("fDept").value};
+  S.f = {type:el("fType").value, phase:el("fPhase").value, out:el("fOut").value,
+         proj:el("fProj").value, pers:el("fPers").value, role:el("fRole").value,
+         dept:el("fDept").value};
   const pk = s => { const m = String(s).match(/^(\d{4})-(\d{2})$/); return m ? (+m[1])*12 + (+m[2]-1) : null; };
   const a = pk(el("fFrom").value), b = pk(el("fTo").value);
   if (a !== null) S.from = a;
@@ -3995,6 +4086,41 @@ function writeHorizon(){
   const s = k => `${Math.floor(k/12)}-${String(k%12+1).padStart(2,"0")}`;
   el("fFrom").value = s(S.from); el("fTo").value = s(S.to);
 }
+/** Pull the horizon in to the months the CURRENT filters actually reach.
+ *
+ *  Narrow to one project type and the window is still the one the whole portfolio needed,
+ *  so a two-year span goes mostly empty and the reader is looking at a chart of nothing
+ *  with no way to tell whether that is the answer or the view. The From and To boxes stay
+ *  editable and are left alone when the user is the one changing them - this runs only
+ *  when a filter DROPDOWN moves.
+ *
+ *  A filter that matches nothing leaves the window where it was: jumping to an arbitrary
+ *  span would hide the fact that the filter is the reason nothing is on screen.
+ */
+function fitHorizon(){
+  const C = S.calc;
+  if (!C) return false;
+  const pids = new Set(activeProjects()), sids = new Set(activePeople());
+  let lo = Infinity, hi = -Infinity;
+  const scan = (map, keep) => {
+    for (const [key, v] of map){
+      if (!(v > 1e-9)) continue;
+      const i = key.lastIndexOf("|");
+      if (!keep.has(key.slice(0, i))) continue;
+      const k = +key.slice(i + 1);
+      if (k < lo) lo = k;
+      if (k > hi) hi = k;
+    }
+  };
+  scan(C.projMonth, pids);
+  scan(C.persMonth, sids);
+  if (!isFinite(lo) || !isFinite(hi)) return false;
+  if (hi - lo > 120) hi = lo + 120;            // a table ten years wide helps nobody
+  S.from = lo; S.to = hi;
+  writeHorizon();
+  return true;
+}
+
 function defaultHorizon(){
   const M = S.model, C = S.calc;
   const now = new Date();
@@ -4122,6 +4248,13 @@ el("picker").onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]
 el("exportBtn").onclick = () => exportWorkbook(false);
 el("exportJsonBtn").onclick = () => exportWorkbook(true);
 el("repClose").onclick = () => el("report").close();
+el("chgBtn").onclick = () => { renderChanges(); el("changes").showModal(); };
+el("chgClose").onclick = () => el("changes").close();
+el("chgBig").onclick = () => {
+  const d = el("changes"), big = d.classList.toggle("big");
+  el("chgBig").textContent = big ? "Exit full screen" : "Full screen";
+  cueScrollers();                       // the box changed size, so its edge cues have too
+};
 el("themeBtn").onclick = () => {
   const r = document.documentElement;
   const dark = r.dataset.theme ? r.dataset.theme === "dark"
@@ -4136,14 +4269,14 @@ const drop = el("drop");
   e.preventDefault(); drop.classList.remove("on"); }));
 drop.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
 
-for (const id of ["fType","fPhase","fProj","fPers","fRole","fDept"])
-  el(id).addEventListener("change", () => { readFilters(); renderKeepingTab(); });
+for (const id of ["fType","fPhase","fOut","fProj","fPers","fRole","fDept"])
+  el(id).addEventListener("change", () => { readFilters(); fitHorizon(); renderKeepingTab(); });
 for (const id of ["fFrom","fTo"])
   el(id).addEventListener("change", () => { readFilters(); renderKeepingTab(); });
 el("fAll").onclick = () => { S.from = S.calc.lo; S.to = S.calc.hi;
   if (S.to - S.from > 120) S.to = S.from + 120; writeHorizon(); renderKeepingTab(); };
 el("fReset").onclick = () => {
-  for (const id of ["fType","fPhase","fProj","fPers","fRole","fDept"]) el(id).value = "All";
+  for (const id of ["fType","fPhase","fOut","fProj","fPers","fRole","fDept"]) el(id).value = "All";
   defaultHorizon(); readFilters(); renderKeepingTab();
 };
 
@@ -4184,7 +4317,8 @@ document.addEventListener("click", e => {
         blank[col] = typeof v === "function" ? v() : v;
     rows.splice(i + 1, 0, blank);                        // directly below, not appended
     beginEditSession();
-    S.pending.push({sheet, row:blank.__row, col:"(new row)", from:null, to:""});
+    S.pending.push({at:new Date(), sheet, row:blank.__row, col:"(new row)",
+                    from:null, to:""});
     // Deliberately no rebuild: a row with every cell empty is INCOMPLETE, not invalid,
     // and the parser skips blank rows. It becomes real when a field is filled, and the
     // export guard refuses to write one that still has no identifier.
