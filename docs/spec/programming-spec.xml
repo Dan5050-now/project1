@@ -1,0 +1,1957 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TEA-SPEC-001 — Programming Specification for the Tumor Evaluation Review Agent.
+  Derived from TEA-PLAN-001 v0.1.0. Status: DRAFT for sponsor review (Step 2 gate).
+
+  This document is intended to be machine-readable as well as human-readable: the
+  <ruleCatalog> is the source artifact for the rule pack. CI asserts a one-to-one
+  correspondence between catalog entries and implemented rule modules at the same version.
+-->
+<programmingSpecification
+    id="TEA-SPEC-001"
+    schemaVersion="1.0"
+    derivedFrom="TEA-PLAN-001@0.1.0"
+    xml:lang="en">
+
+  <documentControl>
+    <title>Tumor Evaluation Review Agent — Programming Specification</title>
+    <version>0.1.0</version>
+    <status>DRAFT</status>
+    <issueDate>2026-08-10</issueDate>
+    <rulePackVersion>0.1.0</rulePackVersion>
+    <guidelineCoverage>RECIST 1.0, RECIST 1.1, iRECIST</guidelineCoverage>
+    <changeHistory>
+      <revision version="0.1.0" date="2026-08-10">
+        Initial draft: definitions, data contracts, processing pipeline, derivation algorithms,
+        rule catalog (6 families, 61 review points), LLM integration contract, query
+        reconciliation, output specification, API surface, testing and extensibility.
+      </revision>
+    </changeHistory>
+    <reviewInstructions>
+      Reviewers should read <reference target="derivations"/> first (the arithmetic everything
+      else depends on), then review the rule catalog family by family. For each rule, confirm:
+      (a) the logic matches sponsor practice, (b) the severity is right, (c) the suggested query
+      wording matches house style, (d) the false-positive guards are sufficient. Mark rules to
+      ACCEPT, AMEND or REMOVE. Rules whose &lt;status&gt; is PROPOSED_OPTIONAL are switched off by
+      default and need an explicit decision.
+    </reviewInstructions>
+  </documentControl>
+
+  <!-- ============================================================= -->
+  <definitions>
+
+    <enumeration name="TargetResponse">
+      <value code="CR">Complete response</value>
+      <value code="PR">Partial response</value>
+      <value code="SD">Stable disease</value>
+      <value code="PD">Progressive disease</value>
+      <value code="NE">Not evaluable</value>
+    </enumeration>
+
+    <enumeration name="NonTargetResponse">
+      <value code="CR">Complete response</value>
+      <value code="NON_CR_NON_PD">Non-CR / Non-PD</value>
+      <value code="PD">Unequivocal progressive disease</value>
+      <value code="NE">Not evaluable</value>
+    </enumeration>
+
+    <enumeration name="OverallResponse">
+      <value code="CR"/><value code="PR"/><value code="SD"/>
+      <value code="NON_CR_NON_PD" note="Only for subjects without measurable disease at baseline"/>
+      <value code="PD"/><value code="NE"/>
+    </enumeration>
+
+    <enumeration name="IrecistResponse">
+      <value code="iCR"/><value code="iPR"/><value code="iSD"/>
+      <value code="iUPD" note="Unconfirmed progression"/>
+      <value code="iCPD" note="Confirmed progression"/>
+      <value code="iNE"/>
+    </enumeration>
+
+    <enumeration name="LesionState">
+      <value code="PRESENT">Measured, value recorded</value>
+      <value code="ABSENT">No longer visible; contributes 0 mm to the sum</value>
+      <value code="TOO_SMALL_TO_MEASURE">Visible but below reliable measurement; contributes the configured default (see too_small_to_measure_default_mm)</value>
+      <value code="NOT_EVALUABLE">Not assessable at this timepoint (obscured, poor quality, region not imaged)</value>
+      <value code="NOT_DONE">Assessment not performed for this lesion</value>
+    </enumeration>
+
+    <enumeration name="Severity">
+      <value code="CRITICAL">Affects a primary or key secondary endpoint derivation (response, progression, date of progression) or subject eligibility. Must be resolved before database lock.</value>
+      <value code="MAJOR">Affects data integrity or guideline conformance with plausible endpoint impact.</value>
+      <value code="MINOR">Conformance or consistency issue with no current endpoint impact.</value>
+      <value code="INFO">Observation for awareness; low confidence or expected-but-worth-noting pattern.</value>
+    </enumeration>
+
+    <enumeration name="DeterminationMode">
+      <value code="DETERMINISTIC">Verdict computed entirely by rule logic. Confidence 1.0.</value>
+      <value code="LLM_ADJUDICATED">Verdict depends on a model judgement over free text or clinical narrative. Confidence reported and calibrated.</value>
+      <value code="HYBRID">Deterministic trigger; model adds classification or context that may downgrade to INFO.</value>
+    </enumeration>
+
+    <enumeration name="QueryLinkStatus">
+      <value code="NEW">No prior query covers this finding.</value>
+      <value code="DUPLICATE_OPEN">An open query already covers it; finding is suppressed from the default worklist and linked.</value>
+      <value code="ANSWERED_RESOLVED">A query was answered and the data now passes; finding is not raised (recorded for audit only).</value>
+      <value code="ANSWERED_UNRESOLVED">A query was answered or closed but the data still fails; finding is escalated one severity level.</value>
+      <value code="RECURRENT">The same dedupe key was raised, resolved, and has re-appeared in a later run.</value>
+    </enumeration>
+
+    <enumeration name="RuleStatus">
+      <value code="ACTIVE">On by default.</value>
+      <value code="PROPOSED_OPTIONAL">Implemented but off by default; requires sponsor decision at the Step 2 gate.</value>
+      <value code="CONDITIONAL">Activates only when its required fields and configuration are present.</value>
+    </enumeration>
+
+    <guidelineProfiles>
+      <profile id="RECIST_1_0">
+        <parameter name="max_target_lesions_total" value="10"/>
+        <parameter name="max_target_lesions_per_organ" value="5"/>
+        <parameter name="min_measurable_non_nodal_mm" value="20" note="10 mm by spiral CT"/>
+        <parameter name="nodal_rules_apply" value="false"/>
+        <parameter name="pd_absolute_increase_mm" value="0" note="Not part of RECIST 1.0"/>
+        <parameter name="pd_relative_increase_pct" value="20"/>
+        <parameter name="pr_decrease_pct" value="30"/>
+      </profile>
+      <profile id="RECIST_1_1">
+        <parameter name="max_target_lesions_total" value="5"/>
+        <parameter name="max_target_lesions_per_organ" value="2"/>
+        <parameter name="min_measurable_non_nodal_mm" value="10"/>
+        <parameter name="min_measurable_nodal_short_axis_mm" value="15"/>
+        <parameter name="pathological_node_threshold_mm" value="10"/>
+        <parameter name="min_measurable_cxr_mm" value="20"/>
+        <parameter name="min_measurable_clinical_exam_mm" value="10"/>
+        <parameter name="nodal_rules_apply" value="true"/>
+        <parameter name="pd_relative_increase_pct" value="20"/>
+        <parameter name="pd_absolute_increase_mm" value="5"/>
+        <parameter name="pr_decrease_pct" value="30"/>
+      </profile>
+      <profile id="iRECIST" extends="RECIST_1_1">
+        <parameter name="new_lesion_tracked_separately" value="true"/>
+        <parameter name="max_new_target_lesions_total" value="5"/>
+        <parameter name="max_new_target_lesions_per_organ" value="2"/>
+        <parameter name="confirmation_window_days" value="28..56"/>
+        <parameter name="icpd_target_increment_mm" value="5"/>
+        <parameter name="icpd_new_lesion_increment_mm" value="5"/>
+      </profile>
+    </guidelineProfiles>
+
+    <interpretationDecisions note="Points where the guidelines are silent or ambiguous. Each is configuration with a stated default; all require confirmation at the Step 2 gate.">
+      <decision id="ID-01" topic="Reappearance of a target lesion that had resolved">
+        <default>The lesion re-enters the sum of diameters at its measured size; it is NOT treated as a new lesion. Progression is then judged by the nadir rule.</default>
+        <alternative>Some protocols treat reappearance of a lesion after CR as progression. If the protocol says so, set reappearance_is_progression=true.</alternative>
+      </decision>
+      <decision id="ID-02" topic="Too small to measure">
+        <default>Contributes the configured default of 5 mm to the sum, and the lesion is not considered absent (so CR is not assignable).</default>
+        <alternative>Record actual estimated size where the eCRF permits it. The rule set flags inconsistent use of the two conventions within a study.</alternative>
+      </decision>
+      <decision id="ID-03" topic="Nodal target lesions in the sum">
+        <default>Nodal target lesions remain in the sum at every timepoint using short axis, even when the short axis falls below 10 mm. The sum therefore need not reach zero for CR.</default>
+        <note>A frequent site error is setting nodal targets to 0 to force CR; rule TE-FU-009 detects it.</note>
+      </decision>
+      <decision id="ID-04" topic="Non-evaluable target lesion at a timepoint">
+        <default>Target response is NE, unless progression can be established from the measured lesions alone (sum of measured lesions already meets the PD threshold against nadir) or from a new lesion, in which case PD is assignable.</default>
+      </decision>
+      <decision id="ID-05" topic="Percent-change rounding">
+        <default>Compute in full precision; compare against thresholds with a tolerance of 1e-6; round only for display to one decimal place. A reported value is considered discrepant only outside a configured tolerance (default 0.5 mm on sums, 0.1 percentage point on percentages).</default>
+      </decision>
+      <decision id="ID-06" topic="Baseline for percent change after a change of baseline scan">
+        <default>Baseline is the last evaluable assessment on or before first dose within the protocol window; if multiple exist, the one closest to first dose.</default>
+      </decision>
+      <decision id="ID-07" topic="Assessments after progression">
+        <default>Excluded from best-overall-response derivation; retained in the data and still checked for internal consistency.</default>
+      </decision>
+      <decision id="ID-08" topic="Unequivocal non-target progression in the presence of measurable disease">
+        <default>Raised for review whenever non-target PD is recorded while target response is CR/PR/SD and no new lesion exists, because the guideline treats this as an exceptional circumstance requiring substantial overall worsening.</default>
+      </decision>
+    </interpretationDecisions>
+
+  </definitions>
+
+  <!-- ============================================================= -->
+  <dataContracts>
+    <contract id="TEA-CTR-001" name="Canonical input" file="docs/contracts/canonical-input.schema.json">
+      <description>
+        The single structure the engine consumes. Source adapters are responsible for producing it;
+        the rules never see source-system field names. Structural violations become findings of
+        family ST rather than exceptions.
+      </description>
+      <requiredBlocks>
+        <block name="study"/><block name="protocol_config"/><block name="subjects"/>
+        <block name="lesions"/><block name="assessments"/><block name="measurements"/>
+        <block name="reported_responses"/>
+      </requiredBlocks>
+      <optionalBlocks>
+        <block name="queries" note="Absent means all findings are classified NEW"/>
+        <block name="cross_domain" note="disposition, death, anticancer therapy, radiotherapy, AE of PD"/>
+        <block name="imaging_metadata" note="slice thickness, modality per scan, scan dates"/>
+      </optionalBlocks>
+      <ingestionRules>
+        <rule>Units normalised to millimetres; original value and unit retained for evidence display.</rule>
+        <rule>Nodal lesions must carry short axis; a nodal lesion carrying only a longest diameter is a structural finding, not a silent substitution.</rule>
+        <rule>Lesion identity is (subject_id, lesion_link_id). Missing or duplicated link ids are structural findings.</rule>
+        <rule>Assessments are grouped per (subject, visit, evaluator). Each evaluator stream is derived independently.</rule>
+        <rule>Dates are ISO-8601; partial dates are retained as partial and rules that need full precision declare themselves not evaluable for that record.</rule>
+      </ingestionRules>
+    </contract>
+
+    <contract id="TEA-CTR-002" name="Finding output" file="docs/contracts/finding.schema.json">
+      <description>
+        The agent's output unit, consumed by the web application and by exports. Stable across
+        releases; additive changes only within a MAJOR version.
+      </description>
+      <fiveElementMapping note="The five reviewer-facing elements required by the sponsor map to these fields">
+        <element name="What review point is checked" field="review_point_text" support="rule.title + rule.intent + guideline citation"/>
+        <element name="What the issue is, on which data" field="issue_text" support="evidence.records (subject, visit, lesion, field, value)"/>
+        <element name="Reason of the issue and background" field="reason_text" support="evidence.observed vs evidence.expected + derivation_trace"/>
+        <element name="Initial query text suggested" field="suggested_query_text" support="rule.messageTemplates.queryText"/>
+        <element name="Additional information" field="additional_info_text" support="rule.messageTemplates.tips + guideline elaboration + related findings"/>
+      </fiveElementMapping>
+    </contract>
+
+    <contract id="TEA-CTR-003" name="Query history input">
+      <field name="query_id" required="true"/>
+      <field name="subject_id" required="true"/>
+      <field name="visit_or_assessment_ref" required="false"/>
+      <field name="form" required="false"/><field name="field" required="false"/>
+      <field name="lesion_ref" required="false"/>
+      <field name="query_text" required="true"/>
+      <field name="answer_text" required="false"/>
+      <field name="status" required="true" values="OPEN|ANSWERED|CLOSED|CANCELLED"/>
+      <field name="opened_date" required="true"/>
+      <field name="answered_date" required="false"/><field name="closed_date" required="false"/>
+      <field name="tea_rule_id" required="false" note="Round-trip identifier when the query originated from TEA; makes matching exact rather than semantic"/>
+    </contract>
+  </dataContracts>
+
+  <!-- ============================================================= -->
+  <processingPipeline>
+    <stage order="1" id="ST-INGEST" component="AC-01" mode="deterministic">
+      Parse and validate source extracts against TEA-CTR-001; normalise units and dates; resolve
+      lesion identity; emit family ST findings for structural defects. A study with structural
+      defects still proceeds; affected subjects are marked partially evaluable.
+    </stage>
+    <stage order="2" id="ST-CONFIG" component="AC-02" mode="deterministic">
+      Resolve the effective parameter set: guideline profile defaults overridden by protocol
+      configuration. Compute protocol_config_hash. Determine which rules are applicable and which
+      are deactivated for missing required fields; record both in the coverage report.
+    </stage>
+    <stage order="3" id="ST-DERIVE" component="AC-03" mode="deterministic">
+      Compute DerivedTimepoint for every assessment in visit-date order per evaluator stream, then
+      DerivedSubjectSummary. Populate derivation_trace for every computed value.
+    </stage>
+    <stage order="4" id="ST-RULES" component="AC-04" mode="deterministic">
+      Execute applicable rules. Each rule returns zero or more raw findings carrying structured
+      evidence and a dedupe key. Rules are independent; execution order does not affect results.
+    </stage>
+    <stage order="5" id="ST-ADJUDICATE" component="AC-05" mode="llm-assisted">
+      For rules declaring llmAssist mode="adjudicate", call the model with the evidence envelope
+      and a strict output schema. A rule's deterministic trigger is never overturned; the
+      adjudication may only set confidence, add rationale, or downgrade severity to INFO when the
+      rule declares downgradeable="true".
+    </stage>
+    <stage order="6" id="ST-QUERY" component="AC-06" mode="hybrid">
+      Classify each finding against the query history (see <reference target="queryReconciliation"/>).
+    </stage>
+    <stage order="7" id="ST-GROUP" component="AC-07" mode="deterministic">
+      Cascade grouping and prioritisation (see <reference target="prioritisation"/>).
+    </stage>
+    <stage order="8" id="ST-NARRATE" component="AC-08" mode="llm-assisted">
+      Render the five reviewer-facing elements. Numeric values are injected from evidence by the
+      template engine after generation, never trusted from model output.
+    </stage>
+    <stage order="9" id="ST-PERSIST" component="AC-09" mode="deterministic">
+      Persist run, findings, coverage report and provenance; expose via API; produce exports.
+    </stage>
+    <stage order="10" id="ST-FEEDBACK" component="AC-10" mode="deterministic">
+      Accept reviewer dispositions; maintain the audit trail; make dispositions available to the
+      next run for suppression and recurrence detection.
+    </stage>
+    <errorPolicy>
+      A failure in stages 5 or 8 degrades to deterministic behaviour for the affected findings and
+      is recorded in the run log; it never aborts the run. A failure in stages 1–4 aborts the run
+      with a diagnostic, because partial deterministic results would be misleading.
+    </errorPolicy>
+  </processingPipeline>
+
+  <!-- ============================================================= -->
+  <derivations id="derivations">
+    <note>
+      These functions are the foundation of the whole system and carry the highest test rigour.
+      All are pure: (canonical model, config) → values. No I/O, no model calls.
+    </note>
+
+    <function id="D-01" name="sumOfDiameters">
+      <signature>sumOfDiameters(assessment, targetLesions, config) → (sum_mm, complete, contributions[])</signature>
+      <logic><![CDATA[
+contributions = []
+for lesion in targetLesions:                       # baseline-selected targets only
+    m = measurement(assessment, lesion)
+    if m is None or m.state in (NOT_EVALUABLE, NOT_DONE):
+        complete = false
+        contributions.append((lesion, null, m.state))
+        continue
+    if m.state == ABSENT:                 value = 0
+    elif m.state == TOO_SMALL_TO_MEASURE: value = config.too_small_to_measure_default_mm
+    else:                                 value = m.value_mm      # short axis if nodal
+    contributions.append((lesion, value, m.state))
+sum_mm = sum(v for (_, v, _) in contributions if v is not null)
+return (sum_mm, complete, contributions)
+      ]]></logic>
+      <notes>
+        <note>Nodal target lesions always contribute their short axis, including when below 10 mm (ID-03).</note>
+        <note>`complete=false` means the sum is a partial sum; downstream logic must not use it for PR/SD conclusions, only for a PD conclusion when the partial sum already crosses the threshold (ID-04).</note>
+      </notes>
+    </function>
+
+    <function id="D-02" name="nadir">
+      <signature>nadir(assessmentsUpTo, config) → (nadir_sum, nadir_assessment_id)</signature>
+      <logic><![CDATA[
+candidates = [a for a in assessmentsUpTo         # includes baseline, includes current
+              if a.derived.sum_complete == true and a.derived.sum_of_diameters is not null]
+if candidates is empty: return (null, null)
+pick the minimum sum_of_diameters; ties resolve to the earliest assessment_date
+      ]]></logic>
+      <notes>
+        <note>Only complete sums are eligible to become the nadir; a partial sum could understate the true burden and produce a spurious PD later.</note>
+        <note>The nadir is recomputed at each timepoint from all prior timepoints including the current one, per RECIST 1.1 ("smallest sum on study").</note>
+      </notes>
+    </function>
+
+    <function id="D-03" name="percentChanges">
+      <signature>percentChanges(sum, baselineSum, nadirSum) → (pct_from_baseline, pct_from_nadir, abs_from_nadir_mm)</signature>
+      <logic><![CDATA[
+pct_from_baseline = (sum - baselineSum) / baselineSum * 100        if baselineSum > 0 else null
+pct_from_nadir    = (sum - nadirSum)    / nadirSum    * 100        if nadirSum    > 0 else null
+abs_from_nadir_mm =  sum - nadirSum
+# Special case: nadirSum == 0 (all targets resolved). Any measurable regrowth is handled by
+# the absolute-increase criterion and by the new/reappeared-lesion path; percent change is null
+# and must not be reported as infinite.
+      ]]></logic>
+    </function>
+
+    <function id="D-04" name="targetResponse">
+      <signature>targetResponse(derived, baselineSum, nadirSum, contributions, config) → code</signature>
+      <logic><![CDATA[
+if no target lesions at baseline: return NOT_APPLICABLE
+
+pd_by_sum = (sum_complete or partialSumAlreadyExceeds) and
+            pct_from_nadir >= config.pd_relative_increase_pct and
+            abs_from_nadir_mm >= config.pd_absolute_increase_mm      # 5 mm in RECIST 1.1, 0 in 1.0
+if pd_by_sum: return PD
+
+if not sum_complete: return NE            # ID-04: cannot exclude PR/SD/CR with missing data
+
+all_non_nodal_absent = every non-nodal target has state ABSENT
+all_nodal_below_threshold = every nodal target has value < config.pathological_node_threshold_mm
+if all_non_nodal_absent and all_nodal_below_threshold: return CR
+
+if pct_from_baseline <= -config.pr_decrease_pct: return PR
+
+return SD
+      ]]></logic>
+      <notes>
+        <note>CR requires the disappearance of all non-nodal target lesions AND reduction of every pathological node (target or non-target) to below 10 mm short axis. The non-target part of that condition is enforced in D-05 and in rule TE-RS-004.</note>
+        <note>TOO_SMALL_TO_MEASURE is not ABSENT and therefore blocks CR.</note>
+        <note>`partialSumAlreadyExceeds` = the sum over measured lesions alone, treating unmeasured lesions as 0, already meets both PD criteria.</note>
+      </notes>
+    </function>
+
+    <function id="D-05" name="nonTargetResponse">
+      <signature>nonTargetResponse(assessment, nonTargetLesions, markers, config) → code</signature>
+      <logic><![CDATA[
+states = [measurement(assessment, l).non_target_state for l in nonTargetLesions]
+if any state == UNEQUIVOCAL_PROGRESSION: return PD
+if any state == NOT_EVALUABLE and no state == UNEQUIVOCAL_PROGRESSION: return NE
+if every state == ABSENT
+   and every pathological node among non-targets is < config.pathological_node_threshold_mm
+   and (not config.tumor_markers_used_for_cr or all markers within normal limits):
+       return CR
+return NON_CR_NON_PD
+      ]]></logic>
+    </function>
+
+    <function id="D-06" name="newLesionStatus">
+      <signature>newLesionStatus(assessment, lesions, config) → YES | NO | EQUIVOCAL</signature>
+      <logic><![CDATA[
+newAtThisVisit = [l for l in lesions if l.category == NEW and l.identified_at == assessment.id]
+if any l in newAtThisVisit flagged unequivocal: return YES
+if any l in newAtThisVisit flagged equivocal:   return EQUIVOCAL   # -> contributes NE, not PD
+return NO
+      ]]></logic>
+      <notes>
+        <note>A lesion in an anatomical region not imaged at baseline still counts as new; rule TE-RS-011 checks that this was considered rather than assumed.</note>
+        <note>Equivocal findings are re-assessed at the next timepoint; if confirmed, progression is dated to the first observation (rule TE-RS-013).</note>
+      </notes>
+    </function>
+
+    <function id="D-07" name="overallTimepointResponse">
+      <signature>overallTimepointResponse(target, nonTarget, newLesion, hasMeasurableDisease) → code</signature>
+      <logic><![CDATA[
+if newLesion == YES:                                   return PD
+if target == PD or nonTarget == PD:                    return PD
+
+if hasMeasurableDisease:
+    # RECIST 1.1 overall response table, subjects WITH measurable disease at baseline
+    (CR, CR)               -> CR
+    (CR, NON_CR_NON_PD)    -> PR
+    (CR, NE)               -> PR
+    (PR, NON_CR_NON_PD|NE) -> PR
+    (SD, NON_CR_NON_PD|NE) -> SD
+    (NE, non-PD)           -> NE
+else:
+    # subjects with NON-TARGET disease only
+    nonTarget == CR             -> CR
+    nonTarget == NON_CR_NON_PD  -> NON_CR_NON_PD
+    nonTarget == NE             -> NE
+      ]]></logic>
+      <notes>
+        <note>PR and SD are not assignable to a subject without measurable disease at baseline. Rule TE-RS-016 detects this common error.</note>
+        <note>An equivocal new lesion maps to newLesion=EQUIVOCAL, which yields NE rather than PD unless target or non-target independently give PD.</note>
+      </notes>
+    </function>
+
+    <function id="D-08" name="bestOverallResponse">
+      <signature>bestOverallResponse(orderedTimepoints, config) → (bor, confirmation_status, supporting_timepoints)</signature>
+      <logic><![CDATA[
+considered = timepoints from first dose up to and including the first PD timepoint
+             (later timepoints excluded, ID-07)
+
+if not config.response_confirmation_required:
+    bor = best of considered by rank CR > PR > SD > NON_CR_NON_PD > PD > NE
+    # SD requires the minimum interval from baseline when config.sd_min_duration_days is set;
+    # an SD earlier than that becomes NE for BOR purposes.
+else:
+    # Confirmation required: a CR or PR must be repeated at a subsequent assessment
+    # at least config.confirmation_min_interval_days later.
+    CR then CR                    -> CR
+    CR then PR                    -> PR or SD or PD, per the RECIST 1.1 confirmation table;
+                                     the first CR is treated as erroneous, so any residual
+                                     disease at the later timepoint is judged against baseline
+    CR then SD / PD / NE          -> SD if the SD minimum duration is met, else PD or NE
+    PR then CR                    -> PR
+    PR then PR                    -> PR
+    PR then SD                    -> SD
+    PR then PD / NE               -> SD if the SD minimum duration is met, else PD or NE
+    NE then NE                    -> NE
+    confirmation_status = CONFIRMED | UNCONFIRMED
+      ]]></logic>
+      <notes>
+        <note>Confirmation is required only where the protocol requires it, typically single-arm trials with response as the primary endpoint. Configuration governs; see OQ-04.</note>
+        <note>The supporting timepoints are recorded so the UI can show exactly which two assessments produced a confirmed response.</note>
+      </notes>
+    </function>
+
+    <function id="D-09" name="irecistStateMachine">
+      <signature>irecistStateMachine(orderedTimepoints, config) → sequence of iRECIST states</signature>
+      <logic><![CDATA[
+state = NO_PROGRESSION
+for tp in orderedTimepoints:
+    r11 = tp.overall_response_derived            # RECIST 1.1 result for this timepoint
+    if state == NO_PROGRESSION:
+        if r11 == PD:
+            state = iUPD
+            record driver = {TARGET | NON_TARGET | NEW_LESION} (may be several)
+            record reference values at iUPD: target sum, non-target extent, new-lesion sum
+        else:
+            state = map(r11): CR->iCR, PR->iPR, SD->iSD, NE->iNE
+    elif state == iUPD:
+        # Confirmation window check is a rule, not part of the state machine.
+        confirmed = false
+        if TARGET in driver      and tp.sum_of_diameters >= iUPD.sum + config.icpd_target_increment_mm:      confirmed = true
+        if NON_TARGET in driver  and tp.non_target shows any further unequivocal worsening:                   confirmed = true
+        if NEW_LESION in driver  and (tp.new_lesion_sum >= iUPD.new_lesion_sum + config.icpd_new_lesion_increment_mm
+                                      or additional new lesions appeared
+                                      or new non-target lesions worsened):                                    confirmed = true
+        # A NEW progression driver appearing for the first time at this timepoint also confirms.
+        if a driver not present at iUPD now meets RECIST 1.1 PD criteria:                                      confirmed = true
+
+        if confirmed: state = iCPD; stop
+        else:
+            # reset: burden stable or improved
+            state = map(r11): CR->iCR, PR->iPR, SD->iSD, NE->iNE
+            # nadir is unchanged; a later increase is measured against the original nadir,
+            # so a subsequent iUPD is possible and permitted.
+      ]]></logic>
+      <notes>
+        <note>New lesions under iRECIST are recorded and summed SEPARATELY from the baseline target sum (up to 5 new target lesions, 2 per organ). They are never added to the baseline sum. Rule TE-IR-004 detects the error.</note>
+        <note>iCPD is terminal for response derivation; assessments after it are retained but excluded from iBOR.</note>
+        <note>Continuation of treatment beyond iUPD requires the subject to be clinically stable; the documentation check is rule TE-IR-008.</note>
+      </notes>
+    </function>
+
+    <function id="D-10" name="progressionDate">
+      <signature>progressionDate(orderedTimepoints, config) → date</signature>
+      <logic><![CDATA[
+PD date = assessment_date of the earliest timepoint meeting PD criteria
+          (for an equivocal new lesion later confirmed: the date of the FIRST observation)
+For iRECIST, the progression date for analysis is the iCPD date, while the iUPD date is retained
+for sensitivity analyses. Both are reported.
+      ]]></logic>
+    </function>
+  </derivations>
+
+  <!-- ============================================================= -->
+  <ruleCatalog version="0.1.0">
+    <conventions>
+      <convention>Rule id format: TE-{FAMILY}-{NNN}. Ids are permanent; a retired rule keeps its id and is marked RETIRED.</convention>
+      <convention>Placeholders in message templates use {curly_braces} and are filled from the evidence object by the template engine. The LLM may rephrase around them but the engine re-injects the values after generation.</convention>
+      <convention>`severity` is the default; the query reconciler may escalate by one level for ANSWERED_UNRESOLVED, and adjudication may downgrade to INFO where downgradeable="true".</convention>
+      <convention>Every rule declares `requiredFields`; if any is absent from the study extract the rule is deactivated and listed in the coverage report as NOT_EVALUATED with the reason.</convention>
+    </conventions>
+
+    <!-- ===== FAMILY ST: structural ===== -->
+    <family id="ST" name="Structural and ingestion integrity">
+      <rule id="TE-ST-001" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Lesion measured at follow-up but not identified at baseline or as a new lesion</title>
+        <intent>Every measurement must belong to a lesion with a known identity and category.</intent>
+        <requiredFields>lesions.lesion_id, measurements.lesion_id</requiredFields>
+        <logic><![CDATA[for m in measurements: if m.lesion_id not in lesions: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Referential integrity between tumor measurement records and tumor identification records.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: a measurement of {value} mm is recorded for lesion {lesion_id}, but no corresponding lesion identification record exists.</issue>
+          <reason>Measurements can only be interpreted against an identified lesion with a category (target/non-target/new) and location. Without it, the lesion cannot enter the sum of diameters, and the derived response may be wrong.</reason>
+          <query>A measurement is recorded for lesion {lesion_id} at {visit} but this lesion is not present on the tumor identification form. Please confirm the lesion identification and complete the missing record, or correct the lesion number on the measurement.</query>
+          <tips>Most often a lesion numbering typo, or a new lesion measured before it was formally recorded as new. Check whether the number matches an existing lesion at another site of disease.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-ST-002" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Duplicate lesion identity</title>
+        <intent>The same anatomical lesion must not be recorded twice.</intent>
+        <logic><![CDATA[group lesions by (subject, organ, laterality, normalised location_detail)
+if group size > 1 and both are TARGET or both NON_TARGET: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Duplicate recording of the same lesion under two lesion numbers.</reviewPoint>
+          <issue>Subject {subject_id}: lesions {lesion_id_a} and {lesion_id_b} are both recorded as {category} at {organ} {laterality} ({location_a} / {location_b}).</issue>
+          <reason>If the same lesion is recorded twice, it is counted twice in the sum of diameters, inflating tumor burden and distorting percent change and the nadir.</reason>
+          <query>Lesions {lesion_id_a} and {lesion_id_b} appear to describe the same lesion at {organ}. Please confirm whether these are two distinct lesions; if not, please remove the duplicate and update the affected assessments.</query>
+          <tips>Compare the baseline sizes and the size trajectory: identical or near-identical values across visits strongly suggests duplication.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-ST-003" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="RECIST_1_1,iRECIST">
+        <title>Nodal lesion recorded without a short axis</title>
+        <intent>Nodal lesions must be measured in short axis; a longest diameter cannot substitute.</intent>
+        <logic><![CDATA[if lesion.is_nodal and measurement provides only longest diameter: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Measurement axis for lymph node lesions.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}, lesion {lesion_id} ({organ} node): the recorded measurement appears to be a longest diameter rather than a short axis.</issue>
+          <reason>RECIST 1.1 requires the short axis for nodal lesions, at baseline and at every follow-up. Using the longest diameter overstates the nodal contribution to the sum and can mask a response or create a false progression.</reason>
+          <query>Lesion {lesion_id} is a lymph node. Please confirm the measurement recorded at {visit} is the short axis; if the longest diameter was recorded, please correct it.</query>
+          <tips>Nodal lesions were only formally distinguished from RECIST 1.0 onwards in version 1.1; sites experienced with older studies frequently record the long axis out of habit.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-ST-004" severity="MINOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Unit or precision inconsistency</title>
+        <intent>Detect mixed cm/mm entry and implausible precision.</intent>
+        <logic><![CDATA[if original_unit differs within a subject, or a value is < 1 with unit mm,
+or a non-nodal target value > 300 mm: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Consistency of measurement units and precision across a subject's records.</reviewPoint>
+          <issue>Subject {subject_id}: measurements are recorded in {units_seen}; lesion {lesion_id} at {visit} has value {original_value} {original_unit}.</issue>
+          <reason>A centimetre value entered in a millimetre field understates a lesion tenfold, which can convert a progression into an apparent response.</reason>
+          <query>Please confirm the unit of the measurement for lesion {lesion_id} at {visit} ({original_value} {original_unit}); the value appears inconsistent with the other measurements recorded for this subject.</query>
+          <tips>Check the trajectory of the same lesion across visits — a tenfold step between adjacent visits is diagnostic of a unit error.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-ST-005" severity="MINOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Assessment visit sequence and date order inconsistent</title>
+        <intent>Visit numbering and assessment dates must be monotonic.</intent>
+        <logic><![CDATA[order assessments by visit_number; if assessment_date is not non-decreasing: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Chronological consistency of tumor assessment visits.</reviewPoint>
+          <issue>Subject {subject_id}: {visit_a} ({date_a}) is dated after {visit_b} ({date_b}) although it precedes it in the visit sequence.</issue>
+          <reason>Nadir, progression dating and best overall response all depend on chronological order. An out-of-order date can move the nadir and change the progression determination.</reason>
+          <query>The assessment dates for {visit_a} and {visit_b} appear inconsistent with the visit sequence. Please verify the assessment dates.</query>
+          <tips>Confirm against the scan dates in the imaging report rather than the visit date, which may reflect the clinic visit rather than the scan.</tips>
+        </messages>
+      </rule>
+    </family>
+
+    <!-- ===== FAMILY BL: baseline and lesion selection ===== -->
+    <family id="BL" name="Baseline and lesion selection">
+      <rule id="TE-BL-001" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Number of target lesions exceeds the maximum</title>
+        <intent>Target lesion count must not exceed the guideline/protocol maximum.</intent>
+        <requiredFields>lesions.category</requiredFields>
+        <logic><![CDATA[n = count(lesions where category == TARGET and identified at baseline)
+if n > config.max_target_lesions_total: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Maximum number of target lesions permitted at baseline.</reviewPoint>
+          <issue>Subject {subject_id}: {n} target lesions are recorded at baseline; the maximum permitted is {max_total}.</issue>
+          <reason>RECIST {guideline_version} permits a maximum of {max_total} target lesions in total. Additional lesions must be recorded as non-target. Including extra lesions in the sum changes the denominator for percent change and can alter the response category at every subsequent timepoint.</reason>
+          <query>{n} target lesions are recorded at baseline for this subject, exceeding the maximum of {max_total} specified in the protocol. Please review the target lesion selection and re-classify the excess lesions as non-target, updating all affected assessments.</query>
+          <tips>Re-selection changes the baseline sum and therefore every subsequent percent change; expect all downstream responses to require re-derivation. Prioritise this issue before reviewing any response mismatch for this subject.</tips>
+        </messages>
+        <tests>
+          <test name="positive">6 targets under RECIST 1.1 → finding</test>
+          <test name="negative">5 targets under RECIST 1.1 → no finding</test>
+          <test name="boundary">10 targets under RECIST 1.0 → no finding</test>
+        </tests>
+      </rule>
+      <rule id="TE-BL-002" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Target lesions per organ exceeds the maximum</title>
+        <intent>No more than the permitted number of target lesions may be selected from any one organ.</intent>
+        <logic><![CDATA[for organ, group in targets grouped by organ:
+    if count(group) > config.max_target_lesions_per_organ: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Maximum number of target lesions per organ.</reviewPoint>
+          <issue>Subject {subject_id}: {n} target lesions are recorded in {organ}; the maximum permitted per organ is {max_per_organ}.</issue>
+          <reason>RECIST {guideline_version} limits target lesions to {max_per_organ} per organ so that the sum represents the overall disease burden rather than one organ. Over-representation of one organ biases the response assessment.</reason>
+          <query>{n} target lesions are recorded in {organ}, exceeding the per-organ maximum of {max_per_organ}. Please re-classify the excess lesions as non-target and update the affected assessments.</query>
+          <tips>Lymph nodes in different nodal stations are commonly all coded to a single "lymph node" organ; confirm whether the sponsor's convention treats nodal stations as separate organs before raising.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-003" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Non-nodal target lesion below the measurability threshold at baseline</title>
+        <intent>Target lesions must be measurable at baseline.</intent>
+        <logic><![CDATA[for t in non-nodal targets:
+    threshold = config.min_measurable_non_nodal_mm
+    if method == CXR:            threshold = config.min_measurable_cxr_mm
+    if method == CLINICAL_EXAM:  threshold = config.min_measurable_clinical_exam_mm
+    if baseline value < threshold: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Measurability of selected target lesions at baseline.</reviewPoint>
+          <issue>Subject {subject_id}: target lesion {lesion_id} ({organ}) measures {value} mm at baseline by {method}, below the {threshold} mm minimum for a measurable lesion.</issue>
+          <reason>RECIST {guideline_version} requires a non-nodal lesion to be at least {threshold} mm by {method} to be measurable and therefore eligible as a target lesion. Sub-threshold lesions are subject to unreliable measurement, and including one makes the whole sum unreliable.</reason>
+          <query>Target lesion {lesion_id} measures {value} mm at baseline, below the {threshold} mm threshold for measurability by {method}. Please confirm the measurement, or re-classify this lesion as non-target and update the affected assessments.</query>
+          <tips>Check the imaging slice thickness where available: a lesion must be at least twice the slice thickness to be measurable, so a 10 mm lesion on 8 mm slices is not measurable even though it meets the nominal threshold.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-004" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="RECIST_1_1,iRECIST">
+        <title>Nodal target lesion with baseline short axis below 15 mm</title>
+        <intent>Only nodes with short axis at least 15 mm are eligible as target lesions.</intent>
+        <logic><![CDATA[for t in nodal targets:
+    if baseline short axis < config.min_measurable_nodal_short_axis_mm: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Eligibility of lymph nodes as target lesions (short axis ≥ 15 mm).</reviewPoint>
+          <issue>Subject {subject_id}: nodal target lesion {lesion_id} ({organ}) has a baseline short axis of {value} mm, below the 15 mm requirement.</issue>
+          <reason>RECIST 1.1 requires a short axis of at least 15 mm for a node to be measurable and selectable as a target lesion. Nodes with a short axis of 10 to under 15 mm are pathological but non-measurable and should be recorded as non-target; nodes under 10 mm are non-pathological and should not be recorded at all.</reason>
+          <query>Nodal target lesion {lesion_id} has a baseline short axis of {value} mm. Please confirm the measurement; a node with short axis below 15 mm should be recorded as a non-target lesion (10 to &lt;15 mm) or not recorded (&lt;10 mm).</query>
+          <tips>This is one of the most frequent baseline errors. Verify that the recorded value is a short axis and not a longest diameter before concluding the selection was wrong.</tips>
+        </messages>
+        <tests>
+          <test name="boundary">short axis exactly 15 mm → no finding</test>
+          <test name="positive">short axis 12 mm as target → finding</test>
+        </tests>
+      </rule>
+      <rule id="TE-BL-005" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="RECIST_1_1,iRECIST">
+        <title>Non-pathological node recorded as a lesion</title>
+        <intent>Nodes with short axis below 10 mm are not pathological and should not be recorded.</intent>
+        <logic><![CDATA[for l in nodal lesions (target or non-target):
+    if baseline short axis < config.pathological_node_threshold_mm: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Recording of lymph nodes that do not meet the pathological threshold.</reviewPoint>
+          <issue>Subject {subject_id}: node {lesion_id} ({organ}) has a baseline short axis of {value} mm and is recorded as a {category} lesion.</issue>
+          <reason>Under RECIST 1.1 a node with a short axis below 10 mm is considered non-pathological and is not recorded or followed. Recording it adds normal tissue to the disease assessment and can prevent a complete response from being assigned.</reason>
+          <query>Node {lesion_id} has a baseline short axis of {value} mm, below the 10 mm pathological threshold. Please confirm whether this node should be recorded as disease; if not, please remove it from the assessment.</query>
+          <tips>Where a node is clinically relevant despite being below threshold (for example biopsy-proven involvement), the site should document the rationale; consider accepting with a comment rather than a data change.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-006" severity="MAJOR" mode="HYBRID" status="CONDITIONAL" downgradeable="true" guideline="ALL">
+        <title>Lesion size below twice the imaging slice thickness</title>
+        <intent>Measurability depends on slice thickness, not only on the nominal threshold.</intent>
+        <requiredFields>imaging_metadata.slice_thickness_mm</requiredFields>
+        <logic><![CDATA[if lesion is target and baseline value < 2 * slice_thickness_mm: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Lesion measurability relative to the imaging slice thickness.</reviewPoint>
+          <issue>Subject {subject_id}: target lesion {lesion_id} measures {value} mm at baseline on {method} with {slice_thickness} mm slices.</issue>
+          <reason>RECIST 1.1 requires a lesion to be at least twice the slice thickness to be measurable; on {slice_thickness} mm slices the minimum measurable lesion is {min_size} mm. Below that, apparent size changes may be partial-volume artefacts rather than real change.</reason>
+          <query>Target lesion {lesion_id} measures {value} mm at baseline on images with {slice_thickness} mm slice thickness. Please confirm the lesion is measurable per the imaging manual, or re-classify it as non-target.</query>
+          <tips>Slice thickness often varies between the baseline and follow-up scans; if so, the comparison itself is compromised and merits a note to the imaging vendor.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-007" severity="MAJOR" mode="LLM_ADJUDICATED" status="ACTIVE" downgradeable="true" guideline="ALL">
+        <title>Non-measurable disease type selected as a target lesion</title>
+        <intent>Presentations that are non-measurable by definition must not be target lesions.</intent>
+        <requiredFields>lesions.organ, lesions.location_detail or description_text</requiredFields>
+        <logic><![CDATA[deterministic pre-filter: organ or location text matches a non-measurable pattern
+   (ascites, pleural effusion, pericardial effusion, leptomeningeal disease,
+    lymphangitic lung/skin involvement, inflammatory breast disease,
+    simple cyst, blastic bone lesion without soft tissue component,
+    abdominal mass identified only by physical examination)
+then LLM adjudication over the free text confirms or rejects, returning
+   {is_non_measurable: bool, category: string, confidence: 0..1, rationale: string}
+raise finding when confirmed; confidence < 0.6 → emit as INFO]]></logic>
+        <messages>
+          <reviewPoint>Selection of lesion types that RECIST classifies as non-measurable.</reviewPoint>
+          <issue>Subject {subject_id}: target lesion {lesion_id} is described as "{location_detail}" in {organ}, which appears to be {non_measurable_category}.</issue>
+          <reason>RECIST classifies {non_measurable_category} as non-measurable disease: it cannot be reproducibly measured in one dimension. Such disease must be recorded as non-target and assessed qualitatively. A non-measurable lesion inside the target sum makes the sum, and every percent change derived from it, unreliable.</reason>
+          <query>Target lesion {lesion_id} is described as "{location_detail}". This appears to represent non-measurable disease under RECIST. Please confirm the lesion selection and, if appropriate, re-classify it as a non-target lesion.</query>
+          <tips>Blastic bone lesions are non-measurable, but a lytic or mixed lytic-blastic lesion with an identifiable soft tissue component can be measurable on CT/MRI. Cystic metastases can be measurable, but where non-cystic lesions are available they are preferred as targets.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-008" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Previously irradiated lesion selected as target without documented progression</title>
+        <intent>Lesions in a previously irradiated field are non-measurable unless progression after radiotherapy is documented.</intent>
+        <requiredFields>lesions.previously_irradiated OR cross_domain.radiotherapy</requiredFields>
+        <logic><![CDATA[if lesion.category == TARGET and (lesion.previously_irradiated or radiotherapy field overlaps lesion site prior to baseline)
+   and not documented progression after radiotherapy: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Eligibility of lesions within a prior radiotherapy field as target lesions.</reviewPoint>
+          <issue>Subject {subject_id}: target lesion {lesion_id} ({organ}) lies in a previously irradiated field (radiotherapy {rt_date}), with no documented progression at that site after treatment.</issue>
+          <reason>RECIST treats lesions in a previously irradiated area, or subjected to other locoregional therapy, as non-measurable unless progression of that lesion has been demonstrated since the treatment. Post-radiation change can mimic both response and progression.</reason>
+          <query>Target lesion {lesion_id} is located within a prior radiotherapy field. Please confirm whether progression of this lesion has been documented since radiotherapy; if not, the lesion should be recorded as non-target.</query>
+          <tips>Also relevant for lesions treated with ablation, embolisation or surgery during the study — see TE-XD-004 for on-study local therapy.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-009" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>No measurable disease at baseline but target lesions recorded</title>
+        <intent>Consistency between the measurable-disease determination and target lesion recording.</intent>
+        <logic><![CDATA[if reported "measurable disease at baseline" == NO and count(targets) > 0: raise finding
+also inverse: if == YES and count(targets) == 0 and measurable lesions exist: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Consistency between the baseline measurable disease flag and the recorded target lesions.</reviewPoint>
+          <issue>Subject {subject_id}: measurable disease at baseline is recorded as {flag}, but {n} target lesions are recorded.</issue>
+          <reason>The measurable-disease determination drives the response algorithm: subjects without measurable disease can only be assigned CR, Non-CR/Non-PD, PD or NE, never PR or SD. An inconsistency here produces a systematically wrong response for every timepoint, and may also affect eligibility.</reason>
+          <query>Measurable disease at baseline is recorded as {flag} while {n} target lesions are entered. Please confirm the baseline disease status and correct the inconsistent record.</query>
+          <tips>Check eligibility criteria: if the protocol requires measurable disease, this may also be an eligibility deviation requiring separate escalation.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-010" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Baseline assessment outside the protocol window relative to first dose</title>
+        <intent>Baseline imaging must be recent enough to represent pre-treatment burden.</intent>
+        <requiredFields>subjects.first_dose_date</requiredFields>
+        <logic><![CDATA[gap = first_dose_date - baseline_assessment_date
+if gap > config.baseline_window_days_before_first_dose or gap < 0: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Timing of the baseline tumor assessment relative to first dose.</reviewPoint>
+          <issue>Subject {subject_id}: baseline assessment dated {baseline_date}, first dose {first_dose_date}, a gap of {gap} days against a permitted window of {window} days.</issue>
+          <reason>A baseline older than the protocol window may no longer represent the disease burden at the start of treatment, which biases every subsequent percent change. A baseline dated after first dose is not a baseline at all and would understate treatment effect.</reason>
+          <query>The baseline tumor assessment ({baseline_date}) falls {gap} days before first dose ({first_dose_date}), outside the protocol window of {window} days. Please confirm the assessment date and whether a protocol deviation has been recorded.</query>
+          <tips>Distinguish the scan date from the assessment or read date; the protocol window normally applies to the scan.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-011" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Reported baseline sum of diameters does not match the recorded lesions</title>
+        <intent>Arithmetic verification of the baseline sum.</intent>
+        <logic><![CDATA[derived = sumOfDiameters(baseline, targets, config)
+if |reported_sum - derived.sum| > config.sum_tolerance_mm: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Recomputation of the baseline sum of diameters from the individual target lesion measurements.</reviewPoint>
+          <issue>Subject {subject_id}: baseline sum of diameters is reported as {reported} mm; the sum of the {n} recorded target lesions is {derived} mm (difference {difference} mm).</issue>
+          <reason>The baseline sum is the reference for every partial response determination. An error of {difference} mm shifts the 30% response threshold and can change the response category at multiple timepoints. Recorded lesions: {lesion_breakdown}.</reason>
+          <query>The baseline sum of diameters ({reported} mm) does not equal the sum of the recorded target lesion measurements ({derived} mm). Please verify the individual measurements and the sum.</query>
+          <tips>Check first whether a nodal target was included using its longest diameter, and whether all target lesions have a baseline measurement.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-012" severity="MINOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Target lesion selection not favouring the largest measurable lesions</title>
+        <intent>Target lesions should be the largest reproducibly measurable lesions.</intent>
+        <logic><![CDATA[if any non-target measurable lesion at baseline is larger than the smallest target lesion
+   by more than config.selection_margin_mm (default 5): raise finding]]></logic>
+        <messages>
+          <reviewPoint>Rationality of target lesion selection relative to lesion size.</reviewPoint>
+          <issue>Subject {subject_id}: non-target lesion {nt_lesion_id} ({nt_value} mm) is larger than target lesion {t_lesion_id} ({t_value} mm).</issue>
+          <reason>RECIST directs that target lesions be selected on the basis of size, choosing the largest lesions that are reproducibly measurable, while remaining representative of all involved organs. Selecting smaller lesions as targets while larger measurable lesions are left as non-target reduces the sensitivity of the response assessment.</reason>
+          <query>Non-target lesion {nt_lesion_id} ({nt_value} mm) is larger than target lesion {t_lesion_id} ({t_value} mm). Please confirm the target lesion selection rationale, for example poor reproducibility of the larger lesion.</query>
+          <tips>Reproducibility legitimately overrides size — a large but ill-defined or confluent mass is a poor target. Expect a proportion of these to be correctly explained rather than corrected.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-013" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Target lesion without a baseline measurement</title>
+        <intent>Every target lesion needs a baseline value to enter the sum.</intent>
+        <logic><![CDATA[for t in targets: if no baseline measurement with state PRESENT: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Completeness of baseline measurements for all selected target lesions.</reviewPoint>
+          <issue>Subject {subject_id}: target lesion {lesion_id} has no baseline measurement (state recorded as {state}).</issue>
+          <reason>Without a baseline value the lesion cannot contribute to the baseline sum, so the reference for percent change is understated and partial response may be reported prematurely.</reason>
+          <query>Target lesion {lesion_id} has no baseline measurement. Please enter the baseline measurement, or re-classify the lesion if it was not measurable at baseline.</query>
+          <tips>A target lesion that was not evaluable at baseline should not have been selected as a target; check whether re-selection is required.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-014" severity="MINOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Assessment method inconsistent between baseline and follow-up for the same lesion</title>
+        <intent>The same lesion should be followed by the same modality throughout.</intent>
+        <logic><![CDATA[for lesion, visits in measurements grouped by lesion:
+    if distinct method_at_visit values > 1: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Consistency of imaging modality for each lesion across visits.</reviewPoint>
+          <issue>Subject {subject_id}: lesion {lesion_id} is measured by {method_a} at {visit_a} and by {method_b} at {visit_b}.</issue>
+          <reason>RECIST requires the same method of assessment and the same technique at baseline and during follow-up. Different modalities measure different things — a change of modality can produce an apparent size change of the order of the response thresholds without any true biological change.</reason>
+          <query>Lesion {lesion_id} was assessed by {method_a} at baseline and {method_b} at {visit_b}. Please confirm the modality used and whether the change was clinically necessary.</query>
+          <tips>Where a modality change was unavoidable, the affected timepoint may need to be treated as not evaluable for that lesion rather than measured.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-015" severity="MINOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Baseline scans span more days than permitted</title>
+        <intent>All baseline imaging should represent a single point in time.</intent>
+        <requiredFields>assessments.scan_dates</requiredFields>
+        <logic><![CDATA[span = max(scan_dates) - min(scan_dates)
+if span > config.scan_span_max_days: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Temporal coherence of the scans composing a single tumor assessment.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: scans span {span} days ({earliest} to {latest}), exceeding the permitted {max_span} days.</issue>
+          <reason>An assessment is intended to be a snapshot. When component scans are widely separated, lesions measured on the later scans reflect a different point in the disease course, which distorts the sum and, at baseline, the reference for all later comparisons.</reason>
+          <query>The scans comprising the {visit} tumor assessment span {span} days. Please confirm the scan dates and whether all scans belong to this assessment.</query>
+          <tips>Commonly caused by brain MRI scheduled separately from body CT; confirm the imaging manual's tolerance before raising.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-016" severity="MAJOR" mode="LLM_ADJUDICATED" status="PROPOSED_OPTIONAL" downgradeable="true" guideline="ALL">
+        <title>Lesion location inconsistent with the assigned organ or laterality</title>
+        <intent>Detect coding errors between the free-text location and the coded organ/laterality.</intent>
+        <logic><![CDATA[LLM classifies (organ, laterality, location_detail) as consistent / inconsistent / unclear
+with rationale; only "inconsistent" with confidence >= 0.7 raises a finding]]></logic>
+        <messages>
+          <reviewPoint>Anatomical consistency between the coded organ, laterality and the free-text lesion description.</reviewPoint>
+          <issue>Subject {subject_id}: lesion {lesion_id} is coded to {organ} {laterality} but described as "{location_detail}".</issue>
+          <reason>Organ coding drives the per-organ target lesion limit and the interpretation of new lesions by region. A mismatch can hide a breach of the per-organ limit or misclassify a new lesion.</reason>
+          <query>Lesion {lesion_id} is recorded at {organ} {laterality} with the description "{location_detail}". Please confirm the anatomical location and correct the coding if needed.</query>
+          <tips>Laterality errors are the most common subtype and matter most for paired organs (lung, kidney, breast, adnexa).</tips>
+        </messages>
+      </rule>
+      <rule id="TE-BL-017" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Baseline assessment missing entirely while follow-up assessments exist</title>
+        <intent>No follow-up can be interpreted without a baseline.</intent>
+        <logic><![CDATA[if subject has follow-up assessments and no assessment flagged is_baseline: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Presence of a baseline tumor assessment for every subject with follow-up data.</reviewPoint>
+          <issue>Subject {subject_id}: {n} follow-up tumor assessments are recorded but no baseline assessment exists.</issue>
+          <reason>Percent change from baseline, the nadir and every response category depend on a baseline. Without it the subject cannot contribute to any efficacy endpoint.</reason>
+          <query>No baseline tumor assessment is recorded for this subject although follow-up assessments exist. Please enter the baseline assessment or confirm why it was not performed.</query>
+          <tips>Check whether the baseline was entered under a screening visit name that failed to map; this is frequently a data-transfer issue rather than missing data.</tips>
+        </messages>
+      </rule>
+    </family>
+
+    <!-- ===== FAMILY FU: follow-up measurement integrity ===== -->
+    <family id="FU" name="Follow-up measurement integrity">
+      <rule id="TE-FU-001" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Reported sum of diameters does not match the recorded lesions at a follow-up visit</title>
+        <intent>Arithmetic verification of the sum at every timepoint.</intent>
+        <logic><![CDATA[for each follow-up assessment:
+    derived = sumOfDiameters(assessment, targets, config)
+    if reported_sum is present and |reported_sum - derived.sum| > config.sum_tolerance_mm: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Recomputation of the sum of diameters at each timepoint from the individual target lesion measurements.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: sum of diameters reported as {reported} mm; recomputed from the {n} target lesions as {derived} mm (difference {difference} mm). Lesion contributions: {lesion_breakdown}.</issue>
+          <reason>The sum drives percent change from baseline (partial response) and from nadir (progression). A {difference} mm error at this timepoint changes the percent change from {reported_pct}% to {derived_pct}% and the derived response from {reported_response} to {derived_response}.</reason>
+          <query>The sum of diameters recorded at {visit} ({reported} mm) does not match the sum of the individual target lesion measurements ({derived} mm). Please verify the individual measurements and the recorded sum.</query>
+          <tips>Check for a lesion measured but omitted from the sum, a lesion recorded as absent but still included, and nodal lesions entered with the wrong axis.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-002" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Target lesion measurement missing without a not-done reason</title>
+        <intent>Missing data must be explained, not silent.</intent>
+        <logic><![CDATA[if measurement absent or value null and state not in (ABSENT, TOO_SMALL_TO_MEASURE, NOT_EVALUABLE, NOT_DONE)
+   or state in (NOT_EVALUABLE, NOT_DONE) with no reason recorded: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Completeness and explanation of missing target lesion measurements.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: target lesion {lesion_id} has no measurement and no reason recorded.</issue>
+          <reason>An unexplained missing measurement makes the sum incomplete, which forces the target response to not evaluable and can propagate into a missing timepoint for progression-free survival.</reason>
+          <query>No measurement is recorded for target lesion {lesion_id} at {visit}. Please enter the measurement or record the reason it could not be assessed.</query>
+          <tips>Distinguish "not evaluable" (lesion could not be assessed) from "absent" (lesion no longer visible); the two have opposite consequences for response.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-003" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Target response reported despite an unevaluable target lesion</title>
+        <intent>Enforce the not-evaluable rule with its progression exception.</intent>
+        <logic><![CDATA[if any target lesion state in (NOT_EVALUABLE, NOT_DONE)
+   and reported target_response not in (NE, PD)
+   and not partialSumAlreadyExceeds(PD thresholds): raise finding]]></logic>
+        <messages>
+          <reviewPoint>Handling of not-evaluable target lesions in the timepoint response.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: target lesion {lesion_id} is not evaluable, yet the target response is reported as {reported_response}.</issue>
+          <reason>When any target lesion cannot be assessed, the sum is incomplete and the true tumor burden is unknown, so the response is not evaluable. The exception is progression: if the measured lesions alone already meet the progression threshold, progressive disease can still be assigned. Here the measured lesions sum to {partial_sum} mm against a nadir of {nadir} mm ({partial_pct}%), which does not reach the progression threshold.</reason>
+          <query>Target lesion {lesion_id} is recorded as not evaluable at {visit} while the target lesion response is reported as {reported_response}. Please confirm; where a target lesion cannot be assessed, the target response should normally be not evaluable.</query>
+          <tips>This is a systematic misunderstanding at many sites: a lesion that is "not seen because it resolved" should be recorded as absent, not as not evaluable.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-004" severity="MINOR" mode="HYBRID" status="ACTIVE" downgradeable="true" guideline="ALL">
+        <title>Implausible measurement change for a single lesion</title>
+        <intent>Outlier detection on lesion trajectories.</intent>
+        <logic><![CDATA[for consecutive measurements of the same lesion:
+    if |delta| >= config.outlier_abs_mm (default 20) and |pct_delta| >= config.outlier_pct (default 50)
+       and interval_days <= config.outlier_window_days (default 90): raise finding
+    LLM may downgrade to INFO when a comment explains the change (e.g. cavitation, haemorrhage)]]></logic>
+        <messages>
+          <reviewPoint>Plausibility of the change in an individual lesion between consecutive assessments.</reviewPoint>
+          <issue>Subject {subject_id}: lesion {lesion_id} changes from {prev_value} mm at {prev_visit} to {value} mm at {visit} ({pct_delta}% over {interval} days).</issue>
+          <reason>A change of this magnitude over {interval} days is unusual and is more often a transcription error, a unit error, or measurement of a different lesion than true biology. The change moves the sum from {prev_sum} mm to {sum} mm and the derived response from {prev_response} to {response}.</reason>
+          <query>Lesion {lesion_id} changed from {prev_value} mm to {value} mm between {prev_visit} and {visit}. Please verify the measurement against the imaging report.</query>
+          <tips>Genuine large changes do occur — rapid response to targeted therapy, cavitation, haemorrhage into a lesion, or coalescence of adjacent lesions. Look for a comment or a matching change in a neighbouring lesion.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-005" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Lesion recorded as absent and subsequently measured again</title>
+        <intent>Detect and correctly handle reappearance of a resolved lesion.</intent>
+        <logic><![CDATA[if lesion state == ABSENT at visit i and state == PRESENT with value > 0 at visit j > i:
+    raise finding (informational when config.reappearance_is_progression is false,
+                   escalate when the site also flagged it as a new lesion)]]></logic>
+        <messages>
+          <reviewPoint>Handling of a target lesion that disappeared and later reappeared.</reviewPoint>
+          <issue>Subject {subject_id}: lesion {lesion_id} was recorded as absent at {absent_visit} and measures {value} mm at {visit}.</issue>
+          <reason>A previously resolved target lesion that reappears re-enters the sum of diameters at its measured size; it is not a new lesion, because it was present at baseline. Progression is then judged against the nadir. If it has instead been recorded as a new lesion, progression will be dated incorrectly and the sum will double-count the disease.</reason>
+          <query>Lesion {lesion_id} was recorded as absent at {absent_visit} and is measured again at {visit}. Please confirm this is the same baseline target lesion rather than a new lesion, and that it is included in the sum of diameters.</query>
+          <tips>Confirm the protocol's position: some protocols treat reappearance after a complete response as progression in itself. The study configuration setting is reappearance_is_progression = {reappearance_is_progression}.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-006" severity="MINOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Inconsistent use of the too-small-to-measure convention</title>
+        <intent>One convention per study.</intent>
+        <logic><![CDATA[if the study contains both TOO_SMALL_TO_MEASURE states and lesions recorded with the
+   default value (e.g. 5 mm) under state PRESENT: raise finding at study level]]></logic>
+        <messages>
+          <reviewPoint>Consistency of the convention for lesions that are visible but too small to measure reliably.</reviewPoint>
+          <issue>Study {study_id}: {n_state} records use the too-small-to-measure state while {n_value} records appear to use a fixed {default} mm value under a present state ({examples}).</issue>
+          <reason>The two conventions produce different sums and different eligibility for complete response. Mixing them makes cross-subject comparison unreliable and can make a complete response unassignable for some subjects and assignable for others with identical imaging.</reason>
+          <query>Please confirm the convention used for lesions below the limit of reliable measurement at this site, so that the records can be harmonised.</query>
+          <tips>Agree the convention centrally and document it in the imaging manual; retrospective harmonisation is usually preferable to leaving the study mixed.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-007" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Assessment interval outside the protocol schedule</title>
+        <intent>Assessments must follow the protocol calendar so that progression dating is comparable.</intent>
+        <logic><![CDATA[for consecutive assessments:
+    if |interval - config.assessment_interval_days| > config.assessment_window_days: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Compliance of tumor assessment timing with the protocol-defined schedule and window.</reviewPoint>
+          <issue>Subject {subject_id}: {interval} days between {prev_visit} ({prev_date}) and {visit} ({date}); the protocol specifies {expected} ± {window} days.</issue>
+          <reason>Assessment timing determines the resolution of progression dating and, in randomised trials, the comparability of progression-free survival between arms. Systematically late assessments delay progression detection.</reason>
+          <query>The interval between {prev_visit} and {visit} is {interval} days, outside the protocol window of {expected} ± {window} days. Please confirm the assessment date and whether a protocol deviation has been recorded.</query>
+          <tips>Cluster by site: isolated deviations are scheduling reality, but a site with a consistent bias is a monitoring signal.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-008" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Missing scheduled assessment before progression or censoring</title>
+        <intent>Detect gaps that affect progression-free survival censoring.</intent>
+        <logic><![CDATA[if gap between assessments >= 2 * config.assessment_interval_days
+   and subject still on treatment during the gap: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Continuity of tumor assessments while the subject remains on study.</reviewPoint>
+          <issue>Subject {subject_id}: no tumor assessment between {prev_date} and {date}, a gap of {gap} days spanning approximately {n_missed} scheduled assessments while the subject remained on treatment.</issue>
+          <reason>Two or more consecutively missed assessments typically require censoring at the last evaluable assessment in progression-free survival analyses, which reduces the information contributed by this subject and can bias the estimate.</reason>
+          <query>No tumor assessment is recorded between {prev_date} and {date} although the subject remained on treatment. Please confirm whether assessments were performed and, if so, enter the data; otherwise please record the reason.</query>
+          <tips>Cross-check against the visit schedule and any unscheduled visits; assessments performed but entered under an unmapped visit name are a common cause.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-009" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="RECIST_1_1,iRECIST">
+        <title>Nodal target lesion recorded as absent or zero</title>
+        <intent>Nodes remain measurable and stay in the sum even when they normalise.</intent>
+        <logic><![CDATA[if lesion.is_nodal and lesion.category == TARGET
+   and (state == ABSENT or value == 0): raise finding]]></logic>
+        <messages>
+          <reviewPoint>Treatment of nodal target lesions that shrink below the pathological threshold.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: nodal target lesion {lesion_id} ({organ}) is recorded as {state_or_zero}.</issue>
+          <reason>Under RECIST 1.1 lymph nodes always retain a measurable short axis and are never recorded as absent; they continue to contribute their short axis to the sum even when it falls below 10 mm. The sum therefore need not reach zero for a complete response — what is required is that every pathological node has a short axis below 10 mm. Recording the node as zero understates the sum by its true short axis and can produce a false partial response or complete response.</reason>
+          <query>Nodal target lesion {lesion_id} is recorded as {state_or_zero} at {visit}. Lymph nodes should continue to be measured in short axis at every visit, including when they normalise. Please enter the measured short axis.</query>
+          <tips>This is the single most common nodal error and it usually reflects a well-intentioned attempt to make the arithmetic produce a complete response. Explain the rule to the site rather than only requesting the correction.</tips>
+        </messages>
+        <tests>
+          <test name="positive">nodal target with state ABSENT at cycle 4 → finding</test>
+          <test name="negative">nodal target measuring 7 mm short axis → no finding</test>
+        </tests>
+      </rule>
+      <rule id="TE-FU-010" severity="MINOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Non-target lesion state missing at a follow-up assessment</title>
+        <intent>Non-target lesions must be assessed qualitatively at every timepoint.</intent>
+        <logic><![CDATA[if non-target lesion has no non_target_state at a performed assessment: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Completeness of qualitative non-target lesion assessment at each timepoint.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: no assessment is recorded for non-target lesion {lesion_id} ({organ}).</issue>
+          <reason>The non-target response contributes to the overall timepoint response, and unequivocal progression of non-target disease is sufficient for progression on its own. A missing non-target assessment leaves the overall response underdetermined.</reason>
+          <query>No assessment is recorded for non-target lesion {lesion_id} at {visit}. Please record the status of this lesion.</query>
+          <tips>Sites often assess non-target disease collectively rather than lesion by lesion; check whether the eCRF expects a per-lesion or an overall non-target response.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-011" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Tumor assessment recorded after death or after the end of study participation</title>
+        <intent>Temporal plausibility against subject-level dates.</intent>
+        <requiredFields>subjects.death_date or subjects.discontinuation_date</requiredFields>
+        <logic><![CDATA[if assessment_date > death_date: raise CRITICAL
+if assessment_date > discontinuation_date + config.post_treatment_followup_days: raise MAJOR]]></logic>
+        <messages>
+          <reviewPoint>Consistency of tumor assessment dates with subject disposition and vital status.</reviewPoint>
+          <issue>Subject {subject_id}: tumor assessment dated {date} at {visit}, after the recorded {reference_event} of {reference_date}.</issue>
+          <reason>An assessment dated after death or well beyond the end of follow-up indicates an error in one of the two dates. Either error affects analysis: an incorrect assessment date can move the progression date, and an incorrect death date affects survival analysis.</reason>
+          <query>The {visit} tumor assessment is dated {date}, after the recorded {reference_event} ({reference_date}). Please verify both dates.</query>
+          <tips>Post-treatment follow-up assessments are legitimate in many protocols; confirm the follow-up period before treating a post-discontinuation assessment as an error.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-012" severity="MINOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>New lesion recorded with an identification date earlier than the visit at which it was first reported</title>
+        <intent>New lesion timing consistency.</intent>
+        <logic><![CDATA[if new lesion identified_at assessment date < the date of the assessment where it first appears
+   in measurements: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Consistency between the date a new lesion was identified and the assessment at which it was reported.</reviewPoint>
+          <issue>Subject {subject_id}: new lesion {lesion_id} is dated {identified_date} but first appears in the assessment data at {visit} ({visit_date}).</issue>
+          <reason>The progression date is taken from the first assessment at which the new lesion was observed. An inconsistency between these dates produces the wrong progression date and therefore the wrong progression-free survival time.</reason>
+          <query>New lesion {lesion_id} has an identification date of {identified_date} but is first reported at {visit} ({visit_date}). Please confirm the date the lesion was first observed.</query>
+          <tips>Where the lesion was visible in retrospect on an earlier scan, the progression date is normally the earlier scan; this requires a documented radiology decision.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-013" severity="MINOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Follow-up scans span more days than permitted</title>
+        <intent>Same coherence check as TE-BL-015, applied to follow-up assessments.</intent>
+        <requiredFields>assessments.scan_dates</requiredFields>
+        <logic><![CDATA[span = max(scan_dates) - min(scan_dates); if span > config.scan_span_max_days: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Temporal coherence of the scans composing a follow-up assessment.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: component scans span {span} days ({earliest} to {latest}).</issue>
+          <reason>Widely separated component scans mean that different parts of the tumor burden are measured at different times, which affects the sum and may affect the progression date.</reason>
+          <query>The scans comprising the {visit} assessment span {span} days. Please confirm the scan dates.</query>
+          <tips>Where the span is unavoidable, the assessment date convention (earliest scan or latest scan) should be applied consistently across the study.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-FU-014" severity="INFO" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Identical measurements repeated across three or more consecutive visits</title>
+        <intent>Detect carried-forward values rather than genuine measurement.</intent>
+        <logic><![CDATA[if a lesion has the identical value at >= 3 consecutive assessments
+   and the lesion is > config.identical_value_min_mm (default 15): raise finding]]></logic>
+        <messages>
+          <reviewPoint>Detection of measurements that may have been carried forward rather than re-measured.</reviewPoint>
+          <issue>Subject {subject_id}: lesion {lesion_id} measures exactly {value} mm at {visits}.</issue>
+          <reason>Identical measurements of a lesion of this size across several timepoints are uncommon given normal measurement variability, and may indicate that a previous value was copied rather than the lesion re-measured. If so, the sum does not reflect the current tumor burden.</reason>
+          <query>Lesion {lesion_id} is recorded as exactly {value} mm at {visits}. Please confirm that the lesion was measured at each assessment.</query>
+          <tips>Small and stable lesions genuinely produce repeated values; this check is deliberately informational and should be reviewed in the context of the whole subject rather than raised as a query in isolation.</tips>
+        </messages>
+      </rule>
+    </family>
+
+    <!-- ===== FAMILY RS: response derivation conformance ===== -->
+    <family id="RS" name="Response derivation conformance">
+      <rule id="TE-RS-001" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Reported target lesion response does not match the derived response</title>
+        <intent>The central check: recompute the target response and compare.</intent>
+        <logic><![CDATA[derived = targetResponse(...)
+if reported_target_response != derived and derived is not NOT_APPLICABLE: raise finding
+severity CRITICAL when the mismatch changes the overall response, MAJOR otherwise]]></logic>
+        <messages>
+          <reviewPoint>Derivation of the target lesion response from the sum of diameters, the baseline sum and the nadir.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: target lesion response is reported as {reported} but derives as {derived}. Sum of diameters {sum} mm; baseline {baseline_sum} mm ({pct_baseline}%); nadir {nadir_sum} mm at {nadir_visit} ({pct_nadir}%, absolute change {abs_nadir} mm).</issue>
+          <reason>{derivation_explanation}</reason>
+          <query>The target lesion response recorded at {visit} is {reported}. Based on the recorded lesion measurements the sum of diameters is {sum} mm, a {pct_baseline}% change from baseline and a {pct_nadir}% change from the nadir of {nadir_sum} mm, which corresponds to {derived}. Please review the recorded response and the underlying measurements.</query>
+          <tips>Before querying the response, confirm the measurements themselves: a response mismatch is frequently a symptom of a measurement or sum error already flagged for this subject. Check the linked findings for this subject first.</tips>
+        </messages>
+        <derivationExplanationVariants>
+          <variant condition="derived==PD">The sum has increased by {pct_nadir}% from the nadir with an absolute increase of {abs_nadir} mm, meeting both the {pd_pct}% relative and the {pd_abs} mm absolute criteria for progression.</variant>
+          <variant condition="derived==PR">The sum has decreased by {pct_baseline_abs}% from baseline, meeting the {pr_pct}% threshold for partial response, and the increase from nadir does not meet the progression criteria.</variant>
+          <variant condition="derived==SD">The change from baseline ({pct_baseline}%) does not reach the {pr_pct}% decrease required for partial response, and the change from nadir ({pct_nadir}%, {abs_nadir} mm) does not meet the progression criteria.</variant>
+          <variant condition="derived==CR">All non-nodal target lesions are recorded as absent and all nodal target lesions have a short axis below {node_threshold} mm.</variant>
+          <variant condition="derived==NE">Target lesion {ne_lesion_ids} could not be assessed, so the sum is incomplete and progression cannot be established from the measured lesions alone.</variant>
+        </derivationExplanationVariants>
+        <tests>
+          <test name="pd_boundary_relative">nadir 50 mm, current 60 mm (+20%, +10 mm) → PD</test>
+          <test name="pd_boundary_absolute">nadir 20 mm, current 24 mm (+20%, +4 mm) → SD, not PD</test>
+          <test name="pr_boundary">baseline 100 mm, current 70 mm (−30%) → PR</test>
+          <test name="cr_with_node">non-nodal all absent, node 8 mm → CR</test>
+          <test name="cr_blocked_by_node">non-nodal all absent, node 11 mm → PR (not CR)</test>
+        </tests>
+      </rule>
+      <rule id="TE-RS-002" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="RECIST_1_1,iRECIST">
+        <title>Progression declared on a relative increase without the required absolute increase</title>
+        <intent>Enforce the 5 mm absolute criterion alongside the 20% relative criterion.</intent>
+        <logic><![CDATA[if reported_target_response == PD
+   and pct_from_nadir >= config.pd_relative_increase_pct
+   and abs_from_nadir_mm < config.pd_absolute_increase_mm: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Application of both progression criteria: a relative increase of at least 20% and an absolute increase of at least 5 mm from the nadir.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: progression is reported. The sum increased from a nadir of {nadir_sum} mm to {sum} mm, a {pct_nadir}% increase but only {abs_nadir} mm in absolute terms.</issue>
+          <reason>RECIST 1.1 requires both a relative increase of at least {pd_pct}% and an absolute increase of at least {pd_abs} mm from the nadir. The absolute criterion was introduced precisely for small tumor burdens, where a 20% increase can fall within measurement variability. Here the absolute increase of {abs_nadir} mm does not reach {pd_abs} mm, so the derived response is {derived}.</reason>
+          <query>Progressive disease is recorded at {visit} based on an increase from the nadir of {nadir_sum} mm to {sum} mm. This is a {pct_nadir}% increase but only {abs_nadir} mm in absolute terms, which does not meet the {pd_abs} mm absolute increase also required by RECIST 1.1. Please review the response assessment, unless progression is based on a new lesion or on unequivocal non-target progression.</query>
+          <tips>Confirm first whether progression was actually driven by a new lesion or by non-target progression, in which case the response is correct and this finding can be rejected. This check applies only to progression driven by the target sum.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-003" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Progression assessed against baseline rather than against the nadir</title>
+        <intent>Detect the classic error of comparing to baseline when the tumor shrank first.</intent>
+        <logic><![CDATA[if reported_target_response != PD
+   and pct_from_nadir >= pd_pct and abs_from_nadir_mm >= pd_abs
+   and pct_from_baseline < pd_pct: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Use of the nadir, rather than baseline, as the reference for progression.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: target response is reported as {reported}. The sum is {sum} mm, which is {pct_baseline}% relative to baseline ({baseline_sum} mm) but {pct_nadir}% relative to the nadir of {nadir_sum} mm recorded at {nadir_visit} — an absolute increase of {abs_nadir} mm.</issue>
+          <reason>Progression is assessed against the smallest sum recorded on study, including baseline, not against baseline itself. Because this subject responded before progressing, the comparison against baseline still looks favourable while the comparison against the nadir meets the progression criteria. The derived response is progressive disease.</reason>
+          <query>At {visit} the sum of diameters is {sum} mm compared with a nadir of {nadir_sum} mm at {nadir_visit}, a {pct_nadir}% increase of {abs_nadir} mm, which meets the RECIST criteria for progression. The recorded response is {reported}. Please review the response assessment.</query>
+          <tips>This is the most consequential single error class in tumor data: it delays or entirely misses the progression date and directly biases progression-free survival. Always check the nadir visit shown above is itself a complete assessment.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-004" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Complete response reported while measurable disease persists</title>
+        <intent>Enforce the full complete response definition, including nodal short axis.</intent>
+        <logic><![CDATA[if reported_target_response == CR and (
+      any non-nodal target with state != ABSENT
+   or any nodal target with short axis >= config.pathological_node_threshold_mm
+   or any target with state in (TOO_SMALL_TO_MEASURE, NOT_EVALUABLE)): raise finding]]></logic>
+        <messages>
+          <reviewPoint>Conditions required for a complete response of target lesions.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: complete response is reported for target lesions, but {blocking_description} (lesion {lesion_id}: {value} mm, state {state}).</issue>
+          <reason>A complete response of target lesions requires the disappearance of all non-nodal target lesions and a reduction of every pathological lymph node, whether target or non-target, to a short axis below {node_threshold} mm. A lesion that is still visible, including one recorded as too small to measure, is not a disappearance.</reason>
+          <query>A complete response is recorded at {visit}, but {blocking_description}. Please review the response assessment and the individual lesion records.</query>
+          <tips>Note the asymmetry that causes most of these: the sum of diameters can be very small without a complete response being appropriate, because nodes retain a short axis. Conversely, complete response does not require the sum to be zero.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-005" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Reported non-target response does not match the derived response</title>
+        <intent>Recompute the non-target response and compare.</intent>
+        <logic><![CDATA[derived = nonTargetResponse(...)
+if reported_non_target_response != derived: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Derivation of the non-target lesion response from the individual non-target lesion states.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: non-target response is reported as {reported} but derives as {derived}. Lesion states: {non_target_breakdown}.</issue>
+          <reason>{derivation_explanation}</reason>
+          <query>The non-target lesion response recorded at {visit} is {reported}, while the individual non-target lesion assessments ({non_target_breakdown}) correspond to {derived}. Please review.</query>
+          <tips>A complete response of non-target disease additionally requires every pathological lymph node to be below 10 mm short axis, and where the protocol uses tumor markers, normalisation of those markers.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-006" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Non-target complete response reported while a pathological node persists</title>
+        <intent>Nodal condition for non-target complete response.</intent>
+        <logic><![CDATA[if reported_non_target_response == CR
+   and any non-target node with short axis >= config.pathological_node_threshold_mm: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Nodal condition for a complete response of non-target disease.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: non-target complete response is reported while node {lesion_id} ({organ}) measures {value} mm short axis.</issue>
+          <reason>A complete response requires all lymph nodes, target and non-target alike, to have reduced to a short axis below {node_threshold} mm. A node of {value} mm remains pathological, so the non-target response is Non-CR/Non-PD.</reason>
+          <query>A complete response of non-target lesions is recorded at {visit}, but node {lesion_id} measures {value} mm in short axis. Please review the non-target response.</query>
+          <tips>Non-target nodes are often not measured at all; where the eCRF does not capture a short axis for non-target nodes, this check depends on the radiology narrative and may need to be raised as a clarification rather than a correction.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-007" severity="MAJOR" mode="HYBRID" status="ACTIVE" downgradeable="true" guideline="ALL">
+        <title>Unequivocal non-target progression reported in a subject with responding or stable measurable disease</title>
+        <intent>Apply the guideline's "exceptional circumstance" test.</intent>
+        <logic><![CDATA[if non_target_response == PD and target_response in (CR, PR, SD) and new_lesion != YES:
+    raise finding
+    LLM assesses the recorded non-target descriptions for evidence of substantial overall
+    worsening; strong evidence downgrades to INFO]]></logic>
+        <messages>
+          <reviewPoint>Threshold for declaring unequivocal progression of non-target disease when measurable disease is present.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: unequivocal progression of non-target disease is reported while the target lesion response is {target_response} (sum {sum} mm, {pct_nadir}% from nadir) and no new lesion is recorded. Non-target findings: {non_target_breakdown}.</issue>
+          <reason>RECIST states that where measurable disease is present, unequivocal progression based on non-target disease alone should be an exceptional circumstance: the increase in overall tumor burden must be comparable in magnitude to the increase that would be required to declare progression for measurable disease. A modest increase in one non-target lesion is not sufficient, particularly while the target lesions are {target_response}.</reason>
+          <query>Unequivocal progression of non-target disease is recorded at {visit} while the target lesions show {target_response}. Please confirm that the overall tumor burden has increased substantially, and provide the radiological description supporting unequivocal progression.</query>
+          <tips>Genuine cases exist — for example a marked increase in a pleural effusion or in lymphangitic disease. The question to the site is not "is this wrong" but "what supports unequivocal". Where the answer supports it, accept and record the rationale so the same finding is not re-raised.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-008" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Reported overall response does not match the RECIST overall response table</title>
+        <intent>The overall response must follow from its three components.</intent>
+        <logic><![CDATA[derived = overallTimepointResponse(reported_target, reported_non_target, reported_new, has_measurable)
+if reported_overall != derived: raise finding
+note: computed from the REPORTED components, so this rule isolates table-application errors
+      from measurement errors, which are covered by TE-RS-001 and TE-RS-005]]></logic>
+        <messages>
+          <reviewPoint>Application of the RECIST overall response table to the reported target, non-target and new lesion components.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: overall response is reported as {reported_overall}, while the recorded components (target {target}, non-target {non_target}, new lesion {new_lesion}) correspond to {derived_overall}.</issue>
+          <reason>{table_explanation}</reason>
+          <query>The overall response recorded at {visit} is {reported_overall}. Based on the recorded components — target lesion response {target}, non-target response {non_target}, new lesions {new_lesion} — the overall response should be {derived_overall}. Please review.</query>
+          <tips>The combinations most often mis-applied are: target complete response with persisting non-target disease, which is a partial response rather than a complete response; and any new lesion, which is progression regardless of the target and non-target results.</tips>
+        </messages>
+        <tests>
+          <test name="cr_plus_non_cr_non_pd">target CR, non-target Non-CR/Non-PD, no new → PR</test>
+          <test name="new_lesion_overrides">target PR, non-target CR, new lesion YES → PD</test>
+          <test name="ne_target">target NE, non-target Non-CR/Non-PD, no new → NE</test>
+        </tests>
+      </rule>
+      <rule id="TE-RS-009" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>New lesion flag inconsistent with recorded new lesions</title>
+        <intent>Cross-check the flag against the lesion records.</intent>
+        <logic><![CDATA[if new_lesion_flag == YES and no lesion with category NEW at this assessment: raise finding
+if new_lesion_flag == NO  and a lesion with category NEW is first recorded here: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Consistency between the new lesion indicator and the recorded new lesion identifications.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: the new lesion indicator is {flag} while {lesion_situation}.</issue>
+          <reason>A new lesion is sufficient for progression on its own. If the indicator and the lesion records disagree, either progression has been declared without a documented lesion, or a documented new lesion has not been reflected in the response — both change the progression date.</reason>
+          <query>The new lesion indicator at {visit} is recorded as {flag} while {lesion_situation}. Please reconcile the new lesion records with the response assessment.</query>
+          <tips>Check whether the lesion was recorded as a new lesion at a later visit than the one where it was first seen; the progression date follows the first observation.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-010" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>New lesion recorded but overall response is not progression</title>
+        <intent>A confirmed new lesion always means progression under RECIST 1.1.</intent>
+        <logic><![CDATA[if new_lesion_flag == YES and reported_overall != PD: raise finding
+   (under iRECIST the expected value is iUPD; see TE-IR-001)]]></logic>
+        <messages>
+          <reviewPoint>Effect of an unequivocal new lesion on the overall timepoint response.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: an unequivocal new lesion is recorded ({new_lesion_description}) but the overall response is reported as {reported_overall}.</issue>
+          <reason>Under RECIST 1.1 the appearance of any unequivocal new lesion is progression, irrespective of the target and non-target responses. {irecist_note}</reason>
+          <query>A new lesion is recorded at {visit} while the overall response is {reported_overall}. Please confirm the new lesion and review the overall response assessment.</query>
+          <tips>Where the finding is equivocal rather than unequivocal, the correct handling is to record it as equivocal and continue treatment, treating the timepoint as not evaluable and re-assessing at the next visit; if later confirmed, progression is dated to this visit.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-011" severity="MAJOR" mode="HYBRID" status="ACTIVE" downgradeable="true" guideline="ALL">
+        <title>New lesion in an anatomical region not imaged at baseline</title>
+        <intent>Ensure the region-not-imaged case was considered explicitly.</intent>
+        <requiredFields>imaging_metadata.regions_imaged (or inferred from baseline lesion organs and modality)</requiredFields>
+        <logic><![CDATA[if new lesion organ/region was not covered by the baseline imaging: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Interpretation of a lesion found in a region that was not imaged at baseline.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: a new lesion is recorded in {organ}, a region that does not appear to have been imaged at baseline ({baseline_regions}).</issue>
+          <reason>A lesion identified in a region that was not scanned at baseline is considered a new lesion, and therefore progression, because pre-existing disease at that site cannot be excluded. The point of this check is to confirm that the site made this determination deliberately rather than by default, since the alternative interpretation — that the lesion was present but unimaged — is not permitted.</reason>
+          <query>A new lesion is recorded in {organ} at {visit}. Baseline imaging does not appear to have covered this region. Please confirm the finding represents a new lesion and that baseline imaging of this region was not performed.</query>
+          <tips>Brain metastases are the usual case: many protocols do not require baseline brain imaging, so a first brain scan performed for symptoms yields lesions that must be treated as new. Confirm the protocol's imaging requirements before raising.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-012" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>New lesion based on FDG-PET without confirmatory anatomical imaging</title>
+        <intent>Apply the PET rules for new lesion determination.</intent>
+        <requiredFields>lesions.method</requiredFields>
+        <logic><![CDATA[if new lesion method == PET and no corresponding CT/MRI finding at the same site
+   and no negative baseline PET recorded: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Use of FDG-PET to establish a new lesion.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: a new lesion in {organ} is based on FDG-PET, without a corresponding finding on anatomical imaging and without a negative baseline PET.</issue>
+          <reason>A positive FDG-PET finding establishes a new lesion when the baseline PET was negative, or when the new site is confirmed on CT or MRI. Without either, a positive PET alone is not sufficient, because the finding may represent disease present but not FDG-avid or not imaged at baseline, or may be non-malignant uptake.</reason>
+          <query>The new lesion recorded at {visit} in {organ} is based on FDG-PET. Please confirm whether a baseline PET was performed and negative, or whether the lesion is confirmed on CT or MRI.</query>
+          <tips>Inflammatory and infectious uptake is common, particularly under immunotherapy; anatomical confirmation matters most in that setting.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-013" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Equivocal new lesion later confirmed but progression not back-dated</title>
+        <intent>Progression is dated to the first observation of a lesion later confirmed.</intent>
+        <logic><![CDATA[if a lesion was EQUIVOCAL at visit i and confirmed unequivocal at visit j > i
+   and the recorded progression date != date of visit i: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Dating of progression when an equivocal finding is subsequently confirmed.</reviewPoint>
+          <issue>Subject {subject_id}: lesion {lesion_id} was recorded as equivocal at {first_visit} ({first_date}) and confirmed at {confirm_visit} ({confirm_date}); the progression date is recorded as {recorded_pd_date}.</issue>
+          <reason>Where therapy continues after an equivocal finding and the finding is subsequently confirmed as a new lesion, progression is dated to the time of the initial observation, not to the confirming assessment. Using the later date overstates progression-free survival by {days_difference} days.</reason>
+          <query>Lesion {lesion_id} was equivocal at {first_visit} and confirmed at {confirm_visit}. Please confirm the date of progression; per RECIST the progression date should be the date of the initial observation ({first_date}).</query>
+          <tips>Under iRECIST the handling differs — the iUPD and iCPD dates are both retained and the analysis convention is protocol-specific. Check which criteria govern before applying this rule.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-014" severity="CRITICAL" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Complete or partial response counted as best overall response without confirmation</title>
+        <intent>Enforce the protocol's confirmation requirement.</intent>
+        <requiredFields>protocol_config.response_confirmation_required = true</requiredFields>
+        <logic><![CDATA[if config.response_confirmation_required
+   and reported_best_overall_response in (CR, PR)
+   and no subsequent assessment >= config.confirmation_min_interval_days later
+      with a response of at least the same rank: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Confirmation of complete and partial responses where the protocol requires it.</reviewPoint>
+          <issue>Subject {subject_id}: best overall response is recorded as {reported_bor} based on {first_visit} ({first_date}), but the next assessment {next_description} does not confirm it.</issue>
+          <reason>The protocol requires confirmation of a complete or partial response by a repeat assessment performed no less than {confirm_days} days after the criteria were first met. Without confirmation the response is unconfirmed and the derived best overall response is {derived_bor}. Counting unconfirmed responses inflates the objective response rate.</reason>
+          <query>The best overall response is recorded as {reported_bor} based on the assessment at {first_visit}. A confirmatory assessment at least {confirm_days} days later does not appear to support this response. Please review the best overall response.</query>
+          <tips>Check whether a confirmatory scan exists but was entered as an unscheduled visit; also check the interval, since a confirmation performed too early does not satisfy the requirement.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-015" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Reported best overall response does not match the derived best overall response</title>
+        <intent>Recompute best overall response across the whole subject timeline.</intent>
+        <logic><![CDATA[derived = bestOverallResponse(orderedTimepoints, config)
+if reported_bor != derived.bor: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Derivation of best overall response across all timepoints, applying the confirmation requirement and excluding assessments after progression.</reviewPoint>
+          <issue>Subject {subject_id}: best overall response is reported as {reported_bor}; derived as {derived_bor}. Timepoint responses considered: {timepoint_sequence}.</issue>
+          <reason>{bor_explanation}</reason>
+          <query>The best overall response recorded for this subject is {reported_bor}. Based on the recorded timepoint responses ({timepoint_sequence}) and the protocol's confirmation requirement, the best overall response derives as {derived_bor}. Please review.</query>
+          <tips>Two frequent causes: a response recorded after progression being counted, and a stable disease result assigned before the protocol's minimum duration from baseline has elapsed.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-016" severity="CRITICAL" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Partial response or stable disease assigned to a subject without measurable disease at baseline</title>
+        <intent>Non-target-only subjects have a restricted response vocabulary.</intent>
+        <logic><![CDATA[if subject has no target lesions at baseline
+   and reported_overall in (PR, SD): raise finding]]></logic>
+        <messages>
+          <reviewPoint>Permitted response categories for subjects with non-measurable disease only.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: overall response is reported as {reported_overall}, but no target lesions were selected at baseline.</issue>
+          <reason>A subject with non-measurable disease only can be assigned a complete response, Non-CR/Non-PD, progressive disease or not evaluable. Partial response and stable disease require measurable disease, since both are defined by a change in the sum of diameters. The corresponding category here is Non-CR/Non-PD.</reason>
+          <query>The overall response at {visit} is recorded as {reported_overall} although no target lesions were identified at baseline. Please review; for subjects with non-measurable disease only, the appropriate categories are complete response, Non-CR/Non-PD, progressive disease or not evaluable.</query>
+          <tips>Check first whether target lesions were in fact selected but failed to load — a missing target lesion record produces this finding spuriously. Look for a companion structural finding on this subject.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-017" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Stable disease assigned before the protocol's minimum duration</title>
+        <intent>Stable disease requires a minimum interval from baseline.</intent>
+        <requiredFields>protocol_config.sd_min_duration_days</requiredFields>
+        <logic><![CDATA[if reported_overall == SD
+   and (assessment_date - baseline_date) < config.sd_min_duration_days: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Minimum duration from baseline required before stable disease can be assigned.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: stable disease is reported {days} days after baseline; the protocol requires a minimum of {min_days} days.</issue>
+          <reason>Stable disease is meaningful only if maintained for a minimum interval defined by the protocol. An earlier assessment cannot establish stability, and counting it inflates the disease control rate.</reason>
+          <query>Stable disease is recorded at {visit}, {days} days after baseline, which is shorter than the minimum of {min_days} days specified in the protocol. Please review the response assessment.</query>
+          <tips>This affects best overall response rather than the timepoint response in many conventions; confirm the sponsor's derivation convention before querying the site.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-018" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Response recorded after a documented progression</title>
+        <intent>Post-progression assessments must not contribute to response endpoints.</intent>
+        <logic><![CDATA[if an assessment after the first PD carries a response in (CR, PR, SD)
+   and it contributes to the reported best overall response: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Treatment of assessments performed after progression in response derivation.</reviewPoint>
+          <issue>Subject {subject_id}: progression is recorded at {pd_visit} ({pd_date}), and a response of {response} is recorded at {later_visit} ({later_date}).</issue>
+          <reason>Best overall response is determined from the assessments recorded from the start of treatment until progression. Assessments after progression are retained in the data but do not contribute to the response endpoints. Including one here changes the best overall response from {derived_bor} to {reported_bor}.</reason>
+          <query>A response of {response} is recorded at {later_visit}, after progression was recorded at {pd_visit}. Please confirm the progression date and the response assessments.</query>
+          <tips>Where the subject continued treatment beyond progression, the later assessments are legitimate data; the issue is their use in derivation, not their existence. If iRECIST applies, progression may have been unconfirmed and the later assessments are then fully valid — check the applicable criteria.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-019" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Recorded progression date does not match the earliest assessment meeting progression criteria</title>
+        <intent>Progression dating.</intent>
+        <logic><![CDATA[derived_date = progressionDate(orderedTimepoints, config)
+if |reported_progression_date - derived_date| > 0 days: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Dating of disease progression relative to the assessments that meet progression criteria.</reviewPoint>
+          <issue>Subject {subject_id}: progression date recorded as {reported_date}; the earliest assessment meeting progression criteria is {derived_visit} on {derived_date} ({days_difference} days difference).</issue>
+          <reason>Progression-free survival is measured to the date of the first assessment demonstrating progression. A difference of {days_difference} days changes the event time for this subject and, aggregated across subjects, biases the survival estimate.</reason>
+          <query>The progression date is recorded as {reported_date}, while the earliest assessment meeting progression criteria is {derived_visit} on {derived_date}. Please confirm the date of progression.</query>
+          <tips>Distinguish radiological progression from clinical progression: if progression was determined clinically, the date may legitimately precede any imaging, and the record should say so.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-RS-020" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Investigator and independent central review assessments discordant</title>
+        <intent>Surface discordance where both streams exist.</intent>
+        <requiredFields>protocol_config.bicr_collected = true</requiredFields>
+        <logic><![CDATA[for each assessment with both INVESTIGATOR and BICR responses:
+    if responses differ, or progression dates differ by > config.bicr_date_tolerance_days:
+        raise finding (INFO by default when the difference does not cross a PD boundary)]]></logic>
+        <messages>
+          <reviewPoint>Concordance between the investigator assessment and the independent central review.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: investigator response {inv_response}, central review response {bicr_response}. {date_note}</issue>
+          <reason>Discordance between the investigator and central review is expected at some rate, but discordance that crosses a progression boundary affects the primary endpoint where the central review is the basis of analysis, and may indicate a systematic difference in lesion selection or measurement at this site.</reason>
+          <query>Not applicable: this finding is for internal review and reconciliation and is not normally issued as a site query.</query>
+          <tips>Review the lesion-level data from both readers side by side. Consistent directional discordance at one site is a monitoring signal; scattered discordance is normal reader variability. Where the sponsor keeps the two streams deliberately separated, this rule should be disabled in configuration.</tips>
+        </messages>
+      </rule>
+    </family>
+
+    <!-- ===== FAMILY IR: iRECIST conformance ===== -->
+    <family id="IR" name="iRECIST conformance">
+      <rule id="TE-IR-001" severity="CRITICAL" mode="DETERMINISTIC" status="CONDITIONAL" guideline="iRECIST">
+        <title>RECIST 1.1 progression not recorded as unconfirmed progression under iRECIST</title>
+        <intent>First progression under iRECIST is iUPD, never iCPD.</intent>
+        <logic><![CDATA[if guideline includes iRECIST and RECIST 1.1 criteria for PD are met at this timepoint
+   and no prior iUPD exists
+   and reported irecist_response != iUPD: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Assignment of unconfirmed progression when RECIST 1.1 progression criteria are first met under iRECIST.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: RECIST 1.1 progression criteria are met ({pd_driver_description}) and the iRECIST response is recorded as {reported_irecist}, with no preceding unconfirmed progression.</issue>
+          <reason>Under iRECIST, the first timepoint at which RECIST 1.1 progression criteria are met is assigned unconfirmed progression (iUPD). Confirmed progression (iCPD) can only be assigned at a subsequent assessment that demonstrates further worsening. Recording confirmed progression at first occurrence removes the confirmation step that iRECIST exists to provide, and may lead to treatment being discontinued for pseudoprogression.</reason>
+          <query>RECIST 1.1 progression criteria are met at {visit} and the iRECIST response is recorded as {reported_irecist}. Under iRECIST the first occurrence of progression should be recorded as unconfirmed progression (iUPD), with confirmation at the next assessment. Please review.</query>
+          <tips>The commonest cause is the site applying RECIST 1.1 habits to an iRECIST study. Where both RECIST 1.1 and iRECIST responses are collected, the RECIST 1.1 field correctly reads PD while the iRECIST field should read iUPD — the two are not in conflict.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-IR-002" severity="CRITICAL" mode="DETERMINISTIC" status="CONDITIONAL" guideline="iRECIST">
+        <title>Confirmatory assessment after unconfirmed progression missing or outside the window</title>
+        <intent>iUPD must be followed by a confirmatory assessment within the protocol window.</intent>
+        <logic><![CDATA[for each iUPD timepoint:
+    next = next assessment for this subject
+    if next is None and subject still on treatment: raise finding (missing confirmation)
+    elif next exists and interval not in [config.irecist_confirmation_window_days_min,
+                                          config.irecist_confirmation_window_days_max]: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Timing of the confirmatory assessment following unconfirmed progression.</reviewPoint>
+          <issue>Subject {subject_id}: unconfirmed progression recorded at {iupd_visit} ({iupd_date}); {confirmation_situation}.</issue>
+          <reason>iRECIST requires the confirmatory assessment between {window_min} and {window_max} days after unconfirmed progression. Assessing too early risks confirming transient pseudoprogression as true progression; assessing too late leaves the subject on a potentially ineffective therapy and leaves the progression date ambiguous. Without a confirmatory assessment, progression remains unconfirmed and the subject's progression status for analysis is indeterminate.</reason>
+          <query>Unconfirmed progression was recorded at {iupd_visit} on {iupd_date}. {confirmation_situation}. Please confirm whether a confirmatory tumor assessment was performed and enter the data, or record the reason it was not performed.</query>
+          <tips>Where the subject discontinued treatment at unconfirmed progression, no confirmation is expected and this finding should be rejected with that reason; check the disposition data before querying.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-IR-003" severity="CRITICAL" mode="DETERMINISTIC" status="CONDITIONAL" guideline="iRECIST">
+        <title>Confirmed progression assigned without meeting the confirmation criteria</title>
+        <intent>iCPD requires further worsening in the category that drove iUPD.</intent>
+        <logic><![CDATA[if reported_irecist == iCPD:
+    verify per driver recorded at the preceding iUPD:
+      TARGET     -> sum >= iUPD.sum + config.icpd_target_increment_mm
+      NON_TARGET -> further unequivocal worsening recorded
+      NEW_LESION -> new lesion sum >= iUPD.new_lesion_sum + config.icpd_new_lesion_increment_mm
+                    or additional new lesions
+      or a new driver now independently meets RECIST 1.1 progression criteria
+    if none satisfied: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Criteria for confirming progression under iRECIST.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: confirmed progression is recorded. Unconfirmed progression was driven by {driver} at {iupd_visit}; at this assessment {confirmation_evidence}.</issue>
+          <reason>Confirmation of progression requires further worsening in the category that drove the unconfirmed progression: an increase of at least {target_increment} mm in the target lesion sum relative to the unconfirmed progression timepoint, further unequivocal worsening of non-target disease, an increase of at least {new_increment} mm in the sum of new measurable lesions, or the appearance of additional new lesions. A new category independently meeting RECIST 1.1 progression criteria also confirms. None of these is evident here, so the response should remain unconfirmed progression or reset according to the current burden.</reason>
+          <query>Confirmed progression is recorded at {visit}. The unconfirmed progression at {iupd_visit} was driven by {driver}, and the current assessment shows {confirmation_evidence}. Please review the confirmation of progression against the iRECIST criteria.</query>
+          <tips>Note the reference point: confirmation compares against the unconfirmed progression timepoint, not against the nadir. This differs from RECIST 1.1 and is a frequent source of confusion.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-IR-004" severity="CRITICAL" mode="DETERMINISTIC" status="CONDITIONAL" guideline="iRECIST">
+        <title>New lesion measurements added to the baseline target sum</title>
+        <intent>iRECIST tracks new lesions separately.</intent>
+        <logic><![CDATA[if reported_sum at a timepoint equals derived baseline-target sum + new lesion measurements
+   (within tolerance) rather than the baseline-target sum alone: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Separate recording of new lesion measurements from the baseline target lesion sum under iRECIST.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: the reported sum of {reported} mm matches the baseline target sum ({target_sum} mm) plus the new lesion measurements ({new_sum} mm) rather than the target sum alone.</issue>
+          <reason>Under iRECIST, new lesions are recorded and measured separately from the baseline target lesions, with their own sum of up to five new measurable lesions, two per organ. They are never added to the baseline target sum, because the baseline sum must remain comparable to baseline for response assessment, while the new lesion sum is used to judge confirmation of progression. Combining them corrupts both.</reason>
+          <query>The sum of diameters at {visit} appears to include the measurements of new lesions. Under iRECIST new lesions are recorded and summed separately from the baseline target lesions. Please review the sum of diameters and the new lesion records.</query>
+          <tips>Confirm the eCRF design supports separate new lesion recording; where it does not, this is a study set-up issue affecting every iRECIST subject rather than a site error.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-IR-005" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="iRECIST">
+        <title>Response reset after unconfirmed progression not applied correctly</title>
+        <intent>When progression is not confirmed, the response returns to iCR/iPR/iSD against the original nadir.</intent>
+        <logic><![CDATA[if a timepoint follows an iUPD, confirmation criteria are NOT met,
+   and reported_irecist not in (iCR, iPR, iSD, iUPD, iNE): raise finding
+also verify the reset response was derived against the ORIGINAL nadir, not against the iUPD sum]]></logic>
+        <messages>
+          <reviewPoint>Reassignment of response when progression is not confirmed at the next assessment.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: unconfirmed progression at {iupd_visit} was not confirmed, and the response is recorded as {reported_irecist}; the derived response is {derived_irecist} (sum {sum} mm against the nadir of {nadir_sum} mm at {nadir_visit}).</issue>
+          <reason>If confirmation criteria are not met, the subject's response resets to iCR, iPR or iSD according to the current tumor burden measured against the original nadir. The nadir is not reset by the unconfirmed progression, so a later increase can again produce unconfirmed progression. This is the mechanism by which iRECIST accommodates pseudoprogression.</reason>
+          <query>Unconfirmed progression was recorded at {iupd_visit} and was not confirmed at {visit}. The response at {visit} is recorded as {reported_irecist}; based on the current sum of {sum} mm against the nadir of {nadir_sum} mm the response derives as {derived_irecist}. Please review.</query>
+          <tips>Multiple episodes of unconfirmed progression are permitted and are not an error. What is not permitted is treating the unconfirmed progression sum as the new reference.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-IR-006" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="iRECIST">
+        <title>New measurable lesions exceed the iRECIST limits</title>
+        <intent>At most five new measurable lesions, two per organ.</intent>
+        <logic><![CDATA[if count(new measurable lesions) > config.max_new_target_lesions_total
+   or count per organ > config.max_new_target_lesions_per_organ: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Limits on the number of new measurable lesions recorded and measured under iRECIST.</reviewPoint>
+          <issue>Subject {subject_id}: {n} new measurable lesions are recorded ({per_organ_breakdown}); iRECIST permits up to {max_total} in total and {max_per_organ} per organ.</issue>
+          <reason>The new lesion sum is used to judge confirmation of progression, so it must be constructed consistently. Additional new lesions beyond the limits are recorded as new non-target lesions rather than measured.</reason>
+          <query>{n} new measurable lesions are recorded for this subject. iRECIST permits up to {max_total} new measurable lesions in total, and {max_per_organ} per organ, with any further new lesions recorded as non-target. Please review the new lesion records.</query>
+          <tips>The appearance of numerous new lesions is itself strong evidence of true progression, so this finding is usually a recording issue rather than a clinical question.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-IR-007" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="iRECIST">
+        <title>Assessments continue after confirmed progression without documented rationale</title>
+        <intent>iCPD is terminal for response derivation.</intent>
+        <logic><![CDATA[if assessments exist after an iCPD timepoint and are assigned iRECIST responses
+   other than iCPD: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Handling of assessments performed after confirmed progression.</reviewPoint>
+          <issue>Subject {subject_id}: confirmed progression recorded at {icpd_visit} ({icpd_date}); subsequent assessments at {later_visits} carry responses of {later_responses}.</issue>
+          <reason>Confirmed progression is the terminal response state. Later assessments may be collected for follow-up, but assigning a non-progression response after confirmed progression is inconsistent and risks the later response being carried into the best overall response derivation.</reason>
+          <query>Assessments after the confirmed progression at {icpd_visit} carry responses of {later_responses}. Please confirm the progression status and the response assessments recorded after it.</query>
+          <tips>Check whether the earlier assessment was in fact unconfirmed rather than confirmed progression; a mislabelled iCPD is the more likely error.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-IR-008" severity="MAJOR" mode="HYBRID" status="PROPOSED_OPTIONAL" downgradeable="true" guideline="iRECIST">
+        <title>Treatment continued beyond unconfirmed progression without documented clinical stability</title>
+        <intent>iRECIST permits continuation only for clinically stable subjects.</intent>
+        <requiredFields>cross_domain.exposure, cross_domain.performance_status or clinical stability assessment</requiredFields>
+        <logic><![CDATA[if treatment continued after an iUPD
+   and no record of the clinical stability assessment exists at that timepoint: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Documentation of clinical stability when treatment continues beyond unconfirmed progression.</reviewPoint>
+          <issue>Subject {subject_id}: treatment continued after unconfirmed progression at {iupd_visit}, with no recorded assessment of clinical stability.</issue>
+          <reason>iRECIST permits treatment beyond unconfirmed progression only where the subject is clinically stable: no decline in performance status, no worsening of symptoms attributable to disease, and no need for intensified management. The documentation supports both subject safety and the interpretation of the subsequent assessment.</reason>
+          <query>Treatment continued after unconfirmed progression at {iupd_visit}. Please confirm that the subject was assessed as clinically stable at that time and that this is documented.</query>
+          <tips>This is a protocol compliance point as much as a data point; where the eCRF has no field for it, escalate to the monitoring team rather than issuing a data query.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-IR-009" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="iRECIST">
+        <title>RECIST 1.1 and iRECIST responses collected in parallel are mutually inconsistent</title>
+        <intent>Where both are collected, the iRECIST value must follow from the RECIST 1.1 value and the state history.</intent>
+        <logic><![CDATA[expected = irecistStateMachine(...) applied to the reported RECIST 1.1 responses
+if reported_irecist != expected: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Consistency between the parallel RECIST 1.1 and iRECIST response assessments.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: RECIST 1.1 response {r11_response}, iRECIST response {reported_irecist}; the iRECIST response derived from the RECIST 1.1 sequence is {expected_irecist}.</issue>
+          <reason>The iRECIST assessment is derived from the same underlying measurements as the RECIST 1.1 assessment, differing only in the treatment of progression and new lesions. Given the RECIST 1.1 result at this timepoint and the preceding response history, the iRECIST response should be {expected_irecist}.</reason>
+          <query>The RECIST 1.1 and iRECIST responses recorded at {visit} are {r11_response} and {reported_irecist}. Based on the response history the iRECIST response would be expected to be {expected_irecist}. Please review.</query>
+          <tips>Where the two fields are on separate forms completed by different people, expect systematic divergence at a site; treat that as a training signal rather than a per-record query.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-IR-010" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="iRECIST">
+        <title>Study uses immunotherapy but responses are assessed under RECIST 1.1 only</title>
+        <intent>Detect a study-level configuration mismatch.</intent>
+        <requiredFields>protocol_config.guideline_version, cross_domain.treatment class</requiredFields>
+        <logic><![CDATA[if protocol specifies iRECIST and no iRECIST responses are present in the data,
+   or the reverse: raise study-level finding]]></logic>
+        <messages>
+          <reviewPoint>Alignment between the response criteria specified in the protocol and the response data collected.</reviewPoint>
+          <issue>Study {study_id}: the protocol specifies {configured_guideline}, but {observed_situation}.</issue>
+          <reason>If iRECIST is specified but not collected, pseudoprogression cannot be distinguished from true progression, and subjects may be discontinued prematurely. If iRECIST is collected but not specified, the analysis convention is undefined. Either way the endpoint derivation is at risk across the whole study.</reason>
+          <query>Not applicable: this is a study set-up finding for the study team rather than a site query.</query>
+          <tips>Raise with the study data manager and the biostatistician; resolution usually requires a database change rather than data correction.</tips>
+        </messages>
+      </rule>
+    </family>
+
+    <!-- ===== FAMILY XD: cross-domain consistency ===== -->
+    <family id="XD" name="Cross-domain consistency">
+      <rule id="TE-XD-001" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>End of treatment due to progression but no progression recorded in the tumor data</title>
+        <requiredFields>cross_domain.disposition</requiredFields>
+        <logic><![CDATA[if disposition reason indicates progressive disease
+   and no assessment with overall response PD (or iCPD) exists: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Consistency between the reason for treatment discontinuation and the recorded tumor response.</reviewPoint>
+          <issue>Subject {subject_id}: treatment discontinued on {disposition_date} for {disposition_reason}, but no assessment records progressive disease. Last recorded response: {last_response} at {last_visit}.</issue>
+          <reason>If treatment stopped for progression, either an assessment demonstrating progression is missing from the tumor data, or the discontinuation reason is incorrect. Both affect the progression-free survival analysis: a missing progression event leads to censoring instead of an event.</reason>
+          <query>Treatment was discontinued for {disposition_reason} on {disposition_date}, but no tumor assessment recording progression is present. Please confirm whether a tumor assessment demonstrating progression was performed, and enter the data if so; if progression was determined clinically, please confirm the basis and the date.</query>
+          <tips>Clinical progression without radiological confirmation is legitimate and common near end of life; the record should show it as such rather than leaving the tumor data silent.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-XD-002" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Progression recorded in the tumor data but treatment continued without documented rationale</title>
+        <requiredFields>cross_domain.exposure</requiredFields>
+        <logic><![CDATA[if PD recorded (RECIST 1.1 study, not iRECIST)
+   and dosing continued > config.post_pd_treatment_days (default 42) after the PD date
+   and no treatment-beyond-progression documentation exists: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Continuation of study treatment after documented progression.</reviewPoint>
+          <issue>Subject {subject_id}: progression recorded at {pd_visit} ({pd_date}); study treatment continued until {last_dose_date}, {days} days beyond progression.</issue>
+          <reason>Treatment beyond progression may be permitted by the protocol, but it must be documented, and it changes the interpretation of subsequent assessments. Where it is not permitted, this is a protocol deviation. Where the study uses iRECIST, the earlier assessment may have been unconfirmed progression rather than confirmed progression, in which case continuation is expected and the response coding needs review instead.</reason>
+          <query>Study treatment continued for {days} days after the progression recorded at {pd_visit}. Please confirm the progression assessment and whether continuation beyond progression was approved.</query>
+          <tips>Check the applicable response criteria first — under iRECIST this pattern is normal and the finding should be rejected.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-XD-003" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>New anticancer therapy started before recorded progression</title>
+        <requiredFields>cross_domain.anticancer_therapy</requiredFields>
+        <logic><![CDATA[if a new systemic anticancer therapy starts before the recorded progression date
+   (or before any recorded progression): raise finding]]></logic>
+        <messages>
+          <reviewPoint>Timing of new anticancer therapy relative to the recorded progression.</reviewPoint>
+          <issue>Subject {subject_id}: new anticancer therapy ({therapy}) started on {therapy_date}; recorded progression date {pd_date_or_none}.</issue>
+          <reason>Starting a new anticancer therapy before recorded progression usually indicates that progression occurred but was not captured, or that treatment changed for another documented reason. In progression-free survival analyses the start of new therapy is commonly a censoring or event-defining event, so the discrepancy has direct analytical consequences, and any tumor assessment after the new therapy no longer reflects the study treatment.</reason>
+          <query>A new anticancer therapy ({therapy}) started on {therapy_date}, before any recorded disease progression. Please confirm the reason for starting new therapy and whether a tumor assessment demonstrating progression was performed.</query>
+          <tips>Radiotherapy for symptom palliation is a frequent benign explanation; distinguish it from a change of systemic therapy.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-XD-004" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Local therapy applied to a target lesion during the study</title>
+        <requiredFields>cross_domain.radiotherapy or procedures</requiredFields>
+        <logic><![CDATA[if radiotherapy, surgery or ablation is recorded at a site matching a target lesion
+   after baseline: raise finding on all subsequent assessments of that lesion]]></logic>
+        <messages>
+          <reviewPoint>Effect of locoregional therapy on the interpretation of a target lesion.</reviewPoint>
+          <issue>Subject {subject_id}: {procedure} was applied to {site} on {procedure_date}, matching target lesion {lesion_id}; measurements of this lesion continue at {later_visits}.</issue>
+          <reason>Once a lesion has received locoregional therapy, its subsequent size no longer reflects the systemic treatment effect, and RECIST treats such lesions as non-measurable unless progression is demonstrated. Continuing to include it in the sum understates tumor burden and can produce a spurious partial response.</reason>
+          <query>{procedure} was applied to {site} on {procedure_date}, which corresponds to target lesion {lesion_id}. Please confirm and clarify how this lesion has been assessed at subsequent visits.</query>
+          <tips>The usual analytical convention is that the subject is considered to have progressed, or is censored, at the time of local therapy to a target lesion; confirm the protocol's convention with the statistician.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-XD-005" severity="MAJOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Adverse event indicating disease progression without a corresponding tumor assessment</title>
+        <requiredFields>cross_domain.adverse_events</requiredFields>
+        <logic><![CDATA[if an AE term maps to disease progression / malignant neoplasm progression
+   and no PD assessment exists within config.ae_pd_window_days (default 60): raise finding]]></logic>
+        <messages>
+          <reviewPoint>Consistency between adverse events indicating disease progression and the tumor assessment data.</reviewPoint>
+          <issue>Subject {subject_id}: adverse event "{ae_term}" with onset {ae_date}; no tumor assessment recording progression within {window} days.</issue>
+          <reason>An adverse event of disease progression implies a clinical determination of progression. If the tumor data does not reflect it, the progression event may be missing from the efficacy analysis, or the adverse event may have been coded inappropriately — disease progression is frequently reported as an adverse event when it should be captured as an efficacy outcome.</reason>
+          <query>An adverse event of "{ae_term}" is recorded with onset {ae_date}. Please confirm whether disease progression was documented and whether a tumor assessment was performed at that time.</query>
+          <tips>Many sponsors instruct sites not to report disease progression as an adverse event; where that convention applies, the finding is also a coding issue for the safety team.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-XD-006" severity="CRITICAL" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Death recorded before the last tumor assessment or before the progression date</title>
+        <requiredFields>subjects.death_date</requiredFields>
+        <logic><![CDATA[if death_date < last assessment_date or death_date < recorded progression date: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Consistency of the death date with the tumor assessment and progression dates.</reviewPoint>
+          <issue>Subject {subject_id}: death recorded on {death_date}; {conflicting_record} dated {conflict_date}.</issue>
+          <reason>A tumor assessment or progression date after the date of death is impossible, so one of the dates is wrong. Both feed survival and progression-free survival analyses directly.</reason>
+          <query>The date of death ({death_date}) precedes {conflicting_record} ({conflict_date}). Please verify both dates.</query>
+          <tips>Partial dates are a frequent cause; check whether an imputed date is being compared against a complete one.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-XD-007" severity="MINOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Tumor marker not normalised while a complete response is reported</title>
+        <requiredFields>protocol_config.tumor_markers_used_for_cr = true, cross_domain.lab_markers</requiredFields>
+        <logic><![CDATA[if reported overall response == CR and marker value > upper limit of normal: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Normalisation of tumor markers as a condition of complete response, where the protocol requires it.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: complete response reported while {marker} is {value} {unit} (upper limit of normal {uln}).</issue>
+          <reason>Where the protocol includes tumor markers in the response definition, a complete response requires marker normalisation in addition to the disappearance of all lesions. A persistently elevated marker means the response is Non-CR/Non-PD.</reason>
+          <query>A complete response is recorded at {visit} while {marker} remains above the upper limit of normal ({value} {unit}). Please review the response assessment.</query>
+          <tips>Marker elevation can have non-malignant causes; the site's explanation may be sufficient without a data change.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-XD-008" severity="MINOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Imaging modality not among those permitted by the protocol</title>
+        <requiredFields>protocol_config.allowed_modalities</requiredFields>
+        <logic><![CDATA[if measurement method not in config.allowed_modalities: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Use of imaging modalities permitted by the protocol and imaging charter.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: lesion {lesion_id} assessed by {method}; the protocol permits {allowed_modalities}.</issue>
+          <reason>Modalities differ in sensitivity and in measurement reproducibility. Using a modality outside the protocol makes the measurement non-comparable with the rest of the subject's data and with other subjects.</reason>
+          <query>Lesion {lesion_id} was assessed by {method} at {visit}, which is not among the modalities specified in the protocol. Please confirm the modality used.</query>
+          <tips>Contrast versus non-contrast CT is the most consequential variant and is often not captured as a distinct modality; consider whether the eCRF should distinguish them.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-XD-009" severity="MINOR" mode="DETERMINISTIC" status="CONDITIONAL" guideline="ALL">
+        <title>Required disease-site imaging missing</title>
+        <requiredFields>protocol_config imaging requirements</requiredFields>
+        <logic><![CDATA[if the protocol requires imaging of a region (e.g. brain in a study enrolling subjects
+   with brain metastases) and no assessment covers that region: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Coverage of all protocol-required anatomical regions at each assessment.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: no assessment of {required_region} although the protocol requires it{subject_context}.</issue>
+          <reason>Disease in an unimaged region cannot be assessed, and a lesion later found there must be treated as a new lesion. Missing required imaging therefore both reduces the reliability of the current response and risks a spurious progression later.</reason>
+          <query>No assessment of {required_region} is recorded at {visit} although the protocol requires it. Please confirm whether the imaging was performed and enter the results.</query>
+          <tips>Brain imaging is the usual case, particularly in lung cancer and melanoma studies.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-XD-010" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Best overall response inconsistent with the subject's timepoint responses at study level</title>
+        <logic><![CDATA[if reported_bor rank is better than the best reported timepoint response: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Consistency of the recorded best overall response with the recorded timepoint responses.</reviewPoint>
+          <issue>Subject {subject_id}: best overall response recorded as {reported_bor}, while the best timepoint response recorded is {best_timepoint} at {visit}.</issue>
+          <reason>The best overall response cannot be better than any response actually recorded at a timepoint. This indicates either a missing timepoint assessment or an incorrect best overall response.</reason>
+          <query>The best overall response is recorded as {reported_bor}, but the best response recorded at any timepoint is {best_timepoint}. Please review.</query>
+          <tips>Check for an unscheduled assessment that was not entered; a response confirmed at an unscheduled visit is a common cause.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-XD-011" severity="INFO" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Subject has no post-baseline assessment</title>
+        <logic><![CDATA[if subject has a baseline assessment, received treatment,
+   and has no post-baseline tumor assessment: raise finding]]></logic>
+        <messages>
+          <reviewPoint>Availability of at least one post-baseline tumor assessment for each treated subject.</reviewPoint>
+          <issue>Subject {subject_id}: treated from {first_dose_date} with no post-baseline tumor assessment; last known status {status}.</issue>
+          <reason>A treated subject with no post-baseline assessment is not evaluable for response and is censored at randomisation or treatment start in progression-free survival, which reduces the power of the analysis. The reason should be documented.</reason>
+          <query>No post-baseline tumor assessment is recorded for this subject. Please confirm whether an assessment was performed, and record the reason if it was not.</query>
+          <tips>Early death or early withdrawal are the usual explanations and are legitimate; the finding exists to ensure the reason is captured.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-XD-012" severity="MINOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Site-level pattern of the same finding</title>
+        <logic><![CDATA[if a rule fires for >= config.site_pattern_min_subjects (default 3) subjects at one site
+   and the site's rate exceeds the study rate by config.site_pattern_factor (default 3):
+   raise one aggregate finding and link the individual findings]]></logic>
+        <messages>
+          <reviewPoint>Detection of systematic issues at a site rather than isolated data errors.</reviewPoint>
+          <issue>Site {site_id}: rule {source_rule_id} ({source_rule_title}) fires for {n_subjects} of {site_subjects} subjects, against a study rate of {study_rate}%.</issue>
+          <reason>A concentration of the same issue at one site usually reflects a training or process gap rather than isolated errors. Addressing it at the site level resolves the whole cluster and prevents recurrence, whereas issuing individual queries treats the symptom.</reason>
+          <query>Not applicable: this finding is directed to the monitoring team rather than to the site as a data query.</query>
+          <tips>Pair with a site training action and re-check at the next data cut; the recurrence status on the linked findings will show whether the intervention worked.</tips>
+        </messages>
+      </rule>
+    </family>
+
+    <!-- ===== FAMILY QM: query management ===== -->
+    <family id="QM" name="Query management and recurrence">
+      <rule id="TE-QM-001" severity="INFO" mode="HYBRID" status="ACTIVE" guideline="ALL">
+        <title>Finding already covered by an open query</title>
+        <logic><![CDATA[classification produced by the query reconciler; see queryReconciliation]]></logic>
+        <messages>
+          <reviewPoint>Suppression of findings already covered by an outstanding query.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: finding {source_finding_id} is already covered by open query {query_id} raised on {opened_date}.</issue>
+          <reason>Re-issuing a query that is already outstanding creates duplicate work at the site and confuses the audit trail. The finding is retained and linked, but is suppressed from the default worklist until the query is answered.</reason>
+          <query>Not applicable: no new query is required.</query>
+          <tips>If the outstanding query is materially different in scope from this finding, disposition the finding as NEW manually and issue a distinct query.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-QM-002" severity="MAJOR" mode="HYBRID" status="ACTIVE" guideline="ALL">
+        <title>Query answered or closed but the underlying issue persists</title>
+        <logic><![CDATA[if a query matching this finding has status ANSWERED or CLOSED
+   and the finding still evaluates as true against the current data: escalate severity by one level]]></logic>
+        <messages>
+          <reviewPoint>Verification that answered and closed queries actually resolved the underlying data issue.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: query {query_id} was {query_status} on {resolution_date} with the answer "{answer_summary}", but the data still shows {current_state}.</issue>
+          <reason>The query was resolved without the data being corrected, or the correction did not address the issue. This is a higher-risk state than a new finding, because the issue has already been reviewed once and has passed through the query process unresolved.</reason>
+          <query>Query {query_id} regarding {issue_summary} was answered on {resolution_date}, but the data still shows {current_state}. Please clarify: if the data is correct as entered, please explain the basis; otherwise please make the correction.</query>
+          <tips>Read the original answer before re-querying. Where the site confirmed the data is correct, the right next step is often a discussion with the medical monitor rather than a repeated query.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-QM-003" severity="MAJOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Issue recurs after a previous resolution</title>
+        <logic><![CDATA[if a finding with this dedupe key was RESOLVED in an earlier run
+   and evaluates true again in the current run: mark RECURRENT and escalate]]></logic>
+        <messages>
+          <reviewPoint>Recurrence of a previously resolved issue.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: this issue was resolved on {previous_resolution_date} (run {previous_run_id}) and is present again in the current data.</issue>
+          <reason>A recurrence usually means either that a data correction was reverted, or that a subsequent data entry reintroduced the same error. Both are worth understanding, because the same cause is likely to affect other records.</reason>
+          <query>This issue was previously raised and resolved on {previous_resolution_date}, and is present again in the current data. Please confirm the current value and clarify the reason for the change.</query>
+          <tips>Compare the audit trail of the affected field across the two data cuts; a reverted correction and a fresh error need different responses.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-QM-004" severity="MINOR" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Critical query outstanding beyond the ageing threshold</title>
+        <logic><![CDATA[if a query linked to a CRITICAL finding is OPEN for > config.query_aging_days (default 30):
+   raise finding]]></logic>
+        <messages>
+          <reviewPoint>Ageing of outstanding queries linked to endpoint-critical findings.</reviewPoint>
+          <issue>Subject {subject_id}: query {query_id} concerning {issue_summary} has been open for {days} days.</issue>
+          <reason>Endpoint-critical data cannot be locked while the query is outstanding, and late resolution compresses the timeline before database lock. Ageing queries on response data are a leading cause of lock delay.</reason>
+          <query>Not applicable: this finding is for the study team's query management rather than a new site query.</query>
+          <tips>Escalate through the monitoring team rather than by reissuing the query.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-QM-005" severity="INFO" mode="LLM_ADJUDICATED" status="ACTIVE" guideline="ALL">
+        <title>Query answer does not address the question asked</title>
+        <logic><![CDATA[LLM classifies the answer against the query as
+   {addresses: full | partial | none, intent: data_will_be_corrected | data_confirmed_correct |
+    clarification_provided | unrelated, confidence}
+raise when addresses == none or partial with confidence >= 0.7]]></logic>
+        <messages>
+          <reviewPoint>Responsiveness of query answers to the question asked.</reviewPoint>
+          <issue>Subject {subject_id}: query {query_id} asked "{query_summary}"; the answer "{answer_summary}" appears to {addresses_description}.</issue>
+          <reason>An unresponsive answer that is nonetheless accepted closes the query without resolving the underlying data question, so the issue survives into the locked database.</reason>
+          <query>Thank you for the response to query {query_id}. The original question concerned {query_summary}; could you please also confirm {outstanding_point}?</query>
+          <tips>Site answers are often correct but terse. Read the original answer in full before re-querying; the model flags candidates rather than making the determination.</tips>
+        </messages>
+      </rule>
+      <rule id="TE-QM-006" severity="INFO" mode="DETERMINISTIC" status="ACTIVE" guideline="ALL">
+        <title>Data changed after a query but a new inconsistency was introduced</title>
+        <logic><![CDATA[if a data value changed between runs in response to a query
+   and a NEW finding with a different rule id now exists on the same record: link and raise]]></logic>
+        <messages>
+          <reviewPoint>Verification that data corrections did not introduce new inconsistencies.</reviewPoint>
+          <issue>Subject {subject_id}, {visit}: {field} was changed from {old_value} to {new_value} following query {query_id}; the record now triggers {new_rule_id} ({new_rule_title}).</issue>
+          <reason>Corrections made in isolation frequently break a dependent value — most often a lesion measurement corrected without the sum or the response being updated. The correction should be applied consistently across the dependent fields.</reason>
+          <query>Following the correction to {field} at {visit}, {new_issue_summary}. Please review the related fields so the assessment is internally consistent.</query>
+          <tips>This is why measurement corrections should always be reviewed together with the sum and the response for the same timepoint, and for all later timepoints if the nadir moved.</tips>
+        </messages>
+      </rule>
+    </family>
+  </ruleCatalog>
+
+  <!-- ============================================================= -->
+  <llmIntegration>
+    <providerInterface>
+      <signature>complete(request: LlmRequest) → LlmResponse</signature>
+      <requestFields>
+        <field name="task_id" note="e.g. adjudicate.non_measurable, narrate.finding, match.query"/>
+        <field name="prompt_template_id"/><field name="prompt_version"/>
+        <field name="system_text"/><field name="user_text"/>
+        <field name="data_envelope" note="Untrusted content, delimited and labelled as data"/>
+        <field name="output_schema" note="JSON Schema; required for every call"/>
+        <field name="options" note="temperature (default 0), max_tokens, seed where supported, timeout"/>
+      </requestFields>
+      <responseFields>
+        <field name="parsed" note="Schema-validated object, or null"/>
+        <field name="raw_text"/><field name="model_id"/><field name="provider"/>
+        <field name="usage"/><field name="latency_ms"/>
+        <field name="validation_status" values="OK | REPAIRED | FAILED"/>
+      </responseFields>
+      <rule>No caller ever sees provider-specific structures. No provider SDK is imported outside its adapter module.</rule>
+    </providerInterface>
+
+    <adapters>
+      <adapter name="anthropic" structuredOutput="TOOL_SCHEMA" toolCalling="true" streaming="true" determinismControls="temperature"/>
+      <adapter name="openai_compatible" structuredOutput="JSON_SCHEMA_OR_JSON_MODE" toolCalling="capability-dependent" streaming="true"
+               note="Serves GLM via an OpenAI-compatible gateway, vLLM, SGLang, Ollama and most internal gateways."/>
+      <adapter name="glm_native" structuredOutput="JSON_MODE" toolCalling="capability-dependent" streaming="true"
+               note="Separate adapter because parameter naming and tool-call semantics differ from the OpenAI shape. Confirm at OQ-03."/>
+      <adapter name="null" structuredOutput="NONE" note="Deterministic-only mode; every LLM task falls back to its template."/>
+    </adapters>
+
+    <capabilityNegotiation><![CDATA[
+strategy = select_strategy(adapter.capabilities, task.requirements)
+  if adapter supports CONSTRAINED_JSON_SCHEMA -> constrained decoding, single call
+  elif adapter supports JSON_MODE            -> JSON mode + schema validation
+  else                                       -> prompt-enforced JSON + schema validation
+
+on validation failure:
+  attempt 1 repair call: original prompt + the validation error + "return only valid JSON"
+  on second failure: record validation_status=FAILED, fall back to the deterministic template,
+                     and log the event; the finding is still produced, with template text.
+    ]]></capabilityNegotiation>
+
+    <promptContracts>
+      <prompt id="P-ADJ-NONMEASURABLE" version="1.0.0" task="adjudicate">
+        <inputs>lesion organ, laterality, location text, description text, method, guideline extract</inputs>
+        <outputSchema>{is_non_measurable: boolean, category: string|null, confidence: number, rationale: string}</outputSchema>
+        <constraint>Rationale must quote the input text it relies on. No output field may contain a measurement value.</constraint>
+      </prompt>
+      <prompt id="P-ADJ-UNEQUIVOCAL" version="1.0.0" task="adjudicate">
+        <inputs>non-target lesion descriptions at this and the previous timepoint, target response, sum change, guideline extract on unequivocal progression</inputs>
+        <outputSchema>{supports_unequivocal: boolean, magnitude_comment: string, confidence: number, rationale: string}</outputSchema>
+      </prompt>
+      <prompt id="P-MATCH-QUERY" version="1.0.0" task="match">
+        <inputs>candidate finding summary; up to N historical queries for the same subject (text, status, dates)</inputs>
+        <outputSchema>{matches: [{query_id: string, relation: "same_issue"|"related"|"unrelated", confidence: number}]}</outputSchema>
+      </prompt>
+      <prompt id="P-CLASSIFY-ANSWER" version="1.0.0" task="classify">
+        <inputs>query text, answer text</inputs>
+        <outputSchema>{addresses: "full"|"partial"|"none", intent: string, confidence: number}</outputSchema>
+      </prompt>
+      <prompt id="P-NARRATE-FINDING" version="1.0.0" task="narrate">
+        <inputs>evidence object, rule metadata, message templates, guideline citation, indication context</inputs>
+        <outputSchema>{review_point_text, issue_text, reason_text, suggested_query_text, additional_info_text}</outputSchema>
+        <constraint>Every numeric value and identifier must appear as a placeholder token; the template engine substitutes them after generation and rejects the output if any placeholder is missing or any unexpected number appears.</constraint>
+        <constraint>Tone: factual, non-accusatory, addressed to a site coordinator; no clinical advice; no speculation about cause beyond what the evidence supports.</constraint>
+      </prompt>
+    </promptContracts>
+
+    <guardrails>
+      <guardrail id="G-01" name="Numeric injection">Numbers are never taken from model output. The template engine re-injects them from the evidence object and fails the render if the model removed a placeholder.</guardrail>
+      <guardrail id="G-02" name="Prompt injection defence">All site-authored text is wrapped in a labelled data envelope with an explicit instruction that its content is data only. Post-generation, any output containing instruction-like content that did not originate in the template is rejected and the template fallback is used. Site text that appears to contain instructions is itself surfaced as an INFO finding.</guardrail>
+      <guardrail id="G-03" name="No verdict authority">The adjudication response schema has no field capable of creating or deleting a finding; it can only set confidence, rationale, and (where downgradeable) a downgrade flag.</guardrail>
+      <guardrail id="G-04" name="Determinism">temperature=0 and a fixed seed where the provider supports it. Narrative variation across runs is expected and acceptable; verdict variation is not possible by construction.</guardrail>
+      <guardrail id="G-05" name="Redaction">Subject identifiers are pseudonymised and free text is scrubbed before any external call, per the study's egress policy. The mapping stays inside the trust boundary.</guardrail>
+      <guardrail id="G-06" name="Budget">Evidence is deterministically summarised to fit the configured prompt budget (NFR-05). Truncation is explicit and recorded, never silent.</guardrail>
+    </guardrails>
+
+    <conformanceSuite>
+      A fixed fixture set runs against every configured adapter before it is approved for a study.
+      Assertions: (1) deterministic verdicts identical across adapters; (2) schema validation success
+      rate above the configured threshold; (3) narrative rubric score above threshold on a sample;
+      (4) no placeholder loss; (5) injection fixtures do not alter behaviour. Results are stored with
+      the adapter and model id and form part of the validation package.
+    </conformanceSuite>
+  </llmIntegration>
+
+  <!-- ============================================================= -->
+  <queryReconciliation id="queryReconciliation">
+    <matchingAlgorithm><![CDATA[
+for each candidate finding f:
+    # 1. exact match: queries TEA itself raised
+    exact = queries where tea_rule_id == f.rule_id and subject == f.subject
+            and assessment/lesion scope overlaps f
+    # 2. structural match: same subject + visit + form/field or lesion
+    structural = queries where subject == f.subject
+                 and (assessment matches or lesion matches)
+                 and field maps to one of f.evidence.fields
+    # 3. semantic match (LLM, only over the residue)
+    semantic = P-MATCH-QUERY(f.summary, remaining queries for this subject)
+               filtered to relation == "same_issue" and confidence >= 0.75
+
+    matched = exact ∪ structural ∪ semantic
+    if matched is empty:                                      f.status = NEW
+    elif any matched.status == OPEN:                          f.status = DUPLICATE_OPEN
+    elif any matched.status in (ANSWERED, CLOSED):
+         if f still evaluates true on current data:           f.status = ANSWERED_UNRESOLVED   # escalate
+         else:                                                f.status = ANSWERED_RESOLVED     # not surfaced
+    if f.dedupe_key was RESOLVED in a prior run and is true now: f.status = RECURRENT
+    ]]></matchingAlgorithm>
+    <safeguards>
+      <safeguard>Semantic matching may only suppress a finding of severity MINOR or INFO. For MAJOR and CRITICAL findings a semantic match links the query but leaves the finding visible, flagged "possible duplicate".</safeguard>
+      <safeguard>Suppression is never silent: suppressed findings are listed in a dedicated view with their linking query.</safeguard>
+      <safeguard>Escalation for ANSWERED_UNRESOLVED raises severity by one level, capped at CRITICAL, and records the original severity.</safeguard>
+    </safeguards>
+  </queryReconciliation>
+
+  <!-- ============================================================= -->
+  <prioritisation id="prioritisation">
+    <cascadeGrouping><![CDATA[
+Root-cause ordering within a subject:
+  structural (ST) > baseline (BL) > measurement (FU) > response (RS/IR) > cross-domain (XD)
+If a finding of a higher-order family exists for the same subject and overlapping assessments,
+lower-order findings that are plausibly downstream are attached as `related_finding_ids` of the
+root and are collapsed under it in the worklist by default. They remain individually addressable.
+Example: TE-BL-001 (too many targets) collapses the TE-RS-001 mismatches it necessarily causes.
+    ]]></cascadeGrouping>
+    <scoring><![CDATA[
+priority_score = severity_weight
+               * endpoint_impact_weight     # 1.5 if the finding changes a derived response,
+                                            # progression date or best overall response; else 1.0
+               * query_state_weight         # 1.3 ANSWERED_UNRESOLVED, 1.2 RECURRENT,
+                                            # 0.3 DUPLICATE_OPEN, 1.0 NEW
+               * confidence                 # 1.0 deterministic; model-reported for adjudicated
+               * recency_weight             # 1.1 if first seen in the current run
+severity_weight: CRITICAL 100, MAJOR 40, MINOR 10, INFO 2
+The formula is displayed in the UI so a reviewer can see why an item ranks where it does.
+    ]]></scoring>
+  </prioritisation>
+
+  <!-- ============================================================= -->
+  <outputSpecification>
+    <findingRecord note="Full JSON Schema in docs/contracts/finding.schema.json"/>
+    <dedupeKey><![CDATA[
+dedupe_key = sha256(study_id | subject_id | rule_id | sorted(assessment_scope) |
+                    sorted(lesion_scope) | rule_semantic_version_major)
+Stable across runs and across PATCH/MINOR rule changes, so a finding's history survives rule
+wording updates. A MAJOR rule change deliberately produces a new key, because the issue being
+asserted has changed.
+    ]]></dedupeKey>
+    <coverageReport>
+      Every run emits, alongside the findings: rules executed, rules deactivated with the reason
+      and the missing fields, subjects and assessments evaluated, subjects partially evaluated with
+      the reason, and counts by family and severity. A run with no findings is only meaningful
+      alongside this report.
+    </coverageReport>
+    <exports>
+      <export format="JSON" note="Canonical; the contract above"/>
+      <export format="XLSX" note="One row per finding with the five narrative elements in separate columns, plus an evidence sheet"/>
+      <export format="CSV" note="Flat, for statistical review"/>
+      <export format="PDF" note="Formatted report per run or per subject, for the trial master file"/>
+    </exports>
+  </outputSpecification>
+
+  <!-- ============================================================= -->
+  <apiSurface note="Read-only except where stated; consumed by the web application (Step 4/5)">
+    <endpoint method="POST" path="/runs">Start a review run for a study and dataset snapshot.</endpoint>
+    <endpoint method="GET" path="/runs/{run_id}">Run metadata, provenance and coverage report.</endpoint>
+    <endpoint method="GET" path="/runs/{run_id}/findings">Findings with filtering, sorting, pagination and faceting.</endpoint>
+    <endpoint method="GET" path="/findings/{finding_id}">Full finding with evidence and derivation trace.</endpoint>
+    <endpoint method="GET" path="/findings/{finding_id}/history">The finding's dedupe-key history across runs.</endpoint>
+    <endpoint method="PATCH" path="/findings/{finding_id}/disposition" write="true">Record a reviewer disposition with reason; appends to the audit trail.</endpoint>
+    <endpoint method="POST" path="/findings/{finding_id}/query-draft" write="true">Persist the reviewer-edited query text and mark it issued.</endpoint>
+    <endpoint method="GET" path="/subjects/{subject_id}/tumor-360">Lesion history, derived timepoints, responses reported and derived, findings and queries.</endpoint>
+    <endpoint method="GET" path="/studies/{study_id}/analytics">Waterfall, spider and swimmer series plus rule and site rates.</endpoint>
+    <endpoint method="GET" path="/config/{study_id}">Effective protocol configuration and active rule pack.</endpoint>
+  </apiSurface>
+
+  <!-- ============================================================= -->
+  <errorHandling>
+    <policy scope="Ingestion">Structural defects become ST findings; the run continues with affected subjects marked partially evaluable.</policy>
+    <policy scope="Derivation">A derivation that cannot complete for a subject marks that subject not evaluable with a reason; other subjects are unaffected.</policy>
+    <policy scope="Rule execution">An exception in one rule is caught, recorded as a run-level defect, and the remaining rules continue. A rule that fails is reported as NOT_EVALUATED in the coverage report, never as passing.</policy>
+    <policy scope="LLM">Timeouts, schema failures and outages fall back to deterministic behaviour and are logged; the run completes.</policy>
+    <policy scope="Persistence">A write failure aborts the run; partial runs are never exposed.</policy>
+  </errorHandling>
+
+  <performance>
+    <target>Deterministic full run: 500 subjects × 12 assessments in under 5 minutes (NFR-03).</target>
+    <technique>Per-subject parallelism; rules are pure functions of a subject's data, so the workload partitions cleanly.</technique>
+    <technique>Narrative generation is deferred and batched: findings are persisted with template text immediately and enriched asynchronously, so the worklist is usable before narration completes.</technique>
+    <technique>Narrative caching keyed on (rule_id, rule_version, prompt_version, model_id, evidence hash) — identical evidence never re-generates.</technique>
+    <technique>Incremental runs process only subjects whose data changed since the previous snapshot (FR-16), with a full run at each data cut.</technique>
+  </performance>
+
+  <!-- ============================================================= -->
+  <testing>
+    <level name="Unit — derivations">Every function in <reference target="derivations"/>, with boundary fixtures at every threshold: 30% PR, 20%/5 mm PD, 10 mm and 15 mm nodal, 5 mm iCPD increment, confirmation interval boundaries.</level>
+    <level name="Unit — rules">Each rule requires at least one positive and one negative fixture; CI fails if either is missing. Rules with false-positive guards require a fixture exercising the guard.</level>
+    <level name="Worked examples">The published RECIST 1.1 and iRECIST worked examples are encoded as fixtures and must reproduce exactly.</level>
+    <level name="Golden dataset">A curated study with a signed-off expected finding list, run on every commit. Any difference must be acknowledged in the rule pack change history before merge.</level>
+    <level name="Provider conformance">The suite described in <reference target="llmIntegration"/>, run per adapter and per model version.</level>
+    <level name="Injection tests">Fixtures containing instruction-like site text; assertion is that behaviour is unchanged and the text is flagged.</level>
+    <level name="Performance">Synthetic study at the NFR-03 scale, run in CI on a schedule rather than per commit.</level>
+    <level name="User acceptance">Reviewer tasks on a de-identified real study, against the Step 3 acceptance thresholds.</level>
+  </testing>
+
+  <configuration>
+    <item name="Protocol configuration">Per study, versioned and hashed; see the ProtocolConfig entity in the plan.</item>
+    <item name="Rule activation">Per study: rules may be deactivated with a documented reason, which appears in the coverage report.</item>
+    <item name="Thresholds">Tolerances (sum, percentage, dates), outlier bounds, ageing thresholds, site pattern thresholds.</item>
+    <item name="LLM">Provider, model id, endpoint, budget, egress policy, redaction level, deterministic-only switch.</item>
+    <item name="Message style">Query salutation, sign-off, and house phrasing conventions, applied by the template engine.</item>
+    <rule>No configuration value may be introduced as a literal in rule code. CI scans for numeric literals in rule modules.</rule>
+  </configuration>
+
+  <extensibility>
+    <procedure name="Adding a review point">
+      <step>Add a rule entry to this catalog with a new permanent id, guideline basis, severity, logic, guards and the five message templates.</step>
+      <step>Implement the rule module with the same id; it must be a pure function of (canonical model, derived values, config).</step>
+      <step>Add at least one positive and one negative fixture, plus a guard fixture where guards exist.</step>
+      <step>Bump the rule pack MINOR version and record the addition in the change history.</step>
+      <step>Run the golden dataset; acknowledge any change in expected findings.</step>
+    </procedure>
+    <procedure name="Adding a guideline or criteria set">
+      <step>Add a guideline profile with its parameter defaults.</step>
+      <step>Add derivation variants only where the algorithm genuinely differs; otherwise parameterise the existing ones.</step>
+      <step>Tag rules with the guideline versions they apply to.</step>
+      <step>Bump the rule pack MAJOR version if any existing rule's behaviour changes.</step>
+    </procedure>
+    <procedure name="Adding a source system">
+      <step>Implement a new adapter producing the canonical input contract. No other layer changes.</step>
+    </procedure>
+    <procedure name="Adding an LLM provider">
+      <step>Implement the adapter interface, declare its capability matrix, run the conformance suite, record the results in the validation package.</step>
+    </procedure>
+  </extensibility>
+
+  <traceability>
+    <link requirement="FR-01" spec="derivations D-01..D-10" tests="unit derivations, worked examples"/>
+    <link requirement="FR-02" spec="TE-BL-011, TE-FU-001, TE-RS-001, TE-RS-005, TE-RS-008, TE-RS-015" tests="rule fixtures, golden dataset"/>
+    <link requirement="FR-03" spec="ruleCatalog, processingPipeline ST-CONFIG/ST-RULES" tests="coverage report assertions"/>
+    <link requirement="FR-04" spec="outputSpecification, message templates on every rule" tests="template render tests, placeholder assertions"/>
+    <link requirement="FR-05" spec="queryReconciliation, family QM" tests="reconciliation fixtures"/>
+    <link requirement="FR-06" spec="guidelineProfiles, rule guideline tags" tests="per-profile fixture runs"/>
+    <link requirement="FR-07" spec="llmIntegration" tests="provider conformance suite"/>
+    <link requirement="FR-08" spec="ReviewRun provenance, dedupeKey" tests="reproduction test on a stored run"/>
+    <link requirement="FR-09" spec="apiSurface disposition endpoints" tests="audit trail tests"/>
+    <link requirement="FR-10" spec="prioritisation cascadeGrouping" tests="cascade fixtures"/>
+    <link requirement="FR-11" spec="prioritisation scoring" tests="scoring unit tests"/>
+    <link requirement="FR-12" spec="TE-RS-020" tests="BICR fixtures"/>
+    <link requirement="FR-14" spec="TE-QM-003, TE-XD-012" tests="multi-run fixtures"/>
+    <link requirement="NFR-01" spec="designPrinciple DP-01, guardrail G-03" tests="provider conformance verdict identity"/>
+    <link requirement="NFR-02" spec="extensibility" tests="CI structural checks"/>
+    <link requirement="NFR-05" spec="guardrail G-06" tests="prompt budget assertions"/>
+    <link requirement="NFR-09" spec="errorHandling LLM policy" tests="outage simulation"/>
+  </traceability>
+
+  <openSpecificationQuestions>
+    <question id="SQ-01">Confirm the severity assigned to each rule against sponsor conventions; severities drive prioritisation and the lock criteria.</question>
+    <question id="SQ-02">Confirm the interpretation decisions ID-01 to ID-08, in particular the too-small-to-measure convention and the treatment of reappearing lesions.</question>
+    <question id="SQ-03">Confirm which PROPOSED_OPTIONAL rules (TE-BL-016, TE-IR-008) should be activated.</question>
+    <question id="SQ-04">Confirm the query text style: salutation, level of explanation, whether the guideline reference should appear in the query itself or only in the reviewer-facing tips.</question>
+    <question id="SQ-05">Confirm tolerances: sum tolerance in mm, percentage tolerance, date tolerances for BICR comparison.</question>
+    <question id="SQ-06">Confirm whether findings addressed to the study team rather than the site (TE-RS-020, TE-IR-010, TE-XD-012, TE-QM-004) should be a separate finding class in the UI.</question>
+    <question id="SQ-07">Confirm whether the sum of diameters is collected at all, or derived only — some eCRFs do not collect it, which makes TE-BL-011 and TE-FU-001 inapplicable and shifts weight onto TE-RS-001.</question>
+  </openSpecificationQuestions>
+
+</programmingSpecification>

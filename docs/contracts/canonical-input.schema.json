@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/tea/contracts/canonical-input.schema.json",
+  "title": "TEA-CTR-001 Canonical input",
+  "description": "The single structure the review engine consumes. Source adapters (SDTM TU/TR/RS, EDC raw) produce it; rules never see source-system field names.",
+  "type": "object",
+  "required": ["study", "protocol_config", "subjects", "lesions", "assessments", "measurements", "reported_responses"],
+  "additionalProperties": false,
+  "properties": {
+    "study": {
+      "type": "object",
+      "required": ["study_id", "guideline_version"],
+      "additionalProperties": false,
+      "properties": {
+        "study_id": { "type": "string" },
+        "indication": { "type": ["string", "null"], "examples": ["NSCLC", "BREAST"] },
+        "guideline_version": { "type": "string", "enum": ["RECIST_1_0", "RECIST_1_1", "RECIST_1_1_PLUS_iRECIST"] },
+        "dataset_snapshot_hash": { "type": ["string", "null"] }
+      }
+    },
+
+    "protocol_config": {
+      "type": "object",
+      "description": "Guideline defaults overridden by the protocol. Every threshold is configuration; none is a code constant.",
+      "additionalProperties": false,
+      "properties": {
+        "max_target_lesions_total": { "type": "integer", "default": 5 },
+        "max_target_lesions_per_organ": { "type": "integer", "default": 2 },
+        "min_measurable_non_nodal_mm": { "type": "number", "default": 10 },
+        "min_measurable_nodal_short_axis_mm": { "type": "number", "default": 15 },
+        "pathological_node_threshold_mm": { "type": "number", "default": 10 },
+        "min_measurable_cxr_mm": { "type": "number", "default": 20 },
+        "min_measurable_clinical_exam_mm": { "type": "number", "default": 10 },
+        "pd_relative_increase_pct": { "type": "number", "default": 20 },
+        "pd_absolute_increase_mm": { "type": "number", "default": 5 },
+        "pr_decrease_pct": { "type": "number", "default": 30 },
+        "response_confirmation_required": { "type": "boolean", "default": false },
+        "confirmation_min_interval_days": { "type": "integer", "default": 28 },
+        "sd_min_duration_days": { "type": ["integer", "null"] },
+        "assessment_interval_days": { "type": ["integer", "null"] },
+        "assessment_window_days": { "type": ["integer", "null"] },
+        "baseline_window_days_before_first_dose": { "type": "integer", "default": 28 },
+        "irecist_confirmation_window_days_min": { "type": "integer", "default": 28 },
+        "irecist_confirmation_window_days_max": { "type": "integer", "default": 56 },
+        "icpd_target_increment_mm": { "type": "number", "default": 5 },
+        "icpd_new_lesion_increment_mm": { "type": "number", "default": 5 },
+        "max_new_target_lesions_total": { "type": "integer", "default": 5 },
+        "max_new_target_lesions_per_organ": { "type": "integer", "default": 2 },
+        "too_small_to_measure_default_mm": { "type": "number", "default": 5 },
+        "reappearance_is_progression": { "type": "boolean", "default": false },
+        "tumor_markers_used_for_cr": { "type": "boolean", "default": false },
+        "bicr_collected": { "type": "boolean", "default": false },
+        "allowed_modalities": { "type": "array", "items": { "type": "string" } },
+        "scan_span_max_days": { "type": "integer", "default": 7 },
+        "sum_tolerance_mm": { "type": "number", "default": 0.5 },
+        "pct_tolerance_points": { "type": "number", "default": 0.1 }
+      }
+    },
+
+    "subjects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["subject_id"],
+        "additionalProperties": false,
+        "properties": {
+          "subject_id": { "type": "string" },
+          "site_id": { "type": ["string", "null"] },
+          "first_dose_date": { "type": ["string", "null"], "format": "date" },
+          "treatment_arm": { "type": ["string", "null"] },
+          "discontinuation_date": { "type": ["string", "null"], "format": "date" },
+          "discontinuation_reason": { "type": ["string", "null"] },
+          "death_date": { "type": ["string", "null"], "format": "date" },
+          "has_measurable_disease_at_baseline": { "type": ["boolean", "null"] }
+        }
+      }
+    },
+
+    "lesions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["lesion_id", "subject_id", "category", "is_nodal", "organ"],
+        "additionalProperties": false,
+        "properties": {
+          "lesion_id": { "type": "string" },
+          "subject_id": { "type": "string" },
+          "category": { "type": "string", "enum": ["TARGET", "NON_TARGET", "NEW"] },
+          "is_nodal": { "type": "boolean" },
+          "organ": { "type": "string" },
+          "location_detail": { "type": ["string", "null"], "description": "Untrusted free text" },
+          "laterality": { "type": ["string", "null"] },
+          "method": { "type": ["string", "null"] },
+          "identified_at_assessment_id": { "type": ["string", "null"] },
+          "new_lesion_certainty": { "type": ["string", "null"], "enum": ["UNEQUIVOCAL", "EQUIVOCAL", null] },
+          "previously_irradiated": { "type": ["boolean", "null"] },
+          "locoregional_therapy_applied": { "type": ["boolean", "null"] },
+          "description_text": { "type": ["string", "null"], "description": "Untrusted free text" }
+        }
+      }
+    },
+
+    "assessments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["assessment_id", "subject_id", "assessment_date", "evaluator"],
+        "additionalProperties": false,
+        "properties": {
+          "assessment_id": { "type": "string" },
+          "subject_id": { "type": "string" },
+          "visit_name": { "type": ["string", "null"] },
+          "visit_number": { "type": ["number", "null"] },
+          "assessment_date": { "type": "string", "format": "date" },
+          "scan_dates": { "type": "array", "items": { "type": "string", "format": "date" } },
+          "is_baseline": { "type": "boolean", "default": false },
+          "evaluator": { "type": "string", "enum": ["INVESTIGATOR", "BICR_1", "BICR_2", "ADJUDICATOR"] },
+          "not_done": { "type": "boolean", "default": false },
+          "not_done_reason": { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "measurements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["assessment_id", "lesion_id", "state"],
+        "additionalProperties": false,
+        "properties": {
+          "assessment_id": { "type": "string" },
+          "lesion_id": { "type": "string" },
+          "value_mm": { "type": ["number", "null"], "description": "Longest diameter for non-nodal lesions; short axis for nodal lesions." },
+          "original_value": { "type": ["number", "null"] },
+          "original_unit": { "type": ["string", "null"], "enum": ["mm", "cm", null] },
+          "axis_recorded": { "type": ["string", "null"], "enum": ["LONGEST_DIAMETER", "SHORT_AXIS", null] },
+          "state": { "type": "string", "enum": ["PRESENT", "ABSENT", "TOO_SMALL_TO_MEASURE", "NOT_EVALUABLE", "NOT_DONE"] },
+          "non_target_state": { "type": ["string", "null"], "enum": ["PRESENT", "ABSENT", "UNEQUIVOCAL_PROGRESSION", "NOT_EVALUABLE", null] },
+          "not_done_reason": { "type": ["string", "null"] },
+          "method_at_visit": { "type": ["string", "null"] },
+          "comment_text": { "type": ["string", "null"], "description": "Untrusted free text" }
+        }
+      }
+    },
+
+    "reported_responses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["assessment_id", "evaluator"],
+        "additionalProperties": false,
+        "properties": {
+          "assessment_id": { "type": "string" },
+          "evaluator": { "type": "string" },
+          "target_response": { "type": ["string", "null"], "enum": ["CR", "PR", "SD", "PD", "NE", null] },
+          "non_target_response": { "type": ["string", "null"], "enum": ["CR", "NON_CR_NON_PD", "PD", "NE", null] },
+          "new_lesion": { "type": ["string", "null"], "enum": ["YES", "NO", "EQUIVOCAL", "NE", null] },
+          "overall_response": { "type": ["string", "null"], "enum": ["CR", "PR", "SD", "NON_CR_NON_PD", "PD", "NE", null] },
+          "irecist_response": { "type": ["string", "null"], "enum": ["iCR", "iPR", "iSD", "iUPD", "iCPD", "iNE", null] },
+          "sum_of_diameters_reported": { "type": ["number", "null"] },
+          "new_lesion_sum_reported": { "type": ["number", "null"] },
+          "best_overall_response": { "type": ["string", "null"] },
+          "progression_date": { "type": ["string", "null"], "format": "date" }
+        }
+      }
+    },
+
+    "queries": {
+      "type": "array",
+      "description": "Historical queries and answers. Absent means every finding is classified NEW.",
+      "items": {
+        "type": "object",
+        "required": ["query_id", "subject_id", "query_text", "status", "opened_date"],
+        "additionalProperties": false,
+        "properties": {
+          "query_id": { "type": "string" },
+          "subject_id": { "type": "string" },
+          "assessment_id": { "type": ["string", "null"] },
+          "lesion_id": { "type": ["string", "null"] },
+          "form": { "type": ["string", "null"] },
+          "field": { "type": ["string", "null"] },
+          "query_text": { "type": "string", "description": "Untrusted free text" },
+          "answer_text": { "type": ["string", "null"], "description": "Untrusted free text" },
+          "status": { "type": "string", "enum": ["OPEN", "ANSWERED", "CLOSED", "CANCELLED"] },
+          "opened_date": { "type": "string", "format": "date" },
+          "answered_date": { "type": ["string", "null"], "format": "date" },
+          "closed_date": { "type": ["string", "null"], "format": "date" },
+          "origin": { "type": ["string", "null"], "enum": ["TEA", "EDC_CHECK", "MANUAL", "OTHER", null] },
+          "tea_rule_id": { "type": ["string", "null"], "description": "Round-trip identifier when TEA raised the query; makes matching exact rather than semantic." }
+        }
+      }
+    },
+
+    "cross_domain": {
+      "type": "object",
+      "description": "Supporting data for the XD rule family. Missing blocks deactivate the dependent rules, which are then reported as NOT_EVALUATED.",
+      "additionalProperties": false,
+      "properties": {
+        "exposure": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "anticancer_therapy": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "radiotherapy": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "procedures": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "adverse_events": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "lab_markers": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "performance_status": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+      }
+    },
+
+    "imaging_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "assessment_id": { "type": "string" },
+              "modality": { "type": "string" },
+              "scan_date": { "type": ["string", "null"], "format": "date" },
+              "slice_thickness_mm": { "type": ["number", "null"] },
+              "regions_imaged": { "type": "array", "items": { "type": "string" } },
+              "contrast_used": { "type": ["boolean", "null"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

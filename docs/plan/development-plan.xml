@@ -1,0 +1,1158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TEA-PLAN-001 — Development Plan for the Tumor Evaluation Review Agent.
+  Status: DRAFT for sponsor review (Step 1 gate).
+  Every element that reflects an unconfirmed decision is marked with a confidence
+  attribute and, where relevant, cross-references an <openQuestion> id.
+-->
+<developmentPlan
+    id="TEA-PLAN-001"
+    schemaVersion="1.0"
+    xml:lang="en">
+
+  <documentControl>
+    <title>Tumor Evaluation Review Agent (TEA) — Development Plan</title>
+    <documentId>TEA-PLAN-001</documentId>
+    <version>0.1.0</version>
+    <status>DRAFT</status>
+    <issueDate>2026-08-10</issueDate>
+    <effectiveDate>Upon sponsor approval of Step 1 gate</effectiveDate>
+    <author role="Solution architect (AI-assisted draft)">Claude Code session</author>
+    <intendedAudience>
+      <audience>Clinical Data Management (data reviewers, data managers)</audience>
+      <audience>Medical Monitors / Clinical Scientists</audience>
+      <audience>Biostatistics and Statistical Programming</audience>
+      <audience>Clinical Systems / IT / Validation (CSV-CSA)</audience>
+      <audience>Quality Assurance and Regulatory Compliance</audience>
+    </intendedAudience>
+    <approvals>
+      <approval role="Business owner (CDM lead)" status="PENDING"/>
+      <approval role="Medical Monitor representative" status="PENDING"/>
+      <approval role="Quality / Validation" status="PENDING"/>
+      <approval role="IT Security / Data Privacy" status="PENDING"/>
+    </approvals>
+    <changeHistory>
+      <revision version="0.1.0" date="2026-08-10" author="AI-assisted draft">
+        Initial draft covering agent concept, data model, review scope, architecture,
+        web application concept, six-step delivery plan, requirements, risks,
+        validation approach, version control policy, recommendations and open questions.
+      </revision>
+    </changeHistory>
+    <relatedDocuments>
+      <document id="TEA-SPEC-001" title="Programming Specification" relation="derived-from-this-plan"/>
+      <document id="TEA-CTR-001" title="Canonical input data contract" relation="child"/>
+      <document id="TEA-CTR-002" title="Finding output contract" relation="child"/>
+      <document id="TEA-VAL-001" title="Validation Plan" relation="planned" step="5"/>
+      <document id="TEA-UI-001" title="UI Design Specification" relation="planned" step="4"/>
+    </relatedDocuments>
+    <versioningPolicy>
+      Semantic versioning per artifact; filenames are version-free and versions live in the
+      document plus a git tag. Rule pack, prompts and engine are versioned independently of
+      the documents. Every agent output carries a provenance stamp naming all of them.
+      See docs/README.md for the full policy.
+    </versioningPolicy>
+  </documentControl>
+
+  <!-- ============================================================= -->
+  <executiveSummary>
+    <paragraph>
+      Tumor evaluation data is among the highest-risk and lowest-automation areas of oncology
+      data review. The efficacy endpoint of most oncology trials (ORR, PFS, DoR, BOR) is derived
+      from lesion-level measurements and investigator response assessments that are entered by
+      site staff, change frequently as scans are re-read, and must obey a dense set of rules from
+      RECIST 1.1 and iRECIST plus protocol-specific deviations. Manual review is performed by
+      Clinical Data Managers and Medical Monitors listing-by-listing, is repeated at every data
+      cut, and does not scale with the volume or the change rate of the data.
+    </paragraph>
+    <paragraph>
+      The Tumor Evaluation Review Agent (TEA) is a decision-support agent that re-derives every
+      RECIST/iRECIST quantity from the collected lesion data, compares the derivation with what
+      the site reported, cross-checks the result against the query history, and produces a
+      prioritised list of suspicious issues. Each issue is presented with five reviewer-facing
+      elements: <emphasis>what review point was checked</emphasis>,
+      <emphasis>what the issue is and on which data</emphasis>,
+      <emphasis>why it is an issue (with current vs expected values)</emphasis>,
+      <emphasis>a suggested initial query text</emphasis>, and
+      <emphasis>additional information</emphasis> (review tips and guideline background).
+      Findings are surfaced in a purpose-built web application whose interaction model follows
+      the conventions of established clinical data review platforms.
+    </paragraph>
+    <paragraph>
+      The central architectural commitment is <emphasis>deterministic-first</emphasis>: all
+      arithmetic and all rule verdicts are produced by a versioned, testable rule engine, never
+      by a language model. The LLM is used only where judgement or language is genuinely
+      required — narrative adjudication of ambiguous cases, reconciliation of free-text query
+      answers, and generation of reviewer-facing explanations and query drafts. This keeps the
+      system reproducible and validatable under GxP, and makes the agent portable across a
+      commercial API model and a company-hosted local model (notably GLM) without any change to
+      the review verdicts themselves.
+    </paragraph>
+  </executiveSummary>
+
+  <!-- ============================================================= -->
+  <problemStatement>
+    <painPoint id="PP-01" severity="high">
+      Review frequency versus data volume: lesion data arrives continuously, and a full manual
+      re-review at every data cut is impractical, so review is sampled or deferred and issues are
+      found late — often at database lock or at the point of endpoint derivation.
+    </painPoint>
+    <painPoint id="PP-02" severity="high">
+      Rule complexity: correct application of RECIST 1.1 requires simultaneous reasoning over
+      lesion measurability, target selection constraints, nodal short-axis handling, nadir
+      tracking, the overall response table, confirmation rules, and best-overall-response
+      derivation. Reviewers cannot hold all of this in mind while reading listings.
+    </painPoint>
+    <painPoint id="PP-03" severity="high">
+      Exceptional cases dominate the risk: lesions that disappear and reappear, lesions too small
+      to measure, non-evaluable timepoints, irradiated or locally treated lesions, unequivocal
+      non-target progression, new lesions in regions not imaged at baseline, pseudoprogression
+      under immunotherapy. These are precisely the cases that manual checklists miss.
+    </painPoint>
+    <painPoint id="PP-04" severity="medium">
+      Query history is disconnected from review: reviewers re-raise queries that were already
+      asked and answered, or fail to notice that a query was answered without the data actually
+      being corrected.
+    </painPoint>
+    <painPoint id="PP-05" severity="medium">
+      Knowledge asymmetry: junior data managers can detect an arithmetic mismatch but cannot
+      judge whether an assessment is clinically defensible; medical monitors have the judgement
+      but not the time to scan every record.
+    </painPoint>
+    <painPoint id="PP-06" severity="medium">
+      Traceability: when an issue is raised, the reasoning is rarely captured in a form that
+      survives to inspection, so the same discussion is repeated at the next data cut.
+    </painPoint>
+    <currentStateNotes>
+      Existing tooling in this space (EDC edit checks, listings review, statistical monitoring)
+      catches field-level and cross-field errors but does not carry a guideline model. Edit checks
+      are per-form and per-visit; RECIST logic is longitudinal (nadir, confirmation, BOR) and
+      therefore falls outside what an EDC check can express.
+    </currentStateNotes>
+  </problemStatement>
+
+  <!-- ============================================================= -->
+  <objectives>
+    <objective id="OBJ-01" priority="must">
+      Re-derive, for every subject and timepoint, the sum of diameters, percent change from
+      baseline and from nadir, target response, non-target response, new-lesion status, overall
+      timepoint response, and best overall response — under the guideline version and protocol
+      parameters that apply to the study.
+    </objective>
+    <objective id="OBJ-02" priority="must">
+      Detect and report discrepancies between derived values and collected values, plus
+      guideline-conformance issues that are not simple mismatches (e.g. ineligible target lesion
+      selection, missing confirmation assessment).
+    </objective>
+    <objective id="OBJ-03" priority="must">
+      Present each issue with the five reviewer-facing elements (review point, issue and data
+      location, reason with current-vs-expected, suggested query text, additional information).
+    </objective>
+    <objective id="OBJ-04" priority="must">
+      Suppress or down-rank issues already covered by the query history; escalate issues where a
+      query was closed but the underlying data still fails the check.
+    </objective>
+    <objective id="OBJ-05" priority="must">
+      Run against a commercial LLM API and a company-hosted local LLM (GLM family) with identical
+      review verdicts and no code changes beyond configuration.
+    </objective>
+    <objective id="OBJ-06" priority="must">
+      Support RECIST 1.0, RECIST 1.1 and iRECIST as selectable, versioned rule packs; be
+      extensible to indication-specific criteria without touching the engine.
+    </objective>
+    <objective id="OBJ-07" priority="should">
+      Provide a holistic review environment: subject-level timelines, cross-subject and
+      cross-site issue patterns, and saved reviewer worklists, not just a flat issue list.
+    </objective>
+    <objective id="OBJ-08" priority="should">
+      Achieve a false-positive rate low enough that reviewers trust the output; target and
+      measurement stated in <reference target="qualityAndMetrics"/>.
+    </objective>
+    <objective id="OBJ-09" priority="must">
+      Be maintainable by a clinical programming team: adding a new review point is a
+      self-contained, declarative change with its own tests, requiring no change to the engine.
+    </objective>
+  </objectives>
+
+  <!-- ============================================================= -->
+  <scope>
+    <inScope>
+      <item>Solid-tumor response assessment data collected under RECIST 1.0, RECIST 1.1 and iRECIST.</item>
+      <item>Investigator assessments; and, where collected, independent central review (BICR) assessments and investigator-vs-BICR reconciliation flags.</item>
+      <item>Lesion-level identification and measurement data, timepoint response data, best overall response, progression dates.</item>
+      <item>Query history (issued queries and their answers) as a second input stream.</item>
+      <item>Supporting cross-domain data used for consistency checks: visit dates, exposure/first dose, disposition, death date, anticancer therapy, radiotherapy/surgery, adverse events indicating disease progression.</item>
+      <item>A web application presenting the agent output for human review and query drafting.</item>
+    </inScope>
+    <outOfScope confidence="assumed" openQuestion="OQ-06">
+      <item>Reading or interpreting the images themselves. TEA reviews the recorded data, not DICOM.</item>
+      <item>Automatic posting of queries into the EDC without human approval (see <reference target="humanInTheLoop"/>).</item>
+      <item>Non-solid-tumor criteria (Lugano/lymphoma, IMWG/myeloma, PCWG3/prostate, RANO/CNS) and modality-specific variants (mRECIST for HCC, Choi for GIST) in the first release; the rule pack mechanism is designed to accept them later.</item>
+      <item>Endpoint analysis and statistical derivation for submission (owned by biostatistics); TEA derivations are for review, not for the analysis dataset.</item>
+      <item>Medical decision-making. TEA produces suspicions for human adjudication and makes no clinical determination.</item>
+    </outOfScope>
+  </scope>
+
+  <!-- ============================================================= -->
+  <agentConcept id="agentConcept">
+
+    <designPrinciples>
+      <principle id="DP-01" name="Deterministic-first, LLM-assisted">
+        Every numeric derivation and every rule verdict is computed by deterministic code from
+        the rule pack. The LLM never decides whether a finding exists for a deterministic rule;
+        it may only (a) adjudicate rules explicitly declared as judgement-based, (b) explain, and
+        (c) draft language. A finding record always states which mode produced it.
+        <rationale>
+          Reproducibility is a validation prerequisite. It also means that when the LLM backend
+          changes from a commercial API to a local GLM deployment, the review verdicts are
+          bit-identical and no re-validation of the review logic is required — only of the
+          narrative layer.
+        </rationale>
+      </principle>
+      <principle id="DP-02" name="Evidence before language">
+        A finding is assembled from structured evidence (the exact records, values and computed
+        quantities) first; narrative text is generated from that evidence and is not permitted to
+        introduce facts absent from it. Narrative generation is a rendering step over a validated
+        evidence object.
+      </principle>
+      <principle id="DP-03" name="Declarative review points">
+        Each review point is a versioned declarative unit: identity, guideline basis, applicability,
+        severity, logic, message templates, false-positive guards, and test cases. Adding a review
+        point never requires modifying the orchestration.
+      </principle>
+      <principle id="DP-04" name="Human-in-the-loop by construction">
+        The agent proposes; a qualified reviewer disposes. No query leaves the system without
+        explicit human approval, and every disposition is recorded and fed back.
+      </principle>
+      <principle id="DP-05" name="Explain like a senior reviewer">
+        Output is written for a data manager who knows the trial but may not know the guideline
+        clause. Every finding cites the guideline provision and states current data versus what
+        would be expected.
+      </principle>
+      <principle id="DP-06" name="Protocol over guideline">
+        The guideline provides defaults; the protocol overrides them. All thresholds, windows,
+        counts and confirmation requirements are configuration, never constants in code.
+      </principle>
+      <principle id="DP-07" name="Untrusted free text">
+        Site-authored free text (query answers, comment fields, lesion descriptions) is data to be
+        analysed, never instructions to be followed. It is passed to the model inside an explicit
+        data envelope with injection defences.
+      </principle>
+      <principle id="DP-08" name="Silence is a feature">
+        A reviewer who receives 400 findings reviews none of them. Deduplication, query-history
+        suppression and risk-based prioritisation are first-class components, not post-processing.
+      </principle>
+    </designPrinciples>
+
+    <agentTopology>
+      <description>
+        A supervising orchestrator drives a fixed, inspectable pipeline of specialised components.
+        The topology is deliberately a pipeline rather than a free-form multi-agent conversation:
+        the sequence of operations on regulated data must be predictable and replayable.
+      </description>
+      <component id="AC-01" name="Ingestion and Normalisation" type="deterministic">
+        Reads source extracts (SDTM TU/TR/RS or EDC raw forms), maps them to the canonical model,
+        normalises units, resolves lesion identity across visits, and records mapping provenance.
+        Emits structural defects (unmappable records, broken lesion links) as findings in their
+        own right.
+      </component>
+      <component id="AC-02" name="Protocol Context Resolver" type="deterministic">
+        Loads the study configuration: guideline version, indication, target lesion limits,
+        confirmation requirement, assessment schedule and windows, imaging modality expectations,
+        marker usage, iRECIST confirmation window. Produces a hash used in the provenance stamp.
+      </component>
+      <component id="AC-03" name="Derivation Engine" type="deterministic">
+        Computes sum of diameters, nadir, percent changes, target/non-target/new-lesion responses,
+        overall timepoint response, best overall response, and the iRECIST state sequence.
+        Purely functional over the canonical model; fully unit-tested against worked examples.
+      </component>
+      <component id="AC-04" name="Rule Engine" type="deterministic">
+        Executes the rule pack against the canonical model plus derived values, producing raw
+        findings with structured evidence.
+      </component>
+      <component id="AC-05" name="Judgement Adjudicator" type="llm-assisted">
+        Handles the small set of review points that are irreducibly qualitative: whether
+        non-target worsening is "unequivocal", whether a new lesion description is unequivocal or
+        equivocal, whether a lesion description implies non-measurability, whether a location text
+        is anatomically consistent with the assigned organ. Returns a structured verdict with
+        confidence and rationale; low-confidence verdicts are emitted as INFO-level "worth a look"
+        rather than as issues.
+      </component>
+      <component id="AC-06" name="Query History Reconciler" type="hybrid">
+        Matches candidate findings against previously issued queries using a deterministic key
+        plus LLM-assisted semantic matching for free-text queries. Classifies each finding as NEW,
+        DUPLICATE_OPEN, ANSWERED_RESOLVED, ANSWERED_UNRESOLVED (escalate), or RECURRENT.
+      </component>
+      <component id="AC-07" name="Prioritiser and Deduplicator" type="deterministic">
+        Collapses cascading findings (one root cause producing many downstream mismatches) into a
+        primary finding with linked consequences, and scores by endpoint impact, severity,
+        recurrence and query state.
+      </component>
+      <component id="AC-08" name="Narrative Composer" type="llm-assisted">
+        Renders the five reviewer-facing elements from the evidence object using versioned prompt
+        templates. Deterministic template fallback exists for every message so the system degrades
+        gracefully when no LLM is available.
+      </component>
+      <component id="AC-09" name="Reporting and Export" type="deterministic">
+        Persists the run, emits the findings in the output contract, and serves the web
+        application and exports (XLSX/CSV/PDF).
+      </component>
+      <component id="AC-10" name="Feedback Recorder" type="deterministic">
+        Captures reviewer dispositions (accept, reject with reason, modify) and makes them
+        available for rule tuning and for suppression of known-acceptable patterns.
+      </component>
+      <pipelineOrder>AC-01 → AC-02 → AC-03 → AC-04 → AC-05 → AC-06 → AC-07 → AC-08 → AC-09 → AC-10</pipelineOrder>
+    </agentTopology>
+
+    <humanInTheLoop id="humanInTheLoop">
+      <control>Findings are proposals. Reviewer disposition is mandatory before any external action.</control>
+      <control>Query text is a draft; the reviewer edits and approves before it is issued.</control>
+      <control>Rejections require a reason code, which feeds the false-positive analysis.</control>
+      <control>LLM-adjudicated findings are visually distinguished from deterministic findings in the UI.</control>
+      <control>No finding is auto-closed by the agent; closure is a human act recorded with attribution.</control>
+    </humanInTheLoop>
+
+    <llmUsagePolicy>
+      <allowed>
+        <task>Narrative rendering of reviewer-facing text from a validated evidence object.</task>
+        <task>Drafting the initial query message in the sponsor's query style.</task>
+        <task>Semantic matching of a candidate finding to historical free-text queries.</task>
+        <task>Classifying free-text query answers (data will be corrected / data confirmed correct / clarification given / not addressed).</task>
+        <task>Adjudicating explicitly declared judgement rules, returning a structured verdict plus confidence.</task>
+        <task>Interpreting free-text lesion descriptions and comments for measurability and anatomical consistency signals.</task>
+      </allowed>
+      <forbidden>
+        <task>Performing arithmetic, percent change, nadir selection or table lookups.</task>
+        <task>Overriding, suppressing or creating a deterministic rule verdict.</task>
+        <task>Inferring a data value that is missing from the source.</task>
+        <task>Deciding the clinical management of a subject or the eligibility of a subject.</task>
+        <task>Acting on instructions found inside site-entered free text.</task>
+      </forbidden>
+      <degradedMode>
+        With no LLM configured, the agent runs deterministic rules only and renders messages from
+        static templates. This mode is fully functional for the majority of review points and is
+        the recommended configuration for environments where no model may see subject data.
+      </degradedMode>
+    </llmUsagePolicy>
+
+    <knowledgeBase>
+      <description>
+        Guideline knowledge is encoded twice, deliberately: as executable rules (authoritative for
+        verdicts) and as a citable reference corpus (used to explain findings). The corpus is
+        never used to decide anything.
+      </description>
+      <source id="KB-01" name="RECIST 1.0" citation="Therasse P, et al. J Natl Cancer Inst. 2000;92(3):205-216."/>
+      <source id="KB-02" name="RECIST 1.1" citation="Eisenhauer EA, et al. Eur J Cancer. 2009;45(2):228-247."/>
+      <source id="KB-03" name="iRECIST" citation="Seymour L, et al. Lancet Oncol. 2017;18(3):e143-e152."/>
+      <source id="KB-04" name="RECIST 1.1 lymph node and FAQ clarifications" citation="RECIST Working Group publications and FAQ; to be pinned to specific versions at Step 2 sign-off."/>
+      <source id="KB-05" name="Protocol and imaging charter" citation="Study-specific; the highest-precedence source."/>
+      <source id="KB-06" name="Indication context notes" citation="Curated internal notes per indication (NSCLC, breast, etc.) governing which non-measurable presentations are common."/>
+      <governance>
+        Each corpus entry is versioned and hash-stamped. Findings cite the corpus entry id and
+        clause, so a guideline clarification is traceable to the findings it affected.
+      </governance>
+    </knowledgeBase>
+
+    <interoperability id="interoperability">
+      <requirement>
+        The agent must run unchanged against a commercial hosted model and a company-hosted local
+        model, with GLM explicitly supported. This is treated as a first-class architectural
+        constraint, not an adapter added later.
+      </requirement>
+      <approach>
+        A single narrow provider interface — <code>complete(messages, schema, options) → structured result</code> —
+        with adapters behind it. The application code never imports a vendor SDK directly.
+      </approach>
+      <adapter name="Anthropic Claude API" transport="native SDK" structuredOutput="tool-use / JSON schema"/>
+      <adapter name="OpenAI-compatible endpoint" transport="HTTP" structuredOutput="response_format json_schema, with prompt-based fallback"
+               note="Covers GLM served via an OpenAI-compatible gateway, vLLM, SGLang, Ollama and most internal gateways."/>
+      <adapter name="GLM (Zhipu) native endpoint" transport="HTTP" structuredOutput="JSON mode + prompt-based fallback"
+               note="Kept separate from the generic adapter because parameter naming and tool-call semantics differ; see OQ-03 for the exact deployment."/>
+      <capabilityMatrix>
+        Each adapter declares capabilities: native tool calling, JSON-schema constrained decoding,
+        max context, streaming, determinism controls (temperature/seed), and cost class. The
+        orchestrator selects a strategy per task from these capabilities rather than assuming the
+        strongest one. Where constrained decoding is unavailable, the agent falls back to
+        prompt-enforced JSON plus schema validation plus one bounded repair attempt, and finally
+        to the deterministic template.
+      </capabilityMatrix>
+      <portabilityRules>
+        <rule>No provider-specific prompt syntax in templates; templates are plain text with typed slots.</rule>
+        <rule>Every LLM call declares an output JSON schema and is validated after the call; invalid output is a handled error, not an exception path.</rule>
+        <rule>Prompts are sized for a conservative context budget (see NFR-05) so a smaller local model is viable; evidence is pre-summarised deterministically rather than dumped.</rule>
+        <rule>A conformance test suite runs the same fixture set through every configured provider and asserts identical deterministic verdicts and acceptable narrative quality.</rule>
+      </portabilityRules>
+    </interoperability>
+
+    <maintainability>
+      <practice>Rule pack as data: the rule catalog in the programming specification is the source artifact from which rule modules are generated/validated, so specification and code cannot drift.</practice>
+      <practice>One rule = one module + one test fixture set. Rules are pure functions of (canonical model, derived values, config) with no shared mutable state.</practice>
+      <practice>Layered structure with explicit boundaries: adapters (I/O) → domain (canonical model) → derivations → rules → assembly → presentation. Dependencies point inward only.</practice>
+      <practice>Configuration over branching: indication and protocol differences are parameters, not if-statements sprinkled through the rules.</practice>
+      <practice>Every new review point ships with: id, guideline citation, at least one positive and one negative test fixture, severity, and message templates. CI rejects rules missing any of these.</practice>
+      <practice>Golden-dataset regression: a curated dataset with known findings runs on every commit; any change in findings must be explicitly acknowledged in the rule pack change history.</practice>
+    </maintainability>
+
+  </agentConcept>
+
+  <!-- ============================================================= -->
+  <dataModel id="dataModel">
+    <description>
+      A canonical model sits between source data and the rules, so the rules never encode a source
+      system's quirks. Two mapping profiles are planned: CDISC SDTM (TU/TR/RS) and EDC raw forms.
+      The canonical model is the contract the rules and the web application both speak.
+    </description>
+
+    <entity name="Study">
+      <attribute name="study_id" type="string" key="primary"/>
+      <attribute name="indication" type="code" note="e.g. NSCLC, BREAST; drives indication context notes"/>
+      <attribute name="guideline_version" type="enum" values="RECIST_1_0 | RECIST_1_1 | RECIST_1_1_PLUS_iRECIST"/>
+      <attribute name="protocol_config_ref" type="ref" target="ProtocolConfig"/>
+    </entity>
+
+    <entity name="ProtocolConfig">
+      <description>All guideline defaults that the protocol may override. Loaded per study, hashed into provenance.</description>
+      <attribute name="max_target_lesions_total" type="int" default="5" note="RECIST 1.0 default 10"/>
+      <attribute name="max_target_lesions_per_organ" type="int" default="2" note="RECIST 1.0 default 5"/>
+      <attribute name="min_measurable_non_nodal_mm" type="decimal" default="10"/>
+      <attribute name="min_measurable_nodal_short_axis_mm" type="decimal" default="15"/>
+      <attribute name="pathological_node_threshold_mm" type="decimal" default="10"/>
+      <attribute name="min_measurable_cxr_mm" type="decimal" default="20"/>
+      <attribute name="min_measurable_clinical_exam_mm" type="decimal" default="10"/>
+      <attribute name="pd_relative_increase_pct" type="decimal" default="20"/>
+      <attribute name="pd_absolute_increase_mm" type="decimal" default="5" note="RECIST 1.0: not applicable"/>
+      <attribute name="pr_decrease_pct" type="decimal" default="30"/>
+      <attribute name="response_confirmation_required" type="boolean" default="false" openQuestion="OQ-04"/>
+      <attribute name="confirmation_min_interval_days" type="int" default="28"/>
+      <attribute name="sd_min_duration_days" type="int" note="Protocol-defined minimum interval from baseline for SD to be assignable"/>
+      <attribute name="assessment_interval_days" type="int" note="e.g. 42 or 56"/>
+      <attribute name="assessment_window_days" type="int" note="+/- tolerance"/>
+      <attribute name="baseline_window_days_before_first_dose" type="int" default="28"/>
+      <attribute name="irecist_confirmation_window_days_min" type="int" default="28"/>
+      <attribute name="irecist_confirmation_window_days_max" type="int" default="56"/>
+      <attribute name="irecist_new_lesion_progression_mm" type="decimal" default="5"/>
+      <attribute name="too_small_to_measure_default_mm" type="decimal" default="5" note="Convention when a lesion is present but below measurable resolution; must match the protocol/eCRF convention"/>
+      <attribute name="tumor_markers_used_for_cr" type="boolean" default="false"/>
+      <attribute name="bicr_collected" type="boolean" default="false"/>
+      <attribute name="allowed_modalities" type="list"/>
+      <attribute name="scan_span_max_days" type="int" default="7" note="Max spread between scans composing one assessment"/>
+    </entity>
+
+    <entity name="Subject">
+      <attribute name="subject_id" type="string" key="primary"/>
+      <attribute name="site_id" type="string"/>
+      <attribute name="first_dose_date" type="date"/>
+      <attribute name="treatment_arm" type="string" optional="true"/>
+      <attribute name="discontinuation_date" type="date" optional="true"/>
+      <attribute name="discontinuation_reason" type="code" optional="true"/>
+      <attribute name="death_date" type="date" optional="true"/>
+    </entity>
+
+    <entity name="Assessment">
+      <description>One tumor assessment timepoint for one evaluator.</description>
+      <attribute name="assessment_id" type="string" key="primary"/>
+      <attribute name="subject_id" type="ref" target="Subject"/>
+      <attribute name="visit_name" type="string"/>
+      <attribute name="visit_number" type="decimal"/>
+      <attribute name="assessment_date" type="date"/>
+      <attribute name="scan_dates" type="list-of-date" note="Per modality; used for scan-span checks"/>
+      <attribute name="is_baseline" type="boolean"/>
+      <attribute name="evaluator" type="enum" values="INVESTIGATOR | BICR_1 | BICR_2 | ADJUDICATOR"/>
+      <attribute name="not_done" type="boolean"/>
+      <attribute name="not_done_reason" type="string" optional="true"/>
+    </entity>
+
+    <entity name="Lesion">
+      <description>A lesion identity that persists across assessments.</description>
+      <attribute name="lesion_id" type="string" key="primary"/>
+      <attribute name="subject_id" type="ref" target="Subject"/>
+      <attribute name="category" type="enum" values="TARGET | NON_TARGET | NEW"/>
+      <attribute name="is_nodal" type="boolean"/>
+      <attribute name="organ" type="code"/>
+      <attribute name="location_detail" type="string"/>
+      <attribute name="laterality" type="code" optional="true"/>
+      <attribute name="method" type="code" note="CT | MRI | CXR | CLINICAL_EXAM | PET_CT | ULTRASOUND | ..."/>
+      <attribute name="identified_at_assessment_id" type="ref" target="Assessment"/>
+      <attribute name="previously_irradiated" type="boolean" optional="true"/>
+      <attribute name="locoregional_therapy_applied" type="boolean" optional="true"/>
+      <attribute name="description_text" type="string" optional="true" note="Free text; treated as untrusted"/>
+    </entity>
+
+    <entity name="LesionMeasurement">
+      <description>One lesion at one assessment.</description>
+      <attribute name="assessment_id" type="ref" target="Assessment" key="composite"/>
+      <attribute name="lesion_id" type="ref" target="Lesion" key="composite"/>
+      <attribute name="value_mm" type="decimal" optional="true" note="Longest diameter for non-nodal, short axis for nodal"/>
+      <attribute name="original_value" type="decimal" optional="true"/>
+      <attribute name="original_unit" type="enum" values="mm | cm"/>
+      <attribute name="state" type="enum" values="PRESENT | ABSENT | TOO_SMALL_TO_MEASURE | NOT_EVALUABLE | NOT_DONE"/>
+      <attribute name="non_target_state" type="enum" optional="true" values="PRESENT | ABSENT | UNEQUIVOCAL_PROGRESSION | NOT_EVALUABLE"/>
+      <attribute name="method_at_visit" type="code"/>
+      <attribute name="comment_text" type="string" optional="true" note="Untrusted free text"/>
+    </entity>
+
+    <entity name="ReportedResponse">
+      <description>Response as collected from the site or central reader — never overwritten by the agent.</description>
+      <attribute name="assessment_id" type="ref" target="Assessment" key="composite"/>
+      <attribute name="evaluator" type="enum" key="composite"/>
+      <attribute name="target_response" type="code" values="CR | PR | SD | PD | NE"/>
+      <attribute name="non_target_response" type="code" values="CR | NON_CR_NON_PD | PD | NE"/>
+      <attribute name="new_lesion" type="code" values="YES | NO | EQUIVOCAL | NE"/>
+      <attribute name="overall_response" type="code" values="CR | PR | SD | PD | NE | NON_CR_NON_PD"/>
+      <attribute name="irecist_response" type="code" optional="true" values="iCR | iPR | iSD | iUPD | iCPD | iNE"/>
+      <attribute name="sum_of_diameters_reported" type="decimal" optional="true"/>
+      <attribute name="best_overall_response" type="code" optional="true"/>
+      <attribute name="progression_date" type="date" optional="true"/>
+    </entity>
+
+    <entity name="DerivedTimepoint">
+      <description>Agent-computed values. Written by AC-03, read by rules and by the UI comparison view.</description>
+      <attribute name="assessment_id" type="ref" target="Assessment" key="primary"/>
+      <attribute name="sum_of_diameters" type="decimal" optional="true"/>
+      <attribute name="sum_complete" type="boolean" note="False when any target lesion is NE/NOT_DONE"/>
+      <attribute name="pct_change_from_baseline" type="decimal" optional="true"/>
+      <attribute name="nadir_sum" type="decimal" optional="true"/>
+      <attribute name="nadir_assessment_id" type="ref" optional="true"/>
+      <attribute name="pct_change_from_nadir" type="decimal" optional="true"/>
+      <attribute name="absolute_change_from_nadir_mm" type="decimal" optional="true"/>
+      <attribute name="target_response_derived" type="code"/>
+      <attribute name="non_target_response_derived" type="code"/>
+      <attribute name="new_lesion_derived" type="code"/>
+      <attribute name="overall_response_derived" type="code"/>
+      <attribute name="irecist_state_derived" type="code" optional="true"/>
+      <attribute name="new_lesion_sum_mm" type="decimal" optional="true" note="iRECIST: tracked separately from target sum"/>
+      <attribute name="derivation_trace" type="object" note="Ordered list of the steps and inputs that produced each value; surfaced in the UI evidence panel"/>
+    </entity>
+
+    <entity name="DerivedSubjectSummary">
+      <attribute name="subject_id" type="ref" key="primary"/>
+      <attribute name="best_overall_response_derived" type="code"/>
+      <attribute name="bor_confirmation_status" type="code" values="CONFIRMED | UNCONFIRMED | NOT_REQUIRED"/>
+      <attribute name="first_pd_assessment_id" type="ref" optional="true"/>
+      <attribute name="irecist_sequence" type="list" optional="true"/>
+    </entity>
+
+    <entity name="Query">
+      <description>Historical query and its answer, imported from the query management system.</description>
+      <attribute name="query_id" type="string" key="primary"/>
+      <attribute name="subject_id" type="ref"/>
+      <attribute name="assessment_id" type="ref" optional="true"/>
+      <attribute name="form" type="string" optional="true"/>
+      <attribute name="field" type="string" optional="true"/>
+      <attribute name="lesion_id" type="ref" optional="true"/>
+      <attribute name="query_text" type="string" note="Untrusted free text"/>
+      <attribute name="answer_text" type="string" optional="true" note="Untrusted free text"/>
+      <attribute name="status" type="enum" values="OPEN | ANSWERED | CLOSED | CANCELLED"/>
+      <attribute name="opened_date" type="date"/>
+      <attribute name="answered_date" type="date" optional="true"/>
+      <attribute name="closed_date" type="date" optional="true"/>
+      <attribute name="origin" type="enum" values="TEA | EDC_CHECK | MANUAL | OTHER"/>
+      <attribute name="tea_rule_id" type="string" optional="true" note="Present when TEA raised it; enables exact re-linking"/>
+    </entity>
+
+    <entity name="Finding">
+      <description>The agent's unit of output. Full field list in TEA-CTR-002.</description>
+      <attribute name="finding_id" type="string" key="primary"/>
+      <attribute name="run_id" type="ref" target="ReviewRun"/>
+      <attribute name="rule_id" type="string"/>
+      <attribute name="rule_version" type="string"/>
+      <attribute name="dedupe_key" type="string" note="Stable across runs; identity of the issue, not of the run"/>
+      <attribute name="subject_id" type="ref"/>
+      <attribute name="assessment_ids" type="list-of-ref"/>
+      <attribute name="lesion_ids" type="list-of-ref"/>
+      <attribute name="severity" type="enum" values="CRITICAL | MAJOR | MINOR | INFO"/>
+      <attribute name="determination_mode" type="enum" values="DETERMINISTIC | LLM_ADJUDICATED | HYBRID"/>
+      <attribute name="confidence" type="decimal" note="1.0 for deterministic; model-reported and calibrated for adjudicated"/>
+      <attribute name="evidence" type="object" note="Observed values, expected values, referenced records"/>
+      <attribute name="review_point_text" type="string" note="What review point was checked"/>
+      <attribute name="issue_text" type="string" note="What the issue is, on which data"/>
+      <attribute name="reason_text" type="string" note="Why it is an issue: current data vs data deemed correct"/>
+      <attribute name="suggested_query_text" type="string"/>
+      <attribute name="additional_info_text" type="string" note="Review tips and guideline elaboration"/>
+      <attribute name="guideline_citations" type="list"/>
+      <attribute name="query_link_status" type="enum" values="NEW | DUPLICATE_OPEN | ANSWERED_RESOLVED | ANSWERED_UNRESOLVED | RECURRENT"/>
+      <attribute name="linked_query_ids" type="list-of-ref"/>
+      <attribute name="priority_score" type="decimal"/>
+      <attribute name="related_finding_ids" type="list-of-ref" note="Cascade grouping: root cause and consequences"/>
+      <attribute name="disposition" type="enum" values="PENDING | ACCEPTED | REJECTED | QUERY_ISSUED | RESOLVED"/>
+      <attribute name="disposition_reason" type="string" optional="true"/>
+      <attribute name="provenance" type="object" note="Engine, rule pack, prompt, model, guideline and config versions; dataset snapshot hash"/>
+    </entity>
+
+    <entity name="ReviewRun">
+      <attribute name="run_id" type="string" key="primary"/>
+      <attribute name="study_id" type="ref"/>
+      <attribute name="run_datetime" type="datetime"/>
+      <attribute name="dataset_snapshot_hash" type="string"/>
+      <attribute name="engine_version" type="string"/>
+      <attribute name="rulepack_version" type="string"/>
+      <attribute name="prompt_bundle_version" type="string"/>
+      <attribute name="llm_provider" type="string"/>
+      <attribute name="llm_model_id" type="string"/>
+      <attribute name="protocol_config_hash" type="string"/>
+      <attribute name="counts" type="object"/>
+    </entity>
+
+    <relationships>
+      <relationship from="Study" to="Subject" cardinality="1..n"/>
+      <relationship from="Study" to="ProtocolConfig" cardinality="1..1"/>
+      <relationship from="Subject" to="Assessment" cardinality="1..n"/>
+      <relationship from="Subject" to="Lesion" cardinality="1..n"/>
+      <relationship from="Assessment" to="LesionMeasurement" cardinality="1..n"/>
+      <relationship from="Lesion" to="LesionMeasurement" cardinality="1..n"/>
+      <relationship from="Assessment" to="ReportedResponse" cardinality="1..n" note="One per evaluator"/>
+      <relationship from="Assessment" to="DerivedTimepoint" cardinality="1..1" note="Per evaluator stream"/>
+      <relationship from="Subject" to="DerivedSubjectSummary" cardinality="1..1"/>
+      <relationship from="Subject" to="Query" cardinality="0..n"/>
+      <relationship from="ReviewRun" to="Finding" cardinality="1..n"/>
+      <relationship from="Finding" to="Query" cardinality="0..n" note="Via linked_query_ids"/>
+      <relationship from="Finding" to="Finding" cardinality="0..n" note="Cascade grouping"/>
+    </relationships>
+
+    <entityRelationshipDiagram><![CDATA[
+   Study 1---1 ProtocolConfig
+     |1
+     |n
+  Subject 1-----n Assessment 1-----n LesionMeasurement n-----1 Lesion
+     |1                |1                                        |
+     |n                |1                                        | (identified at)
+   Query           ReportedResponse                              |
+     |                 DerivedTimepoint 1--------1 Assessment ----+
+     |                          |
+     |                          |1
+     |             DerivedSubjectSummary (per Subject)
+     |
+     +---- linked ----+
+                      |
+   ReviewRun 1-----n Finding ---- cascade ----> Finding
+                      |
+                      +--- evidence refs ---> Assessment / Lesion / LesionMeasurement
+    ]]></entityRelationshipDiagram>
+
+    <sourceMappings>
+      <mapping profile="CDISC_SDTM">
+        <map canonical="Lesion" source="TU" note="TULNKID = lesion identity; TUORRES = TARGET/NON-TARGET/NEW; TULOC/TULAT = organ/laterality; TUMETHOD; TUEVAL = evaluator"/>
+        <map canonical="LesionMeasurement" source="TR" note="TRLNKID joins to TU; TRTESTCD in (LDIAM, LPERP, SAXIS, TUMSTATE); TRSTRESN = value; TRSTAT/TRREASND = not done"/>
+        <map canonical="ReportedResponse" source="RS" note="RSTESTCD in (TRGRESP, NTRGRESP, NEWLPROG, OVRLRESP, BESTRESP); RSEVAL = evaluator"/>
+        <map canonical="Subject" source="DM + EX + DS" note="first dose from EX; discontinuation from DS; death from DM/DS"/>
+        <map canonical="Assessment" source="TU/TR/RS VISIT + --DTC" note="Visit-level grouping key"/>
+      </mapping>
+      <mapping profile="EDC_RAW" confidence="assumed" openQuestion="OQ-01">
+        <map canonical="Lesion" source="Tumor identification form"/>
+        <map canonical="LesionMeasurement" source="Target / non-target lesion assessment forms"/>
+        <map canonical="ReportedResponse" source="Overall response form"/>
+        <note>The exact EDC and form design must be confirmed; a mapping configuration file per study is expected rather than code.</note>
+      </mapping>
+    </sourceMappings>
+  </dataModel>
+
+  <!-- ============================================================= -->
+  <reviewScope>
+    <description>
+      Review points are organised into seven families, 84 review points in the current draft
+      catalog. The full catalog with logic lives in TEA-SPEC-001; this section defines the
+      families, their intent and their risk weighting so the sponsor can confirm coverage before
+      the specification is detailed further.
+    </description>
+    <family id="ST" name="Structural and ingestion integrity" riskWeight="medium" indicativeCount="5">
+      Referential integrity between lesion identification and measurement records, duplicate
+      lesions, nodal measurement axis, unit and precision consistency, visit chronology.
+      <whyItMatters>Structural defects make every downstream check unreliable, so they are reported first and are the root of most finding cascades.</whyItMatters>
+    </family>
+    <family id="BL" name="Baseline and lesion selection" riskWeight="high" indicativeCount="17">
+      Eligibility of selected lesions, target counts and per-organ limits, measurability thresholds
+      including nodal short axis, non-measurable presentations wrongly selected as target,
+      previously irradiated lesions, baseline timing and completeness, duplicate lesions.
+      <whyItMatters>An invalid baseline invalidates every downstream response for that subject and is expensive to fix late.</whyItMatters>
+    </family>
+    <family id="FU" name="Follow-up measurement integrity" riskWeight="high" indicativeCount="14">
+      Sum recomputation, missing or not-done measurements without reason, non-evaluable handling,
+      implausible measurement changes, unit and precision consistency, disappear/reappear handling,
+      method and modality consistency, visit windows and assessment gaps.
+      <whyItMatters>Measurement errors propagate silently into nadir, PD determination and PFS.</whyItMatters>
+    </family>
+    <family id="RS" name="Response derivation conformance" riskWeight="critical" indicativeCount="20">
+      Target, non-target, new-lesion and overall response versus derivation; nadir correctness; the
+      20%-plus-5mm rule; CR conditions including nodal short axis; unequivocal non-target
+      progression in the presence of measurable disease; the overall response table; confirmation;
+      best overall response; progression date.
+      <whyItMatters>These directly determine ORR, BOR, PFS and DoR — the primary and key secondary endpoints.</whyItMatters>
+    </family>
+    <family id="IR" name="iRECIST conformance" riskWeight="critical" indicativeCount="10">
+      iUPD assignment, confirmation window compliance, iCPD criteria by progression driver,
+      separate tracking of new lesion sums, resets after unconfirmed progression, treatment beyond
+      progression documentation, and RECIST 1.1 versus iRECIST consistency.
+      <whyItMatters>iRECIST errors are systematically under-detected because reviewers apply RECIST 1.1 habits to immunotherapy data.</whyItMatters>
+    </family>
+    <family id="XD" name="Cross-domain consistency" riskWeight="high" indicativeCount="12">
+      Response versus disposition, death date, new anticancer therapy, radiotherapy or surgery on a
+      target lesion, adverse event of disease progression, end-of-treatment reason, and
+      investigator-versus-BICR discordance.
+      <whyItMatters>The most defensible issues are those visible only when tumor data is read together with the rest of the trial.</whyItMatters>
+    </family>
+    <family id="QM" name="Query management and recurrence" riskWeight="medium" indicativeCount="6">
+      Duplicate suppression, answered-but-unresolved escalation, recurrence across data cuts,
+      site-level pattern detection, aging critical queries.
+      <whyItMatters>Determines whether reviewers trust and adopt the tool.</whyItMatters>
+    </family>
+  </reviewScope>
+
+  <!-- ============================================================= -->
+  <architecture>
+    <layer name="Adapters (inbound)" responsibility="Read SDTM/EDC extracts and query history; validate structurally; map to canonical model. One module per source profile."/>
+    <layer name="Domain" responsibility="Canonical entities, enumerations, protocol configuration. No I/O, no LLM."/>
+    <layer name="Derivations" responsibility="Pure functions producing DerivedTimepoint and DerivedSubjectSummary. Exhaustively unit-tested."/>
+    <layer name="Rules" responsibility="Declarative rule modules producing raw findings with structured evidence."/>
+    <layer name="Assembly" responsibility="Adjudication, query reconciliation, deduplication, prioritisation, narrative composition."/>
+    <layer name="Ports (outbound)" responsibility="LLM provider adapters, persistence, export, notification. Interface-defined, swappable."/>
+    <layer name="Presentation" responsibility="Read-only API for the web application plus disposition write-back."/>
+    <dependencyRule>Dependencies point inward. Rules may not import an LLM client or a database client.</dependencyRule>
+
+    <technologyOptions confidence="proposed" openQuestion="OQ-07">
+      <option area="Engine language" recommended="Python 3.11+"
+              rationale="Clinical programming teams already read Python; strong data tooling; simple packaging for on-premise deployment."/>
+      <option area="Validation" recommended="Pydantic models generated from the JSON contracts"
+              rationale="Contract and code cannot drift; validation errors are themselves reportable findings."/>
+      <option area="API" recommended="FastAPI" rationale="Schema-first, generates OpenAPI for the front end."/>
+      <option area="Web application" recommended="React + TypeScript"
+              rationale="Matches the interaction complexity of commercial review tools; large component ecosystem for data grids."/>
+      <option area="Persistence" recommended="PostgreSQL"
+              rationale="Run history, findings, dispositions and audit trail need relational integrity and retention."/>
+      <option area="LLM access" recommended="Internal gateway with per-provider adapters"
+              rationale="Central place for redaction, rate limiting, logging and model pinning."/>
+      <option area="Deployment" recommended="Containerised, deployable fully on-premise"
+              rationale="Required for the local-LLM, no-external-egress configuration."/>
+    </technologyOptions>
+
+    <deploymentModes>
+      <mode name="Cloud-assisted" description="Commercial LLM API for narrative and adjudication; requires an approved data transfer path and de-identification."/>
+      <mode name="On-premise with local LLM" description="GLM or equivalent served internally; no subject data leaves the network. Expected steady-state mode."/>
+      <mode name="Deterministic-only" description="No LLM. Full rule coverage, template-rendered narratives. Usable where any model access is prohibited."/>
+    </deploymentModes>
+
+    <dataProtection>
+      <measure>De-identification/redaction layer before any external model call: subject identifiers pseudonymised, free text scrubbed of names and contact details, dates optionally offset with a reversible mapping held locally.</measure>
+      <measure>Configurable egress policy per study; deterministic-only mode enforced by configuration, not by convention.</measure>
+      <measure>No training or retention on submitted data; contractual and technical controls documented before first production use.</measure>
+      <measure>Prompt and completion logging is on by default for auditability, stored in the same trust boundary as the source data.</measure>
+    </dataProtection>
+  </architecture>
+
+  <!-- ============================================================= -->
+  <webApplication>
+    <designIntent>
+      The application must support holistic review, not issue-by-issue triage in isolation. A
+      reviewer must be able to move from an issue to the subject's whole tumor history and back
+      without losing place, and must be able to see patterns across subjects and sites. The
+      interaction vocabulary deliberately follows established clinical data review platforms
+      (issue worklists with faceted filters, subject-level 360 views, listing-plus-detail panels,
+      saved views, bulk disposition, query drafting inline, full audit trail) so that reviewers
+      recognise the tool rather than learn it.
+    </designIntent>
+    <benchmarkPatterns note="Patterns to emulate, drawn from widely used clinical data review and RBQM platforms">
+      <pattern>Issue worklist with faceted filtering, saved views and bulk actions.</pattern>
+      <pattern>Subject 360: one page collecting all data relevant to a subject's issues.</pattern>
+      <pattern>Listing-plus-detail: click a row, get the full evidence panel without navigating away.</pattern>
+      <pattern>Source-versus-derived side-by-side comparison with differences highlighted.</pattern>
+      <pattern>Longitudinal visualisations standard in oncology review: waterfall (best percent change), spider (percent change over time), swimmer (per-subject timeline of responses, queries and milestones).</pattern>
+      <pattern>Query drafting and issuance inline with the finding, with the draft editable before issue.</pattern>
+      <pattern>Signal/trend dashboard by site and by rule for risk-based monitoring.</pattern>
+      <pattern>Complete audit trail on every disposition and every version of the finding.</pattern>
+    </benchmarkPatterns>
+    <plannedScreens>
+      <screen id="S1" name="Review dashboard">Run summary, findings by severity and family, top sites and subjects, open critical items, trend since last run.</screen>
+      <screen id="S2" name="Issue worklist">Filterable, sortable, groupable list; columns for severity, family, subject, visit, query link status, priority; bulk disposition.</screen>
+      <screen id="S3" name="Finding detail">The five reviewer-facing elements, evidence table (observed vs expected), derivation trace, guideline citation, linked queries, query draft editor, disposition controls.</screen>
+      <screen id="S4" name="Subject tumor 360">Lesion table across visits with a measurement heatmap, sum/nadir/percent-change chart, response timeline (reported vs derived), all findings and queries for the subject.</screen>
+      <screen id="S5" name="Cross-subject analytics">Waterfall, spider, swimmer plots; rule-level and site-level issue rates.</screen>
+      <screen id="S6" name="Query workbench">All TEA-originated queries and their lifecycle; recurrence and aging views.</screen>
+      <screen id="S7" name="Configuration and versions">Protocol configuration, active rule pack, model and prompt versions, run history with provenance.</screen>
+    </plannedScreens>
+    <note>Screen inventory and component design are finalised in Step 4 and are subject to the sponsor's approval before any application code is written.</note>
+  </webApplication>
+
+  <!-- ============================================================= -->
+  <developmentSteps>
+    <step number="1" name="Development plan" status="IN_REVIEW">
+      <deliverable>TEA-PLAN-001 (this document), XML, version controlled.</deliverable>
+      <entryCriteria>Requirements and considerations provided by the sponsor.</entryCriteria>
+      <exitCriteria>Sponsor review completed; open questions OQ-01..OQ-14 answered or explicitly deferred with an accepted working assumption; plan approved at version 1.0.0.</exitCriteria>
+      <activities>
+        <activity>Confirm review scope families and risk weighting.</activity>
+        <activity>Confirm data sources and mapping profile.</activity>
+        <activity>Confirm LLM deployment posture and data egress policy.</activity>
+        <activity>Confirm validation expectations with QA.</activity>
+      </activities>
+    </step>
+    <step number="2" name="Programming specification" status="DRAFT_PROVIDED">
+      <deliverable>TEA-SPEC-001, XML, including the machine-readable rule catalog and the input/output data contracts.</deliverable>
+      <entryCriteria>Approved plan; confirmed data contracts; access to a de-identified sample extract.</entryCriteria>
+      <exitCriteria>Every review point reviewed and either accepted, amended or removed by CDM and the Medical Monitor; rule pack frozen at version 1.0.0; each rule has agreed severity and message templates.</exitCriteria>
+      <activities>
+        <activity>Line-by-line review of the rule catalog with CDM and Medical Monitor.</activity>
+        <activity>Confirm severity assignment and query wording conventions against sponsor standards.</activity>
+        <activity>Agree the golden dataset design and acceptance thresholds.</activity>
+      </activities>
+      <note>A draft is provided together with the plan so that the sponsor can see the concrete review logic while reviewing the plan; it will be revised after the Step 1 gate.</note>
+    </step>
+    <step number="3" name="Prototype agent output on dummy data" status="NOT_STARTED">
+      <deliverable>A curated dummy dataset exercising normal and exceptional cases, plus the agent's findings in the output contract, rendered for human reading.</deliverable>
+      <entryCriteria>Approved specification.</entryCriteria>
+      <exitCriteria>Reviewers confirm that the findings are correct, sufficiently explained, and correctly prioritised; measured precision/recall on the dummy set meets the agreed thresholds.</exitCriteria>
+      <activities>
+        <activity>Build the dummy dataset with deliberately seeded issues, including at least: nodal CR handling, nadir-based PD with a sub-5mm increase, unconfirmed PR, iUPD not confirmed within window, new lesion in an unimaged region, disappear-and-reappear lesion, target lesion irradiated mid-study.</activity>
+        <activity>Run deterministic engine plus narrative layer under both a commercial model and a GLM configuration; compare verdict identity and narrative quality.</activity>
+        <activity>Reviewer scoring session; record every false positive and false negative with a reason.</activity>
+      </activities>
+    </step>
+    <step number="4" name="Web application UI design" status="NOT_STARTED">
+      <deliverable>High-level component design first, then a final UI design with concrete components and interaction states.</deliverable>
+      <entryCriteria>Approved prototype output; agreed finding contract.</entryCriteria>
+      <exitCriteria>Sponsor approves the final design; no application code before this approval.</exitCriteria>
+      <activities>
+        <activity>High-level review: information architecture, screen inventory, navigation model.</activity>
+        <activity>Detailed design: component inventory, states (loading, empty, error, bulk selection), accessibility, responsive behaviour.</activity>
+        <activity>Usability walkthrough with two or three reviewers against realistic tasks.</activity>
+      </activities>
+    </step>
+    <step number="5" name="Code generation" status="NOT_STARTED">
+      <deliverable>Engine, rule pack, API and web application implementation with automated tests, plus the validation package.</deliverable>
+      <entryCriteria>Approved UI design and specification.</entryCriteria>
+      <exitCriteria>All rules implemented with tests; golden dataset regression green; conformance suite green across configured LLM providers; validation documentation complete.</exitCriteria>
+      <activities>
+        <activity>Implement derivations first with exhaustive tests against published worked examples.</activity>
+        <activity>Implement rules in risk order (RS and IR families first).</activity>
+        <activity>Implement provider adapters and the conformance suite.</activity>
+        <activity>Implement the application against the approved design.</activity>
+      </activities>
+    </step>
+    <step number="6" name="Finalisation" status="NOT_STARTED">
+      <deliverable>Released application, user documentation, training material, support and change-control model.</deliverable>
+      <entryCriteria>Successful user acceptance testing on at least one real (de-identified) study.</entryCriteria>
+      <exitCriteria>Release approved; version 1.0.0 tagged across documents, rule pack and code; post-release monitoring in place.</exitCriteria>
+    </step>
+  </developmentSteps>
+
+  <!-- ============================================================= -->
+  <requirements>
+    <functional>
+      <requirement id="FR-01" priority="must" objective="OBJ-01">Re-derive all RECIST/iRECIST quantities per timepoint and per subject from lesion-level data.</requirement>
+      <requirement id="FR-02" priority="must" objective="OBJ-02">Compare derived versus reported values and raise a finding on any discrepancy beyond configured tolerance.</requirement>
+      <requirement id="FR-03" priority="must" objective="OBJ-02">Evaluate the full rule catalog per run, with rule applicability driven by guideline version and protocol configuration.</requirement>
+      <requirement id="FR-04" priority="must" objective="OBJ-03">Emit for each finding the five reviewer-facing elements plus structured evidence and guideline citations.</requirement>
+      <requirement id="FR-05" priority="must" objective="OBJ-04">Import query history and classify each finding's relation to it; suppress duplicates and escalate answered-but-unresolved cases.</requirement>
+      <requirement id="FR-06" priority="must" objective="OBJ-06">Support selectable guideline rule packs (RECIST 1.0, 1.1, iRECIST) with per-study configuration overriding guideline defaults.</requirement>
+      <requirement id="FR-07" priority="must" objective="OBJ-05">Run with any configured LLM provider, including a local GLM deployment, and in deterministic-only mode.</requirement>
+      <requirement id="FR-08" priority="must">Persist every run with a full provenance stamp and support re-running a historical run for reproduction.</requirement>
+      <requirement id="FR-09" priority="must">Record reviewer disposition per finding with attribution, timestamp and reason; maintain an immutable audit trail.</requirement>
+      <requirement id="FR-10" priority="must">Deduplicate and cascade-group findings so one root cause is presented once with linked consequences.</requirement>
+      <requirement id="FR-11" priority="must">Prioritise findings by a transparent, inspectable score.</requirement>
+      <requirement id="FR-12" priority="should">Compare investigator and BICR assessments where both are collected and flag discordance.</requirement>
+      <requirement id="FR-13" priority="should">Export findings to XLSX/CSV and a formatted report for offline review and for the trial master file.</requirement>
+      <requirement id="FR-14" priority="should">Detect recurrence of the same issue across runs and across sites; surface site-level patterns.</requirement>
+      <requirement id="FR-15" priority="should">Provide the subject 360 view with lesion history, derived quantities and longitudinal charts.</requirement>
+      <requirement id="FR-16" priority="could">Support incremental runs that process only data changed since the previous snapshot.</requirement>
+      <requirement id="FR-17" priority="could">Allow reviewer-authored suppression rules for known-acceptable patterns, with expiry and audit.</requirement>
+    </functional>
+
+    <nonFunctional>
+      <requirement id="NFR-01" category="reproducibility" priority="must">Given the same input snapshot, configuration and versions, deterministic findings are identical across runs and across LLM providers.</requirement>
+      <requirement id="NFR-02" category="maintainability" priority="must">Adding a review point requires only a new rule module, its fixtures and a catalog entry; no engine change. Verified by a CI check.</requirement>
+      <requirement id="NFR-03" category="performance" priority="must">A study of 500 subjects with 12 assessments each completes a deterministic full run in under 5 minutes on standard hardware; narrative generation is parallelised and incremental.</requirement>
+      <requirement id="NFR-04" category="performance" priority="should">Web application list views respond within 2 seconds at 10,000 findings.</requirement>
+      <requirement id="NFR-05" category="portability" priority="must">No single LLM call exceeds a 32k-token prompt budget, so that smaller local models remain viable; evidence is pre-summarised deterministically.</requirement>
+      <requirement id="NFR-06" category="security" priority="must">Role-based access; subject data encrypted at rest and in transit; egress policy enforced by configuration.</requirement>
+      <requirement id="NFR-07" category="compliance" priority="must">Audit trail meeting ALCOA+ expectations on all human actions and all agent runs; records retained per sponsor retention policy.</requirement>
+      <requirement id="NFR-08" category="usability" priority="should">A reviewer can go from a finding to full context and back in a single click, with no loss of filter state.</requirement>
+      <requirement id="NFR-09" category="reliability" priority="must">An LLM outage degrades the system to deterministic-only mode rather than failing the run.</requirement>
+      <requirement id="NFR-10" category="observability" priority="should">Every run emits metrics: rule hit counts, adjudication rates, model latency and failure rates, disposition outcomes.</requirement>
+      <requirement id="NFR-11" category="internationalisation" priority="could" openQuestion="OQ-11">Query text templates support multiple languages where sites require them.</requirement>
+    </nonFunctional>
+
+    <regulatoryAndQuality>
+      <requirement id="REG-01" priority="must">The system is decision support; a qualified human makes every determination and issues every query.</requirement>
+      <requirement id="REG-02" priority="must">Risk-based validation consistent with GAMP 5 (2nd edition) and the FDA Computer Software Assurance approach, scaled to the system's intended use and impact on data integrity.</requirement>
+      <requirement id="REG-03" priority="must">Where the system is used in a GxP process, 21 CFR Part 11 and EU Annex 11 expectations apply to audit trail, access control and record retention.</requirement>
+      <requirement id="REG-04" priority="must">Specification-to-test traceability: every requirement and every rule traces to at least one test case.</requirement>
+      <requirement id="REG-05" priority="must">Change control: rule pack and prompt changes follow documented review and approval, with impact assessment on previously issued findings.</requirement>
+      <requirement id="REG-06" priority="should">Alignment with ICH E6(R3) expectations on risk-proportionate, quality-by-design monitoring approaches.</requirement>
+      <requirement id="REG-07" priority="must">Data privacy assessment completed before any subject data reaches an external model; deterministic-only or on-premise mode used until it is.</requirement>
+    </regulatoryAndQuality>
+  </requirements>
+
+  <!-- ============================================================= -->
+  <risks>
+    <risk id="RSK-01" category="AI quality" likelihood="high" impact="high">
+      <description>The model fabricates or subtly misstates facts in the narrative, and a reviewer acts on the narrative rather than the evidence.</description>
+      <mitigation>Narrative is rendered from a validated evidence object; numbers in the text are injected from computed values, not generated; the evidence table is always displayed adjacent to the narrative; template fallback available.</mitigation>
+      <residual>Low-moderate; mitigated further by reviewer training that the evidence panel is authoritative.</residual>
+    </risk>
+    <risk id="RSK-02" category="AI quality" likelihood="high" impact="medium">
+      <description>False positives erode trust and the tool is abandoned.</description>
+      <mitigation>False-positive guards per rule; query-history suppression; prioritisation; Step 3 tuning against a scored dummy dataset; mandatory rejection reason codes feeding rule tuning; INFO tier for low-confidence signals.</mitigation>
+      <residual>Moderate; managed as an ongoing metric, not a one-time fix.</residual>
+    </risk>
+    <risk id="RSK-03" category="AI quality" likelihood="medium" impact="high">
+      <description>False negatives: reviewers assume full coverage and stop looking, while the agent misses an issue class.</description>
+      <mitigation>Explicit, published coverage statement per rule family; the UI states what was checked and what was not; recall measured on the golden dataset; manual review retained for uncovered areas.</mitigation>
+      <residual>Moderate. Requires clear communication that TEA augments rather than replaces review.</residual>
+    </risk>
+    <risk id="RSK-04" category="data privacy" likelihood="medium" impact="high">
+      <description>Subject data leaves the approved boundary through an external model call.</description>
+      <mitigation>Egress policy enforced in configuration; de-identification layer; on-premise GLM as the steady-state mode; deterministic-only mode available; prompt logging inside the trust boundary.</mitigation>
+      <residual>Low once the privacy assessment (REG-07) is complete.</residual>
+    </risk>
+    <risk id="RSK-05" category="security" likelihood="medium" impact="medium">
+      <description>Prompt injection via site-entered free text (query answers, comments) redirecting the agent.</description>
+      <mitigation>Free text is passed inside an explicit data envelope with instructions to treat it as data; output is schema-constrained; the LLM cannot alter deterministic verdicts or trigger actions; suspicious instruction-like content is itself flagged.</mitigation>
+      <residual>Low, because the model has no tool authority over external systems.</residual>
+    </risk>
+    <risk id="RSK-06" category="guideline interpretation" likelihood="high" impact="medium">
+      <description>Genuinely ambiguous guideline areas (reappearing lesions, too-small-to-measure conventions, unequivocal progression thresholds) are implemented one way and the sponsor expects another.</description>
+      <mitigation>All ambiguous points are surfaced as explicit configuration with a documented default and are listed for decision at the Step 2 gate; the specification records the interpretation chosen and its rationale.</mitigation>
+      <residual>Low after Step 2 sign-off, provided protocol-specific decisions are captured per study.</residual>
+    </risk>
+    <risk id="RSK-07" category="protocol variability" likelihood="high" impact="medium">
+      <description>Each protocol deviates from guideline defaults; hard-coding one study's rules makes the tool unusable for the next.</description>
+      <mitigation>Protocol configuration object with every threshold externalised; configuration is reviewed and signed off per study; configuration hash recorded in provenance.</mitigation>
+      <residual>Low.</residual>
+    </risk>
+    <risk id="RSK-08" category="data availability" likelihood="medium" impact="medium">
+      <description>Fields needed by some rules (slice thickness, prior irradiation, scan dates per modality) are not collected.</description>
+      <mitigation>Rules declare required fields; unavailable fields deactivate the rule with an explicit "not evaluated" statement in the coverage report rather than a silent pass.</mitigation>
+      <residual>Low, but reduces coverage; feeds a recommendation on eCRF design.</residual>
+    </risk>
+    <risk id="RSK-09" category="model portability" likelihood="medium" impact="medium">
+      <description>A local GLM deployment lacks reliable structured output or tool calling, producing malformed responses.</description>
+      <mitigation>Capability matrix per adapter; schema validation with bounded repair; deterministic template fallback; conformance suite run per provider before use.</mitigation>
+      <residual>Low; worst case is degraded narrative quality, never a wrong verdict.</residual>
+    </risk>
+    <risk id="RSK-10" category="validation" likelihood="medium" impact="high">
+      <description>Validation effort is underestimated because the system touches endpoint-critical data.</description>
+      <mitigation>Validation approach agreed with QA at the Step 1 gate; risk-based scope; the deterministic/LLM split confines the hardest validation questions to the narrative layer, which does not affect verdicts.</mitigation>
+      <residual>Moderate until QA sign-off.</residual>
+    </risk>
+    <risk id="RSK-11" category="adoption" likelihood="medium" impact="medium">
+      <description>Reviewers treat agent output as authoritative (automation bias) and stop applying judgement.</description>
+      <mitigation>Findings are phrased as suspicions requiring confirmation; confidence and determination mode are always visible; training emphasises accountability; rejection is a first-class, frictionless action.</mitigation>
+      <residual>Moderate; monitor via disposition statistics.</residual>
+    </risk>
+    <risk id="RSK-12" category="operations" likelihood="medium" impact="medium">
+      <description>Query flooding: a systemic data-entry misunderstanding at one site generates hundreds of findings, overwhelming the site.</description>
+      <mitigation>Cascade grouping; site-level pattern detection promoting many findings into one systemic signal; reviewer-controlled issuance; rate awareness in the dashboard.</mitigation>
+      <residual>Low.</residual>
+    </risk>
+    <risk id="RSK-13" category="scope" likelihood="medium" impact="medium">
+      <description>Pressure to add other criteria (Lugano, RANO, mRECIST, PCWG3) before the core is stable.</description>
+      <mitigation>Rule pack architecture makes later addition cheap; explicit out-of-scope statement for release 1; a decision gate for each addition.</mitigation>
+      <residual>Low.</residual>
+    </risk>
+    <risk id="RSK-14" category="drift" likelihood="medium" impact="medium">
+      <description>Specification and implementation drift as rules are patched under time pressure.</description>
+      <mitigation>Rule catalog in the specification is the source artifact for the rule pack; CI check asserts that every implemented rule exists in the catalog at the same version and vice versa.</mitigation>
+      <residual>Low.</residual>
+    </risk>
+  </risks>
+
+  <!-- ============================================================= -->
+  <validationAndCompliance>
+    <approach>
+      Risk-based, proportionate to intended use. TEA does not modify source data and does not
+      determine subject management; its risk is that it misleads a reviewer or misses an issue.
+      Validation therefore concentrates on the deterministic derivations and rules (high rigour,
+      full test coverage, documented expected results) and treats the narrative layer as a
+      supporting function verified for accuracy of injected values and absence of unsupported
+      claims.
+    </approach>
+    <activity name="Requirements traceability matrix">Requirements → specification sections → rules → test cases → test results.</activity>
+    <activity name="Unit testing">Every derivation function and every rule, with positive, negative and boundary fixtures. Boundary tests explicitly include the 20%/5 mm PD boundary, the 30% PR boundary, 10 mm and 15 mm nodal thresholds, and the iRECIST 5 mm confirmation increment.</activity>
+    <activity name="Golden dataset regression">A curated dataset with a signed-off expected finding list; run on every commit; changes require acknowledgement in the rule pack change history.</activity>
+    <activity name="Provider conformance testing">The same fixture set through every configured LLM provider; deterministic verdicts must be identical; narrative outputs scored against a rubric.</activity>
+    <activity name="User acceptance testing">Reviewers run realistic tasks on a de-identified real study; acceptance criteria agreed at the Step 3 gate.</activity>
+    <activity name="Installation and operational qualification">Environment, configuration, access control, backup and audit trail verification, scaled per the deployment mode.</activity>
+    <activity name="Periodic review">Rule pack effectiveness reviewed per data cut using disposition statistics; model and prompt versions re-verified when changed.</activity>
+    <referenceFrameworks>
+      <framework>GAMP 5 (2nd edition) risk-based approach to computerised systems</framework>
+      <framework>FDA guidance on Computer Software Assurance for production and quality system software</framework>
+      <framework>21 CFR Part 11 and EU GMP Annex 11 (audit trail, access control, records)</framework>
+      <framework>ICH E6(R3) Good Clinical Practice</framework>
+      <framework>ALCOA+ data integrity principles</framework>
+    </referenceFrameworks>
+  </validationAndCompliance>
+
+  <!-- ============================================================= -->
+  <versionControl>
+    <principle>Everything that can change a finding is versioned and stamped into that finding.</principle>
+    <versionedArtifact name="Development plan" scheme="SemVer" tag="plan-vX.Y.Z"/>
+    <versionedArtifact name="Programming specification" scheme="SemVer" tag="spec-vX.Y.Z"/>
+    <versionedArtifact name="Rule pack" scheme="SemVer" tag="rulepack-vX.Y.Z" note="Independent of the specification version so a wording fix does not force a rule pack release"/>
+    <versionedArtifact name="Prompt bundle" scheme="SemVer" tag="prompts-vX.Y.Z"/>
+    <versionedArtifact name="Engine and application" scheme="SemVer" tag="vX.Y.Z"/>
+    <versionedArtifact name="Protocol configuration" scheme="Per-study version plus content hash"/>
+    <versionedArtifact name="Guideline corpus" scheme="Per-source version plus content hash"/>
+    <outputVersioning>
+      Findings are never edited in place. A re-run produces a new run with new finding records;
+      findings are correlated across runs by their dedupe key, which lets the UI show
+      "first seen", "still open", "resolved" and "recurred" without mutating history.
+    </outputVersioning>
+    <branching>Trunk-based with short-lived feature branches; rule pack changes require an explicit reviewer from CDM or Medical Monitoring in addition to a technical reviewer.</branching>
+    <impactAssessment>Any MAJOR rule pack change triggers a documented impact assessment on findings already issued under the previous version.</impactAssessment>
+  </versionControl>
+
+  <!-- ============================================================= -->
+  <qualityAndMetrics id="qualityAndMetrics">
+    <metric name="Precision (finding acceptance rate)" definition="Accepted findings / dispositioned findings" target="≥ 0.80 for CRITICAL and MAJOR at release" confidence="proposed" openQuestion="OQ-09"/>
+    <metric name="Recall on golden dataset" definition="Seeded issues detected / seeded issues" target="1.00 for deterministic rules; ≥ 0.85 for judgement rules"/>
+    <metric name="Duplicate suppression accuracy" definition="Correctly suppressed / should-have-been-suppressed" target="≥ 0.95, with zero incorrect suppression of CRITICAL findings"/>
+    <metric name="Narrative faithfulness" definition="Sampled findings whose narrative contains no statement unsupported by the evidence object" target="≥ 0.98, audited per release and per model change"/>
+    <metric name="Time to review" definition="Median reviewer minutes per subject per data cut versus baseline" target="Measured at UAT; improvement is the business case"/>
+    <metric name="Provider verdict identity" definition="Deterministic verdicts identical across providers" target="1.00, enforced by CI"/>
+  </qualityAndMetrics>
+
+  <!-- ============================================================= -->
+  <recommendations>
+    <recommendation id="REC-01" priority="high">
+      Keep the deterministic/LLM split absolute. It is what makes local-LLM portability, validation
+      and reproducibility tractable at once. Resist the temptation to let the model "just decide"
+      borderline cases; make them configuration instead.
+    </recommendation>
+    <recommendation id="REC-02" priority="high">
+      Treat the rule catalog in the specification as the source of truth from which rule modules
+      are generated or validated. This is the single most effective defence against specification
+      drift over a multi-year maintenance life.
+    </recommendation>
+    <recommendation id="REC-03" priority="high">
+      Invest in the golden dataset early, during Step 3. It is simultaneously the acceptance
+      criterion, the regression suite and the training material, and it costs far less to build
+      before implementation than after.
+    </recommendation>
+    <recommendation id="REC-04" priority="high">
+      Start with one indication and one protocol, and only then generalise. Coverage breadth on a
+      single well-understood study is more convincing to reviewers than shallow coverage on many.
+      Recommended first target: an immunotherapy study using iRECIST, because that is where manual
+      review is weakest and the payoff is largest.
+    </recommendation>
+    <recommendation id="REC-05" priority="medium">
+      Report coverage, not just findings. Each run should state which rules ran, which were
+      deactivated for missing data, and which subjects were not evaluable — so a clean report is
+      informative rather than merely empty.
+    </recommendation>
+    <recommendation id="REC-06" priority="medium">
+      Feed eCRF design back into the process. Several high-value checks depend on fields that are
+      often not collected (prior irradiation flag, slice thickness, per-modality scan dates,
+      lesion state vocabulary). Collecting them is cheap at study start-up and unlocks whole rule
+      families.
+    </recommendation>
+    <recommendation id="REC-07" priority="medium">
+      Run TEA against the BICR stream as well as the investigator stream where both exist.
+      Investigator-versus-BICR discordance detection is often the highest-yield single check in
+      studies where BICR drives the primary endpoint.
+    </recommendation>
+    <recommendation id="REC-08" priority="medium">
+      Make rejection cheap and informative. Reviewer rejection reasons are the primary tuning
+      signal; a free-text-only rejection wastes that signal, so use a short coded list plus optional text.
+    </recommendation>
+    <recommendation id="REC-09" priority="medium">
+      Pin model versions per study and record them. A silent model upgrade mid-study changes
+      narrative behaviour; the deterministic verdicts will not move, but reviewers will notice and
+      lose confidence if the change is unexplained.
+    </recommendation>
+    <recommendation id="REC-10" priority="low">
+      Plan for a "reviewer notebook" feature: reviewer-authored notes attached to a subject that
+      persist across runs. In practice this is what reviewers ask for first once issue triage works.
+    </recommendation>
+  </recommendations>
+
+  <!-- ============================================================= -->
+  <openQuestions>
+    <question id="OQ-01" topic="Data source" impact="high">
+      <text>Will TEA consume CDISC SDTM (TU/TR/RS) extracts, raw EDC exports, or both? If EDC, which system and can a de-identified sample extract plus the eCRF specification be provided?</text>
+      <workingAssumption>Both profiles are supported; SDTM is implemented first because it is standardised.</workingAssumption>
+    </question>
+    <question id="OQ-02" topic="Query history interface" impact="high">
+      <text>What is the source, format and refresh cadence of the query history, and does it contain a machine-readable link to the queried form/field/record? Should TEA-approved queries be written back automatically, or exported for manual issuance?</text>
+      <workingAssumption>Query history is imported as a periodic extract with subject, visit, form, field, text, status and dates; issuance is manual export in release 1.</workingAssumption>
+    </question>
+    <question id="OQ-03" topic="LLM deployment" impact="high">
+      <text>Which GLM version and serving stack will be used internally (native API, OpenAI-compatible gateway, vLLM), what context window and throughput are available, and does it support constrained JSON output or tool calling?</text>
+      <workingAssumption>An OpenAI-compatible gateway with JSON mode but without reliable constrained decoding; prompts are designed for a 32k budget with schema validation and repair.</workingAssumption>
+    </question>
+    <question id="OQ-04" topic="Protocol parameters" impact="high">
+      <text>For the first target study: is response confirmation required, what is the assessment interval and window, what is the minimum SD duration, is iRECIST in use and with what confirmation window, and are tumor markers used in the CR definition?</text>
+      <workingAssumption>Guideline defaults as listed in ProtocolConfig; confirmation not required; iRECIST confirmation window 4–8 weeks.</workingAssumption>
+    </question>
+    <question id="OQ-05" topic="Indications" impact="medium">
+      <text>Which indications should release 1 cover, and are there indication-specific conventions in use (for example bone-only disease handling in breast cancer, pleural effusion and cavitation handling in NSCLC)?</text>
+      <workingAssumption>NSCLC and breast cancer, with indication context notes limited to measurability guidance.</workingAssumption>
+    </question>
+    <question id="OQ-06" topic="Scope of criteria" impact="medium">
+      <text>Is RECIST 1.0 support genuinely needed for active studies, and should mRECIST/Choi/RANO/Lugano/PCWG3 be on the roadmap?</text>
+      <workingAssumption>RECIST 1.0 supported as a rule pack for legacy studies; other criteria out of scope for release 1, architecture kept open.</workingAssumption>
+    </question>
+    <question id="OQ-07" topic="Technology constraints" impact="medium">
+      <text>Are there mandated platform, language, hosting or authentication standards the solution must adopt (for example an existing internal web platform, SSO provider, or approved database)?</text>
+      <workingAssumption>Python engine, React front end, PostgreSQL, containerised on-premise deployment.</workingAssumption>
+    </question>
+    <question id="OQ-08" topic="Users and roles" impact="medium">
+      <text>Which roles need which permissions (data manager, medical monitor, CRA, biostatistician, read-only auditor), and is there a required segregation of duties between the person who accepts a finding and the person who issues the query?</text>
+      <workingAssumption>Four roles: reviewer, approver, read-only, administrator; approval and issuance may be performed by the same reviewer.</workingAssumption>
+    </question>
+    <question id="OQ-09" topic="Acceptance thresholds" impact="high">
+      <text>Are the proposed precision and recall targets acceptable, and who signs off the golden dataset as the acceptance basis?</text>
+      <workingAssumption>Targets as stated in qualityAndMetrics; golden dataset signed off jointly by CDM lead and Medical Monitor.</workingAssumption>
+    </question>
+    <question id="OQ-10" topic="Data privacy" impact="high">
+      <text>May subject-level data be sent to a commercial LLM API under existing agreements, or must the first release run on-premise or deterministic-only?</text>
+      <workingAssumption>On-premise or deterministic-only until a privacy assessment is complete.</workingAssumption>
+    </question>
+    <question id="OQ-11" topic="Language" impact="low">
+      <text>Do any participating sites require query text in a language other than English?</text>
+      <workingAssumption>English only in release 1; templates structured to allow localisation later.</workingAssumption>
+    </question>
+    <question id="OQ-12" topic="Run cadence and volume" impact="medium">
+      <text>How often should reviews run (on demand, nightly, per data cut), and what are the expected subject and assessment volumes at peak?</text>
+      <workingAssumption>Nightly incremental plus on-demand; sizing per NFR-03.</workingAssumption>
+    </question>
+    <question id="OQ-13" topic="BICR" impact="medium">
+      <text>Is independent central review data available to TEA, and at what latency relative to investigator data? Should investigator-versus-BICR discordance be reported, given that some sponsors deliberately keep the streams separate?</text>
+      <workingAssumption>Discordance detection is built but disabled by configuration unless the sponsor enables it.</workingAssumption>
+    </question>
+    <question id="OQ-14" topic="Validation expectations" impact="high">
+      <text>What validation deliverables does QA expect for a decision-support system of this type, and is an existing internal AI/ML governance procedure applicable?</text>
+      <workingAssumption>Risk-based validation package as described; to be confirmed with QA at the Step 1 gate.</workingAssumption>
+    </question>
+  </openQuestions>
+
+  <!-- ============================================================= -->
+  <assumptions>
+    <assumption id="ASM-01">Source data is available as a periodic extract; TEA does not connect directly to the production EDC.</assumption>
+    <assumption id="ASM-02">Lesion identity is stable across visits and carries a usable link identifier; where it is not, the ingestion layer raises structural findings.</assumption>
+    <assumption id="ASM-03">Protocol configuration can be obtained and signed off per study before the first run.</assumption>
+    <assumption id="ASM-04">Reviewers, not the agent, remain accountable for every query issued and every issue closed.</assumption>
+    <assumption id="ASM-05">Imaging source documents and DICOM are out of reach; all checks operate on collected data.</assumption>
+  </assumptions>
+
+  <!-- ============================================================= -->
+  <glossary>
+    <term name="BOR">Best overall response — the best timepoint response recorded from treatment start until progression, subject to confirmation rules.</term>
+    <term name="BICR">Blinded independent central review.</term>
+    <term name="Nadir">The smallest sum of diameters recorded on study, including baseline; the reference for progression.</term>
+    <term name="Non-target lesion">A lesion recorded at baseline but not measured quantitatively; assessed qualitatively.</term>
+    <term name="iUPD / iCPD">iRECIST unconfirmed and confirmed progressive disease.</term>
+    <term name="Unequivocal progression">Non-target worsening substantial enough to warrant progression, comparable in magnitude to what would be required in measurable disease.</term>
+    <term name="Finding">One suspected issue produced by the agent for human review.</term>
+    <term name="Rule pack">The versioned collection of review points applicable to a guideline version.</term>
+    <term name="Dedupe key">The stable identity of an issue across runs, independent of the run that produced it.</term>
+  </glossary>
+
+  <references>
+    <reference id="R-01">Eisenhauer EA, Therasse P, Bogaerts J, et al. New response evaluation criteria in solid tumours: revised RECIST guideline (version 1.1). Eur J Cancer. 2009;45(2):228-247.</reference>
+    <reference id="R-02">Therasse P, Arbuck SG, Eisenhauer EA, et al. New guidelines to evaluate the response to treatment in solid tumors. J Natl Cancer Inst. 2000;92(3):205-216.</reference>
+    <reference id="R-03">Seymour L, Bogaerts J, Perrone A, et al. iRECIST: guidelines for response criteria for use in trials testing immunotherapeutics. Lancet Oncol. 2017;18(3):e143-e152.</reference>
+    <reference id="R-04">Schwartz LH, Litière S, de Vries E, et al. RECIST 1.1 — Update and clarification: From the RECIST committee. Eur J Cancer. 2016;62:132-137.</reference>
+    <reference id="R-05">ISPE GAMP 5: A Risk-Based Approach to Compliant GxP Computerized Systems, 2nd edition.</reference>
+    <reference id="R-06">FDA Draft Guidance: Computer Software Assurance for Production and Quality System Software.</reference>
+    <reference id="R-07">ICH E6(R3) Guideline for Good Clinical Practice.</reference>
+    <reference id="R-08">CDISC SDTM Implementation Guide — Tumor/Response domains (TU, TR, RS).</reference>
+  </references>
+
+</developmentPlan>
