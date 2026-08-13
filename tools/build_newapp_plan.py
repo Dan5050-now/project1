@@ -20,9 +20,10 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "0.3"
-DOC_STATUS = ("DRAFT - issued for review round 3. Step 1 of 5. Windows-only, non-installed, and shareable "
-              "from a network folder. Nothing is built until Gate N1 is passed.")
+DOC_VERSION = "0.4"
+DOC_STATUS = ("DRAFT - issued for review round 4. Step 1 of 5. Windows-only, non-installed, shareable from a "
+              "network folder, and single-writer: one editor at a time, everyone else reading. Nothing is "
+              "built until Gate N1 is passed.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -163,7 +164,11 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Reviewer", "Requester - rounds 1 and 2 answered 2026-08-13; round 3 pending"),
+    ("Reviewer", "Requester - rounds 1 to 3 answered 2026-08-13; round 4 pending"),
+    ("Sharing model",
+     "SINGLE WRITER, MANY READERS. Instructed 2026-08-13: while one person is editing a plan, no other "
+     "session may update it. Everyone may open and read it at any time. The claim is made at the first "
+     "EDIT, not at open - see sheet 05a, which is given over to this."),
     ("Fixed constraints",
      "WINDOWS ONLY, and NON-INSTALLED. Instructed 2026-08-13. The application is copied as a folder and "
      "run from it - no installer, no administrator rights, no registry, nothing written outside its own "
@@ -216,7 +221,17 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}0.3", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}0.4", DOC_DATE, "Claude Code", "Pending",
+     "REVIEW ROUND 3 APPLIED. The sharing model is settled as SINGLE WRITER, MANY READERS on your "
+     "instruction: while someone is editing, no other session may update. One change of substance against "
+     "v0.3 - the claim is made at the FIRST EDIT rather than at open, which lets everybody read a plan "
+     "somebody else is working on, and which lands exactly on the snapshot point the edit model already has. "
+     "New sheet 05a carries the whole model: the four states a session can be in, what is permitted in each, "
+     "how the claim is made atomically on a network share, how a dead session's claim is released, and the "
+     "four ways a claim ends. NR-STO-10 rewritten; NR-STO-12..18 added; decisions N-19..N-22; risks R-N14 "
+     "(SMB caching can defeat both the claim and the staleness check) and R-N15 (a blocked user forking the "
+     "plan through Save As). Two questions, Q-N16 and Q-N17."],
+    ["0.3", DOC_DATE, "Claude Code", "Superseded",
      "REVIEW ROUND 2 APPLIED. Q-N13 closed - no file association is wanted, so NR-IMP-04 stands as reduced "
      "and decision N-15 is unchallenged. Q-N12 answered 'a shared network folder could be considered', which "
      "is the larger change: one application folder that several people run means their settings would collide, "
@@ -378,8 +393,15 @@ reqs = [
     [f"{MARK_NEW}NR-STO-07", "Storage", "Edits pending at the moment of a crash or power loss are recovered on the next launch, and the user is asked whether to keep or discard them.", "Should", "Data safety", "N4"],
     [f"{MARK_NEW}NR-STO-08", "Storage", "Several workspaces may exist. The user chooses which to open, and may create a new empty one at any time.", "Must", "Scenario planning", "N4"],
     [f"{MARK_NEW}NR-STO-09", "Storage", "A workspace records which source file it was imported from, when, and by which application version.", "Should", "Traceability", "N4"],
-    [f"{MARK_NEW}NR-STO-10", "Storage", "A workspace open for editing is marked as such. A second person opening it is told who holds it and since when, and is given it read-only rather than being allowed to overwrite their work. A mark left behind by a crash can be cleared, with the risk stated.", "Must", "Q-N12 - shared folder", "N4"],
-    [f"{MARK_NEW}NR-STO-11", "Storage", "Read-only is a real working mode, not a refusal: every figure, table and graph is available, and only saving is withheld.", "Must", "Consequence of NR-STO-10", "N4"],
+    [f"{MARK_CHG}NR-STO-10", "Storage", "While one session is editing a workspace, no other session may update it. The claim is made when the FIRST EDIT is attempted - not when the workspace is opened - so that reading is never blocked.", "Must", "Your instruction, round 3", "N4"],
+    [f"{MARK_CHG}NR-STO-11", "Storage", "Reading is a full working mode, not a refusal: every figure, table, graph, filter and export is available to a session that does not hold the claim. Only writing to that workspace is withheld.", "Must", "Consequence of NR-STO-10", "N4"],
+    [f"{MARK_NEW}NR-STO-12", "Storage", "A session refused the claim is told WHO holds it, on which machine, and since when - never merely that the file is locked.", "Must", "Consequence of NR-STO-10", "N4"],
+    [f"{MARK_NEW}NR-STO-13", "Storage", "The claim is made by an operation that cannot be won by two sessions at once, even when they attempt it in the same instant and even across a network share.", "Must", "Correctness", "N4"],
+    [f"{MARK_NEW}NR-STO-14", "Storage", "A holding session refreshes its claim while it lives. A claim left by a session that has died is detectable as such, and may be taken over without anybody deleting a file by hand.", "Must", "Consequence of NR-STO-10", "N4"],
+    [f"{MARK_NEW}NR-STO-15", "Storage", "The claim ends when the holder saves and closes, discards their edits, or closes the application - and a session waiting to edit is offered it without having to reopen the workspace.", "Must", "Usability", "N4"],
+    [f"{MARK_NEW}NR-STO-16", "Storage", "A reading session notices when the workspace has changed on disk beneath it, says so, and offers to reload. It never presents figures it knows to be superseded as though they were current.", "Must", "Consequence of many readers", "N4"],
+    [f"{MARK_NEW}NR-STO-17", "Storage", "A session that cannot claim the workspace may still Save As a copy of its own, and may still export. Being unable to edit a shared plan never means being unable to work.", "Must", "Usability", "N4"],
+    [f"{MARK_NEW}NR-STO-18", "Storage", "Importing into a workspace is an edit and takes the claim like any other. It is the largest change the application can make, so it cannot be the one that bypasses the rule.", "Must", "Correctness", "N4"],
 
     [f"{MARK_CHG}NR-IMP-01", "Import / export", "Import reads the Excel source workbook and prap-source-data JSON exactly as the web application does, using the same reader and reporting the same findings.", "Must", "Replaces nothing - REQ-IMP-01 inherited", "N4"],
     [f"{MARK_CHG}NR-IMP-02", "Import / export", "Importing into a workspace that already holds data presents the differences and lets the user decide, per sheet, whether to replace, merge or skip. It never overwrites silently.", "Must", "New consequence of NR-STO-02", "N4"],
@@ -611,18 +633,8 @@ r = note(ws, r, "There is a chicken-and-egg problem hiding here: if the applicat
                 "which of the four rules applied (NR-DEP-10).")
 r += 1
 
-r = section(ws, r, "Two people, one workspace   [NR-STO-10]")
-lock = [
-    ["Opening a workspace writes a small marker beside it: user name, machine name, time.", "It is advisory, not an operating-system lock - a share may not support real locking, and a lock nobody can clear is worse than none."],
-    ["A second person opening it sees who holds it and since when, and gets it read-only.", "Read-only is a full working mode - every figure, table and graph (NR-STO-11). Only saving is withheld. Looking at a plan somebody else is editing is a reasonable thing to want."],
-    ["Closing removes the marker.", "The normal path leaves nothing behind."],
-    ["A marker left by a crash can be cleared, with the consequence spelled out.", "The alternative - a plan nobody can open until IT deletes a file - is worse. The message names the holder and the time so the user can judge."],
-    ["Saving re-checks the marker first.", "Catches the case where somebody cleared it while the file was open. A refused save that explains itself beats a silent overwrite."],
-]
-r = table(ws, r, ["Rule", "Why"], lock, [56, 90], wrap_cols=(1, 2))
-r = note(ws, r, "This is deliberately modest. Real multi-user editing - merging two people's changes to one plan - "
-                "is out of scope and would change the storage format. What is in scope is that nobody's work "
-                "disappears without them being told, which is the failure that actually matters.")
+r = section(ws, r, "Two people, one workspace")
+r = note(ws, r, "Settled at review round 3 as SINGLE WRITER, MANY READERS, and given its own sheet: see 05a.")
 r += 1
 
 r = section(ws, r, "Writing safely")
@@ -671,6 +683,82 @@ r = note(ws, r, "Q-N05 asks you to confirm this. It is worth a moment's thought:
                 "design where the wrong choice quietly loses work.")
 r = legend(ws, r)
 
+# ---- 05a Sharing ----------------------------------------------------------
+ws, r = sheet(wb, "05a_Sharing", "Sharing a plan between people",
+              "Settled at review round 3: while someone is editing, no other session may update. "
+              "Everyone may read, always.")
+
+r = section(ws, r, "The rule")
+r = lines(ws, r, [
+    "    One writer at a time.  Any number of readers.  Nobody is ever blocked from LOOKING at a plan.",
+    "",
+    "The claim to write is made at the FIRST EDIT, not when the workspace is opened. That single choice is",
+    "what separates this from a file lock, and it is worth being explicit about why:",
+])
+r += 1
+why = [
+    ["Claim on OPEN", "Simple to build.", "Somebody who opened a plan to glance at a figure, and then went to lunch, blocks everybody. Most sessions never edit anything, so most claims would be pointless."],
+    [f"{MARK_NEW}Claim on FIRST EDIT", "Only a session that actually intends to change something takes the claim, so a plan is free unless somebody is really working on it. It also falls exactly on the point the application already has: the snapshot taken before the first pending edit. No new state, no new concept.", "The user learns they cannot edit one moment later than they would have. Mitigated by showing who holds the claim in the window from the moment the workspace opens, so it is never a surprise at the keystroke."],
+]
+r = table(ws, r, ["When the claim is made", "For", "Against"], why, [26, 62, 58], wrap_cols=(2, 3), mark_col=1)
+r = note(ws, r, "The provisional-edit model built for the web application turns out to fit this exactly: "
+                "'snapshot before the first pending edit' becomes 'claim before the first pending edit', and "
+                "Save and Leave-without-change - which already commit and revert - become the two ways a claim "
+                "is released. Nothing about the edit model changes.")
+r += 1
+
+r = section(ws, r, "The four states a session can be in")
+states = [
+    ["READING", "The workspace is open and nobody in this session has tried to change anything.", "Everything except changing the workspace: all tabs, figures, graphs, filters, horizon, exports, Save As.", "Entered on open. Leaves to EDITING on the first edit attempt."],
+    ["EDITING", "This session holds the claim.", "Everything. This is the ordinary working state, identical to the single-user case.", "Entered by a successful claim. Leaves on Save, on Leave-without-change, or on close."],
+    ["BLOCKED", "This session tried to edit and somebody else holds the claim.", "Everything READING allows. The attempted edit did not happen, and the window says who holds the plan and since when.", "Entered by a refused claim. Leaves to READING, and offers EDITING the moment the holder releases."],
+    ["STALE", "Somebody else has saved this workspace since this session read it.", "Everything READING allows, with a standing offer to reload. Editing from a stale view is refused until it reloads.", "Entered when the file changes on disk. Leaves on reload."],
+]
+r = table(ws, r, ["State", "Meaning", "What the user can do", "How it is entered and left"],
+          states, [12, 46, 50, 40], wrap_cols=(2, 3, 4))
+r += 1
+r = note(ws, r, "STALE deserves a word. Without it, somebody who opened a plan at 09:00 is still looking at "
+                "09:00's figures at 11:00, after two saves by somebody else, with nothing on screen to say so - "
+                "and may then quote them. Reading a shared plan is only safe if the application admits when what "
+                "it is showing has been superseded.")
+r += 1
+
+r = section(ws, r, "How the claim is made, on a network share")
+mech = [
+    ["1", "Create a claim file beside the workspace, using an operation that FAILS if the file already exists.", "Not read-then-write: two sessions can both read 'no claim' and both then write one. Create-if-absent is decided by the filesystem, one winner, no race - and it works over SMB (NR-STO-13)."],
+    ["2", "The file records user name, machine name, process, the application version, and the time.", "So a refusal can name a person rather than saying 'locked' (NR-STO-12). 'Kim is editing this, since 09:14, on PC-4471' is actionable; 'file in use' is not."],
+    ["3", "While the session holds the claim it rewrites the time inside it, every 30 seconds.", "A heartbeat. It is how a live holder is told apart from a dead one, without asking the user to guess (NR-STO-14)."],
+    ["4", "A claim whose heartbeat has not moved for three intervals is presumed dead and may be taken over.", "Recovers from a crash, a power cut or a dropped network with nobody deleting a file by hand. The taking-over session says whose claim it is displacing."],
+    ["5", "Saving re-reads the claim first, and refuses if it is no longer this session's.", "The last defence. If anything above went wrong - a clock, a takeover, a share that lied - the save stops instead of overwriting somebody's work."],
+]
+r = table(ws, r, ["Step", "Mechanism", "Why this way"], mech, [7, 62, 76], wrap_cols=(2, 3))
+r += 1
+
+r = section(ws, r, "How a claim ends   [NR-STO-15]")
+ends = [
+    ["The holder saves and closes the workspace.", "Released immediately. A waiting session is offered it without reopening anything."],
+    ["The holder discards their edits (Leave without change).", "Released immediately - there is nothing to protect any more."],
+    ["The holder closes the application.", "Released on the way out, including on an unexpected close where the application still gets to run."],
+    ["The holder's session dies without warning.", "The heartbeat stops; after three missed intervals anybody may take it over."],
+]
+r = table(ws, r, ["Event", "What happens"], ends, [56, 90], wrap_cols=(1, 2))
+r = note(ws, r, "The holder is NOT released merely by saving and continuing to work - that would hand the plan to "
+                "somebody else mid-task. Saving keeps the claim; closing gives it up.")
+r += 1
+
+r = section(ws, r, "What this deliberately is not")
+notdo = [
+    ["Row-level or section-level locking.", "Two people editing different parts of one plan at the same time is a different product, and it needs a merge model the storage format does not have. The claim covers the whole workspace (N-20)."],
+    ["Merging two people's changes.", "Out of scope, and it would change the file format. What is in scope is that no change is lost silently."],
+    ["A queue of waiting editors.", "One waiting session is offered the claim when it frees. Beyond that, people can talk to each other."],
+    ["An operating-system lock.", "A share may not honour one, and a lock left by a crash can need IT to clear it. The claim file plus a heartbeat fails softer and recovers by itself (N-21)."],
+]
+r = table(ws, r, ["Not this", "Why not"], notdo, [46, 100], wrap_cols=(1, 2))
+r = note(ws, r, "The requirement you gave - block other sessions from updating while somebody is editing - is met "
+                "in full by the whole-workspace claim. Everything above that line would be building a "
+                "collaborative editor, which is a different tool.")
+r = legend(ws, r)
+
 # ---- 06 Decisions ---------------------------------------------------------
 ws, r = sheet(wb, "06_Decisions", "Engineering decisions",
               "N-ids belong to this plan. C-01..C-11 of the web plan govern the calculation and are inherited "
@@ -695,6 +783,10 @@ dec = [
     ["N-16", "Where data lives is resolved in one fixed order, and the chosen location is shown in the About dialog.", "A portable application that guesses where its data went is a support problem. Four rules, always in the same order, always visible. The last of them creates a shortcut the user owns rather than hidden state in their profile.", "CONFIRM"],
     ["N-17", "Workspace locking is an advisory marker file, not an operating-system lock.", "A network share may not support real locking, and an OS lock left by a crash can need IT to clear it. A marker anyone can read, and the holder's own machine can clear, fails softer - and the failure that matters is silent overwriting, which a marker prevents.", "CONFIRM"],
     ["N-18", "Concurrent use is designed for unconditionally, not only if the shared folder is adopted.", "Q-N12 says 'could be considered'. The cost of building the marker anyway is one small file; the cost of not building it, and then adopting the share, is somebody's lost afternoon. This also supersedes Q-N06 - it no longer matters what the answer is.", "CONFIRM"],
+    ["N-19", "The write claim is made at the first EDIT, not when the workspace is opened.", "Claiming on open would let somebody who glanced at a plan and walked away block everyone else, and most sessions never edit anything. It also falls on a point the application already has - the snapshot before the first pending edit - so it costs no new concept. See sheet 05a.", "CONFIRM"],
+    ["N-20", "The claim covers the whole workspace, not a row or a section.", "Part-locking implies merging two people's edits, which the storage format cannot express and which is a different product. The requirement given - block other sessions from updating while somebody edits - is met in full by a whole-workspace claim.", "CONFIRM"],
+    ["N-21", "The claim is a file created by an operation that fails if it already exists, kept alive by a heartbeat.", "Read-then-write loses races; two sessions can both see 'free'. Create-if-absent has one winner, decided by the filesystem, and works over SMB. The heartbeat is what tells a live holder from a crashed one without asking a user to guess.", "CONFIRM"],
+    ["N-22", "Saving keeps the claim; only closing or discarding releases it.", "Releasing on save would hand the plan to somebody else in the middle of a working session, which is exactly when it must not move.", "CONFIRM"],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Decision", "Rationale", "Status"], dec, [8, 62, 74, 14], wrap_cols=(2, 3))
@@ -749,7 +841,8 @@ wbs = [
     ["N4", "N4.3", "Workspace lifecycle: new, open, save, save as, recent list, reopen last at launch.", "shell/desktop/", "Not started"],
     ["N4", "N4.4", "Journalling and crash recovery.", "storage/", "Not started"],
     ["N4", "N4.4b", "Data-location resolution, the About dialog that shows it, and the personal shortcut.", "shell/desktop/", "Not started"],
-    ["N4", "N4.4c", "Workspace locking: the marker, the read-only mode, clearing a stale marker, re-checking on save.", "storage/ + ui/", "Not started"],
+    ["N4", "N4.4c", "The write claim: create-if-absent, the heartbeat, expiry and takeover, and the re-check before every save.", "storage/", "Not started"],
+    ["N4", "N4.4d", "The four session states on screen: who holds the plan, the refusal that names them, the offer when it frees, and the staleness notice with its reload.", "ui/", "Not started"],
     ["N4", "N4.5", "Import into an occupied workspace: the difference view and the per-sheet decision.", "ui/", "Not started"],
     ["N4", "N4.6", "Parity suite: identical input through both applications, identical figures, findings and exports.", "tools/test_parity.py", "Not started"],
     ["N4", "N4.7", "Persistence suite: save, close, relaunch, verify; kill mid-write, verify; recover pending edits.", "tools/test_persist.py", "Not started"],
@@ -762,7 +855,7 @@ wbs = [
     ["N5", "N5.4", "Cleanliness check: record every file and registry key touched during a full session; verify nothing outside the application folder is written, and that deleting the folder leaves nothing behind (NR-DEP-06, NR-DEP-07).", "Test evidence", "Not started"],
     ["N5", "N5.5", "Update check: extract a newer zip over an existing folder; verify workspaces, backups and settings are untouched (NR-DEP-03).", "Test evidence", "Not started"],
     ["N5", "N5.6", "Awkward-location tests: a deeply nested path (R-N10), a read-only network folder (R-N11), and a UNC path (NR-DEP-13).", "Test evidence", "Not started"],
-    ["N5", "N5.6b", "Shared-copy tests: two users running one folder keep separate settings and recent lists; two users opening one workspace - the second gets read-only and neither loses work; a stale marker can be cleared.", "tools/test_shared.py", "Not started"],
+    ["N5", "N5.6b", "Shared-copy tests: separate settings per user; the claim race run many times with two sessions starting together, verifying exactly one wins; a killed holder's claim expiring and being taken over; a reader seeing a save and being offered the reload; a save refused after its claim was displaced; Save As while blocked. Repeated on a real share, because share behaviour belongs to the server (R-N14).", "tools/test_shared.py", "Not started"],
     ["N5", "N5.6c", "Measure launch time from a local disk and from a network folder, and state both in the user guide rather than promising one.", "Test evidence", "Not started"],
     ["N5", "N5.7", "Run on a real company PC - the only place execution policy, SmartScreen and anti-virus can be judged.", "Test evidence", "Pending you"],
     ["N5", "N5.8", "User guide: where to extract it, first launch and the SmartScreen prompt, workspaces, import and export, backup, updating, and what to do if it will not start.", "User guide", "Not started"],
@@ -811,8 +904,11 @@ ver = [
     [f"{MARK_NEW}It survives being moved", "Copy the folder to another path and another PC; verify it runs and its settings and recent list still work.", "NR-DEP-08", "Automated, at N5.3"],
     [f"{MARK_NEW}An update cannot delete a plan", "Extract a newer zip over an existing folder; verify workspaces, backups and settings are untouched.", "NR-DEP-03", "Automated, at N5.5"],
     [f"{MARK_NEW}One shared copy serves several people", "Two users run one folder with different --data paths; verify their settings, recent lists and backups never meet.", "NR-DEP-11", "Automated, at N5.6b"],
-    [f"{MARK_NEW}Two people cannot overwrite each other", "Open a workspace as one user, open it again as another; verify the second is told who holds it and gets it read-only, and that neither loses work.", "NR-STO-10", "Automated, at N5.6b"],
-    [f"{MARK_NEW}A crash does not strand a plan", "Kill the application holding a workspace; verify the marker can be cleared from inside the application and the plan opens again.", "R-N13", "Automated, at N5.6b"],
+    [f"{MARK_CHG}Only one session can write", "Two sessions attempt the first edit together, many times over; verify exactly one is granted it and the other is told who holds it. Then verify a save is refused if the claim was displaced beneath it.", "NR-STO-10, NR-STO-13", "Automated, at N5.6b"],
+    [f"{MARK_NEW}Reading is never blocked", "With one session editing, verify another can open, filter, chart and export the same workspace.", "NR-STO-11, NR-STO-17", "Automated, at N5.6b"],
+    [f"{MARK_CHG}A crash does not strand a plan", "Kill the holding session; verify its claim expires on the heartbeat and another session can take it over, naming whose claim it displaced.", "NR-STO-14, R-N13", "Automated, at N5.6b"],
+    [f"{MARK_NEW}Nobody reads superseded figures unknowingly", "Save from one session; verify the other notices, says so, and offers the reload rather than continuing to show the old numbers.", "NR-STO-16", "Automated, at N5.6b"],
+    [f"{MARK_NEW}The share itself behaves", "Repeat the claim, heartbeat and staleness tests against the real network share, not a local folder.", "R-N14", "ONLY provable on your share, at N5.6b"],
     [f"{MARK_NEW}It is allowed to run at all", "Launch it on a company-managed PC and see whether execution policy, SmartScreen or anti-virus stops it.", "R-N01, R-N09", "ONLY provable by you - see the risk sheet"],
     ["The figures are right", "Inherited: the engine is already proven against the Python reference on all 1,225 person-months of the large dataset and 433 of the 10x10 dataset.", "Inherited", "Already done, and re-run by the parity suite"],
 ]
@@ -884,8 +980,12 @@ risks = [
      "Raised from Medium at round 2 - Q-N12 says this is under consideration, so it is now the expected case rather than an edge one. NR-DEP-09 (now Must) and the resolution order at NR-DEP-10 handle it: detected at launch, stated plainly, and the user chooses. Without that it would fail at the first Save, which is the worst possible moment to discover it."],
     [f"{MARK_NEW}R-N12", "Launched from a network folder, the application starts slowly, or Windows treats an executable on a UNC path as untrusted.", "Medium", "Medium",
      "A packaged browser engine is a lot of bytes to pull across a network at every launch, and Windows applies stricter zone rules to executables on network paths than on local ones. Measured rather than promised (NR-NFR-01), and the user guide will recommend the arrangement that is fastest: use the share to DISTRIBUTE the folder, copy it locally once, run it from there. Q-N14 asks which you intend."],
-    [f"{MARK_NEW}R-N13", "A crash leaves a workspace marked as open, and nobody can edit it.", "Medium", "Low",
-     "The direct cost of NR-STO-10. Mitigated by making the marker clearable from inside the application, with the holder and the time shown so the user can judge. Deliberately chosen over an operating-system lock, which would need IT to clear - see decision N-17."],
+    [f"{MARK_CHG}R-N13", "A crash leaves a workspace claimed, and nobody can edit it.", "Medium", "Low",
+     "The direct cost of NR-STO-10, and largely removed at round 3: the heartbeat in NR-STO-14 means a dead session's claim expires by itself after three missed intervals, rather than needing anybody to delete a file. What remains is a wait of a minute or two, and the displacing session says whose claim it took."],
+    [f"{MARK_NEW}R-N14", "A network share's caching defeats the claim or the staleness check, so two sessions both believe they hold the plan.", "Low", "HIGH",
+     "The one failure that would break the guarantee rather than inconvenience somebody. SMB client caching can delay both the visibility of a new file and a change to modification time. Three defences: the claim uses create-if-absent, which the server decides rather than the client; the heartbeat is re-read rather than remembered; and every save re-checks the claim before writing (step 5 on sheet 05a), so a lost race still stops short of overwriting. Must be tested on your actual share - N5.6b - because share behaviour is a property of the server, not of the application."],
+    [f"{MARK_NEW}R-N15", "A blocked user takes a Save As copy, works in it, and the plan quietly forks in two.", "Medium", "Medium",
+     "The cost of NR-STO-17, and worth accepting: the alternative is telling somebody they cannot work at all. Mitigated by the copy carrying its own name and its own import history (NR-STO-09), and by the user guide saying plainly what a copy is for - a scenario of your own, not a second master. A fork somebody chose is a better outcome than an edit somebody lost."],
 ]
 r = table(ws, r, ["ID", "Risk", "Likelihood", "Impact", "Mitigation"],
           risks, [9, 56, 12, 10, 66], wrap_cols=(2, 5), mark_col=1)
@@ -926,6 +1026,8 @@ qs = [
     [f"{MARK_CHG}Q-N13", "Deployment", "Is it acceptable that double-clicking a .prap file in Explorer will NOT open the application?", "ANSWERED 2026-08-13: not needed, drag-and-drop is fine. Closed. NR-IMP-04 stands as reduced, decision N-15 is unchallenged, and no registry entry will be written for any reason.", "Not needed. CLOSED"],
     [f"{MARK_NEW}Q-N14", "Deployment", "If the folder goes on a share, is that share where people RUN it from, or where they copy it from once and then run it locally?", "Decides how hard the launch-time problem is. Running from the share means pulling the whole application across the network at every launch (R-N12); copying it once means the share is simply distribution, and everything is fast. The plan supports both; the user guide should recommend the one you actually intend.", ""],
     [f"{MARK_NEW}Q-N15", "Deployment", "Would that share be writable by the people using it, or read-only?", "If writable, each user's data can sit in a per-user folder on the share and nothing else is needed. If read-only, every user needs their own data folder elsewhere and the shortcut in NR-DEP-12 becomes the normal way to launch, not an extra.", ""],
+    [f"{MARK_NEW}Q-N16", "Sharing", "How long should a silent session hold a plan before others may take it over? The proposal is 90 seconds - three missed 30-second heartbeats.", "Too short and a slow network momentarily strands a working editor; too long and a crashed session blocks the team for a coffee break. 90 seconds is a starting point, not a conviction, and it is a setting rather than a constant.", ""],
+    [f"{MARK_NEW}Q-N17", "Sharing", "When someone is blocked, should the application be able to tell the holder that another person is waiting?", "It is a small addition - a line in the claim file the holder's window reads - and it turns 'I cannot edit this' into 'they know I am waiting'. Left out of v0.4 because it is the first feature that treats the tool as a messaging channel, and that is your call rather than mine.", ""],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Area", "Question", "Why it matters", "Answer"],
@@ -959,6 +1061,11 @@ log = [
     ["13", "-", "Not requester input - found while applying item 12.", "A shared folder breaks the v0.2 layout in two places, and one of them silently destroys work.", "First, one settings file cannot serve two people - solved by the data-location resolution order at NR-DEP-10. Second, two people editing one workspace means the second Save discards the first, with nothing said - solved by the advisory marker at NR-STO-10. The second is the serious one: it is the only failure in this plan that loses work without anybody being told, which is why it is a Must and why it is built whether or not the share is adopted (N-18).", "Closed"],
     ["14", "-", "Not requester input - found while applying item 12.", "Where does a portable application remember its data location, if it cannot write beside itself?", "The usual answer - a file in the user profile - is the hidden state the non-installed rule exists to prevent. Resolved at N-16 by having the application offer to create a desktop shortcut carrying --data: visible, owned by the user, and undone by deleting it. The About dialog always shows which rule applied.", "Closed"],
     ["15", "Q-N06", "Not requester input - a consequence of item 12.", "The question no longer needs answering.", "Q-N06 asked whether two people would ever open one workspace at once. With concurrent use designed for unconditionally (N-18), the answer changes nothing. Marked superseded rather than left open.", "Closed"],
+
+    ["16", "Instruction 2026-08-13 (round 3)", "Block other sessions from updating while someone starts editing.", "Accepted, and it settles the sharing model: single writer, many readers.", "One change of substance against v0.3 - the claim is made at the FIRST EDIT rather than at open, so reading is never blocked and a plan is only held while somebody is genuinely working on it. New sheet 05a carries the model in full. NR-STO-10 rewritten; NR-STO-12..18 added; decisions N-19 (claim on first edit), N-20 (whole workspace, not part of it), N-21 (create-if-absent plus heartbeat) and N-22 (saving keeps the claim, closing releases it).", "Closed"],
+    ["17", "-", "Not requester input - noticed while applying item 16.", "The instruction fits the application's existing edit model exactly.", "'Snapshot before the first pending edit' becomes 'claim before the first pending edit', and Save and Leave-without-change - which already commit and revert - become the two ways a claim is released. Nothing in the edit model changes, which is the strongest sign the rule is the right shape.", "Closed"],
+    ["18", "-", "Not requester input - a gap in v0.3 that item 16 makes plain.", "Blocking writers is not enough on its own: a READER can be misled just as badly.", "Somebody who opened a plan at 09:00 was still shown 09:00's figures after two saves by somebody else, with nothing to say so, and could quote them in good faith. NR-STO-16 added: a reading session notices the file changed beneath it and offers the reload rather than presenting figures it knows to be superseded.", "Closed"],
+    ["19", "-", "Not requester input - raised while applying item 16.", "One failure mode belongs to the network, not to the application.", "SMB client caching can delay both the appearance of a new file and a change to a modification time, which could in principle let two sessions both believe they hold a plan. Three defences are built in - a claim the server decides rather than the client, a heartbeat re-read rather than remembered, and a re-check before every save - but the behaviour belongs to your file server. Recorded as R-N14 and marked on sheet 08 as provable only on your own share.", "Open"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Source", "Input", "Response", "Action taken in v0.1", "Status"],
