@@ -357,6 +357,30 @@ if MANIFEST.exists():
             problems.append(f"{entry['path']} has changed since the manifest was built - "
                             f"run python tools/build_ai_reference.py")
 
+# ---- 4g. app/PRAP.html vs the src/ tree it is now built from ---------------
+# Since N2.1 the single file is a build output, not a hand-written one. Editing it
+# directly would work perfectly well until the next build silently discarded the edit,
+# so the two are held together here rather than by anybody remembering.
+try:
+    sys.path.insert(0, str(ROOT / "tools"))
+    import build_app
+
+    built = build_app.render()
+    current = (ROOT / "app" / "PRAP.html").read_text(encoding="utf-8")
+    if built != current:
+        b, c = built.split("\n"), current.split("\n")
+        where = next((i for i, (x, y) in enumerate(zip(b, c), start=1) if x != y), None)
+        problems.append(
+            f"app/PRAP.html does not match a build from src/ "
+            + (f"(first difference at line {where})" if where
+               else f"(built {len(b)} lines, committed {len(c)})")
+            + " - edit the part under src/ and run python tools/build_app.py")
+    else:
+        notes.append(f"app/PRAP.html is byte-identical to a build from src/ "
+                     f"({len(build_app.PARTS)} parts, {len(built):,} bytes)")
+except Exception as exc:                                    # noqa: BLE001
+    problems.append(f"could not build app/PRAP.html from src/: {exc}")
+
 # ---- 5. every requirement in the plan is traced in the specification ------
 plan_reqs = {str(plan["03_Requirements"].cell(r, 1).value).strip()
              for r in range(5, plan["03_Requirements"].max_row + 1)

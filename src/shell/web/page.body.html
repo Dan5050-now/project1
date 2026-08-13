@@ -1,0 +1,119 @@
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Project Resource Assignment Program</h1>
+  <span class="vers" id="vers"></span>
+  <span class="file" id="fileline">no workbook loaded</span>
+  <input type="file" id="picker" accept=".xlsx,.json" hidden>
+  <button class="btn" id="loadBtn">Load workbook</button>
+  <button class="btn primary" id="exportBtn" disabled>Export</button>
+  <button class="btn" id="exportJsonBtn" disabled
+    title="The same data as plain text, for another program or an AI agent to read">Export JSON</button>
+  <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
+</header>
+
+<details id="prov">
+  <summary id="provSum"></summary>
+  <div id="provBody"></div>
+</details>
+
+<div id="banner"></div>
+<div class="panel" id="filterbar" hidden>
+  <h2>Horizon and filters <span class="scope">applies to every tab</span></h2>
+  <p class="cap">One setting drives the whole page — the charts, both Overall tables and
+    the source-data tabs.</p>
+  <div class="controls">
+    <div class="ctl"><label>From</label><input id="fFrom" size="8"></div>
+    <div class="ctl"><label>To</label><input id="fTo" size="8"></div>
+    <div class="ctl"><label>&nbsp;</label><button class="btn" id="fAll">Expand to all projects</button></div>
+    <div class="ctl"><label>Project type</label>
+      <details class="ms" id="fType"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Clinical phase</label>
+      <details class="ms" id="fPhase"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Outsourcing</label>
+      <details class="ms" id="fOut"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Project</label>
+      <details class="ms" id="fProj"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Person</label>
+      <details class="ms" id="fPers"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Role</label>
+      <details class="ms" id="fRole"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>Department</label>
+      <details class="ms" id="fDept"><summary>All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><label>&nbsp;</label><button class="btn reset" id="fReset">Reset filters</button></div>
+  </div>
+</div>
+
+<div id="editbar" hidden>
+  <span class="guide" id="guide"></span>
+  <span id="editstate"></span>
+  <button class="btn" id="chgBtn" disabled
+    title="Every change waiting to be saved: what changed, where, and what it was before"
+    >Show details</button>
+  <button class="btn primary" id="saveBtn" disabled>Save</button>
+  <button class="btn" id="discardBtn" disabled>Leave without change</button>
+</div>
+
+<nav role="tablist" id="tabs" hidden>
+  <button role="tab" aria-selected="true" data-tab="t-overall">Overall</button>
+  <button role="tab" aria-selected="false" data-tab="t-proj">Source data (project)</button>
+  <button role="tab" aria-selected="false" data-tab="t-pers">Source data (person)</button>
+  <button role="tab" aria-selected="false" data-tab="t-gen">General assumptions</button>
+</nav>
+
+<div id="empty">
+  <p class="lead">Two ways in. Either works, and you can move between them — a plan
+    started here exports to the same workbook, and a workbook loaded here can be edited
+    the same way.</p>
+  <div class="choose">
+    <div class="drop" id="drop">
+      <span class="tag">From a file</span>
+      <h2>Load a source workbook</h2>
+      <p class="cap">Choose a <code>.xlsx</code> workbook or a <code>.prap.json</code>
+        interchange file, or drop one here. Nothing leaves this machine — the file is read
+        in the browser and never uploaded.</p>
+      <button class="btn primary" id="loadBtn2">Choose file</button>
+      <p class="note">Need the layout? Build one with
+        <code>python tools/build_source_workbook.py</code>, or start from
+        <code>PRAP_SourceData_Template_v1.7.xlsx</code>.</p>
+    </div>
+    <div class="drop start" id="startCard">
+      <span class="tag">From nothing</span>
+      <h2>Start a new plan here</h2>
+      <p class="cap">Opens every tab empty, ready to type into. The standard value lists
+        and settings are already in place, so each field offers its own choices; the
+        projects and people are yours to enter. Export to <code>.xlsx</code> when you are
+        ready — the plan is a workbook like any other.</p>
+      <button class="btn primary" id="startBtn">Start blank</button>
+      <p class="note">Period weights and role factors start at a placeholder
+        <strong>1.00</strong>. Set them on <strong>General assumptions</strong> before
+        reading the figures as real.</p>
+    </div>
+  </div>
+</div>
+
+<section class="tab" id="t-overall" hidden></section>
+<section class="tab" id="t-proj" hidden></section>
+<section class="tab" id="t-pers" hidden></section>
+<section class="tab" id="t-gen" hidden></section>
+</div>
+
+<div id="tip" class="tip" hidden></div>
+<div id="sugg" class="sugg" hidden role="listbox"></div>
+
+<dialog id="report">
+  <div class="dlg-h"><strong>Validation findings</strong>
+    <button class="btn" style="margin-left:auto" id="repClose">Close</button></div>
+  <div class="dlg-b" id="repBody"></div>
+</dialog>
+
+<dialog id="changes">
+  <div class="dlg-h"><strong id="chgTitle">Unsaved changes</strong>
+    <button class="btn" style="margin-left:auto" id="chgBig">Full screen</button>
+    <button class="btn" id="chgClose">Close</button></div>
+  <div class="dlg-b" id="chgBody"></div>
+</dialog>
+
+<script>
+"use strict";
