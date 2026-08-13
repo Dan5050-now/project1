@@ -20,10 +20,10 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "0.6"
-DOC_STATUS = ("DRAFT - issued for review round 5. Step 1 of 5. Windows-only, non-installed, shareable from a "
-              "network folder, single-writer, and with users who identify themselves so a blocked colleague "
-              "knows who to ask. Nothing is built until Gate N1 is passed.")
+DOC_VERSION = "0.7"
+DOC_STATUS = ("FINAL DRAFT - every question answered. Ready to be approved as the v1.0 baseline once two "
+              "items on sheet 11 are settled: the plain-language answer at Q-N03, and the reading taken of "
+              "your Q-N04 answer. Nothing is built until Gate N1 is passed.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -164,7 +164,11 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Reviewer", "Requester - rounds 1 to 5 answered 2026-08-13; round 6 pending"),
+    ("Reviewer", "Requester - rounds 1 to 6 answered 2026-08-13 (v0.6_reviewed). All 18 questions answered"),
+    ("Application name",
+     "'Project Management APP' on screen; PM_APP as the folder and executable name (Q-N11). The documents "
+     "keep the PRAP_NewApp_ prefix so this line stays findable beside the web application's - say if you "
+     "would rather they were renamed too."),
     ("Sharing model",
      "SINGLE WRITER, MANY READERS. Instructed 2026-08-13: while one person is editing a plan, no other "
      "session may update it. Everyone may open and read it at any time. The claim is made at the first "
@@ -221,7 +225,20 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}0.6", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}0.7", DOC_DATE, "Claude Code", "Pending",
+     "REVIEW ROUND 6 APPLIED, from PRAP_NewApp_Development_Plan_v0.6_reviewed.xlsx. Every one of the 18 "
+     "questions is now answered. Q-N02: the approach is ASSUMED workable rather than confirmed with IT - "
+     "recorded honestly at A-N09 and R-N01, which stay open and are proven only at N5.7. Q-N03: not an "
+     "answer but a request for a plainer question; sheet 10 gains a plain-language explanation of what code "
+     "signing is, what it would cost and who would buy it, and the question is re-asked in those terms. "
+     "Q-N05 confirms the difference report. Q-N07 cuts retained versions from ten to ONE. Q-N09 confirms no "
+     "validation obligation, which settles R-N16. Q-N10 adds a read-only look at a source workbook. Q-N11 "
+     "names the application. Q-N14 and Q-N15: both distribution modes, on a WRITABLE share - so per-user "
+     "data folders can live on the share itself. Q-N04's answer is about file encryption rather than "
+     "location; the reading taken is recorded at NR-IMP-06 and R-N18 and needs your confirmation. "
+     "NR-APP-08, NR-IMP-05..07, NR-DEP-14 added; NR-STO-06 changed. Decisions N-29..N-32. Risks R-N18 and "
+     "R-N19 added; R-N01, R-N09 and R-N16 re-rated."],
+    ["0.6", DOC_DATE, "Claude Code", "Superseded",
      "REVIEW ROUND 5 APPLIED. Q-N18 closed - the identity is NAME and DEPARTMENT, and nothing else. "
      "E-mail and telephone are dropped rather than left as optional fields nobody fills in. This turns out "
      "to fit the data model already in place: Person.department exists in the source schema, so an identity "
@@ -402,13 +419,14 @@ reqs = [
     [f"{MARK_NEW}NR-APP-05", "Application form", "Native Open, Save, Save As, Import and Export dialogs are used, not browser download prompts.", "Must", "Desktop convention", "N4"],
     [f"{MARK_CHG}NR-APP-06", "Application form", "A recent-workspaces list of at least ten entries is available from the menu. It is stored in the application's own data folder, not in the registry or in the user profile.", "Should", "Desktop convention + NR-DEP-06", "N4"],
     [f"{MARK_NEW}NR-APP-07", "Application form", "The application version is visible in an About dialog and in the window title alongside the open workspace name.", "Must", "Version control", "N4"],
+    [f"{MARK_NEW}NR-APP-08", "Application form", "The application is called 'Project Management APP' on screen. Its folder and executable are named PM_APP, so the name survives being copied, shortened or pinned.", "Must", "Q-N11", "N4"],
 
     [f"{MARK_NEW}NR-STO-01", "Storage", "Imported and hand-entered data survives closing the application. Reopening shows the same plan, with the same figures, without re-importing anything.", "Must", "Your instruction", "N4"],
     [f"{MARK_NEW}NR-STO-02", "Storage", "The application owns a workspace file on disk. That file, not the source Excel workbook, is the working store from the moment data is imported into it.", "Must", "Derived from NR-STO-01", "N4"],
     [f"{MARK_NEW}NR-STO-03", "Storage", "The workspace file is prap-source-data JSON - the same format the AI agent guide already documents - so a workspace can be read, written or generated by an AI agent with no new contract.", "Must", "Interoperability", "N4"],
     [f"{MARK_NEW}NR-STO-04", "Storage", "A committed Save is written to disk before the application reports it as saved. A save that did not reach the disk is never reported as done.", "Must", "Data safety", "N4"],
     [f"{MARK_NEW}NR-STO-05", "Storage", "Workspace writes are atomic: an interrupted write can never leave a workspace file that is neither the old contents nor the new.", "Must", "Data safety", "N4"],
-    [f"{MARK_NEW}NR-STO-06", "Storage", "The last N committed versions of a workspace are retained and can be restored from within the application. N is a setting, default 10.", "Should", "Data safety", "N4"],
+    [f"{MARK_CHG}NR-STO-06", "Storage", "The previous committed version of a workspace is retained and can be restored from within the application. The number retained is a setting; its default is ONE, so a workspace directory holds the current file and the one before it.", "Should", "Q-N07", "N4"],
     [f"{MARK_NEW}NR-STO-07", "Storage", "Edits pending at the moment of a crash or power loss are recovered on the next launch, and the user is asked whether to keep or discard them.", "Should", "Data safety", "N4"],
     [f"{MARK_NEW}NR-STO-08", "Storage", "Several workspaces may exist. The user chooses which to open, and may create a new empty one at any time.", "Must", "Scenario planning", "N4"],
     [f"{MARK_NEW}NR-STO-09", "Storage", "A workspace records which source file it was imported from, when, and by which application version.", "Should", "Traceability", "N4"],
@@ -424,8 +442,11 @@ reqs = [
     [f"{MARK_NEW}NR-STO-18", "Storage", "Importing into a workspace is an edit and takes the claim like any other. It is the largest change the application can make, so it cannot be the one that bypasses the rule.", "Must", "Correctness", "N4"],
 
     [f"{MARK_CHG}NR-IMP-01", "Import / export", "Import reads the Excel source workbook and prap-source-data JSON exactly as the web application does, using the same reader and reporting the same findings.", "Must", "Replaces nothing - REQ-IMP-01 inherited", "N4"],
-    [f"{MARK_CHG}NR-IMP-02", "Import / export", "Importing into a workspace that already holds data presents the differences and lets the user decide, per sheet, whether to replace, merge or skip. It never overwrites silently.", "Must", "New consequence of NR-STO-02", "N4"],
+    [f"{MARK_CHG}NR-IMP-02", "Import / export", "Importing into a workspace that already holds data first asks whether the existing data is to be updated at all. If it is, a DIFFERENCE REPORT is presented - what the file would add, change and remove, sheet by sheet - and the user decides per sheet whether to accept it. Nothing is overwritten silently, and nothing is overwritten unasked.", "Must", "Q-N05", "N4"],
     [f"{MARK_CHG}NR-IMP-03", "Import / export", "Export to Excel and to JSON produces byte-for-byte the same content the web application would produce from the same data.", "Must", "Parity", "N4"],
+    [f"{MARK_NEW}NR-IMP-05", "Import / export", "A source workbook can be opened for a look without creating a workspace: every table and graph, nothing saved, nothing left behind. The quick question - 'what does this file say?' - does not require committing to a plan first.", "Must", "Q-N10", "N4"],
+    [f"{MARK_NEW}NR-IMP-06", "Import / export", "A file the application cannot read because it is encrypted or protected says so, names that as the likely cause, and says what to do about it. It never reports a protected file as corrupt, and never fails silently.", "Must", "Q-N04 - see R-N18", "N4"],
+    [f"{MARK_NEW}NR-IMP-07", "Import / export", "Nothing the application writes is encrypted by the application itself. Where files must be protected, that is done by whatever the company already uses, on the folder - so the application never becomes the only thing that can open the user's own data.", "Must", "Q-N04 - see R-N18", "N2"],
     [f"{MARK_CHG}NR-IMP-04", "Import / export", "A workspace can be opened by dragging it onto the running application's window. Double-clicking a workspace file in Explorer does NOT open it, because a file association would require a registry entry that NR-DEP-06 forbids.", "Could", "Reduced by the non-installed rule", "N4"],
 
     [f"{MARK_NEW}NR-USR-01", "User identity", "The application asks who the user is when it starts, before any workspace is opened, and carries that identity for the session.", "Must", "Q-N17", "N4"],
@@ -457,7 +478,9 @@ reqs = [
     [f"{MARK_NEW}NR-DEP-10", "Deployment", "Where the application keeps its data is resolved in one fixed, documented order, and the answer is shown in the About dialog so it is never a mystery: a --data command-line argument, then a PRAP_DATA environment variable, then a writable data folder beside the application, and failing all of those the application asks.", "Must", "Q-N12", "N4"],
     [f"{MARK_NEW}NR-DEP-11", "Deployment", "Where several people run one shared copy, each has their own settings, recent list, backups and default workspace folder. No user can see, overwrite or lock out another through the application.", "Must", "Q-N12", "N4"],
     [f"{MARK_NEW}NR-DEP-12", "Deployment", "The application can create a personal desktop shortcut, at the user's request, that carries their own --data path. This is how a shared copy is used day to day without being asked anything at launch.", "Should", "Q-N12", "N4"],
-    [f"{MARK_NEW}NR-DEP-13", "Deployment", "The application runs correctly when launched from a UNC path (\\\\server\\share\\PRAP) as well as from a mapped drive letter.", "Must", "Q-N12", "N5"],
+    [f"{MARK_CHG}NR-DEP-13", "Deployment", "The application runs correctly when launched from a UNC path (\\\\server\\share\\PM_APP) as well as from a mapped drive letter.", "Must", "Q-N12", "N5"],
+    [f"{MARK_NEW}NR-DEP-14", "Deployment", "Both arrangements are supported and both are tested: run in place from the shared folder, and copied from it to a local folder and run there. Neither is a second-class case, and the user guide states what each costs in launch time.", "Must", "Q-N14", "N5"],
+    [f"{MARK_NEW}NR-DEP-15", "Deployment", "On a writable shared folder, each person's data folder sits under the application's own data folder, one per user. Nobody has to choose a location, and nobody's settings meet anybody else's.", "Should", "Q-N15", "N4"],
 
     [f"{MARK_NEW}NR-SEC-01", "Security", "No telemetry, no crash reporting to any server, no automatic update check, no font or script loaded from a remote host. Verified by observing that the packaged application opens no socket.", "Must", "Offline by requirement", "N5"],
     [f"{MARK_NEW}NR-SEC-02", "Security", "The embedded browser engine runs with remote content disabled and Node integration off in the renderer, so a crafted workspace file cannot execute code.", "Must", "Standard hardening", "N4"],
@@ -521,7 +544,7 @@ r += 1
 r = section(ws, r, "Build targets from one source tree")
 r = lines(ws, r, [
     "    core/ + ui/ + shell/web/       --build-->   app/PRAP.html          one file, unchanged, still supported",
-    "    core/ + ui/ + shell/desktop/   --build-->   PRAP Desktop package   new",
+    "    core/ + ui/ + shell/desktop/   --build-->   PM_APP package         new",
     "    core/                          --used by--> tools/ test suites     unchanged",
 ], mono=True)
 r += 1
@@ -612,14 +635,15 @@ r = lines(ws, r, [
     "The portable rule says everything lives in one folder. Data safety says an update must not be able to",
     "delete a plan. Those two pull against each other, and the layout below is what resolves them:",
     "",
-    "    PRAP\\                        <- copy THIS folder anywhere; delete it to remove the application",
-    "      PRAP.exe                    <- \\",
+    "    PM_APP\\                      <- copy THIS folder anywhere; delete it to remove the application",
+    "      PM_APP.exe                  <- \\",
     "      resources\\                  <-  |  replaced wholesale by an update",
     "      version.txt                 <- /",
     "      data\\                       <- NEVER touched by an update",
-    "        settings.json             <- window state, recent workspaces, preferences",
-    "        workspaces\\               <- the default home for .prap files",
-    "        backups\\                  <- the retained previous versions (NR-STO-06)",
+    "        users\\<name>\\             <- one per person, where the folder is shared (NR-DEP-15)",
+    "          settings.json           <- window state, recent workspaces, identity, preferences",
+    "          workspaces\\             <- the default home for .prap files",
+    "          backups\\                <- the ONE retained previous version (NR-STO-06)",
 ], mono=True)
 r += 1
 lay = [
@@ -654,8 +678,8 @@ r = section(ws, r, "Where the data folder is - resolved in one fixed order   [NR
 res = [
     ["1", "--data=<path> on the command line", "How a personal shortcut carries it. Explicit, visible, and belongs to the user rather than to the application.", "Always wins"],
     ["2", "The PRAP_DATA environment variable", "For a site that wants to set it centrally, by login script or group policy.", "If no argument"],
-    ["3", "data\\ beside the application", "The ordinary single-user case, and the reason a copied folder simply works.", "If writable, and not shared"],
-    ["4", "Ask the user, once", "The shared or read-only case. The answer is not written to a hidden file - the application offers to create a desktop shortcut carrying --data, so the choice lives somewhere the user can see, move and delete.", "Last resort"],
+    ["3", "data\\ beside the application - and data\\users\\<name>\\ where the folder is shared", "The ordinary single-user case, and the reason a copied folder simply works. Q-N15 says the share would be WRITABLE, so on a shared copy this rule still applies: each person gets their own folder under it and nobody has to choose anything (NR-DEP-15).", "If writable"],
+    ["4", "Ask the user, once", "Only where the folder is read-only after all. The answer is not written to a hidden file - the application offers to create a desktop shortcut carrying --data, so the choice lives somewhere the user can see, move and delete.", "Last resort"],
 ]
 r = table(ws, r, ["Order", "Source", "Why it is there", "Applies"], res, [7, 38, 76, 22], wrap_cols=(3,))
 r = note(ws, r, "There is a chicken-and-egg problem hiding here: if the application cannot write beside itself, "
@@ -876,6 +900,10 @@ dec = [
     ["N-26", "The name is pre-filled from the Windows account but stays editable.", "Free accuracy for the common case without a login system, and editable because a Windows account name is often not how colleagues know each other.", "CONFIRM"],
     ["N-27", "The holder's name and department travel inside the claim, and are removed with it.", "A message that names somebody but not where to find them leaves the colleague exactly as stuck. Nothing personal outlives the claim it was written for.", "CONFIRM"],
     ["N-28", "An identity is a name and a department, and nothing else.", "Your answer at Q-N18. E-mail and telephone are dropped rather than kept as optional fields: a field nobody fills in makes the message look incomplete when it is merely unused, and in a company a name and a department are enough to find anybody. It also matches Person.department, which the source schema already has, so identities and person records share one vocabulary instead of inventing a second.", "CONFIRM"],
+    ["N-29", "The application is 'Project Management APP' on screen, PM_APP as folder and executable.", "Your answer at Q-N11. The documents keep the PRAP_NewApp_ prefix so this plan stays findable beside the web application's; say if you would rather they were renamed to match.", "CONFIRM"],
+    ["N-30", "One previous version of a workspace is retained, and it is a setting rather than a constant.", "Your answer at Q-N07. Recorded with its consequence rather than silently: two bad saves in a row leave nothing good to return to (R-N19). Keeping it a setting means raising it later costs nothing, and the Excel export remains an archive no save can touch.", "CONFIRM"],
+    ["N-31", "Both distribution arrangements are first-class: run from the share, or copy from it and run locally.", "Your answer at Q-N14. Neither is treated as the fallback, both are tested, and the user guide states what each costs in launch time rather than recommending one and leaving the other undocumented.", "CONFIRM"],
+    ["N-32", "The application never encrypts anything itself; where files must be protected, the company's own protection is applied to the folder.", "Following from Q-N04. An application that encrypts its own data becomes the only thing that can read it - and when it will not start, the data is gone. What the application owes instead is a clear message when it meets a file it cannot read (NR-IMP-06).", "CONFIRM"],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Decision", "Rationale", "Status"], dec, [8, 62, 74, 14], wrap_cols=(2, 3))
@@ -937,9 +965,9 @@ wbs = [
     ["N4", "N4.6", "Parity suite: identical input through both applications, identical figures, findings and exports.", "tools/test_parity.py", "Not started"],
     ["N4", "N4.7", "Persistence suite: save, close, relaunch, verify; kill mid-write, verify; recover pending edits.", "tools/test_persist.py", "Not started"],
     ["N4", "N4.8", "Requester reviews against real data; refinements folded in.", "Updated code", "Not started"],
-    ["N4", "GN4", "GATE N4 - application functionally complete.", "PRAP Desktop v0.9", "Not started"],
+    ["N4", "GN4", "GATE N4 - application functionally complete.", "Project Management APP v0.9", "Not started"],
 
-    ["N5", "N5.1", "Package as a plain Windows folder delivered in a zip; verify it launches with no installation and no administrator rights.", "PRAP_Desktop_v<ver>.zip", "Not started"],
+    ["N5", "N5.1", "Package as a plain Windows folder delivered in a zip; verify it launches with no installation and no administrator rights.", "PM_APP_v<ver>.zip", "Not started"],
     ["N5", "N5.2", "Verify no socket is opened, offline, for a full session (NR-SEC-01).", "Test evidence", "Not started"],
     ["N5", "N5.3", "Portability suite: run the folder, then copy it to another path and another PC and run it again; verify the recent list and settings survive (NR-DEP-08).", "tools/test_portable.py", "Not started"],
     ["N5", "N5.4", "Cleanliness check: record every file and registry key touched during a full session; verify nothing outside the application folder is written, and that deleting the folder leaves nothing behind (NR-DEP-06, NR-DEP-07).", "Test evidence", "Not started"],
@@ -950,7 +978,7 @@ wbs = [
     ["N5", "N5.7", "Run on a real company PC - the only place execution policy, SmartScreen and anti-virus can be judged.", "Test evidence", "Pending you"],
     ["N5", "N5.8", "User guide: where to extract it, first launch and the SmartScreen prompt, workspaces, import and export, backup, updating, and what to do if it will not start.", "User guide", "Not started"],
     ["N5", "N5.9", "Full pass over the traceability matrix; version alignment across both product lines.", "Traceability matrix", "Not started"],
-    ["N5", "GN5", "GATE N5 - release.", "PRAP Desktop v1.0", "Not started"],
+    ["N5", "GN5", "GATE N5 - release.", "Project Management APP v1.0 (PM_APP)", "Not started"],
 ]
 r_start = r
 r = table(ws, r, ["Step", "Task", "Activity", "Deliverable", "Status"],
@@ -998,6 +1026,10 @@ ver = [
     [f"{MARK_NEW}Reading is never blocked", "With one session editing, verify another can open, filter, chart and export the same workspace.", "NR-STO-11, NR-STO-17", "Automated, at N5.6b"],
     [f"{MARK_CHG}A crash does not strand a plan", "Kill the holding session; verify the heartbeat stops within 30 seconds and is reported as silent, that the claim expires at 30 minutes and can then be taken over naming whose it was, and that the SAME user on the SAME machine can reclaim it at once.", "NR-STO-14, NR-STO-19, R-N13", "Automated, at N5.6b"],
     [f"{MARK_CHG}A blocked colleague can act", "Block a session and verify the message names the holder and their department, says whether they are still responding and when the plan frees, and copies name and department on request.", "NR-STO-12, NR-USR-05, NR-USR-06", "Automated, at N5.6b"],
+    [f"{MARK_NEW}A look without a workspace", "Open a source workbook directly; verify every table and graph works, that nothing can be saved into it, and that no workspace or setting is created.", "NR-IMP-05", "Automated, at N4"],
+    [f"{MARK_NEW}Re-import asks before it changes anything", "Import a changed workbook over hand-entered data; verify the update question comes first, that the difference report lists what would be added, changed and removed per sheet, and that declining leaves the workspace byte-identical.", "NR-IMP-02", "Automated, at N4.5"],
+    [f"{MARK_NEW}A protected file says so", "Present an encrypted or unreadable workbook; verify the message names protection as the likely cause rather than reporting corruption.", "NR-IMP-06, R-N18", "Automated, at N4"],
+    [f"{MARK_NEW}One version back, and no further", "Save twice; verify exactly one previous version is retained, that it can be restored, and that the older one is gone rather than silently accumulating.", "NR-STO-06", "Automated, at N5.5"],
     [f"{MARK_NEW}One vocabulary for departments", "Declare an identity against a workspace whose people carry departments; verify those departments are offered rather than typed, and that a name matching a person offers that person's department first.", "NR-USR-10, NR-USR-11", "Automated, at N5.6b"],
     [f"{MARK_NEW}Identities do not collide", "Two users on one shared copy; verify each keeps their own name and contact details and neither sees the other's.", "NR-USR-09", "Automated, at N5.6b"],
     [f"{MARK_NEW}Nobody reads superseded figures unknowingly", "Save from one session; verify the other notices, says so, and offers the reload rather than continuing to show the old numbers.", "NR-STO-16", "Automated, at N5.6b"],
@@ -1022,7 +1054,7 @@ vc = [
     ["Desktop plan", "PRAP_NewApp_Development_Plan_v<ver>.xlsx", "docs/", "Sheet 01 of this document"],
     ["Desktop specification", "PRAP_NewApp_Specification_v<ver>.xlsx", "docs/", "Its own version-history sheet"],
     ["Desktop component list", "PRAP_NewApp_Component_List_v<ver>.xlsx", "docs/", "Its own version-history sheet"],
-    ["Desktop application", "PRAP_Desktop_v<ver>.zip, extracting to a PRAP\\ folder", "dist/", "version.txt in the folder, plus the About dialog and window title"],
+    ["Desktop application", "PM_APP_v<ver>.zip, extracting to a PM_APP\\ folder", "dist/", "version.txt in the folder, plus the About dialog and window title"],
     ["Workspace file", "<user's own name>.prap", "data\\workspaces\\ by default, or wherever the user chooses", "Header block inside the file"],
     ["User settings", "settings.json", "data\\", "Written by the application; never carried in the zip"],
     ["Web plan and its documents", "PRAP_Development_Plan_v<ver>.xlsx and siblings", "docs/", "Unchanged - their own sheets"],
@@ -1050,7 +1082,7 @@ ws, r = sheet(wb, "10_Risks", "Risks and assumptions")
 r = section(ws, r, "Risks")
 risks = [
     [f"{MARK_CHG}R-N01", "Corporate policy blocks the application from running at all - typically application allow-listing, or a rule against executables outside Program Files.", "Medium", "HIGH",
-     "Still the single largest risk, and still untestable from here. Being non-installed removes the administrator-rights half of this risk entirely, but not the execution-policy half: an allow-list judges what is being run, not how it got there. Q-N02 asks you to check with IT BEFORE Gate N1. If it happens, the web application still works and still meets the original need - which is why keeping it, as you instructed, is the right call."],
+     "Still the single largest risk. Q-N02 answered at round 6: a zip can be saved in your own folder and run, and checking the rest with IT is impractical for now, so we ASSUME no issue. That is your call to make and the plan proceeds on it - but assuming is not verifying, so this risk stays OPEN rather than closed, assumption A-N09 records it, and N5.7 on a real company PC remains the first moment anybody will know. If it does happen, the web application still works and still meets the original need - which is why keeping it, as you instructed, is the right call."],
     [f"{MARK_NEW}R-N02", "The refactor to share the engine breaks the finished web application.", "Medium", "High",
      "Task N2.2 gates everything else on the 13 existing suites passing unmodified against the rebuilt HTML file. If they do not pass, the refactor is wrong and nothing proceeds. This is why N2.1 is the first task and carries no other change."],
     [f"{MARK_NEW}R-N03", "A workspace file is corrupted and a plan is lost - data that used to be safe in Excel because the application never wrote to it.", "Low", "HIGH",
@@ -1077,8 +1109,12 @@ risks = [
      "The direct cost of NR-STO-10, and largely removed at round 3: the heartbeat in NR-STO-14 means a dead session's claim expires by itself after three missed intervals, rather than needing anybody to delete a file. What remains is a wait of a minute or two, and the displacing session says whose claim it took."],
     [f"{MARK_NEW}R-N14", "A network share's caching defeats the claim or the staleness check, so two sessions both believe they hold the plan.", "Low", "HIGH",
      "The one failure that would break the guarantee rather than inconvenience somebody. SMB client caching can delay both the visibility of a new file and a change to modification time. Three defences: the claim uses create-if-absent, which the server decides rather than the client; the heartbeat is re-read rather than remembered; and every save re-checks the claim before writing (step 5 on sheet 05a), so a lost race still stops short of overwriting. Must be tested on your actual share - N5.6b - because share behaviour is a property of the server, not of the application."],
-    [f"{MARK_NEW}R-N16", "A declared name is mistaken for a verified one, and somebody relies on the tool to say who did what.", "Medium", "Medium",
-     "The honest cost of an identity nobody checks. Anyone can type any name, so the tool answers 'who is editing this' and nothing more. Stated in the plan (NR-USR-08) and on the screen where the name is entered, so the limit is visible at the point it could mislead. If a record of who changed what is ever needed, it is a different feature resting on a real identity - Q-N09 is where that would be raised."],
+    [f"{MARK_CHG}R-N16", "A declared name is mistaken for a verified one, and somebody relies on the tool to say who did what.", "Low", "Low",
+     "Much reduced at round 6: Q-N09 confirms there is no internal validation or record-keeping obligation, so nothing formal rests on this identity. It remains stated at NR-USR-08 and on the screen where the name is entered, because the limit should be visible at the point it could mislead - but it is now a courtesy rather than a control."],
+    [f"{MARK_NEW}R-N18", "Company file protection encrypts a workbook or a workspace, and the application cannot read it.", "Medium", "Medium",
+     "Raised from your Q-N04 answer, which is about decrypting a file before it can be imported. Where a document-security product encrypts files on a share, an ordinary application sees bytes it cannot parse. Two requirements follow: NR-IMP-06, so a protected file is reported as protected rather than as corrupt - the failure that would otherwise waste an afternoon - and NR-IMP-07, so the application never adds encryption of its own and never becomes the only thing that can open your data. Protection stays the company's, applied to the folder."],
+    [f"{MARK_NEW}R-N19", "Two bad saves in a row leave nothing good to go back to.", "Low", "Medium",
+     "The direct cost of the Q-N07 answer - one retained version rather than ten. Save a mistake, notice it, save again while fixing it, and the good version has been pushed out of history. Kept as a setting so it can be raised without a code change, and the Excel export remains an independent archive that no save can touch. The user guide will say plainly: export to Excel anything you cannot afford to lose."],
     [f"{MARK_NEW}R-N17", "A plan is stranded for up to 30 minutes after a crash, and somebody needs it now.", "Medium", "Low",
      "The cost of the Q-N16 answer, and much reduced by two things: the message states exactly when the plan becomes free, so nobody is left guessing, and it names the holder so the ordinary remedy is a telephone call. Your own crashed session is reclaimable at once (NR-STO-19), which removes the case that would otherwise be infuriating. The expiry is a setting, so it can be shortened later without a code change."],
     [f"{MARK_NEW}R-N15", "A blocked user takes a Save As copy, works in it, and the plan quietly forks in two.", "Medium", "Medium",
@@ -1087,12 +1123,35 @@ risks = [
 r = table(ws, r, ["ID", "Risk", "Likelihood", "Impact", "Mitigation"],
           risks, [9, 56, 12, 10, 66], wrap_cols=(2, 5), mark_col=1)
 
+r = section(ws, r, "Code signing, in plain terms   [asked at Q-N03]")
+r = lines(ws, r, [
+    "You asked what the purchase actually is. Here it is without the jargon.",
+])
+r += 1
+sign = [
+    ["What it is", "A digital seal applied to the .exe that says which ORGANISATION published it. Windows checks the seal when the file is run."],
+    ["What happens without it", "Windows does not know who made the file, so SmartScreen shows 'Windows protected your PC - unknown publisher' the first time it is run. The user clicks 'More info' then 'Run anyway'. Anti-virus also treats an unknown publisher with more suspicion. This is R-N09."],
+    ["What happens with it", "The warning names your company instead, and usually disappears entirely once the file has been seen a few times. Anti-virus is far less likely to quarantine it."],
+    ["What is bought", "A CODE-SIGNING CERTIFICATE, from a certificate authority - DigiCert, Sectigo, GlobalSign and similar. Roughly USD 200-600 per year for the standard kind; more for the 'extended validation' kind, which removes the warning immediately rather than gradually. Treat these as indicative figures to check, not quotations."],
+    ["Why the COMPANY has to buy it", "The authority verifies the ORGANISATION exists before issuing - company registration documents, a verifiable telephone number, that sort of thing. An individual cannot buy a certificate in the company's name, which is the whole point of it."],
+    ["What else it needs", "Industry rules now require the signing key to live on a hardware token or in a cloud signing service, so somebody has to hold that token and run the signing step when a new version is built."],
+    ["Who would own it", "Whoever owns software distribution or endpoint security - IT or InfoSec. It is a procurement request, not a development task."],
+    ["Is it needed?", "NO - not to make the application work. Your Q-N02 answer is that a zip in your own folder can be extracted and run, so the application is usable unsigned. Signing removes friction and reduces the chance of anti-virus interference; it is a comfort measure, not a prerequisite. It is worth raising only if the SmartScreen prompt or a quarantine turns out to be a real nuisance at N5.7."],
+]
+r = table(ws, r, ["Question", "Answer"], sign, [30, 116], wrap_cols=(2,))
+r = note(ws, r, "So: nothing needs buying now. If it later does, the request to IT is 'a code-signing certificate "
+                "for internally distributed software, and somewhere to keep the token'. Q-N03 stays open only "
+                "in the sense that you may want to ask; nothing in this plan waits for it.")
+r += 1
+
 r = section(ws, r, "Assumptions")
 assum = [
     ["A-N01", "Data volume stays as assumed by the web plan - up to about 100 projects and 1,000 people.", "Inherited, standing"],
     [f"{MARK_CHG}A-N02", "Windows 10 or 11, 64-bit, is the only target. macOS and Linux are out of scope.", "CONFIRMED at review round 1"],
     [f"{MARK_NEW}A-N08", "The application is never installed: it is copied as a folder and run in place, and the machine is unchanged by its presence.", "CONFIRMED at review round 1"],
-    [f"{MARK_NEW}A-N09", "The user can extract a zip and run an executable from their own folder - i.e. no application allow-listing stands in the way.", "To confirm - Q-N02. The one assumption that could invalidate the whole approach"],
+    [f"{MARK_CHG}A-N09", "The user can extract a zip and run an executable from their own folder, and nothing will later block or remove it.", "ASSUMED at Q-N02, not verified. Confirming with IT was impractical; you chose to proceed on the assumption. First tested at N5.7"],
+    [f"{MARK_NEW}A-N11", "No internal validation, qualification or record-keeping obligation applies to this tool.", "CONFIRMED at Q-N09"],
+    [f"{MARK_NEW}A-N12", "The shared folder, if used, is writable by the people using it.", "CONFIRMED at Q-N15"],
     [f"{MARK_NEW}A-N10", "If a shared network folder is used, it is reachable whenever the application is needed. A plan kept only on an unreachable share cannot be opened.", "Standing - the user guide will recommend keeping working copies locally"],
     [f"{MARK_CHG}A-N03", "One person works on a given workspace at a time - but the application no longer RELIES on it, because a shared folder makes it unsafe to assume.", "WITHDRAWN as an assumption at round 2; enforced by NR-STO-10 instead"],
     ["A-N04", "Package size is unconstrained.", "CONFIRMED by your instruction, 2026-08-13"],
@@ -1109,20 +1168,20 @@ ws, r = sheet(wb, "11_Open_Questions", "Questions for review round 1",
 
 qs = [
     [f"{MARK_CHG}Q-N01", "Deployment", "Which operating systems must this run on?", "ANSWERED 2026-08-13: Windows only. Closed - A-N02, NR-DEP-01. macOS and Linux are out of scope.", "Windows. CLOSED"],
-    [f"{MARK_CHG}Q-N02", "Deployment", "Can you extract a zip into your own folder and run the .exe inside it? Specifically: is there application allow-listing, and will anti-virus or SmartScreen let an unsigned executable run after a one-time warning? Worth asking IT rather than assuming.", "STILL THE HIGHEST-VALUE QUESTION, and narrowed by your instruction. Non-installed removes the administrator-rights half of the problem completely - nothing is written to Program Files or the registry. What remains is whether the machine will EXECUTE it. See R-N01 and R-N09.", ""],
-    ["Q-N03", "Deployment", "If signing IS required, is a company code-signing certificate obtainable, and by whom?", "An IT purchase with a lead time, not a development task. Better known now than at Gate N5.", ""],
-    ["Q-N04", "Storage", "Where should workspaces live by default - your user profile, or a shared network drive?", "A network drive raises file-locking and latency questions that are cheap to design for now and expensive later.", ""],
-    ["Q-N05", "Storage", "When you re-import a source workbook over a workspace that already holds your hand-entered data, what should happen? The proposal is to show the differences and let you decide per sheet.", "The one design choice that can silently lose work. See sheet 05.", ""],
+    [f"{MARK_CHG}Q-N02", "Deployment", "Can you extract a zip into your own folder and run the .exe inside it?", "ANSWERED 2026-08-13: yes - a zip saved in your own folder can be extracted and executed. On the rest - whether anything might later block or remove it - checking with IT is impractical at the moment, and you have chosen to proceed assuming no issue. That is recorded as ASSUMED rather than confirmed: assumption A-N09 and risk R-N01 stay OPEN, and N5.7 on a real company PC is the first moment anybody will actually know. The plan proceeds on your decision; it simply does not pretend to more certainty than exists.", "Yes for running it; the rest ASSUMED, not verified. Proceeding"],
+    [f"{MARK_CHG}Q-N03", "Deployment", "Is a company code-signing certificate obtainable, and by whom?", "ROUND 6 asked for this in plainer terms - what is actually bought, and what is a code-signing certificate. Answered in full on sheet 10, 'Code signing, in plain terms'. The short version: it is a digital seal saying which company published the .exe; without it Windows shows an 'unknown publisher' warning once; it costs roughly USD 200-600 a year; only the company can buy it because the authority verifies the organisation; and NOTHING here needs it - the application works unsigned. Raise it only if the warning or an anti-virus quarantine turns out to be a nuisance in practice.", "Explained on sheet 10. Nothing waits on it - raise with IT only if the warning becomes a nuisance"],
+    [f"{MARK_CHG}Q-N04", "Storage", "Where should workspaces live by default?", "ANSWERED 2026-08-13, and the answer is about ENCRYPTION rather than location: 'even in a shared network, there is a certain way to decrypt a file to be imported into the system'. READING TAKEN - a shared network is acceptable, and files there may carry company protection that has to be lifted before the application can read them. Applied as NR-IMP-06 (a protected file is reported as protected, not as corrupt), NR-IMP-07 and decision N-32 (the application adds no encryption of its own). Location itself falls out of Q-N15: the share is writable, so data\\users\\<name>\\ on the share is the default and nobody has to choose. PLEASE CONFIRM this reading - it is the one place in v0.7 where I have interpreted rather than transcribed.", "Answer recorded; the READING of it needs your confirmation"],
+    [f"{MARK_CHG}Q-N05", "Storage", "When you re-import a source workbook over a workspace that already holds your hand-entered data, what should happen?", "ANSWERED 2026-08-13: ask first whether existing data is to be updated at all, then give a DIFFERENCE REPORT so the user decides what the import may override. Confirms the proposal and adds the explicit first question. NR-IMP-02 rewritten accordingly.", "Ask first, then a difference report. CLOSED"],
     [f"{MARK_CHG}Q-N06", "Storage", "Will more than one person ever have the same workspace open at once?", "SUPERSEDED at round 2. Once a shared folder is on the table the safe answer is 'assume yes', and the cost of doing so is one small marker file. Handled by NR-STO-10 and decision N-18 whichever way it turns out. No answer needed.", "Superseded - no longer needs an answer"],
-    ["Q-N07", "Storage", "How many previous versions of a workspace should be retained, and for how long?", "Default proposed: the last 10. Retention costs only disk space.", ""],
-    ["Q-N08", "Deployment", "How will updates reach you - a file you copy, a shared folder, or a software-distribution system?", "Decides whether the package needs to be distribution-system friendly, which affects how it is built.", ""],
-    ["Q-N09", "Governance", "Does this tool fall under any internal validation or record-keeping obligation, given that it will now HOLD data rather than only display it?", "Holding data can change how a tool is treated in a regulated company. Cheaper to know at Step 1 than at release.", ""],
-    ["Q-N10", "Scope", "Should the desktop application be able to open the same source workbook read-only, as the web application does, for a quick look without creating a workspace?", "A small feature, but it decides whether the workspace is mandatory or optional.", ""],
-    [f"{MARK_CHG}Q-N11", "Naming", "What should the application be called on screen? 'PRAP' or something else?", "Cosmetic, but it appears in the folder name, the executable name and the window title. No longer affects a Start-menu entry or a file association, since the non-installed rule removes both.", ""],
+    [f"{MARK_CHG}Q-N07", "Storage", "How many previous versions of a workspace should be retained?", "ANSWERED 2026-08-13: one - the version immediately before the current one. Applied at NR-STO-06 and decision N-30, kept as a setting so it can be raised without a code change. One consequence recorded rather than left implicit: two bad saves in a row leave nothing good to return to (R-N19), so the Excel export remains the archive for anything that matters.", "One previous version. CLOSED"],
+    [f"{MARK_CHG}Q-N08", "Deployment", "How will updates reach you?", "ANSWERED 2026-08-13: both - a copied file and a shared folder. Neither needs anything special of the package beyond what NR-DEP-03 already requires, since an update is an extraction over the application files and never touches data\\.", "Copied file and shared folder. CLOSED"],
+    [f"{MARK_CHG}Q-N09", "Governance", "Does this tool fall under any internal validation or record-keeping obligation, now that it HOLDS data rather than only displaying it?", "ANSWERED 2026-08-13: no. Recorded as assumption A-N11. It settles R-N16 - with nothing formal resting on it, a declared user name is a courtesy rather than a control - and it keeps Step N5 to functional verification rather than qualification evidence.", "No obligation. CLOSED"],
+    [f"{MARK_CHG}Q-N10", "Scope", "Should the application be able to open a source workbook for a quick look, without creating a workspace?", "ANSWERED 2026-08-13: yes. Added as NR-IMP-05. A workspace is therefore optional rather than mandatory - the question 'what does this file say?' can be answered without committing to a plan, which is also how somebody tries the application for the first time.", "Yes. CLOSED"],
+    [f"{MARK_CHG}Q-N11", "Naming", "What should the application be called on screen?", "ANSWERED 2026-08-13: 'Project Management APP', or 'PM_APP'. Applied as NR-APP-08 and decision N-29 - the long form on screen and in the window title, PM_APP as the folder and executable name. The DOCUMENTS keep the PRAP_NewApp_ prefix so this plan stays findable beside the web application's; say if you would rather they were renamed to match.", "Project Management APP / PM_APP. CLOSED"],
     [f"{MARK_CHG}Q-N12", "Deployment", "Where will you keep the application folder?", "ANSWERED 2026-08-13: a shared network folder could be considered. Planned for as though it will be - NR-DEP-09..13, NR-STO-10, decisions N-16..N-18, risks R-N11..R-N13. Sheet 05 sets out how data and locking work in that arrangement.", "Shared network folder possible. CLOSED, with Q-N14 and Q-N15 following from it"],
     [f"{MARK_CHG}Q-N13", "Deployment", "Is it acceptable that double-clicking a .prap file in Explorer will NOT open the application?", "ANSWERED 2026-08-13: not needed, drag-and-drop is fine. Closed. NR-IMP-04 stands as reduced, decision N-15 is unchallenged, and no registry entry will be written for any reason.", "Not needed. CLOSED"],
-    [f"{MARK_NEW}Q-N14", "Deployment", "If the folder goes on a share, is that share where people RUN it from, or where they copy it from once and then run it locally?", "Decides how hard the launch-time problem is. Running from the share means pulling the whole application across the network at every launch (R-N12); copying it once means the share is simply distribution, and everything is fast. The plan supports both; the user guide should recommend the one you actually intend.", ""],
-    [f"{MARK_NEW}Q-N15", "Deployment", "Would that share be writable by the people using it, or read-only?", "If writable, each user's data can sit in a per-user folder on the share and nothing else is needed. If read-only, every user needs their own data folder elsewhere and the shortcut in NR-DEP-12 becomes the normal way to launch, not an extra.", ""],
+    [f"{MARK_CHG}Q-N14", "Deployment", "Is the share where people RUN it from, or where they copy it from once?", "ANSWERED 2026-08-13: both are possible. Applied as NR-DEP-14 - both are supported, both are tested, and neither is second-class. What the user guide gains instead of a recommendation is a measurement: what each costs in launch time (N5.6c), so the choice can be made on figures rather than on advice.", "Both. CLOSED"],
+    [f"{MARK_CHG}Q-N15", "Deployment", "Would the share be writable, or read-only?", "ANSWERED 2026-08-13: writable. This is the simpler outcome - each person gets data\\users\\<name>\\ under the application folder automatically (NR-DEP-15), nobody is asked where to put anything, and the shortcut at NR-DEP-12 becomes a convenience rather than the normal way in. The read-only path (NR-DEP-09) stays built, because a folder can be made read-only later without anybody telling the application.", "Writable. CLOSED"],
     [f"{MARK_CHG}Q-N16", "Sharing", "How long should a silent session hold a plan before others may take it over?", "ANSWERED 2026-08-13: 30 minutes. Applied at NR-STO-14, kept separate from the 30-second heartbeat so the application can still tell a live holder from a dead one throughout (N-23), and softened by NR-STO-19 - your own crashed session is reclaimable at once. It remains a setting rather than a constant.", "30 minutes. CLOSED"],
     [f"{MARK_CHG}Q-N17", "Sharing", "Should the application be able to say who is editing, and let a blocked colleague contact them?", "ANSWERED 2026-08-13: yes - ask for the user's name at launch, show who is editing in the message a blocked user sees, and give enough information to contact them. Applied as a new requirement area NR-USR-01..09, decisions N-25..N-27, and a section on sheet 05a. This is what makes the 30-minute expiry reasonable: the normal remedy becomes asking rather than waiting.", "Yes, with contact details. CLOSED"],
     [f"{MARK_CHG}Q-N18", "User identity", "Which details should the application record beside the name?", "ANSWERED 2026-08-13: the user's department. E-mail and telephone dropped rather than kept as optional. Applied at NR-USR-04, NR-USR-06, NR-USR-07 and decision N-28; NR-USR-10 and NR-USR-11 added so the department comes from the same vocabulary as Person.department rather than being typed afresh.", "Department. CLOSED"],
@@ -1173,6 +1232,17 @@ log = [
 
     ["25", "Q-N18 answer (round 5)", "Record the user's department beside their name.", "Accepted, and e-mail and telephone are dropped rather than kept as optional.", "NR-USR-04 rewritten to name and department only; NR-USR-06 and NR-USR-07 follow; decision N-28. Dropping the optional fields is the point of the answer, not an omission from it - a field nobody fills in makes the message look incomplete when it is merely unused, and in a company a name and a department find anybody.", "Closed"],
     ["26", "-", "Not requester input - noticed while applying item 25.", "The answer fits a column the data model already has.", "Person.department is in the source schema. So the identity's department is offered from the departments already in the open workspace rather than typed afresh (NR-USR-10), and where the declared name matches a person in the plan, their own department is offered first (NR-USR-11). Without this, 'Data Management' and 'DM' would both come into existence because one of them was typed at a login prompt.", "Closed"],
+
+    ["27", "v0.6_reviewed (round 6)", "Q-N02: a zip can be saved in your own folder and executed. Confirming the rest with IT is difficult at the moment - assume no issue.", "Accepted as a decision to proceed, recorded as an assumption rather than a fact.", "A-N09 reworded from 'to confirm' to 'ASSUMED, not verified'; R-N01 stays OPEN with the same wording. The plan proceeds on your call - it simply does not claim more certainty than exists, and N5.7 remains the first moment anybody will know. Everything else in this plan has been demonstrated before it was claimed; this one cannot be, from here.", "Closed"],
+    ["28", "v0.6_reviewed - Q-N03", "Not an answer: 'elaborate the question more easily. What IT purchase is needed? What is the company code-signing certificate?'", "Fair - the question assumed knowledge it should have supplied.", "Sheet 10 gains 'Code signing, in plain terms': what the seal is, what happens with and without it, what is bought and for roughly how much, why only the company can buy it, what else it needs, who would own it, and - the part that matters - that NOTHING here needs it. The application works unsigned; signing removes friction. Q-N03 rewritten in those terms.", "Closed"],
+    ["29", "v0.6_reviewed - Q-N04", "'Even in a shared network, there is a certain way to decrypt a file to be imported into the system.'", "Read as being about file PROTECTION rather than about location - flagged for your confirmation.", "The reading taken: a shared network is acceptable, and files on it may carry company protection that must be lifted before an ordinary application can read them. NR-IMP-06 makes a protected file report itself as protected rather than as corrupt, which is the failure that would otherwise waste an afternoon; NR-IMP-07 and N-32 keep the application from adding encryption of its own, so it never becomes the only thing that can open your data. Risk R-N18. The location question itself is answered by Q-N15 instead. THIS IS THE ONE PLACE IN v0.7 WHERE I HAVE INTERPRETED RATHER THAN TRANSCRIBED - please confirm or correct it.", "Open"],
+    ["30", "v0.6_reviewed - Q-N05", "Ask whether to update existing data, and give a difference report so the user decides what may be overridden.", "Accepted - confirms the v0.3 proposal and adds an explicit first question.", "NR-IMP-02 rewritten: the import asks whether existing data is to be updated at all, then presents a difference report sheet by sheet. The 'ask first' step is the addition - v0.6 went straight to the differences, which presumes the user wanted an update at all.", "Closed"],
+    ["31", "v0.6_reviewed - Q-N07", "Retain only one previous version.", "Accepted, with its consequence recorded rather than left implicit.", "NR-STO-06 changed from ten to one, decision N-30, kept as a setting. R-N19 added: save a mistake, notice it, save again while fixing it, and the good version has been pushed out of history. The Excel export remains an archive no save can touch, and the user guide will say so plainly.", "Closed"],
+    ["32", "v0.6_reviewed - Q-N09", "No internal validation or record-keeping obligation.", "Accepted - and it settles an open risk.", "Assumption A-N11. R-N16 falls from Medium/Medium to Low/Low: with nothing formal resting on it, a declared user name is a courtesy rather than a control. It also keeps Step N5 to functional verification rather than qualification evidence.", "Closed"],
+    ["33", "v0.6_reviewed - Q-N10", "Yes - open a source workbook for a look without creating a workspace.", "Accepted.", "NR-IMP-05. A workspace becomes optional rather than mandatory, which also gives somebody a way to try the application without committing to anything.", "Closed"],
+    ["34", "v0.6_reviewed - Q-N11", "'Project Management APP' or 'PM_APP'.", "Accepted, with one thing to confirm.", "NR-APP-08 and N-29: the long form on screen and in the window title, PM_APP as folder and executable. Sheet 05's layout and NR-DEP-13 updated to match. The DOCUMENTS keep the PRAP_NewApp_ prefix so this plan stays findable beside the web application's - say if you would rather they were renamed too.", "Closed"],
+    ["35", "v0.6_reviewed - Q-N14 and Q-N15", "Both ways of using the share; and the share would be writable.", "Accepted - and the writable answer is the simpler outcome.", "NR-DEP-14: both arrangements first-class, both tested, and the user guide states what each costs in launch time rather than recommending one. NR-DEP-15: on a writable share each person gets data\\users\\<name>\\ automatically, so nobody is asked where to put anything. The read-only path stays built - a folder can be made read-only later without telling the application.", "Closed"],
+    ["36", "-", "Not requester input - the state of the document.", "Every question is answered.", "Eighteen questions across six review rounds, all answered. Two items remain before this becomes the v1.0 baseline: your confirmation of the reading at item 29, and whether you want the documents renamed at item 34. Neither blocks Step N2 planning; both should be settled before Gate N1 is signed.", "Open"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Source", "Input", "Response", "Action taken in v0.1", "Status"],
