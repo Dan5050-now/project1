@@ -20,9 +20,9 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "0.2"
-DOC_STATUS = ("DRAFT - issued for review round 2. Step 1 of 5. Windows-only and non-installed are now "
-              "fixed constraints, not open questions. Nothing is built until Gate N1 is passed.")
+DOC_VERSION = "0.3"
+DOC_STATUS = ("DRAFT - issued for review round 3. Step 1 of 5. Windows-only, non-installed, and shareable "
+              "from a network folder. Nothing is built until Gate N1 is passed.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -163,11 +163,15 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Reviewer", "Requester - round 1 answered 2026-08-13; round 2 pending"),
+    ("Reviewer", "Requester - rounds 1 and 2 answered 2026-08-13; round 3 pending"),
     ("Fixed constraints",
      "WINDOWS ONLY, and NON-INSTALLED. Instructed 2026-08-13. The application is copied as a folder and "
      "run from it - no installer, no administrator rights, no registry, nothing written outside its own "
      "folder. See sheet 04 for what this changes and sheet 10 for what it does not fix."),
+    ("Under consideration",
+     "The application folder MAY sit on a SHARED NETWORK FOLDER (Q-N12, round 2). Planned for as though it "
+     "will: several people running one copy is designed for on sheet 05, and it is what makes workspace "
+     "locking (NR-STO-10) necessary rather than optional."),
     ("Relationship to the web application",
      "PARALLEL, NOT SUCCESSOR. The web application and its documents are complete and stay in "
      "service. This plan does not supersede, amend or retire any of them."),
@@ -212,7 +216,17 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}0.2", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}0.3", DOC_DATE, "Claude Code", "Pending",
+     "REVIEW ROUND 2 APPLIED. Q-N13 closed - no file association is wanted, so NR-IMP-04 stands as reduced "
+     "and decision N-15 is unchallenged. Q-N12 answered 'a shared network folder could be considered', which "
+     "is the larger change: one application folder that several people run means their settings would collide, "
+     "and two of them could edit one plan at once and lose each other's work. Planned for rather than deferred. "
+     "NR-DEP-06 amended to permit the places the USER designates; NR-DEP-09 raised from Should to Must; "
+     "NR-DEP-10..13 and NR-STO-10 added, covering where data goes, per-user separation, the personal shortcut "
+     "that carries it, and workspace locking. Decisions N-16, N-17 and N-18. Risks R-N12 (running from a UNC "
+     "path) and R-N13 (a stale lock) added. Q-N06 is superseded - concurrent use is now designed for whether or "
+     "not it happens. Two new questions, Q-N14 and Q-N15, both about how the share would actually be used."],
+    ["0.2", DOC_DATE, "Claude Code", "Superseded",
      "REVIEW ROUND 1 APPLIED. Two instructions, both narrowing the product: it must run on Windows, and it "
      "must NOT be installed. Q-N01 is closed (Windows 10/11 only; macOS and Linux out of scope). Q-N02 is "
      "narrowed - no installer means no administrator rights are needed at all, so what remains to check with "
@@ -364,6 +378,8 @@ reqs = [
     [f"{MARK_NEW}NR-STO-07", "Storage", "Edits pending at the moment of a crash or power loss are recovered on the next launch, and the user is asked whether to keep or discard them.", "Should", "Data safety", "N4"],
     [f"{MARK_NEW}NR-STO-08", "Storage", "Several workspaces may exist. The user chooses which to open, and may create a new empty one at any time.", "Must", "Scenario planning", "N4"],
     [f"{MARK_NEW}NR-STO-09", "Storage", "A workspace records which source file it was imported from, when, and by which application version.", "Should", "Traceability", "N4"],
+    [f"{MARK_NEW}NR-STO-10", "Storage", "A workspace open for editing is marked as such. A second person opening it is told who holds it and since when, and is given it read-only rather than being allowed to overwrite their work. A mark left behind by a crash can be cleared, with the risk stated.", "Must", "Q-N12 - shared folder", "N4"],
+    [f"{MARK_NEW}NR-STO-11", "Storage", "Read-only is a real working mode, not a refusal: every figure, table and graph is available, and only saving is withheld.", "Must", "Consequence of NR-STO-10", "N4"],
 
     [f"{MARK_CHG}NR-IMP-01", "Import / export", "Import reads the Excel source workbook and prap-source-data JSON exactly as the web application does, using the same reader and reporting the same findings.", "Must", "Replaces nothing - REQ-IMP-01 inherited", "N4"],
     [f"{MARK_CHG}NR-IMP-02", "Import / export", "Importing into a workspace that already holds data presents the differences and lets the user decide, per sheet, whether to replace, merge or skip. It never overwrites silently.", "Must", "New consequence of NR-STO-02", "N4"],
@@ -380,16 +396,20 @@ reqs = [
     [f"{MARK_CHG}NR-DEP-03", "Deployment", "Updating means replacing the application files inside that folder. No workspace, setting or recent-file entry is touched by an update, and a workspace written by an older version opens in a newer one.", "Must", "Data safety", "N5"],
     [f"{MARK_NEW}NR-DEP-04", "Deployment", "A workspace written by a NEWER version than the running one is refused with a clear message rather than partially read.", "Must", "Data safety", "N4"],
     [f"{MARK_NEW}NR-DEP-05", "Deployment", "The application folder is self-contained: it carries its own browser engine and every other dependency, and requires nothing to be present on the machine beyond Windows itself. Package size is not constrained.", "Must", "Your instruction", "N5"],
-    [f"{MARK_NEW}NR-DEP-06", "Deployment", "The application writes NOTHING outside its own folder - no registry key, no file association, no Start-menu entry, no AppData directory, no temporary file left behind after it closes.", "Must", "Non-installed rule", "N5"],
+    [f"{MARK_CHG}NR-DEP-06", "Deployment", "The application writes nothing outside its own folder EXCEPT where the user has explicitly designated somewhere else - a chosen data folder, an exported file, or a shortcut created at their request. No registry key, no file association, no Start-menu entry, no AppData directory, and no hidden state anywhere.", "Must", "Non-installed rule, amended for the shared folder", "N5"],
     [f"{MARK_NEW}NR-DEP-07", "Deployment", "Deleting the folder removes the application completely, leaving no trace on the machine.", "Must", "Non-installed rule", "N5"],
     [f"{MARK_NEW}NR-DEP-08", "Deployment", "The folder can be copied to another Windows PC, or moved to a different path on the same PC, and works unchanged - including its recent-workspaces list where those workspaces travelled with it. No path is recorded absolutely where a relative one would do.", "Must", "Non-installed rule", "N5"],
-    [f"{MARK_NEW}NR-DEP-09", "Deployment", "Where the application folder is read-only - typically on a network share - the application still runs, tells the user plainly that it cannot write beside itself, and keeps its data in a folder the user chooses instead.", "Should", "Consequence of R-N11", "N4"],
+    [f"{MARK_CHG}NR-DEP-09", "Deployment", "Where the application folder is read-only or shared - typically on a network folder - the application still runs, tells the user plainly that it cannot keep data beside itself, and keeps that data in a folder the user chooses instead.", "Must", "Raised from Should at round 2 - Q-N12", "N4"],
+    [f"{MARK_NEW}NR-DEP-10", "Deployment", "Where the application keeps its data is resolved in one fixed, documented order, and the answer is shown in the About dialog so it is never a mystery: a --data command-line argument, then a PRAP_DATA environment variable, then a writable data folder beside the application, and failing all of those the application asks.", "Must", "Q-N12", "N4"],
+    [f"{MARK_NEW}NR-DEP-11", "Deployment", "Where several people run one shared copy, each has their own settings, recent list, backups and default workspace folder. No user can see, overwrite or lock out another through the application.", "Must", "Q-N12", "N4"],
+    [f"{MARK_NEW}NR-DEP-12", "Deployment", "The application can create a personal desktop shortcut, at the user's request, that carries their own --data path. This is how a shared copy is used day to day without being asked anything at launch.", "Should", "Q-N12", "N4"],
+    [f"{MARK_NEW}NR-DEP-13", "Deployment", "The application runs correctly when launched from a UNC path (\\\\server\\share\\PRAP) as well as from a mapped drive letter.", "Must", "Q-N12", "N5"],
 
     [f"{MARK_NEW}NR-SEC-01", "Security", "No telemetry, no crash reporting to any server, no automatic update check, no font or script loaded from a remote host. Verified by observing that the packaged application opens no socket.", "Must", "Offline by requirement", "N5"],
     [f"{MARK_NEW}NR-SEC-02", "Security", "The embedded browser engine runs with remote content disabled and Node integration off in the renderer, so a crafted workspace file cannot execute code.", "Must", "Standard hardening", "N4"],
     [f"{MARK_NEW}NR-SEC-03", "Security", "Workspace files contain business data only - no credentials, no connection strings, nothing that would be sensitive if the file were mailed to a colleague.", "Must", "Data hygiene", "N2"],
 
-    [f"{MARK_NEW}NR-NFR-01", "Performance", "Launch to a usable window in under 5 seconds, and reopening the last workspace adds no more than 2 seconds on the volumes in A-N01.", "Should", "Usability", "N4"],
+    [f"{MARK_CHG}NR-NFR-01", "Performance", "Launch to a usable window in under 5 seconds from a local disk, and reopening the last workspace adds no more than 2 seconds on the volumes in A-N01. Launch from a network folder is measured and stated rather than promised - see R-N12.", "Should", "Usability", "N4"],
     [f"{MARK_NEW}NR-NFR-02", "Performance", "A Save completes in under 1 second at those volumes, so autosave is never felt.", "Should", "Usability", "N4"],
 ]
 r_start = r
@@ -561,6 +581,50 @@ r = note(ws, r, "The one arrangement that must NOT be used is workspaces inside 
                 "Step 1 rather than discovered at Step 4.")
 r += 1
 
+r = section(ws, r, "When the folder is shared   [round 2: Q-N12]")
+r = lines(ws, r, [
+    "One copy on a network folder, several people running it, is a sensible way to distribute a portable",
+    "application - and it breaks the simple layout above in two places. Both are cheap to solve now and",
+    "expensive to solve after somebody has lost an afternoon's work.",
+    "",
+    "    1. SETTINGS COLLIDE.  One data\\settings.json cannot hold two people's window sizes and recent lists.",
+    "    2. TWO WRITERS.       Two people open the same .prap file; the second Save silently discards the first.",
+])
+r += 1
+r = note(ws, r, "Note that problem 2 exists as soon as workspaces are reachable by two people - which a shared "
+                "folder makes likely even if the application itself is copied locally. So it is solved "
+                "unconditionally, not only in the shared case.")
+r += 1
+
+r = section(ws, r, "Where the data folder is - resolved in one fixed order   [NR-DEP-10]")
+res = [
+    ["1", "--data=<path> on the command line", "How a personal shortcut carries it. Explicit, visible, and belongs to the user rather than to the application.", "Always wins"],
+    ["2", "The PRAP_DATA environment variable", "For a site that wants to set it centrally, by login script or group policy.", "If no argument"],
+    ["3", "data\\ beside the application", "The ordinary single-user case, and the reason a copied folder simply works.", "If writable, and not shared"],
+    ["4", "Ask the user, once", "The shared or read-only case. The answer is not written to a hidden file - the application offers to create a desktop shortcut carrying --data, so the choice lives somewhere the user can see, move and delete.", "Last resort"],
+]
+r = table(ws, r, ["Order", "Source", "Why it is there", "Applies"], res, [7, 38, 76, 22], wrap_cols=(3,))
+r = note(ws, r, "There is a chicken-and-egg problem hiding here: if the application cannot write beside itself, "
+                "where does it remember the answer? The usual solution - a file in the user profile - is exactly "
+                "the hidden state the non-installed rule forbids. A shortcut the user owns solves it honestly: "
+                "it is visible, it is theirs, and deleting it undoes the decision. The About dialog always shows "
+                "which of the four rules applied (NR-DEP-10).")
+r += 1
+
+r = section(ws, r, "Two people, one workspace   [NR-STO-10]")
+lock = [
+    ["Opening a workspace writes a small marker beside it: user name, machine name, time.", "It is advisory, not an operating-system lock - a share may not support real locking, and a lock nobody can clear is worse than none."],
+    ["A second person opening it sees who holds it and since when, and gets it read-only.", "Read-only is a full working mode - every figure, table and graph (NR-STO-11). Only saving is withheld. Looking at a plan somebody else is editing is a reasonable thing to want."],
+    ["Closing removes the marker.", "The normal path leaves nothing behind."],
+    ["A marker left by a crash can be cleared, with the consequence spelled out.", "The alternative - a plan nobody can open until IT deletes a file - is worse. The message names the holder and the time so the user can judge."],
+    ["Saving re-checks the marker first.", "Catches the case where somebody cleared it while the file was open. A refused save that explains itself beats a silent overwrite."],
+]
+r = table(ws, r, ["Rule", "Why"], lock, [56, 90], wrap_cols=(1, 2))
+r = note(ws, r, "This is deliberately modest. Real multi-user editing - merging two people's changes to one plan - "
+                "is out of scope and would change the storage format. What is in scope is that nobody's work "
+                "disappears without them being told, which is the failure that actually matters.")
+r += 1
+
 r = section(ws, r, "Writing safely")
 safe = [
     ["1", "Serialise the committed model to JSON in memory.", "Nothing has touched the disk yet."],
@@ -627,7 +691,10 @@ dec = [
     ["N-12", "A workspace from a newer application version is refused, not partially read.", "Reading unknown fields and writing them back out is how data quietly disappears.", "CONFIRM"],
     ["N-13", "Application files and user data are separate folders under one parent, and an update replaces only the application files.", "Portability wants one folder; data safety forbids an update that can delete a plan. This layout gives both. Putting workspaces among the application files would eventually destroy somebody's work.", "CONFIRM"],
     ["N-14", "The package is a plain folder that runs in place, delivered as a zip - not a single self-extracting executable.", "The single .exe unpacks about 180 MB to the temporary folder on every launch: slow to start, writes outside its own folder, and re-scanned by anti-virus each time. It only looks more portable. See sheet 04.", "CONFIRM"],
-    ["N-15", "No registry entry, no file association, no Start-menu entry, no AppData folder - ever.", "'Non-installed' means the machine is unchanged by the application's presence. Each of these would break that, and each is the kind of convenience that gets added without thinking. Stated as a decision so it has to be argued to be undone.", "CONFIRM"],
+    ["N-15", "No registry entry, no file association, no Start-menu entry, no AppData folder - ever.", "'Non-installed' means the machine is unchanged by the application's presence. Each of these would break that, and each is the kind of convenience that gets added without thinking. Stated as a decision so it has to be argued to be undone. CONFIRMED in substance at round 2: Q-N13 says the file association is not wanted.", "CONFIRM"],
+    ["N-16", "Where data lives is resolved in one fixed order, and the chosen location is shown in the About dialog.", "A portable application that guesses where its data went is a support problem. Four rules, always in the same order, always visible. The last of them creates a shortcut the user owns rather than hidden state in their profile.", "CONFIRM"],
+    ["N-17", "Workspace locking is an advisory marker file, not an operating-system lock.", "A network share may not support real locking, and an OS lock left by a crash can need IT to clear it. A marker anyone can read, and the holder's own machine can clear, fails softer - and the failure that matters is silent overwriting, which a marker prevents.", "CONFIRM"],
+    ["N-18", "Concurrent use is designed for unconditionally, not only if the shared folder is adopted.", "Q-N12 says 'could be considered'. The cost of building the marker anyway is one small file; the cost of not building it, and then adopting the share, is somebody's lost afternoon. This also supersedes Q-N06 - it no longer matters what the answer is.", "CONFIRM"],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Decision", "Rationale", "Status"], dec, [8, 62, 74, 14], wrap_cols=(2, 3))
@@ -681,6 +748,8 @@ wbs = [
     ["N4", "N4.2", "Filesystem storage adapter: open, save, atomic write, version history.", "storage/", "Not started"],
     ["N4", "N4.3", "Workspace lifecycle: new, open, save, save as, recent list, reopen last at launch.", "shell/desktop/", "Not started"],
     ["N4", "N4.4", "Journalling and crash recovery.", "storage/", "Not started"],
+    ["N4", "N4.4b", "Data-location resolution, the About dialog that shows it, and the personal shortcut.", "shell/desktop/", "Not started"],
+    ["N4", "N4.4c", "Workspace locking: the marker, the read-only mode, clearing a stale marker, re-checking on save.", "storage/ + ui/", "Not started"],
     ["N4", "N4.5", "Import into an occupied workspace: the difference view and the per-sheet decision.", "ui/", "Not started"],
     ["N4", "N4.6", "Parity suite: identical input through both applications, identical figures, findings and exports.", "tools/test_parity.py", "Not started"],
     ["N4", "N4.7", "Persistence suite: save, close, relaunch, verify; kill mid-write, verify; recover pending edits.", "tools/test_persist.py", "Not started"],
@@ -692,7 +761,9 @@ wbs = [
     ["N5", "N5.3", "Portability suite: run the folder, then copy it to another path and another PC and run it again; verify the recent list and settings survive (NR-DEP-08).", "tools/test_portable.py", "Not started"],
     ["N5", "N5.4", "Cleanliness check: record every file and registry key touched during a full session; verify nothing outside the application folder is written, and that deleting the folder leaves nothing behind (NR-DEP-06, NR-DEP-07).", "Test evidence", "Not started"],
     ["N5", "N5.5", "Update check: extract a newer zip over an existing folder; verify workspaces, backups and settings are untouched (NR-DEP-03).", "Test evidence", "Not started"],
-    ["N5", "N5.6", "Awkward-location tests: a deeply nested path (R-N10) and a read-only network share (R-N11, NR-DEP-09).", "Test evidence", "Not started"],
+    ["N5", "N5.6", "Awkward-location tests: a deeply nested path (R-N10), a read-only network folder (R-N11), and a UNC path (NR-DEP-13).", "Test evidence", "Not started"],
+    ["N5", "N5.6b", "Shared-copy tests: two users running one folder keep separate settings and recent lists; two users opening one workspace - the second gets read-only and neither loses work; a stale marker can be cleared.", "tools/test_shared.py", "Not started"],
+    ["N5", "N5.6c", "Measure launch time from a local disk and from a network folder, and state both in the user guide rather than promising one.", "Test evidence", "Not started"],
     ["N5", "N5.7", "Run on a real company PC - the only place execution policy, SmartScreen and anti-virus can be judged.", "Test evidence", "Pending you"],
     ["N5", "N5.8", "User guide: where to extract it, first launch and the SmartScreen prompt, workspaces, import and export, backup, updating, and what to do if it will not start.", "User guide", "Not started"],
     ["N5", "N5.9", "Full pass over the traceability matrix; version alignment across both product lines.", "Traceability matrix", "Not started"],
@@ -739,6 +810,9 @@ ver = [
     [f"{MARK_NEW}It leaves the machine unchanged", "Record every file and registry key touched during a full session; verify nothing outside the application folder is written and nothing survives deleting it.", "NR-DEP-06, NR-DEP-07", "Automated, at N5.4"],
     [f"{MARK_NEW}It survives being moved", "Copy the folder to another path and another PC; verify it runs and its settings and recent list still work.", "NR-DEP-08", "Automated, at N5.3"],
     [f"{MARK_NEW}An update cannot delete a plan", "Extract a newer zip over an existing folder; verify workspaces, backups and settings are untouched.", "NR-DEP-03", "Automated, at N5.5"],
+    [f"{MARK_NEW}One shared copy serves several people", "Two users run one folder with different --data paths; verify their settings, recent lists and backups never meet.", "NR-DEP-11", "Automated, at N5.6b"],
+    [f"{MARK_NEW}Two people cannot overwrite each other", "Open a workspace as one user, open it again as another; verify the second is told who holds it and gets it read-only, and that neither loses work.", "NR-STO-10", "Automated, at N5.6b"],
+    [f"{MARK_NEW}A crash does not strand a plan", "Kill the application holding a workspace; verify the marker can be cleared from inside the application and the plan opens again.", "R-N13", "Automated, at N5.6b"],
     [f"{MARK_NEW}It is allowed to run at all", "Launch it on a company-managed PC and see whether execution policy, SmartScreen or anti-virus stops it.", "R-N01, R-N09", "ONLY provable by you - see the risk sheet"],
     ["The figures are right", "Inherited: the engine is already proven against the Python reference on all 1,225 person-months of the large dataset and 433 of the 10x10 dataset.", "Inherited", "Already done, and re-run by the parity suite"],
 ]
@@ -806,8 +880,12 @@ risks = [
      "Likely rather than possible - an unsigned executable arriving in a zip carries the mark-of-the-web and is treated as untrusted. Usually a one-time 'More info - Run anyway', which the user guide will show with a screenshot. Being non-installed does not help here and may hurt: unregistered software has no reputation. If anti-virus quarantines it outright, only IT can allow it - Q-N02 covers this. A code-signing certificate would remove the warning, and remains an IT purchase rather than a coding task (Q-N03)."],
     [f"{MARK_NEW}R-N10", "The application fails in a deeply nested folder because Windows path limits are exceeded.", "Medium", "Medium",
      "A packaged browser engine carries long nested paths, and the classic 260-character limit bites when a portable folder is extracted somewhere like a synced Documents tree. Mitigations: keep internal paths short by packing resources into an archive rather than loose files, test extraction into a deliberately deep path at N5.6, and state a recommended location in the user guide."],
-    [f"{MARK_NEW}R-N11", "The application folder is put on a read-only network share, so it cannot write its own data folder.", "Medium", "Medium",
-     "A natural thing to do with a portable folder - one copy, shared with colleagues. NR-DEP-09 handles it: the application detects it at launch, says so plainly, and asks where to keep data instead. Without that it would fail at the first Save, which is the worst possible moment to discover it."],
+    [f"{MARK_CHG}R-N11", "The application folder is put on a read-only or shared network folder, so it cannot keep its data beside itself.", "HIGH", "Medium",
+     "Raised from Medium at round 2 - Q-N12 says this is under consideration, so it is now the expected case rather than an edge one. NR-DEP-09 (now Must) and the resolution order at NR-DEP-10 handle it: detected at launch, stated plainly, and the user chooses. Without that it would fail at the first Save, which is the worst possible moment to discover it."],
+    [f"{MARK_NEW}R-N12", "Launched from a network folder, the application starts slowly, or Windows treats an executable on a UNC path as untrusted.", "Medium", "Medium",
+     "A packaged browser engine is a lot of bytes to pull across a network at every launch, and Windows applies stricter zone rules to executables on network paths than on local ones. Measured rather than promised (NR-NFR-01), and the user guide will recommend the arrangement that is fastest: use the share to DISTRIBUTE the folder, copy it locally once, run it from there. Q-N14 asks which you intend."],
+    [f"{MARK_NEW}R-N13", "A crash leaves a workspace marked as open, and nobody can edit it.", "Medium", "Low",
+     "The direct cost of NR-STO-10. Mitigated by making the marker clearable from inside the application, with the holder and the time shown so the user can judge. Deliberately chosen over an operating-system lock, which would need IT to clear - see decision N-17."],
 ]
 r = table(ws, r, ["ID", "Risk", "Likelihood", "Impact", "Mitigation"],
           risks, [9, 56, 12, 10, 66], wrap_cols=(2, 5), mark_col=1)
@@ -818,7 +896,8 @@ assum = [
     [f"{MARK_CHG}A-N02", "Windows 10 or 11, 64-bit, is the only target. macOS and Linux are out of scope.", "CONFIRMED at review round 1"],
     [f"{MARK_NEW}A-N08", "The application is never installed: it is copied as a folder and run in place, and the machine is unchanged by its presence.", "CONFIRMED at review round 1"],
     [f"{MARK_NEW}A-N09", "The user can extract a zip and run an executable from their own folder - i.e. no application allow-listing stands in the way.", "To confirm - Q-N02. The one assumption that could invalidate the whole approach"],
-    ["A-N03", "One person works on a given workspace at a time.", "Inherited A-06 - to confirm at Q-N06"],
+    [f"{MARK_NEW}A-N10", "If a shared network folder is used, it is reachable whenever the application is needed. A plan kept only on an unreachable share cannot be opened.", "Standing - the user guide will recommend keeping working copies locally"],
+    [f"{MARK_CHG}A-N03", "One person works on a given workspace at a time - but the application no longer RELIES on it, because a shared folder makes it unsafe to assume.", "WITHDRAWN as an assumption at round 2; enforced by NR-STO-10 instead"],
     ["A-N04", "Package size is unconstrained.", "CONFIRMED by your instruction, 2026-08-13"],
     ["A-N05", "Both applications remain in service indefinitely; neither is a migration path away from the other.", "CONFIRMED by your instruction, 2026-08-13"],
     ["A-N06", "The source Excel workbook continues to be maintained by hand, by someone other than the tool.", "Inherited A-04, standing"],
@@ -837,14 +916,16 @@ qs = [
     ["Q-N03", "Deployment", "If signing IS required, is a company code-signing certificate obtainable, and by whom?", "An IT purchase with a lead time, not a development task. Better known now than at Gate N5.", ""],
     ["Q-N04", "Storage", "Where should workspaces live by default - your user profile, or a shared network drive?", "A network drive raises file-locking and latency questions that are cheap to design for now and expensive later.", ""],
     ["Q-N05", "Storage", "When you re-import a source workbook over a workspace that already holds your hand-entered data, what should happen? The proposal is to show the differences and let you decide per sheet.", "The one design choice that can silently lose work. See sheet 05.", ""],
-    ["Q-N06", "Storage", "Will more than one person ever have the same workspace open at once?", "If yes, the format decision N-02 needs revisiting and locking has to be designed. If no, the plan is simpler and stays simpler.", ""],
+    [f"{MARK_CHG}Q-N06", "Storage", "Will more than one person ever have the same workspace open at once?", "SUPERSEDED at round 2. Once a shared folder is on the table the safe answer is 'assume yes', and the cost of doing so is one small marker file. Handled by NR-STO-10 and decision N-18 whichever way it turns out. No answer needed.", "Superseded - no longer needs an answer"],
     ["Q-N07", "Storage", "How many previous versions of a workspace should be retained, and for how long?", "Default proposed: the last 10. Retention costs only disk space.", ""],
     ["Q-N08", "Deployment", "How will updates reach you - a file you copy, a shared folder, or a software-distribution system?", "Decides whether the package needs to be distribution-system friendly, which affects how it is built.", ""],
     ["Q-N09", "Governance", "Does this tool fall under any internal validation or record-keeping obligation, given that it will now HOLD data rather than only display it?", "Holding data can change how a tool is treated in a regulated company. Cheaper to know at Step 1 than at release.", ""],
     ["Q-N10", "Scope", "Should the desktop application be able to open the same source workbook read-only, as the web application does, for a quick look without creating a workspace?", "A small feature, but it decides whether the workspace is mandatory or optional.", ""],
     [f"{MARK_CHG}Q-N11", "Naming", "What should the application be called on screen? 'PRAP' or something else?", "Cosmetic, but it appears in the folder name, the executable name and the window title. No longer affects a Start-menu entry or a file association, since the non-installed rule removes both.", ""],
-    [f"{MARK_NEW}Q-N12", "Deployment", "Where will you keep the application folder - your own Documents or desktop, or a shared network folder that colleagues also run it from?", "A shared read-only folder needs NR-DEP-09, and several people running one copy raises Q-N06 again. If it is simply your own folder, both simplify.", ""],
-    [f"{MARK_NEW}Q-N13", "Deployment", "Is it acceptable that double-clicking a .prap file in Explorer will NOT open the application, and that workspaces are opened from within it or by dragging them onto its window?", "The direct cost of the non-installed rule - a file association needs a registry entry. If it turns out to matter, the alternative is a small optional 'associate files' action the user runs deliberately, which does write to the registry and would need your explicit agreement.", ""],
+    [f"{MARK_CHG}Q-N12", "Deployment", "Where will you keep the application folder?", "ANSWERED 2026-08-13: a shared network folder could be considered. Planned for as though it will be - NR-DEP-09..13, NR-STO-10, decisions N-16..N-18, risks R-N11..R-N13. Sheet 05 sets out how data and locking work in that arrangement.", "Shared network folder possible. CLOSED, with Q-N14 and Q-N15 following from it"],
+    [f"{MARK_CHG}Q-N13", "Deployment", "Is it acceptable that double-clicking a .prap file in Explorer will NOT open the application?", "ANSWERED 2026-08-13: not needed, drag-and-drop is fine. Closed. NR-IMP-04 stands as reduced, decision N-15 is unchallenged, and no registry entry will be written for any reason.", "Not needed. CLOSED"],
+    [f"{MARK_NEW}Q-N14", "Deployment", "If the folder goes on a share, is that share where people RUN it from, or where they copy it from once and then run it locally?", "Decides how hard the launch-time problem is. Running from the share means pulling the whole application across the network at every launch (R-N12); copying it once means the share is simply distribution, and everything is fast. The plan supports both; the user guide should recommend the one you actually intend.", ""],
+    [f"{MARK_NEW}Q-N15", "Deployment", "Would that share be writable by the people using it, or read-only?", "If writable, each user's data can sit in a per-user folder on the share and nothing else is needed. If read-only, every user needs their own data folder elsewhere and the shortcut in NR-DEP-12 becomes the normal way to launch, not an extra.", ""],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Area", "Question", "Why it matters", "Answer"],
@@ -872,6 +953,12 @@ log = [
     ["8", "Instruction 2026-08-13 (round 1)", "It should be a non-installed application.", "Accepted, and it reaches further than one requirement.", "NR-DEP-02 rewritten from 'no administrator rights' to 'no installer at all'; NR-DEP-05..09 added; NR-APP-06 and NR-IMP-04 amended. Decisions N-13 (data folder separate from application files), N-14 (a plain folder, not a self-extracting exe) and N-15 (no registry, ever). Sheet 04 gains the packaging comparison, sheet 05 the folder layout. Three risks added: R-N09 SmartScreen and anti-virus, R-N10 path length, R-N11 read-only share. Six verification tasks added at Step N5.", "Closed"],
     ["9", "-", "Not requester input - found while applying item 8.", "Two consequences worth your explicit agreement.", "First, an update that extracted over the application folder would delete the user's workspaces if they lived among the application files - resolved by decision N-13 before it could ever be built. Second, no file association is possible without a registry entry, so double-clicking a .prap file will not open the application; raised as Q-N13 rather than decided silently.", "Open"],
     ["10", "-", "Not requester input - found while applying item 8.", "Non-installed makes one thing HARDER, not easier.", "An unsigned, unregistered executable has no reputation with SmartScreen or anti-virus, so it is judged more harshly than installed software would be. Recorded as R-N09 with likelihood HIGH, and folded into Q-N02 so you ask IT the right question - about execution, not about installation rights.", "Open"],
+
+    ["11", "Q-N13 answer (round 2)", "File association not needed; drag-and-drop is fine.", "Accepted - closes the question with no change.", "NR-IMP-04 stands as reduced at v0.2, and decision N-15 is now unchallenged: no registry entry will be written for any purpose. The 'optional associate files action' floated at v0.2 is dropped rather than left hanging.", "Closed"],
+    ["12", "Q-N12 answer (round 2)", "A shared network folder could be considered.", "Accepted, and planned for as though it will happen.", "'Could be considered' is enough: the cost of building for it now is one marker file and one resolution rule, and the cost of not building for it and then adopting it is somebody's lost work. NR-DEP-09 raised to Must; NR-DEP-10..13 and NR-STO-10..11 added; decisions N-16..N-18; risks R-N11 raised to HIGH likelihood, R-N12 and R-N13 added; sheet 05 gains two new sections; five verification tasks added at Steps N4 and N5.", "Closed"],
+    ["13", "-", "Not requester input - found while applying item 12.", "A shared folder breaks the v0.2 layout in two places, and one of them silently destroys work.", "First, one settings file cannot serve two people - solved by the data-location resolution order at NR-DEP-10. Second, two people editing one workspace means the second Save discards the first, with nothing said - solved by the advisory marker at NR-STO-10. The second is the serious one: it is the only failure in this plan that loses work without anybody being told, which is why it is a Must and why it is built whether or not the share is adopted (N-18).", "Closed"],
+    ["14", "-", "Not requester input - found while applying item 12.", "Where does a portable application remember its data location, if it cannot write beside itself?", "The usual answer - a file in the user profile - is the hidden state the non-installed rule exists to prevent. Resolved at N-16 by having the application offer to create a desktop shortcut carrying --data: visible, owned by the user, and undone by deleting it. The About dialog always shows which rule applied.", "Closed"],
+    ["15", "Q-N06", "Not requester input - a consequence of item 12.", "The question no longer needs answering.", "Q-N06 asked whether two people would ever open one workspace at once. With concurrent use designed for unconditionally (N-18), the answer changes nothing. Marked superseded rather than left open.", "Closed"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Source", "Input", "Response", "Action taken in v0.1", "Status"],
