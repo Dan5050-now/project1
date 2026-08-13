@@ -357,6 +357,32 @@ if MANIFEST.exists():
             problems.append(f"{entry['path']} has changed since the manifest was built - "
                             f"run python tools/build_ai_reference.py")
 
+# ---- 4h. the desktop plan vs the desktop specification --------------------
+# The second product line gets the same guarantee as the first: a requirement cannot be
+# dropped between the plan and the specification without this saying so.
+NAPP_PLAN = ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.0.xlsx"
+NAPP_SPEC = ROOT / "docs" / "PRAP_NewApp_Specification_v0.1.xlsx"
+if NAPP_PLAN.exists() and NAPP_SPEC.exists():
+    np_ = load_workbook(NAPP_PLAN, data_only=True)["03_Requirements"]
+    ns_ = load_workbook(NAPP_SPEC, data_only=True)["11_Traceability"]
+    nr_plan = {str(np_.cell(r, 1).value).strip() for r in range(5, np_.max_row + 1)
+               if str(np_.cell(r, 1).value or "").startswith("NR-")}
+    nr_spec = {str(ns_.cell(r, 1).value).strip() for r in range(5, ns_.max_row + 1)
+               if str(ns_.cell(r, 1).value or "").startswith("NR-")}
+    unhoused = {str(ns_.cell(r, 1).value).strip() for r in range(5, ns_.max_row + 1)
+                if str(ns_.cell(r, 1).value or "").startswith("NR-")
+                and str(ns_.cell(r, 2).value or "-").strip() in ("-", "None", "")}
+    if nr_plan - nr_spec:
+        problems.append(f"desktop requirements in the plan but not traced in its "
+                        f"specification: {sorted(nr_plan - nr_spec)}")
+    if nr_spec - nr_plan:
+        problems.append(f"desktop requirements traced in the specification but absent "
+                        f"from the plan: {sorted(nr_spec - nr_plan)}")
+    if unhoused:
+        problems.append(f"desktop requirements traced to no sheet: {sorted(unhoused)}")
+    if not (nr_plan - nr_spec) and not unhoused:
+        notes.append(f"desktop line: {len(nr_plan)} requirements, all specified")
+
 # ---- 4g. app/PRAP.html vs the src/ tree it is now built from ---------------
 # Since N2.1 the single file is a build output, not a hand-written one. Editing it
 # directly would work perfectly well until the next build silently discarded the edit,

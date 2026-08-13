@@ -27,7 +27,7 @@ and stays in service — the two are parallel products, not successor and predec
 | Step | Description | State |
 |---|---|---|
 | N1 | Development plan | **v1.0 APPROVED BASELINE** 2026-08-13 · Gate N1 closed |
-| N2 | Programming specification | **In progress** — N2.1 and N2.2 complete: the source is split and the split is proven inert |
+| N2 | Programming specification | **v0.1 issued for review** — Gate N2 awaits you |
 | N3–N5 | Design, build, release | Not started |
 
 Both applications share one calculation engine, one data schema (version 5) and one
@@ -126,6 +126,18 @@ document through the manifest rather than by sorting filenames.
   Two items were resolved by the approval rather than by a seventh round: the reading
   taken of the Q-N04 answer is adopted, and the documents keep the `PRAP_NewApp_` prefix.
   Both remain correctable — say so and they change under a v1.1.
+- `docs/PRAP_NewApp_Specification_v0.1.xlsx` — **issued for review, Gate N2 candidate.**
+  13 sheets: the storage interface and its capability flags, the workspace file format,
+  the desktop shell and its launch sequence, the save protocol and recovery, the write
+  claim with its state table and every message a user will read, user identity, the
+  import difference report, packaging and the folder. All **69 requirements traced**,
+  none unspecified — and the NR-ids are read out of the approved plan when the workbook
+  is generated, so a requirement cannot be dropped between the two documents.
+  Seven open points on sheet 12 need your eye.
+
+  It deliberately does **not** restate the data schema, the validation rules or the
+  calculation. Those are specified once in `PRAP_Programming_Specification_v1.0.xlsx`
+  and both applications are built from the same `src/core/`.
 - `docs/review/PRAP_NewApp_Development_Plan_v0.6_reviewed.xlsx` — your round-6 answers.
 - `docs/PRAP_NewApp_Development_Plan_v0.7.xlsx` … `_v0.1.xlsx` — superseded drafts.
 
