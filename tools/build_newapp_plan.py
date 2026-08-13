@@ -973,7 +973,7 @@ wbs = [
     ["N2", "N2.8", "Traceability matrix: every NR-id to a specification section, read from the plan rather than re-typed.", "Specification sheet 11", "Complete - 69/69 specified"],
     ["N2", "GN2", "GATE N2 CLOSED - specification approved 2026-08-13; all seven open points agreed. Step N3 authorised.", "PRAP_NewApp_Specification_v1.0.xlsx", "Complete"],
 
-    ["N3", "N3.1", "Desktop-specific UI design: eight screens, built as a clickable prototype rather than described.", "app/PM_APP_Prototype_v0.1.html", "Complete - issued for review"],
+    ["N3", "N3.1", "Desktop-specific UI design: eight screens, built as a clickable prototype; then the real application wrapped in the desktop chrome and loaded with the 62-project dummy dataset, so the figures and charts can be reviewed as they will be.", "app/PM_APP_Prototype_v0.2.html", "Complete - issued for review"],
     ["N3", "N3.2", "List every deliberate divergence from the web UI, with its reason (NR-PAR-04).", "Component list sheet 03 - 9 divergences", "Complete - issued for review"],
     ["N3", "N3.3", "Requester reviews the prototype and the component list.", "Review comments", "Pending you"],
     ["N3", "GN3", "GATE N3 - design and component list approved.", "PRAP_NewApp_Component_List_v1.0.xlsx", "Pending you"],

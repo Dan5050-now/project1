@@ -24,12 +24,12 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "0.1"
+DOC_VERSION = "0.2"
 DOC_STATUS = "DRAFT - issued for review. Gate N3 candidate."
 DOC_DATE = "2026-08-13"
 SPEC = "PRAP_NewApp_Specification_v1.0.xlsx"
 PLAN = "PRAP_NewApp_Development_Plan_v1.0.xlsx"
-PROTO = "app/PM_APP_Prototype_v0.1.html"
+PROTO = "app/PM_APP_Prototype_v0.2.html"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Component_List_v{DOC_VERSION}.xlsx"
 
@@ -144,10 +144,15 @@ cover = [
     ("Author", "Claude Code"),
     ("Reviewer", "Requester - review round 1 pending"),
     ("Governed by", f"{SPEC} (Gate N2 closed) and {PLAN} (Gate N1 closed)"),
-    ("Review it against", f"{PROTO} - open it in a browser. Eight screens, static, "
-                          f"nothing works. Every string in it is the one specified, so "
-                          f"marking up the prototype and marking up this workbook are "
-                          f"the same act."),
+    ("Review it against", f"{PROTO} - open it in a browser. It is THE REAL APPLICATION, "
+                          f"pre-loaded with the 62-project dummy dataset: every tab, table, "
+                          f"chart and figure is computed by the engine that will ship, and "
+                          f"every person-month in it has been checked against the Python "
+                          f"reference implementation - 1,225 of them, exact. The desktop "
+                          f"chrome is around it, and the eight new screens open over it from "
+                          f"the button top right. Only those eight are mocked."),
+    ("Also", "app/PM_APP_Prototype_v0.1.html - the same eight screens on their own, if you "
+             "want to read the wording without the application behind it"),
     ("What is being designed", "Only what the browser has no counterpart for. Every tab, "
                                "table, chart, filter and editing behaviour is the web "
                                "application's, unchanged - decision N-11"),
@@ -189,7 +194,21 @@ r = table(ws, r, ["#", "Screen", "Components", "In the prototype"],
           rows, [5, 40, 26, 22], wrap_cols=(2,))
 r = note(ws, r, "Eight screens is the whole of the new interface. Everything else the desktop application "
                 "shows - four tabs, every table, every chart, the provisional-edit model, the filters, the "
-                "change log - is the web application, running in a window instead of a browser.")
+                "change log - is the web application, running in a window instead of a browser. The "
+                "prototype demonstrates that literally: what is behind the eight screens is not a mock-up "
+                "of the application, it IS the application, with 62 projects and 20 people in it.")
+r += 1
+r = section(ws, r, "What the prototype proves, and what it does not")
+r = lines(ws, r, [
+    "PROVES   Every figure, table and chart you see is computed. tools/test_demo.py compares all 1,225",
+    "         person-months against the Python reference implementation on every run - worst difference",
+    "         0.00e+00. If a number looks wrong in the prototype, it is wrong in the product.",
+    "",
+    "DOES NOT PROVE   Anything about the desktop shell. No file is read, no plan is opened, no claim is",
+    "         taken, nothing is saved. The eight screens are pictures with the specified words on them.",
+    "         Those become real at Step N4, and the tests that prove them are listed on sheet 08 of the",
+    "         specification.",
+])
 r += 1
 r = section(ws, r, "Why so few")
 r = lines(ws, r, [

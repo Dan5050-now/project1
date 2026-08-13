@@ -101,10 +101,15 @@ document through the manifest rather than by sorting filenames.
 
 - `docs/PRAP_NewApp_Development_Plan_v1.2.xlsx` — **current.** Records Steps N2 and N3
   progress against the baseline; changes no requirement, decision or risk.
-- `app/PM_APP_Prototype_v0.1.html` — **the Step N3 prototype.** Open it in a browser:
-  eight screens, static, nothing works. Every string in it is the one specified, so
-  marking up the prototype and marking up the component list are the same act.
-- `docs/PRAP_NewApp_Component_List_v0.1.xlsx` — **issued for review, Gate N3 candidate.**
+- `app/PM_APP_Prototype_v0.2.html` — **the Step N3 prototype.** Open it in a browser.
+  It is *the real application* pre-loaded with the 62-project dummy dataset: every tab,
+  table, chart and figure is computed by the engine that will ship, with the desktop
+  chrome around it and the eight new screens over the top. `tools/test_demo.py` compares
+  all **1,225 person-months against the Python reference on every run — worst difference
+  0.00e+00**, so if a number looks wrong there it is wrong in the product.
+- `app/PM_APP_Prototype_v0.1.html` — the same eight screens on their own, for reading the
+  wording without the application behind it.
+- `docs/PRAP_NewApp_Component_List_v0.2.xlsx` — **issued for review, Gate N3 candidate.**
   20 components, the 9-entry divergence register `NR-PAR-04` requires, all 18
   user-visible strings in one place, and 5 open points.
 - `docs/PRAP_NewApp_Development_Plan_v1.0.xlsx` — **THE APPROVED BASELINE** (2026-08-13),
