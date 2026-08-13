@@ -20,10 +20,10 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "0.4"
-DOC_STATUS = ("DRAFT - issued for review round 4. Step 1 of 5. Windows-only, non-installed, shareable from a "
-              "network folder, and single-writer: one editor at a time, everyone else reading. Nothing is "
-              "built until Gate N1 is passed.")
+DOC_VERSION = "0.5"
+DOC_STATUS = ("DRAFT - issued for review round 5. Step 1 of 5. Windows-only, non-installed, shareable from a "
+              "network folder, single-writer, and with users who identify themselves so a blocked colleague "
+              "knows who to ask. Nothing is built until Gate N1 is passed.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -164,7 +164,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Reviewer", "Requester - rounds 1 to 3 answered 2026-08-13; round 4 pending"),
+    ("Reviewer", "Requester - rounds 1 to 4 answered 2026-08-13; round 5 pending"),
     ("Sharing model",
      "SINGLE WRITER, MANY READERS. Instructed 2026-08-13: while one person is editing a plan, no other "
      "session may update it. Everyone may open and read it at any time. The claim is made at the first "
@@ -221,7 +221,17 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}0.4", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}0.5", DOC_DATE, "Claude Code", "Pending",
+     "REVIEW ROUND 4 APPLIED. Q-N16 answered - a silent session holds a plan for 30 MINUTES, not the 90 "
+     "seconds proposed. Q-N17 answered, and it is what makes 30 minutes coherent: users identify themselves "
+     "at launch, and a blocked colleague is shown who is editing and how to reach them, so the ordinary "
+     "remedy is a telephone call rather than taking the plan away. New requirement area NR-USR-01..08 and a "
+     "new section on sheet 05a. The expiry is separated from the heartbeat, which stays short, so the "
+     "application always knows whether a holder is alive even while it waits out the 30 minutes - and a user "
+     "may reclaim THEIR OWN crashed session at once, which removes the one genuinely infuriating case. "
+     "Decisions N-23..N-27. Risks R-N16 (a typed name is not proof of identity) and R-N17 (a stranded plan). "
+     "One question, Q-N18."],
+    ["0.4", DOC_DATE, "Claude Code", "Superseded",
      "REVIEW ROUND 3 APPLIED. The sharing model is settled as SINGLE WRITER, MANY READERS on your "
      "instruction: while someone is editing, no other session may update. One change of substance against "
      "v0.3 - the claim is made at the FIRST EDIT rather than at open, which lets everybody read a plan "
@@ -395,9 +405,10 @@ reqs = [
     [f"{MARK_NEW}NR-STO-09", "Storage", "A workspace records which source file it was imported from, when, and by which application version.", "Should", "Traceability", "N4"],
     [f"{MARK_CHG}NR-STO-10", "Storage", "While one session is editing a workspace, no other session may update it. The claim is made when the FIRST EDIT is attempted - not when the workspace is opened - so that reading is never blocked.", "Must", "Your instruction, round 3", "N4"],
     [f"{MARK_CHG}NR-STO-11", "Storage", "Reading is a full working mode, not a refusal: every figure, table, graph, filter and export is available to a session that does not hold the claim. Only writing to that workspace is withheld.", "Must", "Consequence of NR-STO-10", "N4"],
-    [f"{MARK_NEW}NR-STO-12", "Storage", "A session refused the claim is told WHO holds it, on which machine, and since when - never merely that the file is locked.", "Must", "Consequence of NR-STO-10", "N4"],
+    [f"{MARK_CHG}NR-STO-12", "Storage", "A session refused the claim is shown a message naming who holds it, how to reach them, since when, whether their session is still responding, and when the plan becomes free - never merely that the file is locked.", "Must", "Q-N17", "N4"],
     [f"{MARK_NEW}NR-STO-13", "Storage", "The claim is made by an operation that cannot be won by two sessions at once, even when they attempt it in the same instant and even across a network share.", "Must", "Correctness", "N4"],
-    [f"{MARK_NEW}NR-STO-14", "Storage", "A holding session refreshes its claim while it lives. A claim left by a session that has died is detectable as such, and may be taken over without anybody deleting a file by hand.", "Must", "Consequence of NR-STO-10", "N4"],
+    [f"{MARK_CHG}NR-STO-14", "Storage", "A holding session refreshes its claim every 30 seconds while it lives, so the application always knows whether the holder is alive. A claim that has stopped being refreshed expires after 30 MINUTES, after which anybody may take it over.", "Must", "Q-N16", "N4"],
+    [f"{MARK_NEW}NR-STO-19", "Storage", "A user may reclaim a stalled claim held by their OWN name on their OWN machine immediately, without waiting out the expiry. Being locked out of your own plan because your application crashed is not a rule worth enforcing.", "Must", "Consequence of the 30-minute expiry", "N4"],
     [f"{MARK_NEW}NR-STO-15", "Storage", "The claim ends when the holder saves and closes, discards their edits, or closes the application - and a session waiting to edit is offered it without having to reopen the workspace.", "Must", "Usability", "N4"],
     [f"{MARK_NEW}NR-STO-16", "Storage", "A reading session notices when the workspace has changed on disk beneath it, says so, and offers to reload. It never presents figures it knows to be superseded as though they were current.", "Must", "Consequence of many readers", "N4"],
     [f"{MARK_NEW}NR-STO-17", "Storage", "A session that cannot claim the workspace may still Save As a copy of its own, and may still export. Being unable to edit a shared plan never means being unable to work.", "Must", "Usability", "N4"],
@@ -407,6 +418,16 @@ reqs = [
     [f"{MARK_CHG}NR-IMP-02", "Import / export", "Importing into a workspace that already holds data presents the differences and lets the user decide, per sheet, whether to replace, merge or skip. It never overwrites silently.", "Must", "New consequence of NR-STO-02", "N4"],
     [f"{MARK_CHG}NR-IMP-03", "Import / export", "Export to Excel and to JSON produces byte-for-byte the same content the web application would produce from the same data.", "Must", "Parity", "N4"],
     [f"{MARK_CHG}NR-IMP-04", "Import / export", "A workspace can be opened by dragging it onto the running application's window. Double-clicking a workspace file in Explorer does NOT open it, because a file association would require a registry entry that NR-DEP-06 forbids.", "Could", "Reduced by the non-installed rule", "N4"],
+
+    [f"{MARK_NEW}NR-USR-01", "User identity", "The application asks who the user is when it starts, before any workspace is opened, and carries that identity for the session.", "Must", "Q-N17", "N4"],
+    [f"{MARK_NEW}NR-USR-02", "User identity", "It asks in full only the first time. Afterwards it shows what it remembers, pre-filled, for the user to confirm with one click - and offers 'not me' for a shared PC.", "Must", "Q-N17, usability", "N4"],
+    [f"{MARK_NEW}NR-USR-03", "User identity", "The name is pre-filled from the Windows account name the first time, so the common case is confirming rather than typing. It stays editable - a Windows account name is often not how colleagues know each other.", "Should", "Q-N17", "N4"],
+    [f"{MARK_NEW}NR-USR-04", "User identity", "Alongside the name the user may record how to be reached - team, e-mail, telephone. These are optional; the name is not.", "Must", "Q-N17 - contact", "N4"],
+    [f"{MARK_NEW}NR-USR-05", "User identity", "A claim carries the holder's name and contact details, so the message a blocked colleague sees can be acted on rather than merely read. Those details are removed with the claim.", "Must", "Q-N17 - contact", "N4"],
+    [f"{MARK_NEW}NR-USR-06", "User identity", "The blocked message offers to copy the holder's contact details, so reaching them takes one action rather than a search through a directory.", "Should", "Q-N17 - contact", "N4"],
+    [f"{MARK_NEW}NR-USR-07", "User identity", "A workspace records who last saved it and when, shown when it is opened. On a shared plan, knowing whose figures these are matters as much as knowing when they were made.", "Should", "Follows from having identities", "N4"],
+    [f"{MARK_NEW}NR-USR-08", "User identity", "This identity is DECLARED, not verified. The application states as much where it is entered, and nothing in it is treated as proof of who acted.", "Must", "Honesty about what it is", "N2"],
+    [f"{MARK_NEW}NR-USR-09", "User identity", "Identity is held per user in their own data folder, never in the shared application folder, so two people on one copy do not overwrite each other's details.", "Must", "NR-DEP-11", "N4"],
 
     [f"{MARK_NEW}NR-PAR-01", "Parity", "The calculation engine, the validation rules and the period derivation are ONE implementation shared by both applications, not two copies kept in step by hand.", "Must", "Your instruction to keep both", "N2"],
     [f"{MARK_NEW}NR-PAR-02", "Parity", "Given identical input, both applications produce identical figures, identical findings and identical exports. This is proven by an automated test, not asserted.", "Must", "Derived from NR-PAR-01", "N4"],
@@ -728,10 +749,60 @@ mech = [
     ["1", "Create a claim file beside the workspace, using an operation that FAILS if the file already exists.", "Not read-then-write: two sessions can both read 'no claim' and both then write one. Create-if-absent is decided by the filesystem, one winner, no race - and it works over SMB (NR-STO-13)."],
     ["2", "The file records user name, machine name, process, the application version, and the time.", "So a refusal can name a person rather than saying 'locked' (NR-STO-12). 'Kim is editing this, since 09:14, on PC-4471' is actionable; 'file in use' is not."],
     ["3", "While the session holds the claim it rewrites the time inside it, every 30 seconds.", "A heartbeat. It is how a live holder is told apart from a dead one, without asking the user to guess (NR-STO-14)."],
-    ["4", "A claim whose heartbeat has not moved for three intervals is presumed dead and may be taken over.", "Recovers from a crash, a power cut or a dropped network with nobody deleting a file by hand. The taking-over session says whose claim it is displacing."],
+    ["4", "A claim whose heartbeat has not moved for 30 MINUTES expires and may be taken over.", "Your answer at Q-N16. Note that the heartbeat interval and the expiry are two different numbers - see the section below, which is where the value of keeping them apart shows."],
     ["5", "Saving re-reads the claim first, and refuses if it is no longer this session's.", "The last defence. If anything above went wrong - a clock, a takeover, a share that lied - the save stops instead of overwriting somebody's work."],
 ]
 r = table(ws, r, ["Step", "Mechanism", "Why this way"], mech, [7, 62, 76], wrap_cols=(2, 3))
+r += 1
+
+r = section(ws, r, "Thirty minutes, and a thirty-second heartbeat   [round 4: Q-N16]")
+r = lines(ws, r, [
+    "The heartbeat interval and the expiry answer two different questions, and keeping them apart is what",
+    "makes a long expiry comfortable rather than opaque:",
+    "",
+    "    HEARTBEAT, 30 seconds    'Is the holder still alive?'      Known within half a minute.",
+    "    EXPIRY, 30 minutes       'May somebody else take it now?'  Your answer at Q-N16.",
+    "",
+    "So the application always knows the holder has gone quiet, long before anyone may act on it - and can",
+    "say so, instead of showing the same message for a colleague who is mid-sentence and one whose laptop",
+    "died twenty minutes ago:",
+], mono=True)
+r += 1
+hb = [
+    ["Holder active - heartbeat within the last 30 seconds", "\"Kim Min-jun is editing this plan (active now).\"", "Wait, or telephone them. The plan is genuinely in use."],
+    ["Holder silent - heartbeat older than 30 seconds", "\"Kim Min-jun's session has not responded since 09:14. The plan becomes free at 09:44.\"", "The colleague can decide: wait 20 minutes, or call and ask. Both are informed choices."],
+    ["Expired - heartbeat older than 30 minutes", "\"Kim Min-jun's session stopped responding at 09:14. You may take over.\"", "Take it over. The displacing session records whose claim it took."],
+    [f"{MARK_NEW}Your own stalled claim, same name and machine", "\"This plan is held by your own earlier session. Take it back?\"", "Immediately, without waiting (NR-STO-19)."],
+]
+r = table(ws, r, ["Situation", "What the colleague is told", "What they can do"], hb, [42, 62, 42], wrap_cols=(2, 3), mark_col=1)
+r = note(ws, r, "Thirty minutes is a long time to be locked out by a crash, and the last row is why it does not "
+                "bite in the case that would annoy most: your own application falling over and then refusing to "
+                "let you back into your own plan. Recovering your own session needs no waiting period at all.")
+r += 1
+
+r = section(ws, r, "Who is editing   [round 4: Q-N17]")
+r = lines(ws, r, [
+    "A thirty-minute expiry is only reasonable if the normal remedy is not waiting but ASKING. That is what",
+    "your Q-N17 answer supplies: the application knows who people are, so a refusal can name someone and say",
+    "how to reach them. The two answers work as a pair - neither is as good alone.",
+])
+r += 1
+ident = [
+    ["At launch, before any plan opens", "The application asks who you are. The first time it pre-fills your Windows account name and asks for the rest; afterwards it shows what it remembers and you confirm with one click. 'Not me' switches user, which matters on a shared PC.", "NR-USR-01..03"],
+    ["What is recorded", "Name, and optionally team, e-mail and telephone. Only the name is required.", "NR-USR-04"],
+    ["Where it is kept", "In the user's own data folder - never in the shared application folder, where two people would overwrite each other.", "NR-USR-09"],
+    ["What the claim carries", "The holder's name and contact details, so the message can be acted on. Removed when the claim ends.", "NR-USR-05"],
+    ["What a blocked colleague sees", "A message naming the holder, showing their team, e-mail and telephone, when they started, whether their session is still responding, and when the plan becomes free - with a button to copy the contact details.", "NR-STO-12, NR-USR-06"],
+    ["What else it improves", "A workspace records who last saved it and when, shown on opening. On a shared plan, whose figures these are matters as much as when they were made.", "NR-USR-07"],
+]
+r = table(ws, r, ["Aspect", "Behaviour", "Requirement"], ident, [34, 96, 16], wrap_cols=(2,))
+r += 1
+r = note(ws, r, "One thing must be said plainly, in the plan and on the screen where the name is typed: this "
+                "identity is DECLARED, not verified. Anyone may type any name. It exists to answer 'who is "
+                "editing this, and how do I reach them' - a question between colleagues - and it answers that "
+                "well. It is not a login, it controls no access, and nothing in it should ever be relied on as "
+                "evidence of who did what (NR-USR-08, R-N16). If an audit trail is ever needed, this is not one, "
+                "and Q-N09 is where that would be settled.")
 r += 1
 
 r = section(ws, r, "How a claim ends   [NR-STO-15]")
@@ -787,6 +858,11 @@ dec = [
     ["N-20", "The claim covers the whole workspace, not a row or a section.", "Part-locking implies merging two people's edits, which the storage format cannot express and which is a different product. The requirement given - block other sessions from updating while somebody edits - is met in full by a whole-workspace claim.", "CONFIRM"],
     ["N-21", "The claim is a file created by an operation that fails if it already exists, kept alive by a heartbeat.", "Read-then-write loses races; two sessions can both see 'free'. Create-if-absent has one winner, decided by the filesystem, and works over SMB. The heartbeat is what tells a live holder from a crashed one without asking a user to guess.", "CONFIRM"],
     ["N-22", "Saving keeps the claim; only closing or discarding releases it.", "Releasing on save would hand the plan to somebody else in the middle of a working session, which is exactly when it must not move.", "CONFIRM"],
+    ["N-23", "The heartbeat interval (30 seconds) and the expiry (30 minutes) are separate numbers.", "They answer different questions - is the holder alive, and may somebody else take over. Keeping them apart lets the application distinguish a colleague who is mid-sentence from one whose laptop died, and say which, instead of showing the same message for both.", "CONFIRM"],
+    ["N-24", "A user may reclaim their own stalled claim immediately, without waiting out the expiry.", "Thirty minutes locked out of somebody else's plan is a policy; thirty minutes locked out of your OWN plan because your application crashed is just an obstruction. Same name and same machine is enough evidence for this purpose.", "CONFIRM"],
+    ["N-25", "Identity is declared by the user, not authenticated.", "There is no directory to check against in an offline, non-installed application, and building one would be a different product. A typed name answers 'who is editing this' completely, which is the question actually being asked. It answers no other question, and the plan says so rather than letting it be assumed (NR-USR-08).", "CONFIRM"],
+    ["N-26", "The name is pre-filled from the Windows account but stays editable.", "Free accuracy for the common case without a login system, and editable because a Windows account name is often not how colleagues know each other.", "CONFIRM"],
+    ["N-27", "Contact details travel inside the claim, and are removed with it.", "A message that names somebody but not how to reach them leaves the colleague exactly as stuck. Nothing personal outlives the claim it was written for.", "CONFIRM"],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Decision", "Rationale", "Status"], dec, [8, 62, 74, 14], wrap_cols=(2, 3))
@@ -843,6 +919,7 @@ wbs = [
     ["N4", "N4.4b", "Data-location resolution, the About dialog that shows it, and the personal shortcut.", "shell/desktop/", "Not started"],
     ["N4", "N4.4c", "The write claim: create-if-absent, the heartbeat, expiry and takeover, and the re-check before every save.", "storage/", "Not started"],
     ["N4", "N4.4d", "The four session states on screen: who holds the plan, the refusal that names them, the offer when it frees, and the staleness notice with its reload.", "ui/", "Not started"],
+    ["N4", "N4.4e", "User identity: the launch prompt, remembering and confirming it, switching user, contact details, and the blocked message that carries them.", "shell/desktop/ + ui/", "Not started"],
     ["N4", "N4.5", "Import into an occupied workspace: the difference view and the per-sheet decision.", "ui/", "Not started"],
     ["N4", "N4.6", "Parity suite: identical input through both applications, identical figures, findings and exports.", "tools/test_parity.py", "Not started"],
     ["N4", "N4.7", "Persistence suite: save, close, relaunch, verify; kill mid-write, verify; recover pending edits.", "tools/test_persist.py", "Not started"],
@@ -906,7 +983,9 @@ ver = [
     [f"{MARK_NEW}One shared copy serves several people", "Two users run one folder with different --data paths; verify their settings, recent lists and backups never meet.", "NR-DEP-11", "Automated, at N5.6b"],
     [f"{MARK_CHG}Only one session can write", "Two sessions attempt the first edit together, many times over; verify exactly one is granted it and the other is told who holds it. Then verify a save is refused if the claim was displaced beneath it.", "NR-STO-10, NR-STO-13", "Automated, at N5.6b"],
     [f"{MARK_NEW}Reading is never blocked", "With one session editing, verify another can open, filter, chart and export the same workspace.", "NR-STO-11, NR-STO-17", "Automated, at N5.6b"],
-    [f"{MARK_CHG}A crash does not strand a plan", "Kill the holding session; verify its claim expires on the heartbeat and another session can take it over, naming whose claim it displaced.", "NR-STO-14, R-N13", "Automated, at N5.6b"],
+    [f"{MARK_CHG}A crash does not strand a plan", "Kill the holding session; verify the heartbeat stops within 30 seconds and is reported as silent, that the claim expires at 30 minutes and can then be taken over naming whose it was, and that the SAME user on the SAME machine can reclaim it at once.", "NR-STO-14, NR-STO-19, R-N13", "Automated, at N5.6b"],
+    [f"{MARK_NEW}A blocked colleague can act", "Block a session and verify the message names the holder, shows their contact details, says whether they are still responding and when the plan frees, and copies those details on request.", "NR-STO-12, NR-USR-05, NR-USR-06", "Automated, at N5.6b"],
+    [f"{MARK_NEW}Identities do not collide", "Two users on one shared copy; verify each keeps their own name and contact details and neither sees the other's.", "NR-USR-09", "Automated, at N5.6b"],
     [f"{MARK_NEW}Nobody reads superseded figures unknowingly", "Save from one session; verify the other notices, says so, and offers the reload rather than continuing to show the old numbers.", "NR-STO-16", "Automated, at N5.6b"],
     [f"{MARK_NEW}The share itself behaves", "Repeat the claim, heartbeat and staleness tests against the real network share, not a local folder.", "R-N14", "ONLY provable on your share, at N5.6b"],
     [f"{MARK_NEW}It is allowed to run at all", "Launch it on a company-managed PC and see whether execution policy, SmartScreen or anti-virus stops it.", "R-N01, R-N09", "ONLY provable by you - see the risk sheet"],
@@ -984,6 +1063,10 @@ risks = [
      "The direct cost of NR-STO-10, and largely removed at round 3: the heartbeat in NR-STO-14 means a dead session's claim expires by itself after three missed intervals, rather than needing anybody to delete a file. What remains is a wait of a minute or two, and the displacing session says whose claim it took."],
     [f"{MARK_NEW}R-N14", "A network share's caching defeats the claim or the staleness check, so two sessions both believe they hold the plan.", "Low", "HIGH",
      "The one failure that would break the guarantee rather than inconvenience somebody. SMB client caching can delay both the visibility of a new file and a change to modification time. Three defences: the claim uses create-if-absent, which the server decides rather than the client; the heartbeat is re-read rather than remembered; and every save re-checks the claim before writing (step 5 on sheet 05a), so a lost race still stops short of overwriting. Must be tested on your actual share - N5.6b - because share behaviour is a property of the server, not of the application."],
+    [f"{MARK_NEW}R-N16", "A declared name is mistaken for a verified one, and somebody relies on the tool to say who did what.", "Medium", "Medium",
+     "The honest cost of an identity nobody checks. Anyone can type any name, so the tool answers 'who is editing this' and nothing more. Stated in the plan (NR-USR-08) and on the screen where the name is entered, so the limit is visible at the point it could mislead. If a record of who changed what is ever needed, it is a different feature resting on a real identity - Q-N09 is where that would be raised."],
+    [f"{MARK_NEW}R-N17", "A plan is stranded for up to 30 minutes after a crash, and somebody needs it now.", "Medium", "Low",
+     "The cost of the Q-N16 answer, and much reduced by two things: the message states exactly when the plan becomes free, so nobody is left guessing, and it names the holder so the ordinary remedy is a telephone call. Your own crashed session is reclaimable at once (NR-STO-19), which removes the case that would otherwise be infuriating. The expiry is a setting, so it can be shortened later without a code change."],
     [f"{MARK_NEW}R-N15", "A blocked user takes a Save As copy, works in it, and the plan quietly forks in two.", "Medium", "Medium",
      "The cost of NR-STO-17, and worth accepting: the alternative is telling somebody they cannot work at all. Mitigated by the copy carrying its own name and its own import history (NR-STO-09), and by the user guide saying plainly what a copy is for - a scenario of your own, not a second master. A fork somebody chose is a better outcome than an edit somebody lost."],
 ]
@@ -1026,8 +1109,9 @@ qs = [
     [f"{MARK_CHG}Q-N13", "Deployment", "Is it acceptable that double-clicking a .prap file in Explorer will NOT open the application?", "ANSWERED 2026-08-13: not needed, drag-and-drop is fine. Closed. NR-IMP-04 stands as reduced, decision N-15 is unchallenged, and no registry entry will be written for any reason.", "Not needed. CLOSED"],
     [f"{MARK_NEW}Q-N14", "Deployment", "If the folder goes on a share, is that share where people RUN it from, or where they copy it from once and then run it locally?", "Decides how hard the launch-time problem is. Running from the share means pulling the whole application across the network at every launch (R-N12); copying it once means the share is simply distribution, and everything is fast. The plan supports both; the user guide should recommend the one you actually intend.", ""],
     [f"{MARK_NEW}Q-N15", "Deployment", "Would that share be writable by the people using it, or read-only?", "If writable, each user's data can sit in a per-user folder on the share and nothing else is needed. If read-only, every user needs their own data folder elsewhere and the shortcut in NR-DEP-12 becomes the normal way to launch, not an extra.", ""],
-    [f"{MARK_NEW}Q-N16", "Sharing", "How long should a silent session hold a plan before others may take it over? The proposal is 90 seconds - three missed 30-second heartbeats.", "Too short and a slow network momentarily strands a working editor; too long and a crashed session blocks the team for a coffee break. 90 seconds is a starting point, not a conviction, and it is a setting rather than a constant.", ""],
-    [f"{MARK_NEW}Q-N17", "Sharing", "When someone is blocked, should the application be able to tell the holder that another person is waiting?", "It is a small addition - a line in the claim file the holder's window reads - and it turns 'I cannot edit this' into 'they know I am waiting'. Left out of v0.4 because it is the first feature that treats the tool as a messaging channel, and that is your call rather than mine.", ""],
+    [f"{MARK_CHG}Q-N16", "Sharing", "How long should a silent session hold a plan before others may take it over?", "ANSWERED 2026-08-13: 30 minutes. Applied at NR-STO-14, kept separate from the 30-second heartbeat so the application can still tell a live holder from a dead one throughout (N-23), and softened by NR-STO-19 - your own crashed session is reclaimable at once. It remains a setting rather than a constant.", "30 minutes. CLOSED"],
+    [f"{MARK_CHG}Q-N17", "Sharing", "Should the application be able to say who is editing, and let a blocked colleague contact them?", "ANSWERED 2026-08-13: yes - ask for the user's name at launch, show who is editing in the message a blocked user sees, and give enough information to contact them. Applied as a new requirement area NR-USR-01..09, decisions N-25..N-27, and a section on sheet 05a. This is what makes the 30-minute expiry reasonable: the normal remedy becomes asking rather than waiting.", "Yes, with contact details. CLOSED"],
+    [f"{MARK_NEW}Q-N18", "User identity", "Which details should the application record beside the name - team, e-mail, telephone, or others such as an extension or an office? All are optional; only the name is required.", "The proposal is team, e-mail and telephone. Worth a moment because these are the fields a blocked colleague sees, and a field nobody fills in is worse than no field at all - it makes the message look incomplete when it is merely unused.", ""],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Area", "Question", "Why it matters", "Answer"],
@@ -1066,6 +1150,12 @@ log = [
     ["17", "-", "Not requester input - noticed while applying item 16.", "The instruction fits the application's existing edit model exactly.", "'Snapshot before the first pending edit' becomes 'claim before the first pending edit', and Save and Leave-without-change - which already commit and revert - become the two ways a claim is released. Nothing in the edit model changes, which is the strongest sign the rule is the right shape.", "Closed"],
     ["18", "-", "Not requester input - a gap in v0.3 that item 16 makes plain.", "Blocking writers is not enough on its own: a READER can be misled just as badly.", "Somebody who opened a plan at 09:00 was still shown 09:00's figures after two saves by somebody else, with nothing to say so, and could quote them in good faith. NR-STO-16 added: a reading session notices the file changed beneath it and offers the reload rather than presenting figures it knows to be superseded.", "Closed"],
     ["19", "-", "Not requester input - raised while applying item 16.", "One failure mode belongs to the network, not to the application.", "SMB client caching can delay both the appearance of a new file and a change to a modification time, which could in principle let two sessions both believe they hold a plan. Three defences are built in - a claim the server decides rather than the client, a heartbeat re-read rather than remembered, and a re-check before every save - but the behaviour belongs to your file server. Recorded as R-N14 and marked on sheet 08 as provable only on your own share.", "Open"],
+
+    ["20", "Q-N16 answer (round 4)", "A silent session may hold a plan for 30 minutes.", "Accepted - twenty times the 90 seconds proposed, and coherent with the Q-N17 answer.", "NR-STO-14 set to 30 minutes. The heartbeat stays at 30 seconds and becomes a separate number (N-23), so the application still knows within half a minute whether a holder is alive, and can say 'active now' or 'silent since 09:14, free at 09:44' rather than one message for both. Kept as a setting, not a constant.", "Closed"],
+    ["21", "Q-N17 answer (round 4)", "Ask for the user's name at log-in; show who is editing in the pop-up; let others contact that person from what the pop-up shows.", "Accepted, and it is what makes item 20 work.", "New requirement area NR-USR-01..09; decisions N-25 (declared, not authenticated), N-26 (pre-filled from the Windows account, editable) and N-27 (contact details travel in the claim and are removed with it); a section on sheet 05a; three verification rows. NR-STO-12 rewritten so the message names the holder, shows how to reach them, and says when the plan frees.", "Closed"],
+    ["22", "-", "Not requester input - noticed while applying items 20 and 21.", "The two answers are stronger together than separately.", "A 30-minute expiry alone would be a long wait with no recourse. Naming the holder turns the normal remedy from waiting into asking, which is what makes the long expiry reasonable rather than obstructive. Recorded on sheet 05a so the reasoning is not lost if either is revisited on its own.", "Closed"],
+    ["23", "-", "Not requester input - found while applying item 20.", "Thirty minutes has one genuinely infuriating case.", "Your own application crashes, you restart it, and you cannot edit your own plan for half an hour. NR-STO-19 and decision N-24 let a user reclaim a stalled claim held by their own name on their own machine at once. Everybody else waits.", "Closed"],
+    ["24", "-", "Not requester input - raised while applying item 21.", "What a typed name is, and is not.", "It answers 'who is editing this, and how do I reach them' completely. It is not a login, it verifies nothing, and anyone can type any name. Stated at NR-USR-08, on the screen where the name is entered, and as risk R-N16 - because the danger is not the feature but somebody later relying on it as a record of who did what. If that is ever needed, Q-N09 is where it belongs.", "Open"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Source", "Input", "Response", "Action taken in v0.1", "Status"],
