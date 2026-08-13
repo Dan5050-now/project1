@@ -27,8 +27,9 @@ and stays in service — the two are parallel products, not successor and predec
 | Step | Description | State |
 |---|---|---|
 | N1 | Development plan | **v1.0 APPROVED BASELINE** 2026-08-13 · Gate N1 closed |
-| N2 | Programming specification | **v0.1 issued for review** — Gate N2 awaits you |
-| N3–N5 | Design, build, release | Not started |
+| N2 | Programming specification | **v1.0 APPROVED** 2026-08-13 · Gate N2 closed |
+| N3 | Desktop UI design | Authorised — not started |
+| N4–N5 | Build, release | Not started |
 
 Both applications share one calculation engine, one data schema (version 5) and one
 JSON interchange format, so they cannot disagree about a number. Nothing in that plan
@@ -98,6 +99,8 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
+- `docs/PRAP_NewApp_Development_Plan_v1.1.xlsx` — **current.** Records Step N2 progress
+  against the baseline; changes no requirement, decision or risk.
 - `docs/PRAP_NewApp_Development_Plan_v1.0.xlsx` — **THE APPROVED BASELINE** (2026-08-13),
   closing Gate N1 and authorising Step N2. The application is **Project Management APP**
   (`PM_APP`). 14 sheets: 69 requirements
@@ -126,19 +129,20 @@ document through the manifest rather than by sorting filenames.
   Two items were resolved by the approval rather than by a seventh round: the reading
   taken of the Q-N04 answer is adopted, and the documents keep the `PRAP_NewApp_` prefix.
   Both remain correctable — say so and they change under a v1.1.
-- `docs/PRAP_NewApp_Specification_v0.1.xlsx` — **issued for review, Gate N2 candidate.**
+- `docs/PRAP_NewApp_Specification_v1.0.xlsx` — **APPROVED** 2026-08-13, closing Gate N2
+  and authorising Step N3. All seven open points agreed with no change requested.
   13 sheets: the storage interface and its capability flags, the workspace file format,
   the desktop shell and its launch sequence, the save protocol and recovery, the write
   claim with its state table and every message a user will read, user identity, the
   import difference report, packaging and the folder. All **69 requirements traced**,
   none unspecified — and the NR-ids are read out of the approved plan when the workbook
   is generated, so a requirement cannot be dropped between the two documents.
-  Seven open points on sheet 12 need your eye.
 
   It deliberately does **not** restate the data schema, the validation rules or the
   calculation. Those are specified once in `PRAP_Programming_Specification_v1.0.xlsx`
   and both applications are built from the same `src/core/`.
-- `docs/review/PRAP_NewApp_Development_Plan_v0.6_reviewed.xlsx` — your round-6 answers.
+- `docs/review/` — your mark-ups, archived as received: the plan at v0.6 and the
+  specification at v0.1.
 - `docs/PRAP_NewApp_Development_Plan_v0.7.xlsx` … `_v0.1.xlsx` — superseded drafts.
 
 ### Web application (first product line)

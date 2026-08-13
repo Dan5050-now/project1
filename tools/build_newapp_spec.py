@@ -13,7 +13,7 @@ second description able to disagree with the first.
 
     python tools/build_newapp_spec.py
 
-Output: docs/PRAP_NewApp_Specification_v0.1.xlsx
+Output: docs/PRAP_NewApp_Specification_v1.0.xlsx
 """
 
 from pathlib import Path
@@ -22,8 +22,8 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "0.1"
-DOC_STATUS = "DRAFT - issued for review. Gate N2 candidate."
+DOC_VERSION = "1.0"
+DOC_STATUS = "APPROVED - 2026-08-13. Gate N2 closed; this governs Steps N3 to N5."
 DOC_DATE = "2026-08-13"
 PLAN = "PRAP_NewApp_Development_Plan_v1.0.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
@@ -126,6 +126,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
+    ("Reviewer", "Requester - one round; all seven open points agreed, no change requested"),
     ("Governed by", f"{PLAN} - the approved baseline, Gate N1 closed 2026-08-13"),
     ("Specifies", "The desktop shell, the storage layer, the workspace file, sharing between "
                   "people, user identity, import, and packaging"),
@@ -166,7 +167,12 @@ r = lines(ws, r, [
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
-          [["0.1", DOC_DATE, "Claude Code", "Pending",
+          [["1.0", DOC_DATE, "Claude Code", "APPROVED",
+            "BASELINE. All seven open points on sheet 12 agreed at review with no change requested, "
+            "so v1.0 is v0.1 with the answers recorded. S-N03 confirmed explicitly as accept-per-SHEET. "
+            "Gate N2 is closed and this specification governs Steps N3 to N5; changing it now costs a "
+            "version and a re-approval."],
+           ["0.1", DOC_DATE, "Claude Code", "Superseded",
             "First issue. Covers WBS tasks N2.3 to N2.8: the storage interface, the workspace file "
             "format, the desktop shell, persistence and recovery, the write claim and user identity, "
             "import, deployment, and the traceability matrix. 69 requirements traced."]],
@@ -685,21 +691,37 @@ ws, r = sheet(wb, "12_Open_Points", "Open points for the Gate N2 review",
               "Things the plan left to the specification, decided here and needing your eye.")
 
 pts = [
-    ["S-N01", "07_Sharing", "The staleness check polls stat() every 10 seconds.", "Cheap on a local disk, one small network round-trip on a share. Longer means somebody reads superseded figures for longer; shorter buys little. Proposed: 10 s, as a setting.", ""],
-    ["S-N02", "06_Persistence", "Restoring a previous version arrives as a PENDING EDIT rather than overwriting.", "It makes a mistaken restore free and puts a deliberate one through the same door as every other change. The alternative - restore writes immediately - is what most applications do, and is worse here.", ""],
-    ["S-N03", "09_Import", "Accept or skip is per SHEET, not per row.", "A row-level choice across a thousand rows is a choice nobody makes. If you want per-row for the small sheets - Project, Person - say so; it is a bigger dialog, not a bigger design.", ""],
-    ["S-N04", "09_Import", "An accepted sheet ADDS and CHANGES but never DELETES.", "So 'only here' rows - the ones somebody typed by hand - always survive an import. Removing them stays a separate, explicit action. Confirm this is what you want: it means a row deleted from the source workbook stays in the plan.", ""],
-    ["S-N05", "05_Shell", "Identity is established BEFORE the last workspace reopens.", "Because opening may need a claim, and a claim needs a name. It costs one dialog between the icon and the plan, every launch - one click after the first run.", ""],
-    ["S-N06", "10_Deployment", "The per-user data folder is keyed on the WINDOWS ACCOUNT name, not the declared name.", "The declared name is editable and could collide; the account name is unique on the machine and stable. The declared name is what colleagues see; the account name is what files are filed under.", ""],
-    ["S-N07", "07_Sharing", "A blocked session that later gets the claim keeps whatever it was looking at.", "Rather than reloading and losing the user's place. It reloads only if the plan changed while they waited - which is the STALE path, and says so.", ""],
+    ["S-N01", "07_Sharing", "The staleness check polls stat() every 10 seconds.", "Cheap on a local disk, one small network round-trip on a share. Longer means somebody reads superseded figures for longer; shorter buys little. Proposed: 10 s, as a setting.", "AGREED"],
+    ["S-N02", "06_Persistence", "Restoring a previous version arrives as a PENDING EDIT rather than overwriting.", "It makes a mistaken restore free and puts a deliberate one through the same door as every other change. The alternative - restore writes immediately - is what most applications do, and is worse here.", "AGREED"],
+    ["S-N03", "09_Import", "Accept or skip is per SHEET, not per row.", "A row-level choice across a thousand rows is a choice nobody makes. If you want per-row for the small sheets - Project, Person - say so; it is a bigger dialog, not a bigger design.", "AGREED - accept per SHEET, confirmed explicitly"],
+    ["S-N04", "09_Import", "An accepted sheet ADDS and CHANGES but never DELETES.", "So 'only here' rows - the ones somebody typed by hand - always survive an import. Removing them stays a separate, explicit action. Confirm this is what you want: it means a row deleted from the source workbook stays in the plan.", "AGREED"],
+    ["S-N05", "05_Shell", "Identity is established BEFORE the last workspace reopens.", "Because opening may need a claim, and a claim needs a name. It costs one dialog between the icon and the plan, every launch - one click after the first run.", "AGREED"],
+    ["S-N06", "10_Deployment", "The per-user data folder is keyed on the WINDOWS ACCOUNT name, not the declared name.", "The declared name is editable and could collide; the account name is unique on the machine and stable. The declared name is what colleagues see; the account name is what files are filed under.", "AGREED"],
+    ["S-N07", "07_Sharing", "A blocked session that later gets the claim keeps whatever it was looking at.", "Rather than reloading and losing the user's place. It reloads only if the plan changed while they waited - which is the STALE path, and says so.", "AGREED"],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Sheet", "Point", "Reasoning", "Your answer"],
           pts, [8, 20, 46, 62, 34], wrap_cols=(3, 4, 5))
 for rr in range(r_start + 1, r_start + 1 + len(pts)):
-    ws.cell(row=rr, column=5).fill = INPUT_FILL
-r = note(ws, r, "None of these blocks Step N3. S-N04 is the one worth a moment: it decides whether a row "
-                "deleted from the source workbook disappears from your plan or stays in it.")
+    ws.cell(row=rr, column=5).fill = NEW_FILL
+r = note(ws, r, "All seven were agreed at review with no change requested, so v1.0 is v0.1 with the answers "
+                "recorded. S-N04 is the one that will be felt in daily use, and the agreement is deliberate: "
+                "a row deleted from the source workbook STAYS in the plan until somebody removes it, because "
+                "the alternative silently destroys hand-entered work.")
+r += 1
+
+r = section(ws, r, "Approval - Gate N2")
+appr = [["PRAP NewApp Specification v1.0", "Dan", "2026-08-13",
+         "APPROVED - BASELINE. Reviewed as v0.1; all seven open points agreed with no change requested. "
+         "Gate N2 is closed and Step N3 - the desktop UI design and the divergence list - is authorised. "
+         "This specification governs Steps N3 to N5: changing it now costs a version and a re-approval, "
+         "not a re-opened gate."]]
+r_start2 = r
+r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [32, 14, 14, 88], wrap_cols=(4,))
+for cc in (1, 2, 3, 4):
+    ws.cell(row=r_start2 + 1, column=cc).fill = NEW_FILL
+r = note(ws, r, "STEP N2 IS COMPLETE. The 69 requirements on sheet 11 now have a specified home each, and "
+                "Step N3 designs the screens that sheets 05 to 09 describe.")
 
 wb.save(OUT)
 print(f"Written: {OUT}")

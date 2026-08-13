@@ -20,9 +20,10 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.0"
-DOC_STATUS = ("APPROVED BASELINE. Gate N1 closed by direction on 2026-08-13; Step N2 is authorised and "
-              "open. Decisions N-01..N-32 are confirmed by that approval.")
+DOC_VERSION = "1.1"
+DOC_STATUS = ("Baseline v1.0 + Step N2 progress. Gates N1 and N2 are both closed; Step N3 is authorised. "
+              "v1.0 remains the approved baseline - this issue records progress against it, and changes no "
+              "requirement, decision or risk.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -164,7 +165,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Reviewer", "Requester - six review rounds, all 18 questions answered"),
-    ("Baseline", "v1.0, approved by direction 2026-08-13. Gate N1 closed"),
+    ("Baseline", "v1.0, approved by direction 2026-08-13. Gate N1 closed; unchanged by this issue"),
     ("Application name",
      "'Project Management APP' on screen; PM_APP as the folder and executable name (Q-N11). The documents "
      "keep the PRAP_NewApp_ prefix so this line stays findable beside the web application's - say if you "
@@ -188,7 +189,7 @@ cover = [
     ("Does NOT govern", f"{WEB_APP}, which remains under {WEB_PLAN}"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
-    ("Supersedes", "v0.7 and every earlier draft in this line. This is the baseline for Steps N2-N5"),
+    ("Supersedes", "Nothing. v1.0 remains the baseline; this issue records progress against it"),
 ]
 r = 4
 for k, v in cover:
@@ -225,7 +226,16 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.0", DOC_DATE, "Claude Code", "APPROVED",
+    [f"{MARK_NEW}1.1", DOC_DATE, "Claude Code", "-",
+     "STEP N2 COMPLETE - a progress record, not a change. v1.0 remains the approved baseline and no "
+     "requirement, decision, risk or assumption is altered. N2.1 split the source into core / ui / storage / "
+     "shell with tools/build_app.py reassembling it; N2.2 proved the split inert - the rebuilt app/PRAP.html "
+     "is BYTE-IDENTICAL to the file the thirteen suites verified, and all thirteen pass against it "
+     "unmodified. N2.3 to N2.8 produced PRAP_NewApp_Specification_v1.0.xlsx, approved at Gate N2 with all "
+     "seven of its open points agreed. Sheet 07 carries the statuses; sheet 04 and sheet 08 record what the "
+     "refactor turned out to cost, which was less than this plan assumed: storage/ in the web shell is two "
+     "functions and 63 lines."],
+    ["1.0", DOC_DATE, "Claude Code", "APPROVED",
      "BASELINE. Gate N1 closed by direction on 2026-08-13 - 'go to next step' - with no change to the "
      "content of v0.7. Decisions N-01..N-32 are confirmed by the approval itself rather than by a seventh "
      "review round, exactly as decisions C-06..C-11 of the web application plan were at its Gate 1. Two "
@@ -955,9 +965,9 @@ wbs = [
     ["N2", "N2.6", "Specify the re-import difference report, the look-without-a-workspace path, and protected files.", "Specification sheet 09", "Complete - issued for review"],
     ["N2", "N2.7", "Specify packaging, deployment, the folder layout, data resolution and update.", "Specification sheet 10", "Complete - issued for review"],
     ["N2", "N2.8", "Traceability matrix: every NR-id to a specification section, read from the plan rather than re-typed.", "Specification sheet 11", "Complete - 69/69 specified"],
-    ["N2", "GN2", "GATE N2 - programming specification approved.", "PRAP_NewApp_Specification_v1.0.xlsx", "Pending you"],
+    ["N2", "GN2", "GATE N2 CLOSED - specification approved 2026-08-13; all seven open points agreed. Step N3 authorised.", "PRAP_NewApp_Specification_v1.0.xlsx", "Complete"],
 
-    ["N3", "N3.1", "Desktop-specific UI design: menu structure, dialogs, the workspace-open screen, the recovery prompt, the difference view.", "Component list draft", "Not started"],
+    ["N3", "N3.1", "Desktop-specific UI design: menu structure, dialogs, the workspace-open screen, the recovery prompt, the difference view, the claim messages.", "Component list draft", "Authorised - not started"],
     ["N3", "N3.2", "List every deliberate divergence from the web UI, with its reason (NR-PAR-04).", "Divergence list", "Not started"],
     ["N3", "N3.3", "Requester reviews the design.", "Review comments", "Not started"],
     ["N3", "GN3", "GATE N3 - design and component list approved.", "PRAP_NewApp_Component_List_v1.0.xlsx", "Not started"],
