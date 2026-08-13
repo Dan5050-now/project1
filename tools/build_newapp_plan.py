@@ -20,7 +20,7 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "0.5"
+DOC_VERSION = "0.6"
 DOC_STATUS = ("DRAFT - issued for review round 5. Step 1 of 5. Windows-only, non-installed, shareable from a "
               "network folder, single-writer, and with users who identify themselves so a blocked colleague "
               "knows who to ask. Nothing is built until Gate N1 is passed.")
@@ -164,7 +164,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Reviewer", "Requester - rounds 1 to 4 answered 2026-08-13; round 5 pending"),
+    ("Reviewer", "Requester - rounds 1 to 5 answered 2026-08-13; round 6 pending"),
     ("Sharing model",
      "SINGLE WRITER, MANY READERS. Instructed 2026-08-13: while one person is editing a plan, no other "
      "session may update it. Everyone may open and read it at any time. The claim is made at the first "
@@ -221,7 +221,16 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}0.5", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}0.6", DOC_DATE, "Claude Code", "Pending",
+     "REVIEW ROUND 5 APPLIED. Q-N18 closed - the identity is NAME and DEPARTMENT, and nothing else. "
+     "E-mail and telephone are dropped rather than left as optional fields nobody fills in. This turns out "
+     "to fit the data model already in place: Person.department exists in the source schema, so an identity "
+     "and a person record now use one vocabulary rather than two. NR-USR-04 rewritten; NR-USR-06 rewritten "
+     "so the message shows name and department and copies them for a directory lookup; NR-USR-10 and "
+     "NR-USR-11 added - the department is offered from the departments already in the open workspace, and "
+     "where the declared name matches a person in the plan their department is offered first. Decision "
+     "N-28. No new questions."],
+    ["0.5", DOC_DATE, "Claude Code", "Superseded",
      "REVIEW ROUND 4 APPLIED. Q-N16 answered - a silent session holds a plan for 30 MINUTES, not the 90 "
      "seconds proposed. Q-N17 answered, and it is what makes 30 minutes coherent: users identify themselves "
      "at launch, and a blocked colleague is shown who is editing and how to reach them, so the ordinary "
@@ -422,12 +431,14 @@ reqs = [
     [f"{MARK_NEW}NR-USR-01", "User identity", "The application asks who the user is when it starts, before any workspace is opened, and carries that identity for the session.", "Must", "Q-N17", "N4"],
     [f"{MARK_NEW}NR-USR-02", "User identity", "It asks in full only the first time. Afterwards it shows what it remembers, pre-filled, for the user to confirm with one click - and offers 'not me' for a shared PC.", "Must", "Q-N17, usability", "N4"],
     [f"{MARK_NEW}NR-USR-03", "User identity", "The name is pre-filled from the Windows account name the first time, so the common case is confirming rather than typing. It stays editable - a Windows account name is often not how colleagues know each other.", "Should", "Q-N17", "N4"],
-    [f"{MARK_NEW}NR-USR-04", "User identity", "Alongside the name the user may record how to be reached - team, e-mail, telephone. These are optional; the name is not.", "Must", "Q-N17 - contact", "N4"],
+    [f"{MARK_CHG}NR-USR-04", "User identity", "An identity is a name and a DEPARTMENT. Both are recorded; no e-mail, telephone or other field is collected. A name and a department are what a colleague needs to find somebody in the company directory.", "Must", "Q-N18", "N4"],
     [f"{MARK_NEW}NR-USR-05", "User identity", "A claim carries the holder's name and contact details, so the message a blocked colleague sees can be acted on rather than merely read. Those details are removed with the claim.", "Must", "Q-N17 - contact", "N4"],
-    [f"{MARK_NEW}NR-USR-06", "User identity", "The blocked message offers to copy the holder's contact details, so reaching them takes one action rather than a search through a directory.", "Should", "Q-N17 - contact", "N4"],
-    [f"{MARK_NEW}NR-USR-07", "User identity", "A workspace records who last saved it and when, shown when it is opened. On a shared plan, knowing whose figures these are matters as much as knowing when they were made.", "Should", "Follows from having identities", "N4"],
+    [f"{MARK_CHG}NR-USR-06", "User identity", "The blocked message shows the holder's name and department together, and offers to copy them, so a colleague can look them up or ask their department without writing anything down.", "Should", "Q-N18", "N4"],
+    [f"{MARK_CHG}NR-USR-07", "User identity", "A workspace records who last saved it - name and department - and when, shown when it is opened. On a shared plan, knowing whose figures these are matters as much as knowing when they were made.", "Should", "Follows from having identities", "N4"],
     [f"{MARK_NEW}NR-USR-08", "User identity", "This identity is DECLARED, not verified. The application states as much where it is entered, and nothing in it is treated as proof of who acted.", "Must", "Honesty about what it is", "N2"],
     [f"{MARK_NEW}NR-USR-09", "User identity", "Identity is held per user in their own data folder, never in the shared application folder, so two people on one copy do not overwrite each other's details.", "Must", "NR-DEP-11", "N4"],
+    [f"{MARK_NEW}NR-USR-10", "User identity", "The department is offered from the departments already present in the open workspace's Person records, and typed freely only where none matches. One vocabulary, not two - 'Data Management' and 'DM' should not both exist because one was typed at a login prompt.", "Should", "Q-N18, Person.department", "N4"],
+    [f"{MARK_NEW}NR-USR-11", "User identity", "Where the declared name matches a person in the open workspace, that person's department is offered first. The user is usually one of the people in the plan, so their own record is the best answer available.", "Could", "Q-N18", "N4"],
 
     [f"{MARK_NEW}NR-PAR-01", "Parity", "The calculation engine, the validation rules and the period derivation are ONE implementation shared by both applications, not two copies kept in step by hand.", "Must", "Your instruction to keep both", "N2"],
     [f"{MARK_NEW}NR-PAR-02", "Parity", "Given identical input, both applications produce identical figures, identical findings and identical exports. This is proven by an automated test, not asserted.", "Must", "Derived from NR-PAR-01", "N4"],
@@ -789,10 +800,11 @@ r = lines(ws, r, [
 r += 1
 ident = [
     ["At launch, before any plan opens", "The application asks who you are. The first time it pre-fills your Windows account name and asks for the rest; afterwards it shows what it remembers and you confirm with one click. 'Not me' switches user, which matters on a shared PC.", "NR-USR-01..03"],
-    ["What is recorded", "Name, and optionally team, e-mail and telephone. Only the name is required.", "NR-USR-04"],
+    ["What is recorded", "A name and a DEPARTMENT. Nothing else - no e-mail, no telephone. A name and a department are what a colleague needs to find somebody in the company directory, and they are two fields people will actually fill in.", "NR-USR-04"],
+    ["Where the department comes from", "The departments already present in the open workspace's Person records, typed freely only where none matches. Person.department is in the source schema already, so an identity and a person record speak one vocabulary. Where the declared name matches a person in the plan, their own department is offered first.", "NR-USR-10, NR-USR-11"],
     ["Where it is kept", "In the user's own data folder - never in the shared application folder, where two people would overwrite each other.", "NR-USR-09"],
     ["What the claim carries", "The holder's name and contact details, so the message can be acted on. Removed when the claim ends.", "NR-USR-05"],
-    ["What a blocked colleague sees", "A message naming the holder, showing their team, e-mail and telephone, when they started, whether their session is still responding, and when the plan becomes free - with a button to copy the contact details.", "NR-STO-12, NR-USR-06"],
+    ["What a blocked colleague sees", "A message naming the holder and their department, when they started, whether their session is still responding, and when the plan becomes free - with a button to copy the name and department. For example: \"Kim Min-jun (Data Management) has been editing this plan since 09:14, active now.\"", "NR-STO-12, NR-USR-06"],
     ["What else it improves", "A workspace records who last saved it and when, shown on opening. On a shared plan, whose figures these are matters as much as when they were made.", "NR-USR-07"],
 ]
 r = table(ws, r, ["Aspect", "Behaviour", "Requirement"], ident, [34, 96, 16], wrap_cols=(2,))
@@ -862,7 +874,8 @@ dec = [
     ["N-24", "A user may reclaim their own stalled claim immediately, without waiting out the expiry.", "Thirty minutes locked out of somebody else's plan is a policy; thirty minutes locked out of your OWN plan because your application crashed is just an obstruction. Same name and same machine is enough evidence for this purpose.", "CONFIRM"],
     ["N-25", "Identity is declared by the user, not authenticated.", "There is no directory to check against in an offline, non-installed application, and building one would be a different product. A typed name answers 'who is editing this' completely, which is the question actually being asked. It answers no other question, and the plan says so rather than letting it be assumed (NR-USR-08).", "CONFIRM"],
     ["N-26", "The name is pre-filled from the Windows account but stays editable.", "Free accuracy for the common case without a login system, and editable because a Windows account name is often not how colleagues know each other.", "CONFIRM"],
-    ["N-27", "Contact details travel inside the claim, and are removed with it.", "A message that names somebody but not how to reach them leaves the colleague exactly as stuck. Nothing personal outlives the claim it was written for.", "CONFIRM"],
+    ["N-27", "The holder's name and department travel inside the claim, and are removed with it.", "A message that names somebody but not where to find them leaves the colleague exactly as stuck. Nothing personal outlives the claim it was written for.", "CONFIRM"],
+    ["N-28", "An identity is a name and a department, and nothing else.", "Your answer at Q-N18. E-mail and telephone are dropped rather than kept as optional fields: a field nobody fills in makes the message look incomplete when it is merely unused, and in a company a name and a department are enough to find anybody. It also matches Person.department, which the source schema already has, so identities and person records share one vocabulary instead of inventing a second.", "CONFIRM"],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Decision", "Rationale", "Status"], dec, [8, 62, 74, 14], wrap_cols=(2, 3))
@@ -984,7 +997,8 @@ ver = [
     [f"{MARK_CHG}Only one session can write", "Two sessions attempt the first edit together, many times over; verify exactly one is granted it and the other is told who holds it. Then verify a save is refused if the claim was displaced beneath it.", "NR-STO-10, NR-STO-13", "Automated, at N5.6b"],
     [f"{MARK_NEW}Reading is never blocked", "With one session editing, verify another can open, filter, chart and export the same workspace.", "NR-STO-11, NR-STO-17", "Automated, at N5.6b"],
     [f"{MARK_CHG}A crash does not strand a plan", "Kill the holding session; verify the heartbeat stops within 30 seconds and is reported as silent, that the claim expires at 30 minutes and can then be taken over naming whose it was, and that the SAME user on the SAME machine can reclaim it at once.", "NR-STO-14, NR-STO-19, R-N13", "Automated, at N5.6b"],
-    [f"{MARK_NEW}A blocked colleague can act", "Block a session and verify the message names the holder, shows their contact details, says whether they are still responding and when the plan frees, and copies those details on request.", "NR-STO-12, NR-USR-05, NR-USR-06", "Automated, at N5.6b"],
+    [f"{MARK_CHG}A blocked colleague can act", "Block a session and verify the message names the holder and their department, says whether they are still responding and when the plan frees, and copies name and department on request.", "NR-STO-12, NR-USR-05, NR-USR-06", "Automated, at N5.6b"],
+    [f"{MARK_NEW}One vocabulary for departments", "Declare an identity against a workspace whose people carry departments; verify those departments are offered rather than typed, and that a name matching a person offers that person's department first.", "NR-USR-10, NR-USR-11", "Automated, at N5.6b"],
     [f"{MARK_NEW}Identities do not collide", "Two users on one shared copy; verify each keeps their own name and contact details and neither sees the other's.", "NR-USR-09", "Automated, at N5.6b"],
     [f"{MARK_NEW}Nobody reads superseded figures unknowingly", "Save from one session; verify the other notices, says so, and offers the reload rather than continuing to show the old numbers.", "NR-STO-16", "Automated, at N5.6b"],
     [f"{MARK_NEW}The share itself behaves", "Repeat the claim, heartbeat and staleness tests against the real network share, not a local folder.", "R-N14", "ONLY provable on your share, at N5.6b"],
@@ -1111,7 +1125,7 @@ qs = [
     [f"{MARK_NEW}Q-N15", "Deployment", "Would that share be writable by the people using it, or read-only?", "If writable, each user's data can sit in a per-user folder on the share and nothing else is needed. If read-only, every user needs their own data folder elsewhere and the shortcut in NR-DEP-12 becomes the normal way to launch, not an extra.", ""],
     [f"{MARK_CHG}Q-N16", "Sharing", "How long should a silent session hold a plan before others may take it over?", "ANSWERED 2026-08-13: 30 minutes. Applied at NR-STO-14, kept separate from the 30-second heartbeat so the application can still tell a live holder from a dead one throughout (N-23), and softened by NR-STO-19 - your own crashed session is reclaimable at once. It remains a setting rather than a constant.", "30 minutes. CLOSED"],
     [f"{MARK_CHG}Q-N17", "Sharing", "Should the application be able to say who is editing, and let a blocked colleague contact them?", "ANSWERED 2026-08-13: yes - ask for the user's name at launch, show who is editing in the message a blocked user sees, and give enough information to contact them. Applied as a new requirement area NR-USR-01..09, decisions N-25..N-27, and a section on sheet 05a. This is what makes the 30-minute expiry reasonable: the normal remedy becomes asking rather than waiting.", "Yes, with contact details. CLOSED"],
-    [f"{MARK_NEW}Q-N18", "User identity", "Which details should the application record beside the name - team, e-mail, telephone, or others such as an extension or an office? All are optional; only the name is required.", "The proposal is team, e-mail and telephone. Worth a moment because these are the fields a blocked colleague sees, and a field nobody fills in is worse than no field at all - it makes the message look incomplete when it is merely unused.", ""],
+    [f"{MARK_CHG}Q-N18", "User identity", "Which details should the application record beside the name?", "ANSWERED 2026-08-13: the user's department. E-mail and telephone dropped rather than kept as optional. Applied at NR-USR-04, NR-USR-06, NR-USR-07 and decision N-28; NR-USR-10 and NR-USR-11 added so the department comes from the same vocabulary as Person.department rather than being typed afresh.", "Department. CLOSED"],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Area", "Question", "Why it matters", "Answer"],
@@ -1156,6 +1170,9 @@ log = [
     ["22", "-", "Not requester input - noticed while applying items 20 and 21.", "The two answers are stronger together than separately.", "A 30-minute expiry alone would be a long wait with no recourse. Naming the holder turns the normal remedy from waiting into asking, which is what makes the long expiry reasonable rather than obstructive. Recorded on sheet 05a so the reasoning is not lost if either is revisited on its own.", "Closed"],
     ["23", "-", "Not requester input - found while applying item 20.", "Thirty minutes has one genuinely infuriating case.", "Your own application crashes, you restart it, and you cannot edit your own plan for half an hour. NR-STO-19 and decision N-24 let a user reclaim a stalled claim held by their own name on their own machine at once. Everybody else waits.", "Closed"],
     ["24", "-", "Not requester input - raised while applying item 21.", "What a typed name is, and is not.", "It answers 'who is editing this, and how do I reach them' completely. It is not a login, it verifies nothing, and anyone can type any name. Stated at NR-USR-08, on the screen where the name is entered, and as risk R-N16 - because the danger is not the feature but somebody later relying on it as a record of who did what. If that is ever needed, Q-N09 is where it belongs.", "Open"],
+
+    ["25", "Q-N18 answer (round 5)", "Record the user's department beside their name.", "Accepted, and e-mail and telephone are dropped rather than kept as optional.", "NR-USR-04 rewritten to name and department only; NR-USR-06 and NR-USR-07 follow; decision N-28. Dropping the optional fields is the point of the answer, not an omission from it - a field nobody fills in makes the message look incomplete when it is merely unused, and in a company a name and a department find anybody.", "Closed"],
+    ["26", "-", "Not requester input - noticed while applying item 25.", "The answer fits a column the data model already has.", "Person.department is in the source schema. So the identity's department is offered from the departments already in the open workspace rather than typed afresh (NR-USR-10), and where the declared name matches a person in the plan, their own department is offered first (NR-USR-11). Without this, 'Data Management' and 'DM' would both come into existence because one of them was typed at a login prompt.", "Closed"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Source", "Input", "Response", "Action taken in v0.1", "Status"],
