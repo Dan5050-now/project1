@@ -28,7 +28,7 @@ and stays in service — the two are parallel products, not successor and predec
 |---|---|---|
 | N1 | Development plan | **v1.0 APPROVED BASELINE** 2026-08-13 · Gate N1 closed |
 | N2 | Programming specification | **v1.0 APPROVED** 2026-08-13 · Gate N2 closed |
-| N3 | Desktop UI design | Authorised — not started |
+| N3 | Desktop UI design | **Prototype + component list issued** — Gate N3 awaits you |
 | N4–N5 | Build, release | Not started |
 
 Both applications share one calculation engine, one data schema (version 5) and one
@@ -99,8 +99,14 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.1.xlsx` — **current.** Records Step N2 progress
-  against the baseline; changes no requirement, decision or risk.
+- `docs/PRAP_NewApp_Development_Plan_v1.2.xlsx` — **current.** Records Steps N2 and N3
+  progress against the baseline; changes no requirement, decision or risk.
+- `app/PM_APP_Prototype_v0.1.html` — **the Step N3 prototype.** Open it in a browser:
+  eight screens, static, nothing works. Every string in it is the one specified, so
+  marking up the prototype and marking up the component list are the same act.
+- `docs/PRAP_NewApp_Component_List_v0.1.xlsx` — **issued for review, Gate N3 candidate.**
+  20 components, the 9-entry divergence register `NR-PAR-04` requires, all 18
+  user-visible strings in one place, and 5 open points.
 - `docs/PRAP_NewApp_Development_Plan_v1.0.xlsx` — **THE APPROVED BASELINE** (2026-08-13),
   closing Gate N1 and authorising Step N2. The application is **Project Management APP**
   (`PM_APP`). 14 sheets: 69 requirements

@@ -20,10 +20,9 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.1"
-DOC_STATUS = ("Baseline v1.0 + Step N2 progress. Gates N1 and N2 are both closed; Step N3 is authorised. "
-              "v1.0 remains the approved baseline - this issue records progress against it, and changes no "
-              "requirement, decision or risk.")
+DOC_VERSION = "1.2"
+DOC_STATUS = ("Baseline v1.0 + Steps N2 and N3 progress. v1.0 remains the approved baseline - this issue "
+              "records progress against it, and changes no requirement, decision or risk.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -226,7 +225,14 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.1", DOC_DATE, "Claude Code", "-",
+    [f"{MARK_NEW}1.2", DOC_DATE, "Claude Code", "-",
+     "STEP N3 ISSUED FOR REVIEW - a progress record, not a change. N3.1 designed the eight screens the "
+     "browser has no counterpart for and built them as a clickable prototype rather than describing them, "
+     "because a table describing a dialog is a poor way to review a dialog. N3.2 produced the divergence "
+     "register the plan requires at NR-PAR-04: nine differences from the web interface, each with its "
+     "reason, and a tenth row saying that nothing else differs. PRAP_NewApp_Component_List_v0.1.xlsx "
+     "carries 20 components, 18 user-visible strings and 5 open points, and awaits Gate N3."],
+    ["1.1", DOC_DATE, "Claude Code", "-",
      "STEP N2 COMPLETE - a progress record, not a change. v1.0 remains the approved baseline and no "
      "requirement, decision, risk or assumption is altered. N2.1 split the source into core / ui / storage / "
      "shell with tools/build_app.py reassembling it; N2.2 proved the split inert - the rebuilt app/PRAP.html "
@@ -967,10 +973,10 @@ wbs = [
     ["N2", "N2.8", "Traceability matrix: every NR-id to a specification section, read from the plan rather than re-typed.", "Specification sheet 11", "Complete - 69/69 specified"],
     ["N2", "GN2", "GATE N2 CLOSED - specification approved 2026-08-13; all seven open points agreed. Step N3 authorised.", "PRAP_NewApp_Specification_v1.0.xlsx", "Complete"],
 
-    ["N3", "N3.1", "Desktop-specific UI design: menu structure, dialogs, the workspace-open screen, the recovery prompt, the difference view, the claim messages.", "Component list draft", "Authorised - not started"],
-    ["N3", "N3.2", "List every deliberate divergence from the web UI, with its reason (NR-PAR-04).", "Divergence list", "Not started"],
-    ["N3", "N3.3", "Requester reviews the design.", "Review comments", "Not started"],
-    ["N3", "GN3", "GATE N3 - design and component list approved.", "PRAP_NewApp_Component_List_v1.0.xlsx", "Not started"],
+    ["N3", "N3.1", "Desktop-specific UI design: eight screens, built as a clickable prototype rather than described.", "app/PM_APP_Prototype_v0.1.html", "Complete - issued for review"],
+    ["N3", "N3.2", "List every deliberate divergence from the web UI, with its reason (NR-PAR-04).", "Component list sheet 03 - 9 divergences", "Complete - issued for review"],
+    ["N3", "N3.3", "Requester reviews the prototype and the component list.", "Review comments", "Pending you"],
+    ["N3", "GN3", "GATE N3 - design and component list approved.", "PRAP_NewApp_Component_List_v1.0.xlsx", "Pending you"],
 
     ["N4", "N4.1", "Desktop shell: application window, menu bar, native dialogs, window state.", "shell/desktop/", "Not started"],
     ["N4", "N4.2", "Filesystem storage adapter: open, save, atomic write, version history.", "storage/", "Not started"],
