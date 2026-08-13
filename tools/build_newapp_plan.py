@@ -20,8 +20,9 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "0.1"
-DOC_STATUS = "DRAFT - issued for review. Step 1 of 5. Nothing is built until Gate N1 is passed."
+DOC_VERSION = "0.2"
+DOC_STATUS = ("DRAFT - issued for review round 2. Step 1 of 5. Windows-only and non-installed are now "
+              "fixed constraints, not open questions. Nothing is built until Gate N1 is passed.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -162,7 +163,11 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Reviewer", "Requester - review round 1 pending"),
+    ("Reviewer", "Requester - round 1 answered 2026-08-13; round 2 pending"),
+    ("Fixed constraints",
+     "WINDOWS ONLY, and NON-INSTALLED. Instructed 2026-08-13. The application is copied as a folder and "
+     "run from it - no installer, no administrator rights, no registry, nothing written outside its own "
+     "folder. See sheet 04 for what this changes and sheet 10 for what it does not fix."),
     ("Relationship to the web application",
      "PARALLEL, NOT SUCCESSOR. The web application and its documents are complete and stay in "
      "service. This plan does not supersede, amend or retire any of them."),
@@ -207,7 +212,18 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}0.1", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}0.2", DOC_DATE, "Claude Code", "Pending",
+     "REVIEW ROUND 1 APPLIED. Two instructions, both narrowing the product: it must run on Windows, and it "
+     "must NOT be installed. Q-N01 is closed (Windows 10/11 only; macOS and Linux out of scope). Q-N02 is "
+     "narrowed - no installer means no administrator rights are needed at all, so what remains to check with "
+     "IT is execution policy, SmartScreen and anti-virus, not installation rights. NR-DEP-01..04 rewritten "
+     "and NR-DEP-05..08 added; NR-IMP-04 reduced, because a file association would need a registry write the "
+     "portable rule forbids. Decisions N-13, N-14 and N-15 added, and N-14 rejects the single self-extracting "
+     "executable in favour of a plain folder. Sheet 05 gains the folder layout, which had to be settled here "
+     "because putting workspaces inside the application folder would make an update delete them. Risks R-N09 "
+     "(SmartScreen and anti-virus), R-N10 (Windows path length) and R-N11 (read-only network share) added; "
+     "R-N01 re-scoped. Two new questions, Q-N12 and Q-N13."],
+    ["0.1", DOC_DATE, "Claude Code", "Superseded",
      "FIRST ISSUE. Raised on your instruction of 2026-08-13: build the requested application as a separate "
      "program type, keep imported data across sessions, and plan it apart from the web application under its "
      "own document name. Contains 33 requirements (sheet 03), the layer split that makes one engine serve two "
@@ -245,13 +261,15 @@ r += 1
 
 r = section(ws, r, "The two applications side by side")
 twin = [
-    ["Form", "One HTML file, opened in a browser", "Installed program with its own window and icon", "-"],
+    [f"{MARK_CHG}Form", "One HTML file, opened in a browser", "Program with its own window and icon, run from a copied folder - NOT installed", "NR-APP-01, NR-DEP-05"],
+    [f"{MARK_CHG}Platform", "Any browser on any OS", "Windows 10 / 11 only", "NR-DEP-01"],
     [f"{MARK_CHG}Data after closing", "Lost - the file must be re-imported each session", "KEPT - the workspace reopens as it was left", "NR-STO-01"],
     [f"{MARK_CHG}Source of truth", "The Excel workbook outside the application", "The workspace file the application owns; Excel becomes exchange", "NR-STO-02"],
     ["Calculation engine", "Shared - one implementation", "Shared - the same implementation, not a copy", "NR-PAR-01"],
     ["Data contract", "Schema version 5, ten sheets", "Identical, unchanged", "NR-PAR-02"],
     ["AI agent interoperability", "prap-source-data JSON, format_version 1", "Identical, and now also the on-disk format", "NR-STO-03"],
-    [f"{MARK_NEW}Distribution", "Copy one file", "Copy or install one package; size unconstrained on your instruction", "NR-DEP-01"],
+    [f"{MARK_CHG}Distribution", "Copy one file", "Copy one folder. No installer, no administrator rights, no registry. Size unconstrained", "NR-DEP-02, NR-DEP-05"],
+    [f"{MARK_NEW}Removal", "Delete the file", "Delete the folder. Nothing is left behind anywhere on the machine", "NR-DEP-07"],
     ["Network use", "None", "None", "NR-SEC-01"],
     ["Status", "Complete, in service, frozen at Gate 5", "Not started - this plan is Step 1", "-"],
 ]
@@ -276,7 +294,9 @@ r += 1
 
 r = section(ws, r, "In scope")
 ins = [
-    ["A packaged desktop application for Windows, launched from an icon, no browser involved."],
+    ["A desktop application for Windows 10 / 11, launched from an icon, no browser involved."],
+    ["Portable operation: the whole application is one folder that is copied where the user wants it and run "
+     "from there, with everything it needs and everything it writes kept inside that folder."],
     ["Persistent storage: a workspace the application owns, written on every Save and reopened at launch."],
     ["Import from the Excel source workbook and from prap-source-data JSON, as today - but as an INGEST into "
      "the workspace rather than as the session's only data."],
@@ -299,8 +319,11 @@ outs = [
     ["A server, a database service, or any network feature.",
      "The tool is offline by requirement, and that is a property worth keeping rather than an accident."],
     ["macOS and Linux builds.",
-     "Buildable from the same source at little cost, but not verified and not supported unless Q-N01 says the "
-     "target is not Windows-only."],
+     "CLOSED at review round 1: Windows only. The same source would build for them, but they are neither "
+     "verified nor supported."],
+    ["An installer, a Start-menu entry, a file association, or any registry entry.",
+     "CLOSED at review round 1: the application is non-installed. Each of these would write outside its own "
+     "folder, which NR-DEP-06 forbids. The cost is recorded honestly at NR-IMP-04 and decision N-15."],
     ["Automatic update over the network.",
      "It would be the only thing in the product that needs a network. Updates are distributed as a new package."],
     ["Migrating the web application onto the desktop shell, or retiring it.",
@@ -324,12 +347,12 @@ r = lines(ws, r, [
 r += 1
 
 reqs = [
-    [f"{MARK_NEW}NR-APP-01", "Application form", "The application is an installed or portable desktop program with its own window, icon and menu bar. No browser is visible to the user at any point.", "Must", "Your instruction", "N4"],
+    [f"{MARK_CHG}NR-APP-01", "Application form", "The application is a desktop program with its own window, icon and menu bar. No browser is visible to the user at any point.", "Must", "Your instruction", "N4"],
     [f"{MARK_NEW}NR-APP-02", "Application form", "It runs fully offline. It makes no network request of any kind, including on first launch.", "Must", "Inherited intent", "N4"],
     [f"{MARK_NEW}NR-APP-03", "Application form", "It launches to the plan the user last had open, without asking for a file.", "Must", "Your instruction", "N4"],
     [f"{MARK_NEW}NR-APP-04", "Application form", "Window size, position and the active tab are remembered between sessions.", "Should", "Desktop convention", "N4"],
     [f"{MARK_NEW}NR-APP-05", "Application form", "Native Open, Save, Save As, Import and Export dialogs are used, not browser download prompts.", "Must", "Desktop convention", "N4"],
-    [f"{MARK_NEW}NR-APP-06", "Application form", "A recent-workspaces list of at least ten entries is available from the menu.", "Should", "Desktop convention", "N4"],
+    [f"{MARK_CHG}NR-APP-06", "Application form", "A recent-workspaces list of at least ten entries is available from the menu. It is stored in the application's own data folder, not in the registry or in the user profile.", "Should", "Desktop convention + NR-DEP-06", "N4"],
     [f"{MARK_NEW}NR-APP-07", "Application form", "The application version is visible in an About dialog and in the window title alongside the open workspace name.", "Must", "Version control", "N4"],
 
     [f"{MARK_NEW}NR-STO-01", "Storage", "Imported and hand-entered data survives closing the application. Reopening shows the same plan, with the same figures, without re-importing anything.", "Must", "Your instruction", "N4"],
@@ -345,17 +368,22 @@ reqs = [
     [f"{MARK_CHG}NR-IMP-01", "Import / export", "Import reads the Excel source workbook and prap-source-data JSON exactly as the web application does, using the same reader and reporting the same findings.", "Must", "Replaces nothing - REQ-IMP-01 inherited", "N4"],
     [f"{MARK_CHG}NR-IMP-02", "Import / export", "Importing into a workspace that already holds data presents the differences and lets the user decide, per sheet, whether to replace, merge or skip. It never overwrites silently.", "Must", "New consequence of NR-STO-02", "N4"],
     [f"{MARK_CHG}NR-IMP-03", "Import / export", "Export to Excel and to JSON produces byte-for-byte the same content the web application would produce from the same data.", "Must", "Parity", "N4"],
-    [f"{MARK_NEW}NR-IMP-04", "Import / export", "A workspace can be opened directly by drag-and-drop onto the application window or its icon.", "Could", "Desktop convention", "N4"],
+    [f"{MARK_CHG}NR-IMP-04", "Import / export", "A workspace can be opened by dragging it onto the running application's window. Double-clicking a workspace file in Explorer does NOT open it, because a file association would require a registry entry that NR-DEP-06 forbids.", "Could", "Reduced by the non-installed rule", "N4"],
 
     [f"{MARK_NEW}NR-PAR-01", "Parity", "The calculation engine, the validation rules and the period derivation are ONE implementation shared by both applications, not two copies kept in step by hand.", "Must", "Your instruction to keep both", "N2"],
     [f"{MARK_NEW}NR-PAR-02", "Parity", "Given identical input, both applications produce identical figures, identical findings and identical exports. This is proven by an automated test, not asserted.", "Must", "Derived from NR-PAR-01", "N4"],
     [f"{MARK_NEW}NR-PAR-03", "Parity", "The HTML application continues to be built from the shared engine and its behaviour is unchanged by the refactor, proven by the existing 13 suites passing unmodified.", "Must", "Protects the finished product", "N2"],
     [f"{MARK_NEW}NR-PAR-04", "Parity", "Screen layout, wording and interaction match the web application except where a desktop convention requires otherwise, and every such difference is listed.", "Should", "Two tools, one habit", "N3"],
 
-    [f"{MARK_NEW}NR-DEP-01", "Deployment", "The application is delivered as one package. Package size is not constrained.", "Must", "Your instruction", "N5"],
-    [f"{MARK_NEW}NR-DEP-02", "Deployment", "It installs and runs without administrator rights.", "Must", "Corporate desktop reality", "N5"],
-    [f"{MARK_NEW}NR-DEP-03", "Deployment", "Updating means replacing the package. No workspace is touched by an update, and a workspace written by an older version opens in a newer one.", "Must", "Data safety", "N5"],
+    [f"{MARK_CHG}NR-DEP-01", "Deployment", "The application runs on Windows 10 and Windows 11, 64-bit. No other operating system is supported or tested.", "Must", "Your instruction", "N5"],
+    [f"{MARK_CHG}NR-DEP-02", "Deployment", "There is NO INSTALLER. The application is a folder that is copied to wherever the user wants it and run from there. It requires no administrator rights, at any point, for any purpose.", "Must", "Your instruction", "N5"],
+    [f"{MARK_CHG}NR-DEP-03", "Deployment", "Updating means replacing the application files inside that folder. No workspace, setting or recent-file entry is touched by an update, and a workspace written by an older version opens in a newer one.", "Must", "Data safety", "N5"],
     [f"{MARK_NEW}NR-DEP-04", "Deployment", "A workspace written by a NEWER version than the running one is refused with a clear message rather than partially read.", "Must", "Data safety", "N4"],
+    [f"{MARK_NEW}NR-DEP-05", "Deployment", "The application folder is self-contained: it carries its own browser engine and every other dependency, and requires nothing to be present on the machine beyond Windows itself. Package size is not constrained.", "Must", "Your instruction", "N5"],
+    [f"{MARK_NEW}NR-DEP-06", "Deployment", "The application writes NOTHING outside its own folder - no registry key, no file association, no Start-menu entry, no AppData directory, no temporary file left behind after it closes.", "Must", "Non-installed rule", "N5"],
+    [f"{MARK_NEW}NR-DEP-07", "Deployment", "Deleting the folder removes the application completely, leaving no trace on the machine.", "Must", "Non-installed rule", "N5"],
+    [f"{MARK_NEW}NR-DEP-08", "Deployment", "The folder can be copied to another Windows PC, or moved to a different path on the same PC, and works unchanged - including its recent-workspaces list where those workspaces travelled with it. No path is recorded absolutely where a relative one would do.", "Must", "Non-installed rule", "N5"],
+    [f"{MARK_NEW}NR-DEP-09", "Deployment", "Where the application folder is read-only - typically on a network share - the application still runs, tells the user plainly that it cannot write beside itself, and keeps its data in a folder the user chooses instead.", "Should", "Consequence of R-N11", "N4"],
 
     [f"{MARK_NEW}NR-SEC-01", "Security", "No telemetry, no crash reporting to any server, no automatic update check, no font or script loaded from a remote host. Verified by observing that the packaged application opens no socket.", "Must", "Offline by requirement", "N5"],
     [f"{MARK_NEW}NR-SEC-02", "Security", "The embedded browser engine runs with remote content disabled and Node integration off in the renderer, so a crafted workspace file cannot execute code.", "Must", "Standard hardening", "N4"],
@@ -439,6 +467,37 @@ r = note(ws, r, "Size was the strongest argument for Tauri, and your instruction
                 "verifiability: an Electron build can be tested here, before delivery, by the same means every "
                 "other claim in this project has been tested. Recorded as decision N-01, and it is reversible - "
                 "the shell layer is the only code that would change.")
+r += 1
+
+r = section(ws, r, "Portable packaging   [round 1: non-installed]")
+r = lines(ws, r, [
+    "'Non-installed' is a stronger constraint than 'no administrator rights', and it rules out two shapes of",
+    "package that are otherwise normal on Windows. The two that remain differ in a way the user feels:",
+])
+r += 1
+pack = [
+    ["Installer (MSI / NSIS / MSIX)", "REJECTED", "Writes to Program Files and the registry, creates Start-menu entries and an uninstall record. This is precisely what 'non-installed' excludes."],
+    ["Single self-extracting .exe", "REJECTED", "Looks the most portable, and behaves the least. Each launch unpacks around 180 MB into the Windows temporary folder before the window appears - slow to start (against NR-NFR-01), it writes outside its own folder (against NR-DEP-06), and anti-virus scans the freshly written files every time."],
+    [f"{MARK_NEW}Plain folder, run in place", "SELECTED - N-14", "PRAP.exe sits in a folder with its engine and resources beside it. Copy the folder, double-click the exe, it runs. Nothing is unpacked, nothing is registered, launch is as fast as the disk. The folder is large and visibly full of files, which is the only real cost."],
+    ["ZIP of that folder", "How it is delivered", "The delivered artifact is a .zip of the folder above. The user extracts it once, wherever they like, and that extracted folder IS the application."],
+]
+r = table(ws, r, ["Shape", "Status", "Assessment"], pack, [30, 20, 96], wrap_cols=(3,), mark_col=1)
+r += 1
+r = note(ws, r, "Worth being explicit, because the single .exe is what most people picture when they hear "
+                "'portable': it is the worse option here on three of this plan's own requirements. A folder is "
+                "less elegant and behaves better.")
+r += 1
+
+r = section(ws, r, "What the non-installed rule costs")
+cost = [
+    ["Double-clicking a .prap file in Explorer will not open it.", "A file association is a registry entry. Mitigated by drag-and-drop onto the window, and by the recent-workspaces list (NR-IMP-04, NR-APP-06)."],
+    ["No Start-menu or taskbar entry appears by itself.", "The user can pin the exe by hand - which is a user action, not something the application does. The user guide will say how."],
+    ["Windows will not treat the application as known software.", "SmartScreen and anti-virus judge an unsigned, unregistered executable more harshly, not less. See risks R-N01 and R-N09 - this is the one place where 'non-installed' makes a problem harder rather than easier."],
+    ["The folder must not be nested too deeply.", "Windows path-length limits. See R-N10."],
+]
+r = table(ws, r, ["Cost", "What is done about it"], cost, [56, 90], wrap_cols=(1, 2))
+r = note(ws, r, "None of these is a reason to reconsider - they are the price of the constraint, listed so that "
+                "nobody is surprised by them at Gate N5.")
 r = legend(ws, r)
 
 # ---- 05 Data flow ---------------------------------------------------------
@@ -467,11 +526,39 @@ wsf = [
     ["Format", "prap-source-data JSON, format_version 1 - the format the AI agent guide already documents.", "NR-STO-03"],
     ["Why not SQLite", "The data is small - tens of projects, hundreds of people, low thousands of rows. SQLite buys concurrency and query power that nothing here needs, and costs the property that an AI agent can read a workspace with no new contract. Revisit only if Q-N06 turns out to need multi-user access.", "N-02"],
     ["Why not the Excel workbook itself", "Writing xlsx on every Save would be slow, would lose the provisional-edit state, and would make an interrupted write corrupt the user's own archive file.", "N-02"],
-    ["Extension", ".prap - registered with Windows so double-clicking one opens the application.", "NR-IMP-04"],
+    ["Extension", ".prap - but NOT registered with Windows, because that would need a registry entry the non-installed rule forbids. Workspaces are opened from within the application, or dragged onto its window.", "NR-IMP-04"],
     ["Contents", "The ten sheets exactly as imported, plus a small header: application version, schema version, source file name and import timestamp, and the retained version history.", "NR-STO-09"],
     ["Readable", "Yes - it is JSON. A workspace can be inspected, diffed, version-controlled, or handed to an AI agent as-is.", "NR-STO-03"],
 ]
 r = table(ws, r, ["Aspect", "Decision", "Ref"], wsf, [22, 108, 12], wrap_cols=(2,))
+r += 1
+
+r = section(ws, r, "Where things live   [round 1: non-installed]")
+r = lines(ws, r, [
+    "The portable rule says everything lives in one folder. Data safety says an update must not be able to",
+    "delete a plan. Those two pull against each other, and the layout below is what resolves them:",
+    "",
+    "    PRAP\\                        <- copy THIS folder anywhere; delete it to remove the application",
+    "      PRAP.exe                    <- \\",
+    "      resources\\                  <-  |  replaced wholesale by an update",
+    "      version.txt                 <- /",
+    "      data\\                       <- NEVER touched by an update",
+    "        settings.json             <- window state, recent workspaces, preferences",
+    "        workspaces\\               <- the default home for .prap files",
+    "        backups\\                  <- the retained previous versions (NR-STO-06)",
+], mono=True)
+r += 1
+lay = [
+    ["An update replaces the application files and leaves data\\ alone.", "Stated as a rule in the user guide AND enforced by the updater instructions: the delivered zip contains no data\\ folder, so extracting it over an existing installation cannot overwrite one."],
+    ["Workspaces default into data\\workspaces\\ but are not confined there.", "The user may save a workspace anywhere - a project folder, a network drive. The default simply means the application always has somewhere sensible to put one."],
+    ["Paths in settings.json are relative wherever they can be.", "So copying the folder to another PC, or to a different drive letter, does not break the recent list (NR-DEP-08)."],
+    ["If the application folder is read-only, data\\ cannot be created.", "The application says so plainly at first launch and asks the user where to keep data instead, remembering the answer next to nothing else - see R-N11 and NR-DEP-09."],
+]
+r = table(ws, r, ["Rule", "How it is upheld"], lay, [56, 90], wrap_cols=(1, 2))
+r = note(ws, r, "The one arrangement that must NOT be used is workspaces inside resources\\, or anywhere else "
+                "among the application files: an update would silently delete the user's plans. It is an easy "
+                "mistake to make and an unrecoverable one to ship, which is why it is written down here at "
+                "Step 1 rather than discovered at Step 4.")
 r += 1
 
 r = section(ws, r, "Writing safely")
@@ -538,6 +625,9 @@ dec = [
     ["N-10", "Engine parity between the applications is mandatory and tested; visual parity is best-effort and documented.", "The figures must agree or both tools are worthless. Whether a dialog looks native matters much less.", "CONFIRM"],
     ["N-11", "The desktop application reuses the web UI rather than being redesigned.", "You have reviewed that UI over 25 rounds. Redesigning it would discard that and give you two habits to hold.", "CONFIRM"],
     ["N-12", "A workspace from a newer application version is refused, not partially read.", "Reading unknown fields and writing them back out is how data quietly disappears.", "CONFIRM"],
+    ["N-13", "Application files and user data are separate folders under one parent, and an update replaces only the application files.", "Portability wants one folder; data safety forbids an update that can delete a plan. This layout gives both. Putting workspaces among the application files would eventually destroy somebody's work.", "CONFIRM"],
+    ["N-14", "The package is a plain folder that runs in place, delivered as a zip - not a single self-extracting executable.", "The single .exe unpacks about 180 MB to the temporary folder on every launch: slow to start, writes outside its own folder, and re-scanned by anti-virus each time. It only looks more portable. See sheet 04.", "CONFIRM"],
+    ["N-15", "No registry entry, no file association, no Start-menu entry, no AppData folder - ever.", "'Non-installed' means the machine is unchanged by the application's presence. Each of these would break that, and each is the kind of convenience that gets added without thinking. Stated as a decision so it has to be argued to be undone.", "CONFIRM"],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Decision", "Rationale", "Status"], dec, [8, 62, 74, 14], wrap_cols=(2, 3))
@@ -597,11 +687,15 @@ wbs = [
     ["N4", "N4.8", "Requester reviews against real data; refinements folded in.", "Updated code", "Not started"],
     ["N4", "GN4", "GATE N4 - application functionally complete.", "PRAP Desktop v0.9", "Not started"],
 
-    ["N5", "N5.1", "Package for Windows; verify it launches without administrator rights.", "Installable package", "Not started"],
-    ["N5", "N5.2", "Verify no socket is opened, offline, on a clean machine (NR-SEC-01).", "Test evidence", "Not started"],
-    ["N5", "N5.3", "Install and test on a real company PC - the only place several of these requirements can be proven.", "Test evidence", "Pending you"],
-    ["N5", "N5.4", "User guide: install, workspaces, import and export, backup, what to do if it will not start.", "User guide", "Not started"],
-    ["N5", "N5.5", "Full pass over the traceability matrix; version alignment across both product lines.", "Traceability matrix", "Not started"],
+    ["N5", "N5.1", "Package as a plain Windows folder delivered in a zip; verify it launches with no installation and no administrator rights.", "PRAP_Desktop_v<ver>.zip", "Not started"],
+    ["N5", "N5.2", "Verify no socket is opened, offline, for a full session (NR-SEC-01).", "Test evidence", "Not started"],
+    ["N5", "N5.3", "Portability suite: run the folder, then copy it to another path and another PC and run it again; verify the recent list and settings survive (NR-DEP-08).", "tools/test_portable.py", "Not started"],
+    ["N5", "N5.4", "Cleanliness check: record every file and registry key touched during a full session; verify nothing outside the application folder is written, and that deleting the folder leaves nothing behind (NR-DEP-06, NR-DEP-07).", "Test evidence", "Not started"],
+    ["N5", "N5.5", "Update check: extract a newer zip over an existing folder; verify workspaces, backups and settings are untouched (NR-DEP-03).", "Test evidence", "Not started"],
+    ["N5", "N5.6", "Awkward-location tests: a deeply nested path (R-N10) and a read-only network share (R-N11, NR-DEP-09).", "Test evidence", "Not started"],
+    ["N5", "N5.7", "Run on a real company PC - the only place execution policy, SmartScreen and anti-virus can be judged.", "Test evidence", "Pending you"],
+    ["N5", "N5.8", "User guide: where to extract it, first launch and the SmartScreen prompt, workspaces, import and export, backup, updating, and what to do if it will not start.", "User guide", "Not started"],
+    ["N5", "N5.9", "Full pass over the traceability matrix; version alignment across both product lines.", "Traceability matrix", "Not started"],
     ["N5", "GN5", "GATE N5 - release.", "PRAP Desktop v1.0", "Not started"],
 ]
 r_start = r
@@ -641,15 +735,20 @@ ver = [
     ["Re-import loses nothing", "Import a changed workbook over hand-entered data; verify every difference is shown and nothing changes without a decision.", "NR-IMP-02", "Automated, in this repository"],
     ["An old workspace still opens", "Open a workspace written by an earlier version; verify it loads and reports the upgrade.", "NR-DEP-03", "Automated, in this repository"],
     [f"{MARK_NEW}No network access", "Run packaged, offline, with socket activity observed for a full session.", "NR-SEC-01", "Automated on the build machine; repeated on the company PC"],
-    [f"{MARK_NEW}It installs without admin rights", "Install and launch on a company-managed PC.", "NR-DEP-02", "ONLY provable by you, at N5.3"],
-    [f"{MARK_NEW}It is allowed to run at all", "Launch the packaged application on a company-managed PC.", "R-N01", "ONLY provable by you - see the risk sheet"],
+    [f"{MARK_CHG}It needs no installation", "Extract the zip, run the exe, use it, delete the folder - with no administrator rights at any point.", "NR-DEP-02", "Automated on the build machine; repeated by you at N5.7"],
+    [f"{MARK_NEW}It leaves the machine unchanged", "Record every file and registry key touched during a full session; verify nothing outside the application folder is written and nothing survives deleting it.", "NR-DEP-06, NR-DEP-07", "Automated, at N5.4"],
+    [f"{MARK_NEW}It survives being moved", "Copy the folder to another path and another PC; verify it runs and its settings and recent list still work.", "NR-DEP-08", "Automated, at N5.3"],
+    [f"{MARK_NEW}An update cannot delete a plan", "Extract a newer zip over an existing folder; verify workspaces, backups and settings are untouched.", "NR-DEP-03", "Automated, at N5.5"],
+    [f"{MARK_NEW}It is allowed to run at all", "Launch it on a company-managed PC and see whether execution policy, SmartScreen or anti-virus stops it.", "R-N01, R-N09", "ONLY provable by you - see the risk sheet"],
     ["The figures are right", "Inherited: the engine is already proven against the Python reference on all 1,225 person-months of the large dataset and 433 of the 10x10 dataset.", "Inherited", "Already done, and re-run by the parity suite"],
 ]
 r = table(ws, r, ["Claim", "How it is proven", "Requirement", "Where"],
           ver, [34, 66, 14, 34], wrap_cols=(2, 4), mark_col=1)
 r += 1
-r = note(ws, r, "Two rows say ONLY PROVABLE BY YOU. Everything else in this project has been demonstrated before "
-                "it was claimed; these two cannot be, from here. They are the reason risk R-N01 is rated as it is.")
+r = note(ws, r, "One row says ONLY PROVABLE BY YOU, and round 1 is the reason there is now only one: with no "
+                "installer, the administrator-rights question answers itself and can be demonstrated here. "
+                "Whether your machine will EXECUTE an unsigned folder-based application cannot be, from any "
+                "environment but yours. That single row is why risk R-N01 is rated as it is.")
 r = legend(ws, r)
 
 # ---- 09 Version control ---------------------------------------------------
@@ -660,8 +759,9 @@ vc = [
     ["Desktop plan", "PRAP_NewApp_Development_Plan_v<ver>.xlsx", "docs/", "Sheet 01 of this document"],
     ["Desktop specification", "PRAP_NewApp_Specification_v<ver>.xlsx", "docs/", "Its own version-history sheet"],
     ["Desktop component list", "PRAP_NewApp_Component_List_v<ver>.xlsx", "docs/", "Its own version-history sheet"],
-    ["Desktop application", "PRAP_Desktop_v<ver> (package)", "dist/", "About dialog and window title"],
-    ["Workspace file", "<user's own name>.prap", "wherever the user keeps it", "Header block inside the file"],
+    ["Desktop application", "PRAP_Desktop_v<ver>.zip, extracting to a PRAP\\ folder", "dist/", "version.txt in the folder, plus the About dialog and window title"],
+    ["Workspace file", "<user's own name>.prap", "data\\workspaces\\ by default, or wherever the user chooses", "Header block inside the file"],
+    ["User settings", "settings.json", "data\\", "Written by the application; never carried in the zip"],
     ["Web plan and its documents", "PRAP_Development_Plan_v<ver>.xlsx and siblings", "docs/", "Unchanged - their own sheets"],
     ["Web application", "app/PRAP.html", "app/", "APP_VERSION constant, shown in the footer"],
     ["Shared source tree", "core/, ui/, storage/, shell/", "repository root", "Git history"],
@@ -686,8 +786,8 @@ ws, r = sheet(wb, "10_Risks", "Risks and assumptions")
 
 r = section(ws, r, "Risks")
 risks = [
-    [f"{MARK_NEW}R-N01", "Corporate policy blocks an unsigned packaged application, so it cannot be launched on the machine it was built for.", "Medium", "HIGH",
-     "The single largest risk in this plan, and it cannot be tested from here. Q-N02 asks you to check with IT BEFORE Gate N1. Mitigation if it happens: the web application still works and still meets the original need - which is precisely why keeping it, as you instructed, is the right call. A code-signing certificate is an IT purchase, not a coding task."],
+    [f"{MARK_CHG}R-N01", "Corporate policy blocks the application from running at all - typically application allow-listing, or a rule against executables outside Program Files.", "Medium", "HIGH",
+     "Still the single largest risk, and still untestable from here. Being non-installed removes the administrator-rights half of this risk entirely, but not the execution-policy half: an allow-list judges what is being run, not how it got there. Q-N02 asks you to check with IT BEFORE Gate N1. If it happens, the web application still works and still meets the original need - which is why keeping it, as you instructed, is the right call."],
     [f"{MARK_NEW}R-N02", "The refactor to share the engine breaks the finished web application.", "Medium", "High",
      "Task N2.2 gates everything else on the 13 existing suites passing unmodified against the rebuilt HTML file. If they do not pass, the refactor is wrong and nothing proceeds. This is why N2.1 is the first task and carries no other change."],
     [f"{MARK_NEW}R-N03", "A workspace file is corrupted and a plan is lost - data that used to be safe in Excel because the application never wrote to it.", "Low", "HIGH",
@@ -702,6 +802,12 @@ risks = [
      "Reduced by the architecture - most maintenance lands in the shared core and serves both - and by N-06 freezing the web application's feature set. It is not eliminated. It is the price of the bilingual arrangement, and worth stating plainly."],
     [f"{MARK_NEW}R-N08", "Users are unsure which of the two applications to use, or work in both and diverge.", "Medium", "Medium",
      "A one-page note in the user guide: the desktop application for planning work you keep, the web application for a quick look on a machine where nothing may be installed. A workspace exports to Excel, which imports into either, so no work is trapped."],
+    [f"{MARK_NEW}R-N09", "Windows SmartScreen warns about the executable, or anti-virus quarantines it, because it is unsigned and unknown.", "HIGH", "Medium",
+     "Likely rather than possible - an unsigned executable arriving in a zip carries the mark-of-the-web and is treated as untrusted. Usually a one-time 'More info - Run anyway', which the user guide will show with a screenshot. Being non-installed does not help here and may hurt: unregistered software has no reputation. If anti-virus quarantines it outright, only IT can allow it - Q-N02 covers this. A code-signing certificate would remove the warning, and remains an IT purchase rather than a coding task (Q-N03)."],
+    [f"{MARK_NEW}R-N10", "The application fails in a deeply nested folder because Windows path limits are exceeded.", "Medium", "Medium",
+     "A packaged browser engine carries long nested paths, and the classic 260-character limit bites when a portable folder is extracted somewhere like a synced Documents tree. Mitigations: keep internal paths short by packing resources into an archive rather than loose files, test extraction into a deliberately deep path at N5.6, and state a recommended location in the user guide."],
+    [f"{MARK_NEW}R-N11", "The application folder is put on a read-only network share, so it cannot write its own data folder.", "Medium", "Medium",
+     "A natural thing to do with a portable folder - one copy, shared with colleagues. NR-DEP-09 handles it: the application detects it at launch, says so plainly, and asks where to keep data instead. Without that it would fail at the first Save, which is the worst possible moment to discover it."],
 ]
 r = table(ws, r, ["ID", "Risk", "Likelihood", "Impact", "Mitigation"],
           risks, [9, 56, 12, 10, 66], wrap_cols=(2, 5), mark_col=1)
@@ -709,7 +815,9 @@ r = table(ws, r, ["ID", "Risk", "Likelihood", "Impact", "Mitigation"],
 r = section(ws, r, "Assumptions")
 assum = [
     ["A-N01", "Data volume stays as assumed by the web plan - up to about 100 projects and 1,000 people.", "Inherited, standing"],
-    ["A-N02", "Windows 10 or 11 is the target. macOS and Linux are out of scope unless Q-N01 says otherwise.", "To confirm - Q-N01"],
+    [f"{MARK_CHG}A-N02", "Windows 10 or 11, 64-bit, is the only target. macOS and Linux are out of scope.", "CONFIRMED at review round 1"],
+    [f"{MARK_NEW}A-N08", "The application is never installed: it is copied as a folder and run in place, and the machine is unchanged by its presence.", "CONFIRMED at review round 1"],
+    [f"{MARK_NEW}A-N09", "The user can extract a zip and run an executable from their own folder - i.e. no application allow-listing stands in the way.", "To confirm - Q-N02. The one assumption that could invalidate the whole approach"],
     ["A-N03", "One person works on a given workspace at a time.", "Inherited A-06 - to confirm at Q-N06"],
     ["A-N04", "Package size is unconstrained.", "CONFIRMED by your instruction, 2026-08-13"],
     ["A-N05", "Both applications remain in service indefinitely; neither is a migration path away from the other.", "CONFIRMED by your instruction, 2026-08-13"],
@@ -724,8 +832,8 @@ ws, r = sheet(wb, "11_Open_Questions", "Questions for review round 1",
               "Please answer in the Answer column. Q-N02 is the one worth asking someone else before you answer.")
 
 qs = [
-    ["Q-N01", "Deployment", "Which operating systems must this run on? Windows 10/11 only, or also macOS?", "Decides whether one package or three are built and tested.", ""],
-    ["Q-N02", "Deployment", "Can you run a packaged application from your own user folder or a network share, without administrator rights and without it being code-signed? Worth asking your IT or desktop-support team rather than assuming.", "The highest-value question in this document. A 'no' changes decision N-01, and would make the web application the right long-term answer after all. See risk R-N01.", ""],
+    [f"{MARK_CHG}Q-N01", "Deployment", "Which operating systems must this run on?", "ANSWERED 2026-08-13: Windows only. Closed - A-N02, NR-DEP-01. macOS and Linux are out of scope.", "Windows. CLOSED"],
+    [f"{MARK_CHG}Q-N02", "Deployment", "Can you extract a zip into your own folder and run the .exe inside it? Specifically: is there application allow-listing, and will anti-virus or SmartScreen let an unsigned executable run after a one-time warning? Worth asking IT rather than assuming.", "STILL THE HIGHEST-VALUE QUESTION, and narrowed by your instruction. Non-installed removes the administrator-rights half of the problem completely - nothing is written to Program Files or the registry. What remains is whether the machine will EXECUTE it. See R-N01 and R-N09.", ""],
     ["Q-N03", "Deployment", "If signing IS required, is a company code-signing certificate obtainable, and by whom?", "An IT purchase with a lead time, not a development task. Better known now than at Gate N5.", ""],
     ["Q-N04", "Storage", "Where should workspaces live by default - your user profile, or a shared network drive?", "A network drive raises file-locking and latency questions that are cheap to design for now and expensive later.", ""],
     ["Q-N05", "Storage", "When you re-import a source workbook over a workspace that already holds your hand-entered data, what should happen? The proposal is to show the differences and let you decide per sheet.", "The one design choice that can silently lose work. See sheet 05.", ""],
@@ -734,11 +842,13 @@ qs = [
     ["Q-N08", "Deployment", "How will updates reach you - a file you copy, a shared folder, or a software-distribution system?", "Decides whether the package needs to be distribution-system friendly, which affects how it is built.", ""],
     ["Q-N09", "Governance", "Does this tool fall under any internal validation or record-keeping obligation, given that it will now HOLD data rather than only display it?", "Holding data can change how a tool is treated in a regulated company. Cheaper to know at Step 1 than at release.", ""],
     ["Q-N10", "Scope", "Should the desktop application be able to open the same source workbook read-only, as the web application does, for a quick look without creating a workspace?", "A small feature, but it decides whether the workspace is mandatory or optional.", ""],
-    ["Q-N11", "Naming", "What should the application be called on screen and in the Start menu? 'PRAP' or something else?", "Cosmetic, but it appears in the package name, the window title and the file association.", ""],
+    [f"{MARK_CHG}Q-N11", "Naming", "What should the application be called on screen? 'PRAP' or something else?", "Cosmetic, but it appears in the folder name, the executable name and the window title. No longer affects a Start-menu entry or a file association, since the non-installed rule removes both.", ""],
+    [f"{MARK_NEW}Q-N12", "Deployment", "Where will you keep the application folder - your own Documents or desktop, or a shared network folder that colleagues also run it from?", "A shared read-only folder needs NR-DEP-09, and several people running one copy raises Q-N06 again. If it is simply your own folder, both simplify.", ""],
+    [f"{MARK_NEW}Q-N13", "Deployment", "Is it acceptable that double-clicking a .prap file in Explorer will NOT open the application, and that workspaces are opened from within it or by dragging them onto its window?", "The direct cost of the non-installed rule - a file association needs a registry entry. If it turns out to matter, the alternative is a small optional 'associate files' action the user runs deliberately, which does write to the registry and would need your explicit agreement.", ""],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Area", "Question", "Why it matters", "Answer"],
-          qs, [9, 15, 62, 56, 40], wrap_cols=(3, 4, 5))
+          qs, [9, 15, 62, 56, 40], wrap_cols=(3, 4, 5), mark_col=1)
 last = r_start + len(qs)
 for rr in range(r_start + 1, last + 1):
     ws.cell(row=rr, column=5).fill = INPUT_FILL
@@ -756,7 +866,12 @@ log = [
     ["3", "Instruction 2026-08-13", "Use both ways - the web application goes final and stays usable; keep the HTML and its documents.", "Accepted, and it shapes the architecture.", "Sheet 02 states what is kept and untouched. Decisions N-05, N-06 and N-10 make the arrangement maintainable: one engine, the web application feature-frozen, parity tested rather than assumed. Risk R-N07 records the cost.", "Closed"],
     ["4", "Instruction 2026-08-13", "Develop the new application under a separate plan with a different name.", "Accepted.", "This document, PRAP-NAPP-PLAN-001, in its own version line from v0.1 with its own gates N1..N5. The web application plan is not amended.", "Closed"],
     ["5", "Instruction 2026-08-13", "Distribution size would be allowed.", "Accepted - and it decides an open question.", "Recorded as assumption A-N04. It removes the only strong argument against Electron, so decision N-01 selects it on the grounds of verifiability instead. Sheet 04 keeps Tauri as a documented later option.", "Closed"],
-    ["6", "-", "Not requester input - raised while drafting.", "Two claims in this plan cannot be verified from the development environment.", "Whether the package is allowed to run on a company PC (R-N01), and whether it installs without administrator rights (NR-DEP-02). Both are marked on sheet 08 as provable only by you, and Q-N02 asks you to check the first before Gate N1 rather than after Gate N5.", "Open"],
+    ["6", "-", "Not requester input - raised while drafting.", "Two claims in this plan cannot be verified from the development environment.", "Whether the package is allowed to run on a company PC (R-N01), and whether it installs without administrator rights (NR-DEP-02). Both are marked on sheet 08 as provable only by you, and Q-N02 asks you to check the first before Gate N1 rather than after Gate N5. Round 1 closed the second of the two - see item 8.", "Closed"],
+
+    ["7", "Instruction 2026-08-13 (round 1)", "The new application should work well under Windows OS.", "Accepted - Q-N01 closed.", "Windows 10 / 11, 64-bit, is the only supported target: NR-DEP-01, assumption A-N02 confirmed, macOS and Linux moved to out of scope on sheet 02. Risk R-N06 stands - the development environment is Linux, so Windows behaviour is verified by you at N5.7 and every claim about it is labelled unverified until then.", "Closed"],
+    ["8", "Instruction 2026-08-13 (round 1)", "It should be a non-installed application.", "Accepted, and it reaches further than one requirement.", "NR-DEP-02 rewritten from 'no administrator rights' to 'no installer at all'; NR-DEP-05..09 added; NR-APP-06 and NR-IMP-04 amended. Decisions N-13 (data folder separate from application files), N-14 (a plain folder, not a self-extracting exe) and N-15 (no registry, ever). Sheet 04 gains the packaging comparison, sheet 05 the folder layout. Three risks added: R-N09 SmartScreen and anti-virus, R-N10 path length, R-N11 read-only share. Six verification tasks added at Step N5.", "Closed"],
+    ["9", "-", "Not requester input - found while applying item 8.", "Two consequences worth your explicit agreement.", "First, an update that extracted over the application folder would delete the user's workspaces if they lived among the application files - resolved by decision N-13 before it could ever be built. Second, no file association is possible without a registry entry, so double-clicking a .prap file will not open the application; raised as Q-N13 rather than decided silently.", "Open"],
+    ["10", "-", "Not requester input - found while applying item 8.", "Non-installed makes one thing HARDER, not easier.", "An unsigned, unregistered executable has no reputation with SmartScreen or anti-virus, so it is judged more harshly than installed software would be. Recorded as R-N09 with likelihood HIGH, and folded into Q-N02 so you ask IT the right question - about execution, not about installation rights.", "Open"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Source", "Input", "Response", "Action taken in v0.1", "Status"],
