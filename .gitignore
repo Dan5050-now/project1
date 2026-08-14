@@ -1,17 +1,27 @@
-# Excel lock files created when a workbook is open
-~$*.xlsx
-~$*.xlsm
-
 # Python
 __pycache__/
 *.pyc
 .venv/
 venv/
 
+# Excel lock files created when a workbook is open
+~$*.xlsx
+~$*.xlsm
+
 # OS
+.DS_Store
 Thumbs.db
 desktop.ini
-.DS_Store
 
 # Scratch files written by the browser test suites on every run
 output/test_rows_export.xlsx
+
+# The desktop application's dependencies. ~250 MB of Electron, restored by
+# `npm install` - and the one thing in this repository that is not source.
+node_modules/
+
+# Build outputs. src/shell/desktop/index.html is emitted by tools/build_desktop.py
+# from the same src/ the web application is built from; data/ is what a running
+# desktop application keeps beside itself, and belongs to the user rather than here.
+src/shell/desktop/index.html
+data/

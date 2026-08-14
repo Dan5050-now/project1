@@ -1,0 +1,14 @@
+{
+  "name": "pm-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Project Management APP (PM_APP) - desktop shell over the shared PRAP engine",
+  "main": "src/shell/desktop/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test:storage": "node tools/test_storage.mjs"
+  },
+  "devDependencies": {
+    "electron": "^43.4.0"
+  }
+}

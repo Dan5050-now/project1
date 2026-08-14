@@ -69,12 +69,36 @@ check(not offenders,
       "; ".join(offenders[:3]) if offenders else
       f"{len(list((SRC / 'core').glob('*.js')))} files clean")
 
-# ---- 2. the seam is small --------------------------------------------------
-storage = list((SRC / "storage").rglob("*.js"))
-lines = sum(len(p.read_text(encoding="utf-8").split("\n")) for p in storage)
-check(storage and lines < 150,
-      "storage/ is small enough to be a seam the desktop shell can replace",
-      f"{len(storage)} file(s), {lines} lines: " + ", ".join(p.stem for p in storage))
+# ---- 2. the seam is small, and the implementations sit behind it -----------
+web_storage = list((SRC / "storage" / "web").rglob("*.js"))
+web_lines = sum(len(p.read_text(encoding="utf-8").split("\n")) for p in web_storage)
+check(web_storage and web_lines < 150,
+      "the web shell's storage is small enough to be a seam — two functions, one that "
+      "reads a file and one that writes one",
+      f"{len(web_storage)} file(s), {web_lines} lines")
+
+desk_storage = list((SRC / "storage" / "desktop").rglob("*.js"))
+desk_lines = sum(len(p.read_text(encoding="utf-8").split("\n")) for p in desk_storage)
+check(desk_storage and desk_lines > 200,
+      "and the desktop implementation behind the same seam is where the work is",
+      f"{len(desk_storage)} file(s), {desk_lines} lines: "
+      + ", ".join(p.stem for p in desk_storage))
+
+# The desktop modules are Node, not a browser. If one reaches for the DOM it has been
+# written in the wrong layer, and it will fail in the main process where there is none.
+NODE_ONLY = [(r"\bdocument\.", "document"), (r"\bwindow\.", "window"),
+             (r"\blocalStorage\b", "localStorage")]
+leaks = []
+for p in desk_storage + list((SRC / "shell" / "desktop").glob("*.js")):
+    code = re.sub(r"/\*.*?\*/", "", p.read_text(encoding="utf-8"), flags=re.S)
+    code = re.sub(r"^\s*//.*$", "", code, flags=re.M)
+    for pattern, name in NODE_ONLY:
+        if re.search(pattern, code):
+            leaks.append(f"{p.name} uses {name}")
+check(not leaks,
+      "the desktop storage and shell are Node only — no DOM in the main process",
+      "; ".join(leaks[:3]) if leaks else
+      f"{len(desk_storage) + len(list((SRC / 'shell' / 'desktop').glob('*.js')))} files clean")
 
 core_lines = sum(len(p.read_text(encoding="utf-8").split("\n"))
                  for p in (SRC / "core").glob("*.js"))
@@ -87,11 +111,20 @@ missing = [n for n in build_app.PARTS if not (SRC / n).exists()]
 check(not missing, "every part the build names exists", "; ".join(missing[:3]) or
       f"{len(build_app.PARTS)} parts")
 
-orphans = sorted({str(p.relative_to(SRC)).replace("\\", "/")
-                  for p in SRC.rglob("*") if p.is_file()} - set(build_app.PARTS))
+# Every file in src/ must be reached by SOMETHING. The web build takes most of them;
+# the desktop build takes the same minus the two web storage functions; and the desktop
+# main process requires its own modules directly rather than being concatenated.
+DESKTOP_ONLY = {"storage/desktop", "shell/desktop"}
+BUILT_PAGES = {"shell/desktop/index.html"}          # emitted by build_desktop.py
+reachable = set(build_app.PARTS) | BUILT_PAGES
+orphans = sorted(
+    n for n in (str(p.relative_to(SRC)).replace("\\", "/")
+                for p in SRC.rglob("*") if p.is_file())
+    if n not in reachable and not any(n.startswith(d + "/") for d in DESKTOP_ONLY))
 check(not orphans,
-      "and nothing in src/ is left out of it — an unbuilt file is a file nobody runs",
-      "; ".join(orphans[:3]) if orphans else f"{len(build_app.PARTS)} parts, all built")
+      "and nothing in src/ is left out of a build — an unbuilt file is a file nobody runs",
+      "; ".join(orphans[:3]) if orphans else
+      f"{len(build_app.PARTS)} web parts, plus the desktop modules")
 
 built = build_app.render()
 current = (ROOT / "app" / "PRAP.html").read_text(encoding="utf-8")

@@ -20,9 +20,9 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.4"
-DOC_STATUS = ("Baseline v1.0 + change C-N01, APPROVED 2026-08-13. Gates N1, N2 and N3 are all closed; "
-              "Step N4 - building it - is authorised and open. 70 requirements, 32 decisions, 19 risks.")
+DOC_VERSION = "1.5"
+DOC_STATUS = ("Baseline v1.0 + change C-N01. Gates N1-N3 closed; STEP N4 IN PROGRESS - the storage layer "
+              "and the desktop shell are built and tested, and the application launches.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -225,7 +225,16 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.4", DOC_DATE, "Claude Code", "APPROVED",
+    [f"{MARK_NEW}1.5", DOC_DATE, "Claude Code", "-",
+     "STEP N4 IN PROGRESS - a progress record, not a change. Tasks N4.1 to N4.4c are built: the desktop "
+     "shell (window, menu, native dialogs, window state), the filesystem storage adapter with its atomic "
+     "write protocol and retained version, the workspace lifecycle, journalling, and the write claim with "
+     "its heartbeat, expiry and same-user reclaim. Two suites prove them - tools/test_storage.mjs (33 "
+     "checks in plain Node, including twelve kills mid-write and an eight-process race for one claim) and "
+     "tools/desktop_smoke.js (23 checks inside a running Electron application). Both found real defects "
+     "before delivery; sheet 12 records them. N4.4d, N4.4e and N4.5 - the four session states on screen, "
+     "the identity dialog and the difference report - are next."],
+    ["1.4", DOC_DATE, "Claude Code", "APPROVED",
      "GATE N3 CLOSED and CHANGE C-N01 APPROVED, both on 2026-08-13. Content is v1.3 unchanged; this issue "
      "records the approvals and opens Step N4. The requirement register now stands at 70 and is the "
      "contract for the build; the component list v1.0 and specification v1.2 are its companions. Nothing "
@@ -992,12 +1001,12 @@ wbs = [
     ["N3", "N3.3", "Requester reviews the prototype and the component list.", "v0.2_reviewed mark-up", "Complete"],
     ["N3", "GN3", "GATE N3 CLOSED - component list v1.0 approved 2026-08-13, with change C-N01. Step N4 authorised.", "PRAP_NewApp_Component_List_v1.0.xlsx", "Complete"],
 
-    ["N4", "N4.1", "Desktop shell: application window, menu bar, native dialogs, window state.", "src/shell/desktop/", "Authorised - not started"],
-    ["N4", "N4.2", "Filesystem storage adapter: open, save, atomic write, version history.", "storage/", "Not started"],
-    ["N4", "N4.3", "Workspace lifecycle: new, open, save, save as, recent list, reopen last at launch.", "shell/desktop/", "Not started"],
-    ["N4", "N4.4", "Journalling and crash recovery.", "storage/", "Not started"],
-    ["N4", "N4.4b", "Data-location resolution, the About dialog that shows it, and the personal shortcut.", "shell/desktop/", "Not started"],
-    ["N4", "N4.4c", "The write claim: create-if-absent, the heartbeat, expiry and takeover, and the re-check before every save.", "storage/", "Not started"],
+    ["N4", "N4.1", "Desktop shell: application window, menu bar, native dialogs, window state.", "src/shell/desktop/main.js, preload.js, paths.js", "Complete - 23 checks in a running application"],
+    ["N4", "N4.2", "Filesystem storage adapter: open, save, atomic write, version history.", "src/storage/desktop/workspace.js", "Complete - killed mid-write 12 times, always wholly old or wholly new"],
+    ["N4", "N4.3", "Workspace lifecycle: new, open, save, save as, recent list, reopen last at launch.", "src/shell/desktop/main.js", "Complete"],
+    ["N4", "N4.4", "Journalling and crash recovery.", "src/storage/desktop/workspace.js", "Complete - the storage half; the prompt is N4.4d"],
+    ["N4", "N4.4b", "Data-location resolution, the About dialog that shows it, and the personal shortcut.", "src/shell/desktop/paths.js", "Complete - the shortcut is outstanding"],
+    ["N4", "N4.4c", "The write claim: create-if-absent, the heartbeat, expiry and takeover, and the re-check before every save.", "src/storage/desktop/claim.js", "Complete - one winner from eight racing processes"],
     ["N4", "N4.4d", "The four session states on screen: who holds the plan, the refusal that names them, the offer when it frees, and the staleness notice with its reload.", "ui/", "Not started"],
     ["N4", "N4.4e", "User identity: the launch prompt, remembering and confirming it, switching user, contact details, and the blocked message that carries them.", "shell/desktop/ + ui/", "Not started"],
     ["N4", "N4.5", "Import into an occupied workspace: the difference view and the per-sheet decision.", "ui/", "Not started"],

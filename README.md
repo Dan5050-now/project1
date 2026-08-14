@@ -29,7 +29,7 @@ and stays in service — the two are parallel products, not successor and predec
 | N1 | Development plan | **v1.0 APPROVED BASELINE** 2026-08-13 · Gate N1 closed |
 | N2 | Programming specification | **v1.0 APPROVED** 2026-08-13 · Gate N2 closed |
 | N3 | Desktop UI design | **v1.0 component list APPROVED** 2026-08-13 · Gate N3 closed |
-| N4 | Build | Authorised — not started |
+| N4 | Build | **In progress** — storage layer and shell built; the application launches |
 | N5 | Release | Not started |
 
 Both applications share one calculation engine, one data schema (version 5) and one
@@ -41,11 +41,18 @@ amends the web application's plan, specification, component list or code.
 file and the sources disagree.
 
 ```
-src/core/      1,210 lines   decides numbers — parse, validate, derive, calculate, xlsx, JSON
-src/ui/                      draws them — tables, charts, filters, the provisional-edit model
-src/storage/      63 lines   puts bytes somewhere — the seam the desktop shell replaces
-src/shell/web/               page markup and event wiring — the web build target
+src/core/           1,210 lines   decides numbers — parse, validate, derive, calculate
+src/ui/                           draws them — tables, charts, filters, the edit model
+src/storage/web/       63 lines   the seam: one function reads a file, one writes one
+src/storage/desktop/  487 lines   workspaces, atomic saves, versions, journal, the claim
+src/shell/web/                    page markup and event wiring — the web build target
+src/shell/desktop/                the Electron window, menu, IPC and data-folder rules
 ```
+
+The desktop application runs: `npm install && npm start`. Two suites prove the parts
+that can lose work — `tools/test_storage.mjs` (33 checks in plain Node, including
+twelve kills mid-save and an eight-process race for one claim) and
+`tools/desktop_smoke.js` (23 checks inside a running Electron window).
 
 The split was made along the fourteen section boundaries the single file already had, in
 order, so the rebuilt file is **byte-identical** to the one that passed all thirteen
@@ -100,7 +107,8 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.4.xlsx` — **current.** Baseline v1.0 plus
+- `docs/PRAP_NewApp_Development_Plan_v1.5.xlsx` — **current.** Records Step N4 progress.
+- `docs/PRAP_NewApp_Development_Plan_v1.4.xlsx` — Baseline v1.0 plus
   **change C-N01, approved** 2026-08-13: `NR-IMP-08` (export is a supported way to edit a
   plan outside the application, and the round trip loses nothing) and assumption `A-N13`
   (one manager imports). 70 requirements. Gates N1–N3 all closed; Step N4 is open.
