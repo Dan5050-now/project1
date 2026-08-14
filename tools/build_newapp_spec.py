@@ -22,10 +22,11 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.0"
-DOC_STATUS = "APPROVED - 2026-08-13. Gate N2 closed; this governs Steps N3 to N5."
+DOC_VERSION = "1.1"
+DOC_STATUS = ("v1.0 APPROVED 2026-08-13. This issue carries five clarifications from the Gate N3 "
+              "review; as a change against an approved baseline it needs its own approval - see sheet 12.")
 DOC_DATE = "2026-08-13"
-PLAN = "PRAP_NewApp_Development_Plan_v1.0.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.3.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Specification_v{DOC_VERSION}.xlsx"
@@ -126,7 +127,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Reviewer", "Requester - one round; all seven open points agreed, no change requested"),
+    ("Reviewer", "Requester - Gate N2 approved v1.0; the Gate N3 review returned five clarifications, applied here"),
     ("Governed by", f"{PLAN} - the approved baseline, Gate N1 closed 2026-08-13"),
     ("Specifies", "The desktop shell, the storage layer, the workspace file, sharing between "
                   "people, user identity, import, and packaging"),
@@ -167,7 +168,16 @@ r = lines(ws, r, [
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
-          [["1.0", DOC_DATE, "Claude Code", "APPROVED",
+          [["1.1", DOC_DATE, "Claude Code", "Pending",
+            "GATE N3 REVIEW APPLIED - five clarifications, none of which reverses a decision. (1) The write "
+            "claim is taken when a DATA VALUE ACTUALLY CHANGES, not when a user clicks into a cell or moves "
+            "a selection: sheet 07 now says so in those words, because 'first edit' was open to the looser "
+            "reading. (2) The recovery dialog lists EVERY unsaved change, scrollable, rather than three and "
+            "a count. (3) The difference report expands to individual rows on request. (4) The manual "
+            "light/dark toggle is removed - the window follows Windows and offers no setting. (5) Export is "
+            "confirmed as a supported way to edit a plan outside the application, and sheet 09 gains the "
+            "round trip it must survive (NR-IMP-08, change C-N01 on the plan)."],
+           ["1.0", DOC_DATE, "Claude Code", "APPROVED",
             "BASELINE. All seven open points on sheet 12 agreed at review with no change requested, "
             "so v1.0 is v0.1 with the answers recorded. S-N03 confirmed explicitly as accept-per-SHEET. "
             "Gate N2 is closed and this specification governs Steps N3 to N5; changing it now costs a "
@@ -404,7 +414,7 @@ jr = [
     ["When", "On every pending edit, debounced to at most once a second.", "Cheap: the journal is the pending list, not the model."],
     ["Where", "<name>.prap.journal", "Beside the workspace, so moving the plan moves its unfinished work with it."],
     ["Cleared", "On Save (committed) and on Leave without change (discarded).", "Both already exist as events; neither is a new concept."],
-    ["On launch", "A journal whose mtime is newer than its workspace prompts: 'This plan has <n> unsaved changes from <when>. Keep them, or discard them?'", "The user decides. Silently applying recovered edits would be worse than losing them (NR-STO-07)."],
+    ["On launch", "A journal whose mtime is newer than its workspace prompts: 'This plan has <n> unsaved changes from <when>. Keep them, or discard them?' EVERY change is listed, in a scrollable box - not a sample with a count.", "The user decides, and cannot decide from three lines out of forty. Silently applying recovered edits would be worse than losing them (NR-STO-07). Gate N3 review."],
     ["Never merged", "A journal is only offered for the workspace it belongs to, and only if the workspace has not been saved by somebody else since.", "Otherwise the recovered edits would be applied to figures they were never made against."],
 ]
 r = table(ws, r, ["Aspect", "Behaviour", "Why"], jr, [16, 68, 62], wrap_cols=(2, 3))
@@ -441,7 +451,7 @@ r = code(ws, r, [
 r += 1
 mech = [
     ["Taken", "open(path, 'wx') - create, and FAIL if it already exists.", "Decided by the filesystem, one winner, and it works over SMB. Read-then-write loses the race: two sessions can both read 'free' (NR-STO-13).", "NR-STO-13"],
-    ["When", "On the first pending edit of a session - the same point the snapshot is taken.", "Not on open. A session that only reads never takes it, so a plan is free unless somebody is really working on it (N-19).", "NR-STO-10"],
+    ["When", "At the moment a DATA VALUE ACTUALLY CHANGES - the same point the snapshot is taken. Clicking into a cell, selecting a row, changing a filter, switching tab, or typing into a field and leaving it unchanged do NOT take the claim.", "Not on open, and not on a click. A session that only looks - even one that clicks about a great deal - never takes it, so a plan is free unless somebody is really altering it. Clarified at the Gate N3 review, because 'the first edit' was open to the looser reading.", "NR-STO-10"],
     ["Kept alive", "The holder rewrites `heartbeat` every 30 seconds.", "So the application can always tell a live holder from a dead one - within half a minute, whatever the expiry is (N-23).", "NR-STO-14"],
     ["Expires", "30 minutes after the last heartbeat.", "Q-N16. Separate from the heartbeat interval, deliberately.", "NR-STO-14"],
     ["Reclaimed", "Immediately, if name and machine are this user's own.", "Being locked out of your own plan for half an hour because your application crashed is an obstruction, not a policy (N-24).", "NR-STO-19"],
@@ -555,6 +565,41 @@ r += 1
 r = note(ws, r, "'Only here' is the column that earns the report. Those are the rows somebody typed by hand, and "
                 "they are exactly what a silent replace would destroy. Accepting a sheet never deletes them - "
                 "an import adds and changes; removal is always a separate, explicit action.")
+r += 1
+
+r = section(ws, r, "Row-level detail   [Gate N3 review]")
+r = lines(ws, r, [
+    "Each sheet expands, on request, to the individual rows behind its counts: which rows would be added,",
+    "which would change and in which columns, with the current value and the incoming one side by side.",
+    "Collapsed by default, because sheet counts are what the decision is taken on and forty expanded sheets",
+    "are not a report.",
+    "",
+    "The expansion is for LOOKING, not for choosing: the tick stays at sheet level (S-N03). Row-level counts",
+    "that disagree with what you expected are the reason to open it - and the reason to say no.",
+])
+r += 1
+
+r = section(ws, r, "Export as the way to edit outside the application   [NR-IMP-08]")
+r = lines(ws, r, [
+    "Confirmed at the Gate N3 review as a supported workflow rather than a side effect, and it needs no new",
+    "screen - only a guarantee:",
+    "",
+    "    export  ->  change it in Excel or a text editor  ->  give it to the manager  ->  import  ->  report",
+])
+r += 1
+rt = [
+    ["What goes out", "Every sheet, every column, every row of the plan - in .xlsx or .prap.json, the user's choice.", "NR-IMP-03"],
+    ["What must come back", "All of it. A value that survived the journey out and back is unchanged; nothing is silently dropped because the application did not recognise it.", "NR-IMP-08"],
+    ["What is NOT trusted on the way back", "Anything the application derives - a project's window from its milestones, its team size from its assignments. Those are recomputed from the rows, never read from the file. A stale derived value in a hand-edited workbook must not become the truth.", "NR-IMP-08"],
+    ["Who imports", "One person - the application's manager - receives the edited files and applies them (A-N13). No per-user import rule is needed, and none is specified.", "A-N13"],
+    ["How it lands", "Through the same difference report as any other import. A file edited by hand is exactly the case the report exists for.", "NR-IMP-02"],
+    ["Proof", "The web application already round-trips xlsx -> json -> xlsx -> json reproducing every cell (tools/test_interop.py). NR-IMP-08 makes that a requirement of this application rather than a property it happens to have, and N4.6 tests it after a hand edit.", "NR-IMP-08"],
+]
+r = table(ws, r, ["Aspect", "Specified", "NR"], rt, [30, 98, 16], wrap_cols=(2,))
+r = note(ws, r, "Note the third row. It is the only part of this that is not already true: an exported workbook "
+                "carries derived columns so a person can read them, and a person editing that workbook may "
+                "well change a milestone without changing the project window beside it. Recomputing rather "
+                "than trusting is what stops the file's stale copy winning.")
 r += 1
 
 r = section(ws, r, "Looking at a source file without a workspace")
@@ -720,8 +765,29 @@ r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [32, 14, 14, 88], wrap_cols=(4,))
 for cc in (1, 2, 3, 4):
     ws.cell(row=r_start2 + 1, column=cc).fill = NEW_FILL
-r = note(ws, r, "STEP N2 IS COMPLETE. The 69 requirements on sheet 11 now have a specified home each, and "
-                "Step N3 designs the screens that sheets 05 to 09 describe.")
+r = note(ws, r, "STEP N2 IS COMPLETE. Every requirement on sheet 11 has a specified home, and Step N3 designs "
+                "the screens that sheets 05 to 09 describe.")
+r += 1
+
+r = section(ws, r, "Change C-N01 - the Gate N3 review, awaiting approval")
+chg = [
+    ["1", "07_Sharing", "The write claim is taken when a DATA VALUE ACTUALLY CHANGES - not on a click, a selection, a filter or a tab.", "Your words: the timing considers any unsaved data change, not the timing when a user just clicks something. 'The first edit' was open to the looser reading; it is now closed.", "Clarifies NR-STO-10"],
+    ["2", "06_Persistence", "The recovery dialog lists EVERY unsaved change, scrollable.", "Was three and a count. Nobody can decide from three lines out of forty.", "Clarifies NR-STO-07"],
+    ["3", "09_Import", "The difference report expands to individual rows on request.", "For looking, not for choosing - the tick stays at sheet level, which S-N03 settled.", "Clarifies NR-IMP-02"],
+    ["4", "05_Shell", "The manual light/dark toggle is removed; the window follows Windows.", "One fewer setting. Divergence D-N09 on the component list is rewritten accordingly.", "Component list"],
+    ["5", "09_Import", "Export is a supported way to EDIT a plan outside the application, and the round trip must lose nothing.", "New requirement NR-IMP-08 on the plan, with assumption A-N13 - one manager imports, not every user.", "NEW NR-IMP-08"],
+]
+r = table(ws, r, ["#", "Sheet", "Change", "Why", "Effect"], chg, [5, 18, 56, 60, 22], wrap_cols=(3, 4, 5))
+r += 1
+r = section(ws, r, "Approval - change C-N01")
+appr2 = [["PRAP NewApp Specification v1.1", "", "",
+          "Awaiting approval. v1.0 is the approved baseline and remains so until this is signed. None of the "
+          "five reverses a decision taken at Gate N2; four are clarifications and the fifth adds a "
+          "requirement the plan carries as C-N01."]]
+r_start3 = r
+r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr2, [32, 14, 14, 88], wrap_cols=(4,))
+for cc in (2, 3):
+    ws.cell(row=r_start3 + 1, column=cc).fill = INPUT_FILL
 
 wb.save(OUT)
 print(f"Written: {OUT}")

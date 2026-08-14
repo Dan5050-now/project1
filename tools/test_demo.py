@@ -24,7 +24,7 @@ import tempfile
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-DEMO = (ROOT / "app" / "PM_APP_Prototype_v0.2.html").as_uri()
+DEMO = (ROOT / "app" / "PM_APP_Prototype_v0.3.html").as_uri()
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.9.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
@@ -46,7 +46,7 @@ C = prap_io.calculate(M)
 ref = {f"{sid}|{k}": v for (sid, k), v in C["pers_month"].items()}
 ref_total = sum(ref.values())
 
-print("app/PM_APP_Prototype_v0.2.html — the real application, with real data")
+print("app/PM_APP_Prototype_v0.3.html — the real application, with real data")
 
 with sync_playwright() as pw:
     browser = pw.chromium.launch(executable_path=CHROME)
@@ -106,8 +106,11 @@ with sync_playwright() as pw:
     check("Project Management APP" in pg.inner_text("h1"),
           "and the product calls itself by its own name (NR-APP-08)",
           pg.inner_text("h1"))
-    check(pg.locator("#loadBtn").is_visible() is False,
+    check(pg.locator("#loadBtn").is_visible() is False
+          and pg.locator("#exportBtn").is_visible() is False,
           "the web application's file buttons are hidden — menus replace them (D-N02)")
+    check(pg.locator("#themeBtn").is_visible() is False,
+          "and the theme toggle is gone — the window follows Windows (D-N09, U-N04)")
 
     pg.click("#pm-screens")
     pg.wait_for_timeout(500)

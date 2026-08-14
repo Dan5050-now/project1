@@ -24,12 +24,12 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "0.2"
-DOC_STATUS = "DRAFT - issued for review. Gate N3 candidate."
+DOC_VERSION = "0.3"
+DOC_STATUS = "Review round 1 applied. Re-issued for Gate N3."
 DOC_DATE = "2026-08-13"
-SPEC = "PRAP_NewApp_Specification_v1.0.xlsx"
-PLAN = "PRAP_NewApp_Development_Plan_v1.0.xlsx"
-PROTO = "app/PM_APP_Prototype_v0.2.html"
+SPEC = "PRAP_NewApp_Specification_v1.1.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.3.xlsx"
+PROTO = "app/PM_APP_Prototype_v0.3.html"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Component_List_v{DOC_VERSION}.xlsx"
 
@@ -142,7 +142,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Reviewer", "Requester - review round 1 pending"),
+    ("Reviewer", "Requester - round 1 answered 2026-08-13; five points settled and one added"),
     ("Governed by", f"{SPEC} (Gate N2 closed) and {PLAN} (Gate N1 closed)"),
     ("Review it against", f"{PROTO} - open it in a browser. It is THE REAL APPLICATION, "
                           f"pre-loaded with the 62-project dummy dataset: every tab, table, "
@@ -229,22 +229,23 @@ comps = [
     ["NC-01", "Identity dialog", "1", "Asks name and department at launch, before any plan opens. First run pre-fills the name from the Windows account; afterwards both are pre-filled and the primary button reads 'Continue as <name>'.", "NR-USR-01..04", ""],
     ["NC-02", "'Not me' switch", "1", "Clears the remembered identity and asks again. Present on every launch, not buried in a menu - a shared PC needs it in the place where the wrong name is showing.", "NR-USR-02", ""],
     ["NC-03", "Open-a-plan screen", "2", "Recent list on the left, four ways to start on the right. Each recent entry shows where it lives, when it was saved and by whom.", "NR-APP-03, NR-APP-06, NR-USR-07", ""],
-    ["NC-04", "'Held by' marker in the recent list", "2", "A plan somebody else is editing says so BEFORE it is opened, not after. Costs one read of the claim file per listed plan.", "NR-STO-12", ""],
+    ["NC-04", "'Held by' marker in the recent list", "2", "A plan somebody else is editing says so BEFORE it is opened, not after. Costs one read of the claim file per listed plan - agreed as worth it.", "NR-STO-12", "U-N01"],
     ["NC-05", "Blocked dialog - holder active", "3", "Names the holder and department, says when they started and that they are active now. Buttons: copy name and department, open read-only.", "NR-STO-11, NR-STO-12, NR-USR-05", ""],
     ["NC-06", "Blocked dialog - holder silent", "3", "The same dialog in amber, saying since when they stopped responding and the exact time the plan becomes free.", "NR-STO-14, NR-STO-12", ""],
     ["NC-07", "Superseded strip", "4", "A strip above the content, not a dialog: says who saved and when, and what the figures on screen are from. Offers Reload or Keep looking.", "NR-STO-16", ""],
-    ["NC-08", "Recovery dialog", "5", "Names the plan, the number of unsaved changes and when they were made, and LISTS the first few. Keep or discard.", "NR-STO-07", ""],
+    ["NC-08", "Recovery dialog", "5", "Names the plan, the number of unsaved changes and when they were made, and lists EVERY ONE of them in a scrollable box. Keep or discard.", "NR-STO-07", "U-N02"],
     ["NC-09", "Update-first question", "6", "'This plan already contains data. Update it from <file>?' asked BEFORE any difference is computed or shown.", "NR-IMP-02", ""],
-    ["NC-10", "Difference report", "6", "Per sheet: add, change, only-here, and a tick. 'Only here' is highlighted because those are the hand-entered rows. Expandable to the rows themselves.", "NR-IMP-02", ""],
+    ["NC-10", "Difference report", "6", "Per sheet: add, change, only-here, and a tick. 'Only here' is highlighted because those are the hand-entered rows. Expands on request to the individual rows, showing current and incoming values side by side - for looking, not for choosing; the tick stays at sheet level.", "NR-IMP-02", "U-N05"],
     ["NC-11", "Window title", "7", "<plan> — Project Management APP, with a bullet for unsaved changes and [read-only] when somebody else holds it.", "NR-APP-07, NR-APP-08", ""],
     ["NC-12", "Menu bar", "7", "File, Edit, View, Plan, Help. Save is disabled without the claim, with the reason on hover.", "NR-APP-05", ""],
-    ["NC-13", "Status strip", "7", "Who you are, whether you hold the plan, the unsaved count, and the three buttons the web application already has.", "NR-USR-01, NR-STO-10", ""],
+    ["NC-13", "Status strip", "7", "Who you are, whether you hold the plan, the unsaved count, and the three buttons the web application already has. 'You are editing this plan' appears when a VALUE CHANGES, not when you click into a cell.", "NR-USR-01, NR-STO-10", "U-N03"],
     ["NC-14", "About dialog", "8", "Version, schema, application folder, DATA FOLDER, and which of the four rules chose it.", "NR-APP-07, NR-DEP-10", ""],
     ["NC-15", "Save / Save As / Close plan", "7", "Native dialogs, not browser downloads. Save As works even when blocked, so being unable to edit never means being unable to work.", "NR-APP-05, NR-STO-17", ""],
     ["NC-16", "Recent-workspaces menu", "7", "At least ten, most recent first, per user, with relative paths where possible.", "NR-APP-06, NR-DEP-08", ""],
     ["NC-17", "Restore previous version", "7", "Plan menu. Loads the retained version AS A PENDING EDIT rather than overwriting - so a mistaken restore costs nothing.", "NR-STO-06", ""],
     ["NC-18", "'Look at a source file'", "2", "Opens a workbook read-only with no workspace created. Save disabled throughout; Export and Save As are not.", "NR-IMP-05", ""],
     ["NC-19", "Protected-file message", "-", "A file that cannot be read because it is protected says so and says what to do, rather than reporting corruption.", "NR-IMP-06", ""],
+    ["NC-21", "Export for editing outside the application", "7", "File > Export to Excel and Export JSON, offered as a way to CHANGE a plan as well as to read one: export, edit the file elsewhere, hand it to the manager, import it back through the difference report. The round trip loses nothing, and derived values are recomputed rather than trusted.", "NR-IMP-08", "New at round 1"],
     ["NC-20", "Read-only mode", "3", "Not a refusal: every tab, figure, chart, filter and export works. Only writing to that plan is withheld, and the window says why.", "NR-STO-11", ""],
 ]
 r_start = r
@@ -273,7 +274,7 @@ div = [
     ["D-N06", "The title bar carries the plan name and an unsaved marker.", "A browser tab shows a page title; a window shows a document. The bullet is the standard Windows convention for unsaved work.", "Convention", ""],
     ["D-N07", "Export still exists, unchanged, alongside Save.", "They are different acts: Save keeps the plan, Export hands somebody an Excel file. Collapsing them would lose the archive that R-N19 depends on.", "Deliberate", ""],
     ["D-N08", "No file association, so a .prap file cannot be double-clicked open.", "The non-installed rule forbids the registry entry. Mitigated by the recent list and drag-and-drop onto the window.", "Q-N13", ""],
-    ["D-N09", "The theme toggle stays, and the window follows Windows' light/dark setting by default.", "Same control, one more default. A desktop application that ignores the system theme looks broken in a way a web page does not.", "Convention", ""],
+    ["D-N09", "The manual light/dark toggle is REMOVED. The window follows the Windows setting and offers no control of its own.", "Changed at review round 1. A desktop application that ignores the system theme looks broken; one that offers a second place to set it invites the two to disagree. The web application keeps its toggle, because a browser page cannot always read the system setting reliably.", "U-N04", "Changed"],
     ["D-N10", "Nothing else.", "Every tab, table, chart, filter, pop-up, value list, scroll behaviour, validation message and editing rule is the web application's, unchanged (N-11). Twenty-five rounds of review are not being re-opened.", "N-11", ""],
 ]
 r_start = r
@@ -322,23 +323,28 @@ r = note(ws, r, "The last column takes replacement text, not a verdict - if a se
 # ---- 05 Open points -------------------------------------------------------
 ws, r = sheet(wb, "05_Open_Points", "Open points for the Gate N3 review")
 pts = [
-    ["U-N01", "NC-04", "The recent list reads each listed plan's claim file, so it can say 'held by' before you open it.", "It costs one small read per entry - imperceptible locally, a few hundred milliseconds for ten entries on a slow share. Worth it? The alternative is finding out after you open.", ""],
-    ["U-N02", "NC-08", "The recovery dialog lists the first three changes and then 'and 4 more'.", "Enough to recognise the work without becoming a wall of text. Say if you would rather see all of them, scrollable.", ""],
-    ["U-N03", "NC-01", "The identity dialog appears at EVERY launch, pre-filled, needing one click.", "The alternative is asking once and never again, which is wrong on a shared PC - the second person would silently be the first. One click seems the right price.", ""],
-    ["U-N04", "D-N09", "The window follows the Windows light/dark setting by default, with the manual toggle kept.", "The web application defaults to the browser's setting, so this is the same rule in its desktop form.", ""],
-    ["U-N05", "NC-10", "The difference report is expandable to the individual rows, but collapsed by default.", "Sheet-level counts are what the decision is made on; the rows are for when a count looks wrong.", ""],
+    ["U-N01", "NC-04", "The recent list reads each listed plan's claim file, so it can say 'held by' before you open it.", "Cost per entry on a slow share, against finding out after you open.", "AGREED - the cost is acceptable. Built as proposed."],
+    ["U-N02", "NC-08", "The recovery dialog lists the first three changes and then 'and 4 more'.", "Enough to recognise the work without a wall of text.", "CHANGED - list ALL of them, scrollable. Nobody can decide from three lines out of forty."],
+    ["U-N03", "NC-01", "When is a session recognised as editing?", "The claim has to attach to something, and 'the first edit' was open to a loose reading.", "CLARIFIED - it attaches when an unsaved DATA CHANGE has happened, not when a user clicks something. Specification sheet 07 now says so in those words."],
+    ["U-N04", "D-N09", "The window follows the Windows light/dark setting, with the manual toggle kept.", "Same rule as the web application, in desktop form.", "CHANGED - remove the manual toggle. The window follows Windows and offers no setting of its own."],
+    ["U-N05", "NC-10", "The difference report is expandable to the individual rows, but collapsed by default.", "Sheet counts are what the decision is taken on.", "AGREED - and stated as a requirement rather than an option: the expansion is provided, collapsed by default."],
+    ["U-N06", "NC-21", "NEW, raised at review: export the existing data so it can be updated OUTSIDE the application, in either format, and brought back.", "Bulk update or input, archiving, rollback, or simply reference. One manager receives the edited files and applies them - not every user importing their own.", "ACCEPTED as change C-N01. NR-IMP-08 added to the plan; assumption A-N13 records the one-manager scoping; specification sheet 09 carries the round trip it has to survive."],
 ]
 r_start = r
 r = table(ws, r, ["ID", "Component", "Point", "Reasoning", "Your answer"],
           pts, [8, 12, 52, 62, 34], wrap_cols=(3, 4, 5))
 for rr in range(r_start + 1, r_start + 1 + len(pts)):
-    ws.cell(row=rr, column=5).fill = INPUT_FILL
-r = note(ws, r, "None blocks Step N4. U-N01 is the only one with a cost attached rather than a preference.")
+    ws.cell(row=rr, column=5).fill = NEW_FILL
+r = note(ws, r, "All six settled. U-N03 and U-N06 reach beyond this document: U-N03 clarifies the write claim "
+                "in the specification, and U-N06 adds a requirement to the plan - a change against an "
+                "approved baseline, so it carries its own approval on sheet 12 of each.")
 
 r = section(ws, r, "Approval - Gate N3")
 appr = [[f"PRAP NewApp Component List v{DOC_VERSION}", "", "",
-         "Awaiting review. To approve: mark sheets 02 and 03, correct any wording on sheet 04, and answer "
-         "the five points above. Gate N3 closing authorises Step N4 - building it."]]
+         "Re-issued with round 1 applied: 21 components, 10 divergences, 18 messages, six points settled. "
+         "Approving this closes Gate N3 and authorises Step N4 - building it. It also approves change "
+         "C-N01, which the plan and the specification each carry: exporting is a supported way to edit a "
+         "plan outside the application, and the round trip must lose nothing."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [34, 14, 14, 84], wrap_cols=(4,))
 for cc in (2, 3):

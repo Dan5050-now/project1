@@ -14,7 +14,7 @@ no file is read, no plan is opened, no claim is taken. Everything else is live.
 
     python tools/build_newapp_demo.py
 
-Output: app/PM_APP_Prototype_v0.2.html
+Output: app/PM_APP_Prototype_v0.3.html
 """
 
 import importlib.util
@@ -24,7 +24,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-VERSION = "0.2"
+VERSION = "0.3"
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "app" / "PRAP.html"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.9.xlsx"
@@ -60,8 +60,10 @@ CHROME_CSS = """
 #pm-demo{font-size:11.5px;color:var(--muted);padding:6px 16px;background:var(--page);
   border-bottom:1px solid var(--grid)}
 /* The application's own file buttons are replaced by menus on the desktop (D-N02),
-   so they are hidden here rather than left to contradict the menu bar. */
-#loadBtn,#exportBtn,#exportJsonBtn{display:none}
+   so they are hidden here rather than left to contradict the menu bar. The theme
+   toggle goes too: the desktop window follows Windows and offers no setting of its
+   own (D-N09, changed at the Gate N3 review). */
+#loadBtn,#exportBtn,#exportJsonBtn,#themeBtn{display:none}
 
 #pm-open{position:fixed;right:18px;bottom:18px;z-index:70}
 #pm-ov{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.42);

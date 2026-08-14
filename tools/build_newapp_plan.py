@@ -20,9 +20,10 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.2"
-DOC_STATUS = ("Baseline v1.0 + Steps N2 and N3 progress. v1.0 remains the approved baseline - this issue "
-              "records progress against it, and changes no requirement, decision or risk.")
+DOC_VERSION = "1.3"
+DOC_STATUS = ("Baseline v1.0 + Steps N2/N3 progress + ONE CHANGE AWAITING APPROVAL. Change C-N01 adds "
+              "NR-IMP-08 and assumption A-N13 from the Gate N3 review. A change against an approved "
+              "baseline needs its own approval - see sheet 12.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -225,7 +226,15 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.2", DOC_DATE, "Claude Code", "-",
+    [f"{MARK_NEW}1.3", DOC_DATE, "Claude Code", "Pending",
+     "GATE N3 REVIEW APPLIED, and it carries ONE CHANGE against the approved baseline rather than progress "
+     "alone. Change C-N01: exporting is confirmed as a supported way to EDIT a plan - out to Excel or JSON, "
+     "changed outside the application, and back in - so NR-IMP-08 is added, requiring the round trip to lose "
+     "nothing. Assumption A-N13 records the scoping the reviewer supplied with it: bulk editing goes to one "
+     "manager who imports, not to every user importing their own file. A change against an approved "
+     "baseline needs its own approval; sheet 12 carries it. The other four answers change the "
+     "specification and the component list, not this document."],
+    ["1.2", DOC_DATE, "Claude Code", "-",
      "STEP N3 ISSUED FOR REVIEW - a progress record, not a change. N3.1 designed the eight screens the "
      "browser has no counterpart for and built them as a clickable prototype rather than describing them, "
      "because a table describing a dialog is a poor way to review a dialog. N3.2 produced the divergence "
@@ -471,6 +480,7 @@ reqs = [
     [f"{MARK_NEW}NR-IMP-05", "Import / export", "A source workbook can be opened for a look without creating a workspace: every table and graph, nothing saved, nothing left behind. The quick question - 'what does this file say?' - does not require committing to a plan first.", "Must", "Q-N10", "N4"],
     [f"{MARK_NEW}NR-IMP-06", "Import / export", "A file the application cannot read because it is encrypted or protected says so, names that as the likely cause, and says what to do about it. It never reports a protected file as corrupt, and never fails silently.", "Must", "Q-N04 - see R-N18", "N4"],
     [f"{MARK_NEW}NR-IMP-07", "Import / export", "Nothing the application writes is encrypted by the application itself. Where files must be protected, that is done by whatever the company already uses, on the folder - so the application never becomes the only thing that can open the user's own data.", "Must", "Q-N04 - see R-N18", "N2"],
+    [f"{MARK_NEW}NR-IMP-08", "Import / export", "Export is a supported way to EDIT a plan, not only to read one. The exported file - in either format - can be changed outside the application and imported back with no loss: every row, column and value that went out comes back, and anything the application derives is recomputed rather than trusted.", "Must", "Gate N3 review - C-N01", "N4"],
     [f"{MARK_CHG}NR-IMP-04", "Import / export", "A workspace can be opened by dragging it onto the running application's window. Double-clicking a workspace file in Explorer does NOT open it, because a file association would require a registry entry that NR-DEP-06 forbids.", "Could", "Reduced by the non-installed rule", "N4"],
 
     [f"{MARK_NEW}NR-USR-01", "User identity", "The application asks who the user is when it starts, before any workspace is opened, and carries that identity for the session.", "Must", "Q-N17", "N4"],
@@ -1178,6 +1188,7 @@ assum = [
     [f"{MARK_NEW}A-N11", "No internal validation, qualification or record-keeping obligation applies to this tool.", "CONFIRMED at Q-N09"],
     [f"{MARK_NEW}A-N12", "The shared folder, if used, is writable by the people using it.", "CONFIRMED at Q-N15"],
     [f"{MARK_NEW}A-N10", "If a shared network folder is used, it is reachable whenever the application is needed. A plan kept only on an unreachable share cannot be opened.", "Standing - the user guide will recommend keeping working copies locally"],
+    [f"{MARK_NEW}A-N13", "Bulk editing outside the application is done by exporting, changing the file, and giving it to ONE person - the application's manager - who imports it. Every user does not import their own files.", "CONFIRMED at the Gate N3 review"],
     [f"{MARK_CHG}A-N03", "One person works on a given workspace at a time - but the application no longer RELIES on it, because a shared folder makes it unsafe to assume.", "WITHDRAWN as an assumption at round 2; enforced by NR-STO-10 instead"],
     ["A-N04", "Package size is unconstrained.", "CONFIRMED by your instruction, 2026-08-13"],
     ["A-N05", "Both applications remain in service indefinitely; neither is a migration path away from the other.", "CONFIRMED by your instruction, 2026-08-13"],

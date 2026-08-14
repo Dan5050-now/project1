@@ -28,7 +28,7 @@ and stays in service — the two are parallel products, not successor and predec
 |---|---|---|
 | N1 | Development plan | **v1.0 APPROVED BASELINE** 2026-08-13 · Gate N1 closed |
 | N2 | Programming specification | **v1.0 APPROVED** 2026-08-13 · Gate N2 closed |
-| N3 | Desktop UI design | **Prototype + component list issued** — Gate N3 awaits you |
+| N3 | Desktop UI design | **Round 1 applied; re-issued** — Gate N3 awaits you |
 | N4–N5 | Build, release | Not started |
 
 Both applications share one calculation engine, one data schema (version 5) and one
@@ -99,9 +99,10 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.2.xlsx` — **current.** Records Steps N2 and N3
-  progress against the baseline; changes no requirement, decision or risk.
-- `app/PM_APP_Prototype_v0.2.html` — **the Step N3 prototype.** Open it in a browser.
+- `docs/PRAP_NewApp_Development_Plan_v1.3.xlsx` — **current.** Records Steps N2/N3 progress,
+  plus **change C-N01** from the Gate N3 review — `NR-IMP-08` and assumption `A-N13`.
+  A change against an approved baseline, so it carries its own approval.
+- `app/PM_APP_Prototype_v0.3.html` — **the Step N3 prototype.** Open it in a browser.
   It is *the real application* pre-loaded with the 62-project dummy dataset: every tab,
   table, chart and figure is computed by the engine that will ship, with the desktop
   chrome around it and the eight new screens over the top. `tools/test_demo.py` compares
@@ -109,8 +110,8 @@ document through the manifest rather than by sorting filenames.
   0.00e+00**, so if a number looks wrong there it is wrong in the product.
 - `app/PM_APP_Prototype_v0.1.html` — the same eight screens on their own, for reading the
   wording without the application behind it.
-- `docs/PRAP_NewApp_Component_List_v0.2.xlsx` — **issued for review, Gate N3 candidate.**
-  20 components, the 9-entry divergence register `NR-PAR-04` requires, all 18
+- `docs/PRAP_NewApp_Component_List_v0.3.xlsx` — **re-issued, Gate N3 candidate.**
+  21 components, the 9-entry divergence register `NR-PAR-04` requires, all 18
   user-visible strings in one place, and 5 open points.
 - `docs/PRAP_NewApp_Development_Plan_v1.0.xlsx` — **THE APPROVED BASELINE** (2026-08-13),
   closing Gate N1 and authorising Step N2. The application is **Project Management APP**
@@ -140,6 +141,8 @@ document through the manifest rather than by sorting filenames.
   Two items were resolved by the approval rather than by a seventh round: the reading
   taken of the Q-N04 answer is adopted, and the documents keep the `PRAP_NewApp_` prefix.
   Both remain correctable — say so and they change under a v1.1.
+- `docs/PRAP_NewApp_Specification_v1.1.xlsx` — five clarifications from the Gate N3
+  review, awaiting approval as change C-N01.
 - `docs/PRAP_NewApp_Specification_v1.0.xlsx` — **APPROVED** 2026-08-13, closing Gate N2
   and authorising Step N3. All seven open points agreed with no change requested.
   13 sheets: the storage interface and its capability flags, the workspace file format,
