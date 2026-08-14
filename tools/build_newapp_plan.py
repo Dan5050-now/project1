@@ -20,10 +20,9 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.3"
-DOC_STATUS = ("Baseline v1.0 + Steps N2/N3 progress + ONE CHANGE AWAITING APPROVAL. Change C-N01 adds "
-              "NR-IMP-08 and assumption A-N13 from the Gate N3 review. A change against an approved "
-              "baseline needs its own approval - see sheet 12.")
+DOC_VERSION = "1.4"
+DOC_STATUS = ("Baseline v1.0 + change C-N01, APPROVED 2026-08-13. Gates N1, N2 and N3 are all closed; "
+              "Step N4 - building it - is authorised and open. 70 requirements, 32 decisions, 19 risks.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -226,7 +225,12 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.3", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}1.4", DOC_DATE, "Claude Code", "APPROVED",
+     "GATE N3 CLOSED and CHANGE C-N01 APPROVED, both on 2026-08-13. Content is v1.3 unchanged; this issue "
+     "records the approvals and opens Step N4. The requirement register now stands at 70 and is the "
+     "contract for the build; the component list v1.0 and specification v1.2 are its companions. Nothing "
+     "further is asked of the reviewer until Gate N4, when the application is functionally complete."],
+    ["1.3", DOC_DATE, "Claude Code", "Superseded",
      "GATE N3 REVIEW APPLIED, and it carries ONE CHANGE against the approved baseline rather than progress "
      "alone. Change C-N01: exporting is confirmed as a supported way to EDIT a plan - out to Excel or JSON, "
      "changed outside the application, and back in - so NR-IMP-08 is added, requiring the round trip to lose "
@@ -985,10 +989,10 @@ wbs = [
 
     ["N3", "N3.1", "Desktop-specific UI design: eight screens, built as a clickable prototype; then the real application wrapped in the desktop chrome and loaded with the 62-project dummy dataset, so the figures and charts can be reviewed as they will be.", "app/PM_APP_Prototype_v0.2.html", "Complete - issued for review"],
     ["N3", "N3.2", "List every deliberate divergence from the web UI, with its reason (NR-PAR-04).", "Component list sheet 03 - 9 divergences", "Complete - issued for review"],
-    ["N3", "N3.3", "Requester reviews the prototype and the component list.", "Review comments", "Pending you"],
-    ["N3", "GN3", "GATE N3 - design and component list approved.", "PRAP_NewApp_Component_List_v1.0.xlsx", "Pending you"],
+    ["N3", "N3.3", "Requester reviews the prototype and the component list.", "v0.2_reviewed mark-up", "Complete"],
+    ["N3", "GN3", "GATE N3 CLOSED - component list v1.0 approved 2026-08-13, with change C-N01. Step N4 authorised.", "PRAP_NewApp_Component_List_v1.0.xlsx", "Complete"],
 
-    ["N4", "N4.1", "Desktop shell: application window, menu bar, native dialogs, window state.", "shell/desktop/", "Not started"],
+    ["N4", "N4.1", "Desktop shell: application window, menu bar, native dialogs, window state.", "src/shell/desktop/", "Authorised - not started"],
     ["N4", "N4.2", "Filesystem storage adapter: open, save, atomic write, version history.", "storage/", "Not started"],
     ["N4", "N4.3", "Workspace lifecycle: new, open, save, save as, recent list, reopen last at launch.", "shell/desktop/", "Not started"],
     ["N4", "N4.4", "Journalling and crash recovery.", "storage/", "Not started"],

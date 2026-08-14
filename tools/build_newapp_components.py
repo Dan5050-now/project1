@@ -24,11 +24,11 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "0.3"
-DOC_STATUS = "Review round 1 applied. Re-issued for Gate N3."
+DOC_VERSION = "1.0"
+DOC_STATUS = "APPROVED - 2026-08-13. Gate N3 closed; this governs Step N4."
 DOC_DATE = "2026-08-13"
-SPEC = "PRAP_NewApp_Specification_v1.1.xlsx"
-PLAN = "PRAP_NewApp_Development_Plan_v1.3.xlsx"
+SPEC = "PRAP_NewApp_Specification_v1.2.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.4.xlsx"
 PROTO = "app/PM_APP_Prototype_v0.3.html"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Component_List_v{DOC_VERSION}.xlsx"
@@ -142,7 +142,7 @@ cover = [
     ("Status", DOC_STATUS),
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
-    ("Reviewer", "Requester - round 1 answered 2026-08-13; five points settled and one added"),
+    ("Reviewer", "Requester - one round; five points settled, one added, approved 2026-08-13"),
     ("Governed by", f"{SPEC} (Gate N2 closed) and {PLAN} (Gate N1 closed)"),
     ("Review it against", f"{PROTO} - open it in a browser. It is THE REAL APPLICATION, "
                           f"pre-loaded with the 62-project dummy dataset: every tab, table, "
@@ -340,15 +340,18 @@ r = note(ws, r, "All six settled. U-N03 and U-N06 reach beyond this document: U-
                 "approved baseline, so it carries its own approval on sheet 12 of each.")
 
 r = section(ws, r, "Approval - Gate N3")
-appr = [[f"PRAP NewApp Component List v{DOC_VERSION}", "", "",
-         "Re-issued with round 1 applied: 21 components, 10 divergences, 18 messages, six points settled. "
-         "Approving this closes Gate N3 and authorises Step N4 - building it. It also approves change "
-         "C-N01, which the plan and the specification each carry: exporting is a supported way to edit a "
-         "plan outside the application, and the round trip must lose nothing."]]
+appr = [["PRAP NewApp Component List v1.0", "Dan", "2026-08-13",
+         "APPROVED - BASELINE. Gate N3 is closed and Step N4 authorised. 21 components, 10 divergences and "
+         "18 user-visible strings are the contract for what the desktop application looks like and says. "
+         "The approval also covers change C-N01, carried by plan v1.4 and specification v1.2: exporting is "
+         "a supported way to edit a plan outside the application, and the round trip must lose nothing."]]
 r_start2 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr, [34, 14, 14, 84], wrap_cols=(4,))
-for cc in (2, 3):
-    ws.cell(row=r_start2 + 1, column=cc).fill = INPUT_FILL
+for cc in (1, 2, 3, 4):
+    ws.cell(row=r_start2 + 1, column=cc).fill = NEW_FILL
+r = note(ws, r, "STEP N3 IS COMPLETE. What was designed here now has to be built, and the tests that will "
+                "prove it are already written down - sheet 08 of the specification lists them, including the "
+                "three that can only be run on your own machine.")
 
 wb.save(OUT)
 print(f"Written: {OUT}")

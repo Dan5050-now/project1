@@ -22,11 +22,11 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.1"
-DOC_STATUS = ("v1.0 APPROVED 2026-08-13. This issue carries five clarifications from the Gate N3 "
-              "review; as a change against an approved baseline it needs its own approval - see sheet 12.")
+DOC_VERSION = "1.2"
+DOC_STATUS = ("APPROVED - 2026-08-13. v1.0 approved at Gate N2; change C-N01 approved with the Gate N3 "
+              "review. This issue is the governing specification for Steps N4 and N5.")
 DOC_DATE = "2026-08-13"
-PLAN = "PRAP_NewApp_Development_Plan_v1.3.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.4.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Specification_v{DOC_VERSION}.xlsx"
@@ -168,7 +168,11 @@ r = lines(ws, r, [
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
-          [["1.1", DOC_DATE, "Claude Code", "Pending",
+          [["1.2", DOC_DATE, "Claude Code", "APPROVED",
+            "BASELINE. Change C-N01 approved 2026-08-13 together with Gate N3. Content is v1.1 unchanged - "
+            "the five clarifications from the Gate N3 review, now signed. This issue governs Steps N4 and "
+            "N5; v1.0 is superseded."],
+           ["1.1", DOC_DATE, "Claude Code", "Superseded",
             "GATE N3 REVIEW APPLIED - five clarifications, none of which reverses a decision. (1) The write "
             "claim is taken when a DATA VALUE ACTUALLY CHANGES, not when a user clicks into a cell or moves "
             "a selection: sheet 07 now says so in those words, because 'first edit' was open to the looser "
@@ -780,14 +784,15 @@ chg = [
 r = table(ws, r, ["#", "Sheet", "Change", "Why", "Effect"], chg, [5, 18, 56, 60, 22], wrap_cols=(3, 4, 5))
 r += 1
 r = section(ws, r, "Approval - change C-N01")
-appr2 = [["PRAP NewApp Specification v1.1", "", "",
-          "Awaiting approval. v1.0 is the approved baseline and remains so until this is signed. None of the "
-          "five reverses a decision taken at Gate N2; four are clarifications and the fifth adds a "
-          "requirement the plan carries as C-N01."]]
+appr2 = [["PRAP NewApp Specification v1.2", "Dan", "2026-08-13",
+          "APPROVED. Change C-N01 accepted in full: the write claim attaches to a data change rather than a "
+          "click, recovery lists every unsaved change, the difference report expands to rows, the manual "
+          "theme toggle is removed, and export is a supported way to edit a plan outside the application "
+          "with a round trip that loses nothing. This issue supersedes v1.0 and governs Steps N4 and N5."]]
 r_start3 = r
 r = table(ws, r, ["Document", "Approver", "Date", "Decision"], appr2, [32, 14, 14, 88], wrap_cols=(4,))
-for cc in (2, 3):
-    ws.cell(row=r_start3 + 1, column=cc).fill = INPUT_FILL
+for cc in (1, 2, 3, 4):
+    ws.cell(row=r_start3 + 1, column=cc).fill = NEW_FILL
 
 wb.save(OUT)
 print(f"Written: {OUT}")
