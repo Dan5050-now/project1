@@ -25,3 +25,7 @@ node_modules/
 # desktop application keeps beside itself, and belongs to the user rather than here.
 src/shell/desktop/index.html
 data/
+
+# Packaged builds. ~140 MB of Electron per package; rebuilt on demand by
+# tools/package_windows.py, and never a thing a repository should carry.
+dist/
