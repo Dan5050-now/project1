@@ -29,3 +29,7 @@ data/
 # Packaged builds. ~140 MB of Electron per package; rebuilt on demand by
 # tools/package_windows.py, and never a thing a repository should carry.
 dist/
+
+# The compiled launch probe. Its source is tools/probe/PM_APP_Probe.c and one
+# command rebuilds it; a checked-in binary is a thing nobody can review.
+tools/probe/*.exe
