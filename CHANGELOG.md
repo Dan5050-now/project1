@@ -1,49 +1,67 @@
 # Changelog
 
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
-Each artifact is versioned independently; see `docs/README.md` for the versioning policy.
+Each artifact is versioned independently; see `docs/README.md`.
 
-## [Unreleased]
+## [1.0.0] — 2026-08-17
 
-### Added — Step 1 and Step 2 draft deliverables (2026-08-10)
+Step 1 gate passed. Review disposition: 95 items — 78 Accept, 3 Amend, 14 open questions
+closed (8 answered, 6 assumptions accepted). Reviewed by Daniel.
 
-- **TEA-PLAN-001 Development Plan v0.1.0** (`docs/plan/development-plan.xml`)
-  - Agent concept: deterministic-first / LLM-assisted split, 10-component pipeline,
-    human-in-the-loop controls, explicit allowed/forbidden LLM task list, degraded
-    (deterministic-only) mode.
-  - LLM interoperability: provider interface with Anthropic, OpenAI-compatible (covers GLM
-    gateways, vLLM, Ollama), GLM-native and null adapters; capability matrix and portability rules.
-  - Canonical data model: 11 entities, relationships, ER diagram, SDTM (TU/TR/RS) and EDC
-    mapping profiles.
-  - Review scope: 7 rule families with risk weighting.
-  - Architecture, deployment modes, data protection, web application concept and 7 planned screens.
-  - Six-step delivery plan with entry/exit criteria per step.
-  - 17 functional, 11 non-functional and 7 regulatory requirements; 14 risks with mitigations;
-    validation approach; version control policy; quality metrics; 10 recommendations;
-    14 open questions each with a stated working assumption.
+### Changed — document format
+- Controlled documents are now **Excel workbooks**, replacing XML. The v0.1.0 XML drafts
+  moved to `docs/superseded/` for history only.
 
-- **TEA-SPEC-001 Programming Specification v0.1.0** (`docs/spec/programming-spec.xml`)
-  - Guideline profiles for RECIST 1.0, RECIST 1.1 and iRECIST; 8 documented interpretation
-    decisions for ambiguous areas.
-  - 10 derivation algorithms in pseudocode (sum of diameters, nadir, percent changes, target /
-    non-target / new-lesion / overall response, best overall response with confirmation,
-    iRECIST state machine, progression dating).
-  - **Rule catalog v0.1.0: 84 review points** — ST 5, BL 17, FU 14, RS 20, IR 10, XD 12, QM 6.
-    Every rule carries intent, logic, severity, determination mode and the five reviewer-facing
-    message templates.
-  - LLM integration contract: provider interface, 5 prompt contracts, 6 guardrails
-    (numeric injection, prompt-injection defence, no verdict authority, determinism, redaction,
-    budget), conformance suite.
-  - Query reconciliation algorithm, cascade grouping and prioritisation scoring.
-  - Output specification, dedupe key, coverage report, API surface, error handling,
-    performance, 8 test levels, configuration, extensibility procedures, traceability matrix.
-  - 7 open specification questions for the Step 2 review.
+### Changed — scope
+- **RECIST 1.0 removed** (OBJ-06 / OQ-06). Guideline packs are RECIST 1.1 and iRECIST.
+  One profile, one knowledge-base entry and one reference retired; rules previously tagged
+  `ALL` now mean RECIST 1.1 + iRECIST.
+- **Veeva EDC is the primary input profile** (OQ-01), with the CRF specification supplied
+  as structured data. SDTM demoted to secondary.
+- Release 1 simplifications: on-demand runs only (OQ-12), no strict role separation
+  (OQ-08), English only (OQ-11).
+- Indications: NSCLC and breast cancer; prostate, colorectal, pancreatic, head and neck
+  and ovarian cancer on the post-release roadmap (OQ-05).
 
-- **TEA-CTR-001 canonical input contract** (`docs/contracts/canonical-input.schema.json`)
-- **TEA-CTR-002 finding output contract** (`docs/contracts/finding.schema.json`)
-- **Document control policy** (`docs/README.md`)
+### Added — confidence rate (OBJ-03)
+- Every finding now carries a confidence rate (xx.x%): the estimated probability that the
+  finding is a correct query, distinct from certainty that the rule fired correctly.
+- Confidence base rate assigned to all 84 rules (range 0.30–0.97, mean 0.79).
+- Computation model, display bands and safeguards specified; calibration error added as a
+  quality metric; FR-18 added; RSK-15 added for miscalibration.
 
-### Not started
+### Added — query answer assessment (OBJ-04)
+- The agent now assesses whether a site's answer to an earlier query reasonably explains
+  the current data, instead of escalating whenever the data still fails a check.
+- New outcome `JUSTIFIED_BY_ANSWER` with permanent suppression for MINOR and INFO
+  findings; CRITICAL and MAJOR are flagged for a human to close, never auto-suppressed.
+- TE-QM-002 rewritten; prompt contract `P-ASSESS-ANSWER` added; FR-19 added.
 
-Steps 3–6 (prototype output on dummy data, UI design, code generation, final application) are
-gated on written approval of the two draft documents above.
+### Added — protocol intake (OQ-04)
+- New component AC-11 and pipeline stage ST-INTAKE: the agent summarises protocol
+  parameter checkpoints for the user to confirm before the first run. FR-20 added, plus
+  screen S7 and prompt contract `P-INTAKE-PROTOCOL`.
+
+### Added — tooling
+- `docs/spec/rule-catalog.yaml` — machine-readable catalog, maintained separately from the
+  specification workbook by decision at the Step 1 review.
+- `tools/check_catalog_drift.py` — CI guard comparing catalog, workbook and (from Step 5)
+  implemented rule modules across id, family, title, guideline, severity, mode, status and
+  confidence base rate. Negative-tested: it fails on an injected mismatch.
+- `tools/build_rule_catalog.py` — regenerates the catalog from `tools/rules.json`.
+
+### Documents
+- **TEA-PLAN-001 v1.0.0** — 25 sheets. APPROVED.
+- **TEA-SPEC-001 v1.0.0** — 20 sheets, including the 84-rule catalog split across a Rules
+  sheet (logic, severity, confidence) and a Rule_Messages sheet (the five reviewer-facing
+  elements). DRAFT, awaiting the Step 2 review.
+
+### Open
+- Six items carry into Step 2, tracked on the plan's Open_Items sheet. OI-01 queries the
+  "pleural effusion" entry in the indication roadmap, which is a finding type rather than
+  an indication.
+
+## [0.1.0] — 2026-08-10
+
+Initial XML drafts of the development plan and programming specification, the canonical
+input and finding data contracts, and the document control policy. Superseded by 1.0.0.
