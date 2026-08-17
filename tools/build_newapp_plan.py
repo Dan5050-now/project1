@@ -20,9 +20,10 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.5"
-DOC_STATUS = ("Baseline v1.0 + change C-N01. Gates N1-N3 closed; STEP N4 IN PROGRESS - the storage layer "
-              "and the desktop shell are built and tested, and the application launches.")
+DOC_VERSION = "1.6"
+DOC_STATUS = ("Baseline v1.0 + change C-N01. Gates N1-N3 closed; Step N4 in progress. A-N09 IS NOW "
+              "EVIDENCE rather than an assumption: an unsigned executable ran on the requester's own "
+              "machine on 2026-08-15.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -225,7 +226,16 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.5", DOC_DATE, "Claude Code", "-",
+    [f"{MARK_NEW}1.6", "2026-08-15", "Claude Code", "-",
+     "THE LAUNCH PROBE RAN. Assumption A-N09 - that the requester can extract a zip into a folder of "
+     "their own and run an unsigned executable from it - was the one thing in this plan that could have "
+     "invalidated the whole approach, and it is now evidence: PM_APP_Probe.exe ran on BOOK-R8USOPHQ11 at "
+     "09:14 on 2026-08-15, from C:\\Users\\del09\\..., and could write beside itself. R-N01 falls from "
+     "Medium/HIGH to Low/HIGH; R-N10 falls to Low, measured rather than guessed - the real folder leaves "
+     "153 characters of headroom under the Windows limit. What is NOT yet known is how anti-virus treats "
+     "the full 142 MB package, so R-N09 stands unchanged and A-N09 is confirmed only for the half that "
+     "was tested. Evidence archived at docs/review/PM_APP_probe_result_2026-08-15.txt."],
+    ["1.5", DOC_DATE, "Claude Code", "-",
      "STEP N4 IN PROGRESS - a progress record, not a change. Tasks N4.1 to N4.4c are built: the desktop "
      "shell (window, menu, native dialogs, window state), the filesystem storage adapter with its atomic "
      "write protocol and retained version, the workspace lifecycle, journalling, and the write claim with "
@@ -1129,8 +1139,8 @@ ws, r = sheet(wb, "10_Risks", "Risks and assumptions")
 
 r = section(ws, r, "Risks")
 risks = [
-    [f"{MARK_CHG}R-N01", "Corporate policy blocks the application from running at all - typically application allow-listing, or a rule against executables outside Program Files.", "Medium", "HIGH",
-     "Still the single largest risk. Q-N02 answered at round 6: a zip can be saved in your own folder and run, and checking the rest with IT is impractical for now, so we ASSUME no issue. That is your call to make and the plan proceeds on it - but assuming is not verifying, so this risk stays OPEN rather than closed, assumption A-N09 records it, and N5.7 on a real company PC remains the first moment anybody will know. If it does happen, the web application still works and still meets the original need - which is why keeping it, as you instructed, is the right call."],
+    [f"{MARK_CHG}R-N01", "Corporate policy blocks the application from running at all - typically application allow-listing, or a rule against executables outside Program Files.", "Low", "HIGH",
+     "LARGELY SETTLED 2026-08-15. It was the largest risk in this plan and it is now largely evidence: an unsigned executable, extracted from a zip into C:\\Users\\del09\\..., started and ran. There is no application allow-list standing in the way on that machine. Likelihood drops from Medium to Low; the impact stays HIGH because what remains would still be fatal - a policy that tolerates a 257 KB probe may yet quarantine a 142 MB application carrying a browser engine (R-N09). Proven for one machine and one user; a policy applied to a group could differ."],
     [f"{MARK_NEW}R-N02", "The refactor to share the engine breaks the finished web application.", "Medium", "High",
      "Task N2.2 gates everything else on the 13 existing suites passing unmodified against the rebuilt HTML file. If they do not pass, the refactor is wrong and nothing proceeds. This is why N2.1 is the first task and carries no other change."],
     [f"{MARK_NEW}R-N03", "A workspace file is corrupted and a plan is lost - data that used to be safe in Excel because the application never wrote to it.", "Low", "HIGH",
@@ -1147,8 +1157,8 @@ risks = [
      "A one-page note in the user guide: the desktop application for planning work you keep, the web application for a quick look on a machine where nothing may be installed. A workspace exports to Excel, which imports into either, so no work is trapped."],
     [f"{MARK_NEW}R-N09", "Windows SmartScreen warns about the executable, or anti-virus quarantines it, because it is unsigned and unknown.", "HIGH", "Medium",
      "Likely rather than possible - an unsigned executable arriving in a zip carries the mark-of-the-web and is treated as untrusted. Usually a one-time 'More info - Run anyway', which the user guide will show with a screenshot. Being non-installed does not help here and may hurt: unregistered software has no reputation. If anti-virus quarantines it outright, only IT can allow it - Q-N02 covers this. A code-signing certificate would remove the warning, and remains an IT purchase rather than a coding task (Q-N03)."],
-    [f"{MARK_NEW}R-N10", "The application fails in a deeply nested folder because Windows path limits are exceeded.", "Medium", "Medium",
-     "A packaged browser engine carries long nested paths, and the classic 260-character limit bites when a portable folder is extracted somewhere like a synced Documents tree. Mitigations: keep internal paths short by packing resources into an archive rather than loose files, test extraction into a deliberately deep path at N5.6, and state a recommended location in the user guide."],
+    [f"{MARK_CHG}R-N10", "The application fails in a deeply nested folder because Windows path limits are exceeded.", "Low", "Medium",
+     "MEASURED 2026-08-15 rather than guessed. The requester's own folder is C:\\Users\\del09\\DL-ClaudeCW\\project management app develop\\ - 64 characters to the application root, which leaves the deepest file inside the package at 107 of the 260 Windows allows: 153 characters of headroom, and the path contains spaces without trouble. The risk is real for somebody who extracts into a much deeper tree, so the user guide still states a recommended location and N5.6 still tests a deliberately deep path."],
     [f"{MARK_CHG}R-N11", "The application folder is put on a read-only or shared network folder, so it cannot keep its data beside itself.", "HIGH", "Medium",
      "Raised from Medium at round 2 - Q-N12 says this is under consideration, so it is now the expected case rather than an edge one. NR-DEP-09 (now Must) and the resolution order at NR-DEP-10 handle it: detected at launch, stated plainly, and the user chooses. Without that it would fail at the first Save, which is the worst possible moment to discover it."],
     [f"{MARK_NEW}R-N12", "Launched from a network folder, the application starts slowly, or Windows treats an executable on a UNC path as untrusted.", "Medium", "Medium",
@@ -1197,7 +1207,7 @@ assum = [
     ["A-N01", "Data volume stays as assumed by the web plan - up to about 100 projects and 1,000 people.", "Inherited, standing"],
     [f"{MARK_CHG}A-N02", "Windows 10 or 11, 64-bit, is the only target. macOS and Linux are out of scope.", "CONFIRMED at review round 1"],
     [f"{MARK_NEW}A-N08", "The application is never installed: it is copied as a folder and run in place, and the machine is unchanged by its presence.", "CONFIRMED at review round 1"],
-    [f"{MARK_CHG}A-N09", "The user can extract a zip and run an executable from their own folder, and nothing will later block or remove it.", "ASSUMED at Q-N02, not verified. Confirming with IT was impractical; you chose to proceed on the assumption. First tested at N5.7"],
+    [f"{MARK_CHG}A-N09", "The user can extract a zip and run an executable from their own folder, and nothing will later block or remove it.", "CONFIRMED IN PART 2026-08-15 - an unsigned .exe extracted from a zip ran on BOOK-R8USOPHQ11 and wrote beside itself. The clause about a LARGE package and anti-virus is still untested"],
     [f"{MARK_NEW}A-N11", "No internal validation, qualification or record-keeping obligation applies to this tool.", "CONFIRMED at Q-N09"],
     [f"{MARK_NEW}A-N12", "The shared folder, if used, is writable by the people using it.", "CONFIRMED at Q-N15"],
     [f"{MARK_NEW}A-N10", "If a shared network folder is used, it is reachable whenever the application is needed. A plan kept only on an unreachable share cannot be opened.", "Standing - the user guide will recommend keeping working copies locally"],

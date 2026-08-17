@@ -107,7 +107,10 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.5.xlsx` — **current.** Records Step N4 progress.
+- `docs/PRAP_NewApp_Development_Plan_v1.6.xlsx` — **current.** Records Step N4 progress,
+  and the launch probe: an unsigned executable **ran on the requester's own machine**
+  on 2026-08-15, so `A-N09` is evidence rather than assumption and `R-N01` falls from
+  Medium/HIGH to Low/HIGH. Evidence at `docs/review/PM_APP_probe_result_2026-08-15.txt`.
 - `docs/PRAP_NewApp_Development_Plan_v1.4.xlsx` — Baseline v1.0 plus
   **change C-N01, approved** 2026-08-13: `NR-IMP-08` (export is a supported way to edit a
   plan outside the application, and the round trip loses nothing) and assumption `A-N13`
