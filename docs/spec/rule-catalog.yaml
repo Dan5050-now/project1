@@ -4,7 +4,7 @@
 # CI enforces consistency via tools/check_catalog_drift.py.
 version: 1.0.0
 guidelines: [RECIST_1_1, iRECIST]
-rule_count: 84
+rule_count: 85
 rules:
   - id: TE-BL-001
     family: BL
@@ -1269,6 +1269,39 @@ rules:
       reason: "Discordance between the investigator and central review is expected at some rate, but discordance that crosses a progression boundary affects the primary endpoint where the central review is the basis of analysis, and may indicate a systematic difference in lesion selection or measurement at this site."
       query: "Not applicable: this finding is for internal review and reconciliation and is not normally issued as a site query."
       tips: "Review the lesion-level data from both readers side by side. Consistent directional discordance at one site is a monitoring signal; scattered discordance is normal reader variability. Where the sponsor keeps the two streams deliberately separated, this rule should be disabled in configuration."
+  - id: TE-RS-021
+    family: RS
+    title: "New or worsening effusion used as evidence of progression without cytological confirmation"
+    guideline: "RECIST 1.1 + iRECIST"
+    severity: MAJOR
+    mode: HYBRID
+    status: PROPOSED_OPTIONAL
+    confidence_base_rate: 0.55
+    required_fields: "reported_responses.overall, non_target_state, lesion description text, derived target response, cytology result where collected"
+    intent: "Progression driven by an effusion must rest on cytological confirmation where the measurable disease is responding or stable."
+    logic: |
+      for each assessment a where reported overall response == PD:
+          effusions = non-target or new-lesion records at a whose organ or description
+                      matches an effusion pattern (pleural, pericardial, peritoneal / ascites)
+          for e in effusions:
+              appeared  = e not present at the previous assessment
+              worsened  = e.non_target_state moved toward worsening since the previous assessment
+              if (appeared or worsened)
+                 and derived target_response at a in (CR, PR, SD)
+                 and no cytology or histology result recorded for e:
+                     raise finding
+      
+      guards:
+        - suppress when unequivocal progression is evidenced independently of the effusion
+        - suppress when derived target response is itself PD
+        - deactivate when the protocol waives cytological confirmation (set at AC-11 intake)
+        - deactivate when no cytology field is collected, reporting NOT_EVALUATED
+    messages:
+      review_point: "Whether a new or worsening effusion used to support progression carries the cytological confirmation RECIST requires."
+      issue: "Progressive disease is recorded at {visit} for subject {subject_id}. The supporting non-target finding is {effusion_description}, which {appeared_or_worsened} at this visit, while target lesions show {target_response_derived}. No cytological result is recorded for the effusion."
+      reason: "RECIST 1.1 requires that an effusion appearing or worsening during treatment be confirmed cytologically before it is taken as evidence of progression, where the measurable disease is responding or stable. Effusions arise from causes unrelated to tumor progression, including the treatment itself and intercurrent illness. An unconfirmed effusion is a recognised source of spurious progression, which censors the subject early and shortens progression-free survival."
+      query: "Progressive disease is recorded at {visit}, supported by {effusion_description}, while target lesions show {target_response_derived}. Please confirm whether cytological assessment of the effusion was performed and record the result. If cytology was not performed, please confirm the basis on which progression was assessed."
+      tips: "This matters most where the effusion is the sole basis for progression; where other unequivocal progression exists the finding is suppressed. Some protocols explicitly waive cytological confirmation — check the protocol before querying, and if it is waived, deactivate this rule at the AC-11 intake rather than dispositioning each occurrence."
   - id: TE-ST-001
     family: ST
     title: "Lesion measured at follow-up but not identified at baseline or as a new lesion"

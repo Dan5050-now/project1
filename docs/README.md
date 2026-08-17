@@ -68,7 +68,7 @@ python3 tools/check_catalog_drift.py --rules-dir src/rules   # also vs implement
 ```
 
 The check compares id, family, title, guideline, severity, mode, status and confidence
-base rate for all 84 rules, and exits non-zero on any mismatch. Run it in CI on every
+base rate for all 85 rules, and exits non-zero on any mismatch. Run it in CI on every
 commit. Regenerate the catalog after editing `tools/rules.json`:
 
 ```bash

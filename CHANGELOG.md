@@ -26,7 +26,7 @@ closed (8 answered, 6 assumptions accepted). Reviewed by Daniel.
 ### Added — confidence rate (OBJ-03)
 - Every finding now carries a confidence rate (xx.x%): the estimated probability that the
   finding is a correct query, distinct from certainty that the rule fired correctly.
-- Confidence base rate assigned to all 84 rules (range 0.30–0.97, mean 0.79).
+- Confidence base rate assigned to all rules (range 0.30–0.97, mean 0.79).
 - Computation model, display bands and safeguards specified; calibration error added as a
   quality metric; FR-18 added; RSK-15 added for miscalibration.
 
@@ -52,14 +52,26 @@ closed (8 answered, 6 assumptions accepted). Reviewed by Daniel.
 
 ### Documents
 - **TEA-PLAN-001 v1.0.0** — 25 sheets. APPROVED.
-- **TEA-SPEC-001 v1.0.0** — 20 sheets, including the 84-rule catalog split across a Rules
+- **TEA-SPEC-001 v1.0.0** — 20 sheets, including the 85-rule catalog split across a Rules
   sheet (logic, severity, confidence) and a Rule_Messages sheet (the five reviewer-facing
   elements). DRAFT, awaiting the Step 2 review.
 
+### Added — rule TE-RS-021
+- **New or worsening effusion used as evidence of progression without cytological
+  confirmation.** MAJOR, HYBRID, PROPOSED_OPTIONAL (off by default), confidence base
+  rate 0.55. RECIST 1.1 requires cytological confirmation of an effusion appearing or
+  worsening on treatment before it may be taken as progression, where the measurable
+  disease is responding or stable; an unconfirmed effusion is a recognised source of
+  spurious progression that censors subjects early and shortens PFS. No existing rule
+  covered this. Catalog is now **85 rules** (RS family 20 → 21). Decision at the Step 2
+  gate under SQ-04.
+
+### Closed
+- **OI-01** — mesothelioma was not intended, so pleural effusion does not enter the
+  indication roadmap. Investigating what the entry pointed at produced TE-RS-021 above.
+
 ### Open
-- Six items carry into Step 2, tracked on the plan's Open_Items sheet. OI-01 queries the
-  "pleural effusion" entry in the indication roadmap, which is a finding type rather than
-  an indication.
+- Five items carry into Step 2, tracked on the plan's Open_Items sheet.
 
 ## [0.1.0] — 2026-08-10
 

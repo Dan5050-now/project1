@@ -1782,5 +1782,26 @@
   "msg_query": "Following the correction to {field} at {visit}, {new_issue_summary}. Please review the related fields so the assessment is internally consistent.",
   "msg_tips": "This is why measurement corrections should always be reviewed together with the sum and the response for the same timepoint, and for all later timepoints if the nadir moved.",
   "tests": []
+ },
+ {
+  "id": "TE-RS-021",
+  "family": "RS",
+  "family_name": "Response derivation conformance",
+  "title": "New or worsening effusion used as evidence of progression without cytological confirmation",
+  "guideline": "RECIST 1.1 + iRECIST",
+  "severity": "MAJOR",
+  "mode": "HYBRID",
+  "status": "PROPOSED_OPTIONAL",
+  "downgradeable": true,
+  "confidence_base_rate": 0.55,
+  "intent": "Progression driven by an effusion must rest on cytological confirmation where the measurable disease is responding or stable.",
+  "required_fields": "reported_responses.overall, non_target_state, lesion description text, derived target response, cytology result where collected",
+  "logic": "for each assessment a where reported overall response == PD:\n    effusions = non-target or new-lesion records at a whose organ or description\n                matches an effusion pattern (pleural, pericardial, peritoneal / ascites)\n    for e in effusions:\n        appeared  = e not present at the previous assessment\n        worsened  = e.non_target_state moved toward worsening since the previous assessment\n        if (appeared or worsened)\n           and derived target_response at a in (CR, PR, SD)\n           and no cytology or histology result recorded for e:\n               raise finding\n\nguards:\n  - suppress when unequivocal progression is evidenced independently of the effusion\n  - suppress when derived target response is itself PD\n  - deactivate when the protocol waives cytological confirmation (set at AC-11 intake)\n  - deactivate when no cytology field is collected, reporting NOT_EVALUATED",
+  "msg_review_point": "Whether a new or worsening effusion used to support progression carries the cytological confirmation RECIST requires.",
+  "msg_issue": "Progressive disease is recorded at {visit} for subject {subject_id}. The supporting non-target finding is {effusion_description}, which {appeared_or_worsened} at this visit, while target lesions show {target_response_derived}. No cytological result is recorded for the effusion.",
+  "msg_reason": "RECIST 1.1 requires that an effusion appearing or worsening during treatment be confirmed cytologically before it is taken as evidence of progression, where the measurable disease is responding or stable. Effusions arise from causes unrelated to tumor progression, including the treatment itself and intercurrent illness. An unconfirmed effusion is a recognised source of spurious progression, which censors the subject early and shortens progression-free survival.",
+  "msg_query": "Progressive disease is recorded at {visit}, supported by {effusion_description}, while target lesions show {target_response_derived}. Please confirm whether cytological assessment of the effusion was performed and record the result. If cytology was not performed, please confirm the basis on which progression was assessed.",
+  "msg_tips": "This matters most where the effusion is the sole basis for progression; where other unequivocal progression exists the finding is suppressed. Some protocols explicitly waive cytological confirmation \u2014 check the protocol before querying, and if it is waived, deactivate this rule at the AC-11 intake rather than dispositioning each occurrence.",
+  "tests": []
  }
 ]
