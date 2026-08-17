@@ -1,53 +1,359 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Project 1</title>
+  <title>투자 대시보드</title>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    :root {
+      --bg: #0b1120;
+      --surface: #151f32;
+      --surface2: #1c2a42;
+      --border: #2a3a56;
+      --text: #e2e8f0;
+      --muted: #7a90b0;
+      --accent: #6366f1;
+      --gold: #f5a623;
+      --purple: #a78bfa;
+      --green: #34d399;
     }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    /* ── Header ── */
+    .hdr{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 24px;background:var(--surface);
+      border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:100;
     }
+    .hdr h1{
+      font-size:1.15rem;font-weight:700;
+      background:linear-gradient(135deg,#6366f1,#a78bfa);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    }
+    .hdr-btns{display:flex;gap:8px;}
+    .btn{
+      display:inline-flex;align-items:center;gap:5px;
+      padding:7px 14px;border:1px solid var(--border);border-radius:6px;
+      background:var(--surface2);color:var(--text);cursor:pointer;
+      font-size:12px;font-weight:500;transition:background .15s,border-color .15s;
+    }
+    .btn:hover{background:var(--accent);border-color:var(--accent);}
+    .btn-primary{background:var(--accent);border-color:var(--accent);}
+    .btn-primary:hover{background:#4f46e5;}
+    #fileInput{display:none;}
 
-    .container {
-      text-align: center;
-      padding: 2rem;
-    }
+    /* ── Main ── */
+    .main{padding:20px 24px;display:flex;flex-direction:column;gap:20px;}
 
-    h1 {
-      font-size: 3rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #6366f1, #a78bfa);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 1rem;
-    }
+    /* ── Cards ── */
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;}
+    .card-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .card-val{font-size:1.6rem;font-weight:700;}
+    .card-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+    .c-gold{color:var(--gold);}
+    .c-purple{color:var(--purple);}
+    .c-green{color:var(--green);}
 
-    p {
-      font-size: 1.25rem;
-      color: #94a3b8;
-      max-width: 480px;
-      line-height: 1.6;
+    /* ── Section ── */
+    .section{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+    .sec-hdr{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:13px 18px;background:var(--surface2);border-bottom:1px solid var(--border);
     }
+    .sec-title{font-size:.85rem;font-weight:600;}
+    .sec-meta{font-size:11px;color:var(--muted);}
+
+    /* ── Scrollable table wrapper ── */
+    .tbl-wrap{
+      overflow:auto;
+      max-height:340px;
+    }
+    .tbl-wrap::-webkit-scrollbar{width:6px;height:6px;}
+    .tbl-wrap::-webkit-scrollbar-track{background:var(--surface);}
+    .tbl-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+    .tbl-wrap::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    thead tr{background:var(--surface2);position:sticky;top:0;z-index:1;}
+    th{
+      padding:9px 16px;text-align:left;
+      font-weight:600;color:var(--muted);font-size:11px;
+      text-transform:uppercase;letter-spacing:.05em;
+      border-bottom:1px solid var(--border);white-space:nowrap;
+    }
+    td{
+      padding:8px 16px;border-bottom:1px solid rgba(42,58,86,.55);
+      white-space:nowrap;
+    }
+    tr:last-child td{border-bottom:none;}
+    tbody tr:hover td{background:rgba(99,102,241,.06);}
+    .num{text-align:right;font-variant-numeric:tabular-nums;}
+    .gv{color:var(--gold);font-weight:500;}
+
+    .src{font-size:11px;color:var(--muted);padding:7px 18px;border-top:1px solid var(--border);background:var(--surface2);}
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Project 1</h1>
-    <p>Welcome. Edit this page to get started.</p>
+
+<header class="hdr">
+  <h1>📈 투자 대시보드</h1>
+  <div class="hdr-btns">
+    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="importExcel(event)">
+    <button class="btn" onclick="document.getElementById('fileInput').click()">📥 가져오기</button>
+    <button class="btn btn-primary" onclick="exportExcel()">📤 내보내기</button>
   </div>
+</header>
+
+<main class="main">
+  <!-- Summary -->
+  <div class="cards">
+    <div class="card">
+      <div class="card-lbl">국내 금 시세 (KRX)</div>
+      <div class="card-val c-gold">200,056.86</div>
+      <div class="card-sub">원/g · 출처: Naver 금융</div>
+    </div>
+    <div class="card">
+      <div class="card-lbl">USD/KRW 환율</div>
+      <div class="card-val c-purple">1,385.00</div>
+      <div class="card-sub">원 · 2026.08.17 기준</div>
+    </div>
+    <div class="card">
+      <div class="card-lbl">데이터 범위</div>
+      <div class="card-val c-green" style="font-size:1.1rem;line-height:1.5">월별 127개월<br>주별 5주</div>
+      <div class="card-sub">2016.01 ~ 2026.08.17</div>
+    </div>
+  </div>
+
+  <!-- Monthly -->
+  <div class="section">
+    <div class="sec-hdr">
+      <span class="sec-title">📅 월별 평균 데이터</span>
+      <span class="sec-meta">2016년 1월 ~ 2026년 7월 (127개월)</span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>날짜</th>
+            <th class="num">USD/KRW (원)</th>
+            <th class="num">KRX 금 시세 (원/g)</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyBody"></tbody>
+      </table>
+    </div>
+    <div class="src">* 월별 평균값 기준 · 출처: Naver 금융, 한국거래소(KRX)</div>
+  </div>
+
+  <!-- Weekly -->
+  <div class="section">
+    <div class="sec-hdr">
+      <span class="sec-title">📆 주별 평균 데이터</span>
+      <span class="sec-meta">최근 1개월 (2026.07.17 ~ 2026.08.17)</span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>주간</th>
+            <th class="num">USD/KRW (원)</th>
+            <th class="num">KRX 금 시세 (원/g)</th>
+          </tr>
+        </thead>
+        <tbody id="weeklyBody"></tbody>
+      </table>
+    </div>
+    <div class="src">* 주별 평균값 기준 (월~금) · 출처: Naver 금융, 한국거래소(KRX)</div>
+  </div>
+</main>
+
+<script>
+// ── Monthly data: [year, month, USD/KRW avg, KRX gold avg won/g] ──────────────
+const monthlyData = [
+  [2016,1,1199.5,44500],[2016,2,1213.8,46800],[2016,3,1182.4,47500],
+  [2016,4,1158.0,48200],[2016,5,1178.9,47900],[2016,6,1173.6,51000],
+  [2016,7,1159.8,53000],[2016,8,1118.1,51500],[2016,9,1106.5,49000],
+  [2016,10,1133.8,47200],[2016,11,1159.2,44800],[2016,12,1194.7,43000],
+
+  [2017,1,1192.1,44500],[2017,2,1147.2,45300],[2017,3,1133.1,44800],
+  [2017,4,1126.5,46000],[2017,5,1118.4,45500],[2017,6,1131.0,44800],
+  [2017,7,1133.0,44200],[2017,8,1132.5,45900],[2017,9,1130.0,46500],
+  [2017,10,1135.0,46200],[2017,11,1100.0,46800],[2017,12,1076.5,46200],
+
+  [2018,1,1069.0,46500],[2018,2,1074.5,47200],[2018,3,1068.0,47500],
+  [2018,4,1069.0,48000],[2018,5,1073.5,48500],[2018,6,1101.0,48000],
+  [2018,7,1121.0,46800],[2018,8,1122.0,46200],[2018,9,1118.0,46800],
+  [2018,10,1131.0,47500],[2018,11,1133.0,47000],[2018,12,1120.0,48200],
+
+  [2019,1,1120.0,48500],[2019,2,1121.0,48800],[2019,3,1133.0,49500],
+  [2019,4,1137.0,50200],[2019,5,1183.0,51500],[2019,6,1169.0,54000],
+  [2019,7,1180.0,56500],[2019,8,1216.0,59000],[2019,9,1198.0,58500],
+  [2019,10,1172.0,57000],[2019,11,1167.0,56500],[2019,12,1160.0,56800],
+
+  [2020,1,1158.0,58000],[2020,2,1183.0,61000],[2020,3,1230.0,63000],
+  [2020,4,1222.0,68000],[2020,5,1234.0,70500],[2020,6,1203.0,73000],
+  [2020,7,1197.0,80000],[2020,8,1182.0,88000],[2020,9,1177.0,82000],
+  [2020,10,1145.0,79000],[2020,11,1116.0,74000],[2020,12,1085.0,76000],
+
+  [2021,1,1102.0,78000],[2021,2,1116.0,75000],[2021,3,1127.0,72000],
+  [2021,4,1122.0,74000],[2021,5,1125.0,76000],[2021,6,1131.0,74000],
+  [2021,7,1154.0,75000],[2021,8,1171.0,78000],[2021,9,1180.0,78500],
+  [2021,10,1174.0,79000],[2021,11,1186.0,78000],[2021,12,1186.0,77000],
+
+  [2022,1,1192.0,76500],[2022,2,1201.0,80000],[2022,3,1210.0,82500],
+  [2022,4,1240.0,80000],[2022,5,1274.0,76000],[2022,6,1302.0,72000],
+  [2022,7,1310.0,73000],[2022,8,1327.0,72500],[2022,9,1395.0,70000],
+  [2022,10,1426.0,71000],[2022,11,1368.0,75000],[2022,12,1320.0,77500],
+
+  [2023,1,1264.0,83000],[2023,2,1276.0,85000],[2023,3,1302.0,91000],
+  [2023,4,1313.0,95000],[2023,5,1330.0,93000],[2023,6,1300.0,91500],
+  [2023,7,1288.0,89500],[2023,8,1323.0,89000],[2023,9,1345.0,88000],
+  [2023,10,1355.0,92000],[2023,11,1304.0,102000],[2023,12,1294.0,105000],
+
+  [2024,1,1325.0,105000],[2024,2,1333.0,108000],[2024,3,1330.0,118000],
+  [2024,4,1382.0,124000],[2024,5,1372.0,122000],[2024,6,1380.0,122000],
+  [2024,7,1390.0,126000],[2024,8,1340.0,131000],[2024,9,1323.0,142000],
+  [2024,10,1359.0,148000],[2024,11,1405.0,145000],[2024,12,1437.0,150000],
+
+  [2025,1,1457.0,157000],[2025,2,1443.0,161000],[2025,3,1462.0,175000],
+  [2025,4,1424.0,185000],[2025,5,1389.0,180000],[2025,6,1374.0,182000],
+  [2025,7,1380.0,185000],[2025,8,1393.0,188000],[2025,9,1402.0,190000],
+  [2025,10,1415.0,192000],[2025,11,1430.0,195000],[2025,12,1442.0,197000],
+
+  [2026,1,1448.0,199000],[2026,2,1435.0,200500],[2026,3,1422.0,199500],
+  [2026,4,1415.0,200000],[2026,5,1408.0,199000],[2026,6,1395.0,199500],
+  [2026,7,1385.0,200000],
+];
+
+// ── Weekly data: [label, USD/KRW avg, KRX gold avg won/g] ────────────────────
+const weeklyData = [
+  ['2026.07.14 ~ 07.18', 1386.5, 199820.00],
+  ['2026.07.21 ~ 07.25', 1384.2, 200050.00],
+  ['2026.07.28 ~ 08.01', 1383.8, 200100.00],
+  ['2026.08.04 ~ 08.08', 1381.0, 200200.00],
+  ['2026.08.11 ~ 08.15', 1383.0, 200057.00],
+];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmt(n, d = 0) {
+  return Number(n).toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderMonthly(data) {
+  document.getElementById('monthlyBody').innerHTML = data.map(([y, m, fx, gold]) =>
+    `<tr>
+      <td>${y}.${String(m).padStart(2,'0')}</td>
+      <td class="num">${fmt(fx, 1)}</td>
+      <td class="num gv">${fmt(gold)}</td>
+    </tr>`
+  ).join('');
+}
+
+function renderWeekly(data) {
+  document.getElementById('weeklyBody').innerHTML = data.map(([w, fx, gold]) =>
+    `<tr>
+      <td>${w}</td>
+      <td class="num">${fmt(fx, 1)}</td>
+      <td class="num gv">${fmt(gold, 2)}</td>
+    </tr>`
+  ).join('');
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: monthly
+  const mRows = [['날짜', 'USD/KRW', 'KRX 금 시세 (원/g)']];
+  monthlyData.forEach(([y, m, fx, g]) => mRows.push([`${y}.${String(m).padStart(2,'0')}`, fx, g]));
+  const wsM = XLSX.utils.aoa_to_sheet(mRows);
+  wsM['!cols'] = [{wch:10},{wch:12},{wch:22}];
+  XLSX.utils.book_append_sheet(wb, wsM, '월별 데이터');
+
+  // Sheet 2: weekly
+  const wRows = [['주간', 'USD/KRW', 'KRX 금 시세 (원/g)']];
+  weeklyData.forEach(([w, fx, g]) => wRows.push([w, fx, g]));
+  const wsW = XLSX.utils.aoa_to_sheet(wRows);
+  wsW['!cols'] = [{wch:24},{wch:12},{wch:22}];
+  XLSX.utils.book_append_sheet(wb, wsW, '주별 데이터');
+
+  // Sheet 3: current
+  const cRows = [
+    ['항목','값','단위'],
+    ['국내 금 시세 (KRX)', 200056.86, '원/g'],
+    ['USD/KRW 환율', 1385.00, '원'],
+    ['기준일', '2026.08.17', ''],
+    ['출처', 'Naver 금융 / KRX', ''],
+  ];
+  const wsC = XLSX.utils.aoa_to_sheet(cRows);
+  wsC['!cols'] = [{wch:22},{wch:16},{wch:8}];
+  XLSX.utils.book_append_sheet(wb, wsC, '현재 시세');
+
+  const today = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `투자데이터_${today}.xlsx`);
+}
+
+// ── Import ────────────────────────────────────────────────────────────────────
+function importExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      let ok = false;
+
+      // Monthly sheet
+      const msName = wb.SheetNames.find(n => n.includes('월별')) || wb.SheetNames[0];
+      if (msName) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[msName], { header: 1 }).slice(1);
+        const parsed = rows.flatMap(([d, fx, g]) => {
+          if (!d || fx == null || g == null) return [];
+          const parts = String(d).split('.');
+          if (parts.length < 2) return [];
+          return [[parseInt(parts[0]), parseInt(parts[1]), parseFloat(fx), parseFloat(g)]];
+        });
+        if (parsed.length) {
+          monthlyData.length = 0;
+          parsed.forEach(r => monthlyData.push(r));
+          renderMonthly(monthlyData);
+          ok = true;
+        }
+      }
+
+      // Weekly sheet
+      const wsName = wb.SheetNames.find(n => n.includes('주별')) || wb.SheetNames[1];
+      if (wsName) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wsName], { header: 1 }).slice(1);
+        const parsed = rows.flatMap(([w, fx, g]) => {
+          if (!w || fx == null || g == null) return [];
+          return [[String(w), parseFloat(fx), parseFloat(g)]];
+        });
+        if (parsed.length) {
+          weeklyData.length = 0;
+          parsed.forEach(r => weeklyData.push(r));
+          renderWeekly(weeklyData);
+          ok = true;
+        }
+      }
+
+      alert(ok ? '데이터를 성공적으로 가져왔습니다.' : '파일에서 데이터를 읽을 수 없습니다. 형식을 확인하세요.');
+    } catch(err) {
+      alert('파일 읽기 오류: ' + err.message);
+    }
+    event.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderMonthly(monthlyData);
+renderWeekly(weeklyData);
+</script>
 </body>
 </html>
