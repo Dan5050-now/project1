@@ -20,7 +20,7 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.6"
+DOC_VERSION = "1.7"
 DOC_STATUS = ("Baseline v1.0 + change C-N01. Gates N1-N3 closed; Step N4 in progress. A-N09 IS NOW "
               "EVIDENCE rather than an assumption: an unsigned executable ran on the requester's own "
               "machine on 2026-08-15.")
@@ -226,7 +226,17 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.6", "2026-08-15", "Claude Code", "-",
+    [f"{MARK_NEW}1.7", "2026-08-15", "Claude Code", "-",
+     "THE BLOCKER MOVED. The probe proved the machine will RUN an unsigned executable; the attempt to send "
+     "one proved the company will not let it ARRIVE - e-mail refused the .exe on a general security check. "
+     "Risk R-N20 records it, and it is a different risk from R-N01: execution policy is satisfied, "
+     "transport is not. It also puts decision N-01 back in question, since an Electron package is an "
+     ".exe however it is delivered. Three routes are set out for the requester on sheet 10a, and the "
+     "recommendation is the one that removes the executable from the problem entirely: keep the engine "
+     "and the interface exactly as they are, and replace the Electron main process with a small Python "
+     "one. No new engine, no second set of figures - the storage interface at specification sheet 03 is "
+     "the seam that makes it a swap rather than a rewrite."],
+    ["1.6", "2026-08-15", "Claude Code", "-",
      "THE LAUNCH PROBE RAN. Assumption A-N09 - that the requester can extract a zip into a folder of "
      "their own and run an unsigned executable from it - was the one thing in this plan that could have "
      "invalidated the whole approach, and it is now evidence: PM_APP_Probe.exe ran on BOOK-R8USOPHQ11 at "
@@ -1169,6 +1179,8 @@ risks = [
      "The one failure that would break the guarantee rather than inconvenience somebody. SMB client caching can delay both the visibility of a new file and a change to modification time. Three defences: the claim uses create-if-absent, which the server decides rather than the client; the heartbeat is re-read rather than remembered; and every save re-checks the claim before writing (step 5 on sheet 05a), so a lost race still stops short of overwriting. Must be tested on your actual share - N5.6b - because share behaviour is a property of the server, not of the application."],
     [f"{MARK_CHG}R-N16", "A declared name is mistaken for a verified one, and somebody relies on the tool to say who did what.", "Low", "Low",
      "Much reduced at round 6: Q-N09 confirms there is no internal validation or record-keeping obligation, so nothing formal rests on this identity. It remains stated at NR-USR-08 and on the screen where the name is entered, because the limit should be visible at the point it could mislead - but it is now a courtesy rather than a control."],
+    [f"{MARK_NEW}R-N20", "The company will not let an executable ARRIVE, whatever its policy on running one.", "HIGH", "HIGH",
+     "PROVEN 2026-08-15, and it is now the binding constraint. The probe ran happily once it was on the machine, but e-mail refused to carry a .exe at all on a general security check. Execution policy is satisfied; transport is not. Two things follow. First, no amount of work on the package fixes this - an Electron build is an .exe however it is zipped, and defeating a mail filter is not a solution anybody should want. Second, decision N-01 is genuinely reopened: the choice of shell is now governed by what can be delivered rather than by what is pleasant to build. See sheet 10a."],
     [f"{MARK_NEW}R-N18", "Company file protection encrypts a workbook or a workspace, and the application cannot read it.", "Medium", "Medium",
      "Raised from your Q-N04 answer, which is about decrypting a file before it can be imported. Where a document-security product encrypts files on a share, an ordinary application sees bytes it cannot parse. Two requirements follow: NR-IMP-06, so a protected file is reported as protected rather than as corrupt - the failure that would otherwise waste an afternoon - and NR-IMP-07, so the application never adds encryption of its own and never becomes the only thing that can open your data. Protection stays the company's, applied to the folder."],
     [f"{MARK_NEW}R-N19", "Two bad saves in a row leave nothing good to go back to.", "Low", "Medium",
@@ -1220,6 +1232,70 @@ assum = [
 ]
 r = table(ws, r, ["ID", "Assumption", "Status"], assum, [9, 108, 26], wrap_cols=(2,), mark_col=1)
 r = legend(ws, r)
+
+# ---- 10a Delivery routes ---------------------------------------------------
+ws, r = sheet(wb, "10a_Delivery", "Getting it onto the laptop   [R-N20]",
+              "The probe ran, but e-mail refused to carry it. Execution is settled; delivery is not.")
+
+r = section(ws, r, "What the two tests together showed")
+r = lines(ws, r, [
+    "  RUNNING an unsigned executable from a user folder    ALLOWED   (probe, 2026-08-15)",
+    "  SENDING one through company e-mail                   REFUSED   (general security check)",
+    "",
+    "Those are different controls, and only the second is now in the way. It is also the one that no",
+    "amount of work on the package can fix: an Electron build is an .exe however it is zipped, renamed",
+    "or split.",
+], mono=True)
+r += 1
+r = note(ws, r, "Working around the mail filter is not on this sheet and will not be. It is a control the "
+                "company put there deliberately; going around it is the behaviour it exists to catch, and it "
+                "would put the requester rather than the tool in the wrong.")
+r += 1
+
+r = section(ws, r, "The three routes")
+routes = [
+    ["A", "Ask IT for the sanctioned channel", "The software-distribution share, the internal artifact store, or an allow-list entry. Nothing is rebuilt - the package is finished and tested.", "Best fidelity, no work. Depends entirely on somebody else, and the answer may be no or slow.", "Ask first - it costs one conversation"],
+    ["B", "Replace the Electron shell with a PYTHON one", "The interface and the engine do not change at all. Python does what Electron's main process does - files, folders, the claim - and serves the existing page to the browser. What travels is .py text, not an executable.", "Removes the executable from the problem. Needs Python on the laptop. Roughly 700 lines of new Python, no new engine.", "RECOMMENDED if A is slow or refused"],
+    ["C", "Persistence in the web application instead", "Give the existing HTML file real storage, through the browser's own file access. It already arrives - it is a document.", "Fastest, and it satisfies NR-STO-01. But browser storage is per profile, so the shared-folder and claim model largely goes; and it is Edge/Chrome only.", "Partial - keeps the data, loses the sharing"],
+]
+r = table(ws, r, ["", "Route", "What it is", "What it costs", "Verdict"],
+          routes, [4, 34, 62, 58, 30], wrap_cols=(3, 4, 5))
+r += 1
+
+r = section(ws, r, "Why route B is a swap rather than a rewrite")
+r = lines(ws, r, [
+    "Because the seam is already there. Specification sheet 03 defines thirteen storage operations, and",
+    "preload.js already exposes exactly those to the page. A Python shell implements the same thirteen",
+    "over HTTP instead of IPC; the page calls fetch() instead of ipcRenderer.invoke(). Nothing above that",
+    "line moves.",
+    "",
+    "    core/    unchanged   the same JavaScript, the same figures, in the browser",
+    "    ui/      unchanged   the same tabs, tables and charts the reviewer approved",
+    "    storage/ NEW         workspace.py and claim.py, ported from the .js beside them",
+    "    shell/   NEW         http.server, about 200 lines, serving the page and the thirteen calls",
+])
+r += 1
+why = [
+    ["Decision N-05 survives", "There is still ONE engine. The numbers stay in core/, in the browser. Python touches files and nothing else - if a calculation appears in the Python, something has gone wrong.", "N-05"],
+    ["No pip install", "http.server, json, pathlib, zipfile and xml are all standard library. The xlsx reading and writing stays in the browser, where it is already dependency-free - so Python never needs openpyxl.", "NR-DEP-05"],
+    ["The storage design carries over intact", "Atomic save, retained version, journal, the claim with its heartbeat and expiry - all of it is filesystem work, and all of it ports directly. The 33 checks in test_storage.mjs become 33 checks in Python.", "NR-STO-04..19"],
+    ["The shared folder still works", "Which route C cannot offer. Real files, real claim files, several people on one plan - the whole of sheet 07 keeps its meaning.", "NR-STO-10"],
+    ["What is lost", "A window of its own. The application would open in the browser, pointed at a local address, launched from a shortcut. It looks like the web application because it IS the web application - which is a fair trade for arriving at all.", "D-N01..D-N09"],
+]
+r = table(ws, r, ["Point", "Detail", "Ref"], why, [34, 96, 14], wrap_cols=(2,))
+r = note(ws, r, "The Python engine that already exists - tools/prap_io.py, 876 lines, proven identical to the "
+                "browser on 1,225 person-months - is NOT what route B uses. It stays what it is: the "
+                "independent reference that checks the browser's arithmetic. Using it as the engine would "
+                "create the second implementation N-05 exists to prevent.")
+r += 1
+
+r = section(ws, r, "What has to be known before route B is chosen")
+q = [
+    ["Is Python installed on the laptop, and which version?", "`python --version` at a command prompt. 3.9 or newer is enough. If it is absent, route B needs IT to install it - which is the same conversation as route A, but for a runtime that is far easier to approve than an unknown application."],
+    ["What internal route exists for files that are not e-mail?", "SharePoint, Teams, an internal GitLab, a software share. Route B still has to arrive; .py is text rather than an executable, which most filters treat differently, but the sanctioned route is better than the tolerated one."],
+    ["Would IT rather approve a runtime than an application?", "Usually yes, and it is worth asking in those terms. 'May I have Python' is a smaller request than 'may I run this 142 MB thing a contractor sent me'."],
+]
+r = table(ws, r, ["Question", "Why it decides the route"], q, [56, 90], wrap_cols=(1, 2))
 
 # ---- 11 Open questions ----------------------------------------------------
 ws, r = sheet(wb, "11_Open_Questions", "Questions for review round 1",
