@@ -20,11 +20,12 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.8"
-DOC_STATUS = ("Baseline v1.0 + change C-N01. Gates N1-N3 closed; Step N4 in progress. TWO COMPANY "
-              "CONTROLS ARE NOW MEASURED RATHER THAN FEARED: an executable may run but may not arrive "
-              "(R-N20), and data may not enter a browser page through the file picker (R-N21). Both "
-              "point at the same answer on sheet 10a.")
+DOC_VERSION = "1.9"
+DOC_STATUS = ("Baseline v1.0 + changes C-N01 and C-N02. Gates N1-N3 closed; Step N4 in progress and "
+              "Step N4a - the Python shell - BUILT AND TESTED, awaiting your run on the company laptop. "
+              "Two company controls are measured rather than feared: an executable may run but may not "
+              "arrive (R-N20), and data may not enter a browser page through the file picker (R-N21). "
+              "Both are answered on sheet 10a, and neither is worked around.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -227,7 +228,18 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.8", "2026-08-18", "Claude Code", "-",
+    [f"{MARK_NEW}1.9", "2026-08-18", "Claude Code", "-",
+     "CHANGE C-N02 - THE PYTHON SHELL, BUILT. The two answers that were missing arrived: Python 3.14 is "
+     "installed on the laptop, and e-mail is the only route in. Route B on sheet 10a is therefore the "
+     "route, and it is no longer a proposal - src/storage/python/ and src/shell/python/ exist, 80 storage "
+     "checks and 42 end-to-end checks pass, and the packaged application is 107 KB of readable Python text "
+     "that fits in an e-mail. What it changes in this plan: NR-SEC-01 is AMENDED (a loopback listener is "
+     "permitted, an outbound connection is still forbidden) with NR-SEC-04..06 specifying the controls "
+     "around it; NR-IMP-09 requires that the page carry no browser file interface at all; NR-DEP-16 fixes "
+     "the runtime at Python 3.9+, standard library only. Risk R-N22 records the socket as an attack "
+     "surface and what answers it. Step N4a is added to sheet 08. The Electron shell is NOT withdrawn - "
+     "it stays the better application wherever it can be delivered, and both are built from one engine."],
+    ["1.8", "2026-08-18", "Claude Code", "-",
      "THE SECOND CONTROL IS NAMED. IT bans data upload into HTML, and the diagnostic settles what that "
      "means in practice: the file dialog opens normally, and on choosing a file a company security "
      "message appears and nothing is imported. Transferring and opening the HTML file itself is not "
@@ -526,6 +538,8 @@ reqs = [
     [f"{MARK_NEW}NR-IMP-05", "Import / export", "A source workbook can be opened for a look without creating a workspace: every table and graph, nothing saved, nothing left behind. The quick question - 'what does this file say?' - does not require committing to a plan first.", "Must", "Q-N10", "N4"],
     [f"{MARK_NEW}NR-IMP-06", "Import / export", "A file the application cannot read because it is encrypted or protected says so, names that as the likely cause, and says what to do about it. It never reports a protected file as corrupt, and never fails silently.", "Must", "Q-N04 - see R-N18", "N4"],
     [f"{MARK_NEW}NR-IMP-07", "Import / export", "Nothing the application writes is encrypted by the application itself. Where files must be protected, that is done by whatever the company already uses, on the folder - so the application never becomes the only thing that can open the user's own data.", "Must", "Q-N04 - see R-N18", "N2"],
+    [f"{MARK_NEW}NR-IMP-09", "Import / export", "Where a shell is built for a machine that blocks data entering a browser page, the page carries NO browser file interface at all: no file input, no drop handler, no File API call. The shell reads the chosen file and hands the bytes to the page. The web application's own picker is REMOVED at start-up rather than hidden, because a button that opens a dialog and then loses the file teaches its user that the application is broken.", "Must", "R-N21, C-N02", "N4"],
+    [f"{MARK_NEW}NR-DEP-16", "Deployment", "The Python shell needs a Python 3.9 or newer interpreter and NOTHING else: standard library only, no pip install, no download, no administrator rights. What is delivered is readable source text, so it can be reviewed before it is run.", "Must", "R-N20, C-N02", "N4"],
     [f"{MARK_NEW}NR-IMP-08", "Import / export", "Export is a supported way to EDIT a plan, not only to read one. The exported file - in either format - can be changed outside the application and imported back with no loss: every row, column and value that went out comes back, and anything the application derives is recomputed rather than trusted.", "Must", "Gate N3 review - C-N01", "N4"],
     [f"{MARK_CHG}NR-IMP-04", "Import / export", "A workspace can be opened by dragging it onto the running application's window. Double-clicking a workspace file in Explorer does NOT open it, because a file association would require a registry entry that NR-DEP-06 forbids.", "Could", "Reduced by the non-installed rule", "N4"],
 
@@ -562,9 +576,12 @@ reqs = [
     [f"{MARK_NEW}NR-DEP-14", "Deployment", "Both arrangements are supported and both are tested: run in place from the shared folder, and copied from it to a local folder and run there. Neither is a second-class case, and the user guide states what each costs in launch time.", "Must", "Q-N14", "N5"],
     [f"{MARK_NEW}NR-DEP-15", "Deployment", "On a writable shared folder, each person's data folder sits under the application's own data folder, one per user. Nobody has to choose a location, and nobody's settings meet anybody else's.", "Should", "Q-N15", "N4"],
 
-    [f"{MARK_NEW}NR-SEC-01", "Security", "No telemetry, no crash reporting to any server, no automatic update check, no font or script loaded from a remote host. Verified by observing that the packaged application opens no socket.", "Must", "Offline by requirement", "N5"],
+    [f"{MARK_CHG}NR-SEC-01", "Security", "No telemetry, no crash reporting to any server, no automatic update check, no font or script loaded from a remote host, and NO OUTBOUND CONNECTION OF ANY KIND. AMENDED by change C-N02: the Python shell must LISTEN on 127.0.0.1, because that is how a browser and a local program talk to each other. Listening on loopback is permitted and specified at NR-SEC-04..06; connecting anywhere remains forbidden.", "Must", "Offline by requirement; C-N02", "N5"],
     [f"{MARK_NEW}NR-SEC-02", "Security", "The embedded browser engine runs with remote content disabled and Node integration off in the renderer, so a crafted workspace file cannot execute code.", "Must", "Standard hardening", "N4"],
     [f"{MARK_NEW}NR-SEC-03", "Security", "Workspace files contain business data only - no credentials, no connection strings, nothing that would be sensitive if the file were mailed to a colleague.", "Must", "Data hygiene", "N2"],
+    [f"{MARK_NEW}NR-SEC-04", "Security", "Where a shell listens, it binds 127.0.0.1 only - never the network interface - on a port the operating system chooses at start. Nothing outside the machine can reach it, nothing is reserved, and Windows Firewall is never asked to allow anything.", "Must", "C-N02", "N4"],
+    [f"{MARK_NEW}NR-SEC-05", "Security", "Every request to that listener must carry a key generated at start-up and never written to disk; the Host header must be a loopback name; and any cross-site request is refused outright, with no CORS header ever sent. Another program on the machine cannot guess the key, and another web page cannot read it.", "Must", "C-N02", "N4"],
+    [f"{MARK_NEW}NR-SEC-06", "Security", "The listener serves one page and one operation list. No URL is ever mapped onto a path on disk, so there is no directory to escape from.", "Must", "C-N02", "N4"],
 
     [f"{MARK_CHG}NR-NFR-01", "Performance", "Launch to a usable window in under 5 seconds from a local disk, and reopening the last workspace adds no more than 2 seconds on the volumes in A-N01. Launch from a network folder is measured and stated rather than promised - see R-N12.", "Should", "Usability", "N4"],
     [f"{MARK_NEW}NR-NFR-02", "Performance", "A Save completes in under 1 second at those volumes, so autosave is never felt.", "Should", "Usability", "N4"],
@@ -1048,6 +1065,15 @@ wbs = [
     ["N4", "N4.8", "Requester reviews against real data; refinements folded in.", "Updated code", "Not started"],
     ["N4", "GN4", "GATE N4 - application functionally complete.", "Project Management APP v0.9", "Not started"],
 
+    ["N4a", "N4a.1", "Port the storage layer to Python: workspaces, atomic save, versions, journal, the write claim.", "src/storage/python/", "Complete - 80 checks, including 12 kills mid-save and 8 processes racing for one claim"],
+    ["N4a", "N4a.2", "The local server that replaces Electron's main process, with the six controls NR-SEC-04..06 require.", "src/shell/python/server.py", "Complete - 11 of the 42 end-to-end checks are the security ones"],
+    ["N4a", "N4a.3", "Choosing a file WITHOUT the browser: a native dialog where tkinter exists, a folder listing in the page where it does not.", "src/shell/python/files.py, bridge.js", "Complete - and the page carries no file input at all (NR-IMP-09)"],
+    ["N4a", "N4a.4", "The window chrome the Electron menu bar used to provide, drawn in the page.", "src/shell/python/chrome.html, chrome.css", "Complete"],
+    ["N4a", "N4a.5", "Build and package: one command, 107 KB of readable Python text.", "tools/build_python_app.py", "Complete - dist/PM_APP_python_v0.2.zip"],
+    ["N4a", "N4a.6", "Prove it is the same application: 1,225 person-months compared against the independent Python reference on every run.", "tools/test_python_app.py", "Complete - worst difference 0.00e+00"],
+    ["N4a", "N4a.7", "Requester runs it on the company laptop and reports what happened.", "Your result", "WAITING ON YOU"],
+    ["N4a", "GN4a", "GATE N4a - the Python shell arrives, starts, and reads a workbook on the target machine.", "PM_APP Python v0.2", "Not started"],
+
     ["N5", "N5.1", "Package as a plain Windows folder delivered in a zip; verify it launches with no installation and no administrator rights.", "PM_APP_v<ver>.zip", "Not started"],
     ["N5", "N5.2", "Verify no socket is opened, offline, for a full session (NR-SEC-01).", "Test evidence", "Not started"],
     ["N5", "N5.3", "Portability suite: run the folder, then copy it to another path and another PC and run it again; verify the recent list and settings survive (NR-DEP-08).", "tools/test_portable.py", "Not started"],
@@ -1194,6 +1220,7 @@ risks = [
      "Much reduced at round 6: Q-N09 confirms there is no internal validation or record-keeping obligation, so nothing formal rests on this identity. It remains stated at NR-USR-08 and on the screen where the name is entered, because the limit should be visible at the point it could mislead - but it is now a courtesy rather than a control."],
     [f"{MARK_NEW}R-N20", "The company will not let an executable ARRIVE, whatever its policy on running one.", "HIGH", "HIGH",
      "PROVEN 2026-08-15, and it is now the binding constraint. The probe ran happily once it was on the machine, but e-mail refused to carry a .exe at all on a general security check. Execution policy is satisfied; transport is not. Two things follow. First, no amount of work on the package fixes this - an Electron build is an .exe however it is zipped, and defeating a mail filter is not a solution anybody should want. Second, decision N-01 is genuinely reopened: the choice of shell is now governed by what can be delivered rather than by what is pleasant to build. See sheet 10a."],
+    [f"{MARK_NEW}R-N22", "The Python shell listens on a socket, and a listening socket on a company laptop is an attack surface.", "Low", "HIGH", "CREATED by change C-N02, and the honest price of route B: a browser and a local program can only talk over one. It is answered rather than accepted. Loopback only, so nothing off the machine can reach it and Windows Firewall is never asked for anything (NR-SEC-04). A port the operating system picks at start, so nothing is predictable. A 32-byte key on every request, generated at start and never written to disk - another program cannot guess it, and another web page cannot read it because same-origin policy keeps this page's DOM to itself (NR-SEC-05). The Host header must be loopback, which is what stops DNS rebinding. No CORS header is ever sent and any cross-site request is refused. No URL is mapped onto a path on disk, so there is nothing to escape from (NR-SEC-06). Every one of those is checked by tools/test_python_app.py on each run - eleven checks, before the application is even looked at."],
     [f"{MARK_NEW}R-N21", "Data cannot enter a browser page at all - the company blocks the file picker, so the web application cannot be given a file.", "HIGH", "HIGH",
      "PROVEN 2026-08-18, by diagnostic rather than by report. The file dialog opens normally; on choosing a file a company security message appears and nothing is imported. Transferring and opening the HTML file is NOT restricted. That combination identifies it precisely: a technical control on the browser's file-input data path, watching the File API, not a policy about the document and not a restriction on the browser. Three things follow. (1) The finished web application cannot be fed data on that laptop by any of its three routes - picker, drag-and-drop, or a JSON file - because all three end in the same API. It remains correct, and it remains usable anywhere the control does not apply. (2) Route C on sheet 10a is dead, not partial: it proposed persistence through the browser's own file access, which is the intercepted interface. (3) It is NOT a barrier to route B, because a Python shell reads the file from disk itself and hands the bytes to the page - there is no upload for a control to intercept. No mitigation is proposed on the browser side, and none will be: the control is deliberate, and evading it is the behaviour it exists to catch."],
     [f"{MARK_NEW}R-N18", "Company file protection encrypts a workbook or a workspace, and the application cannot read it.", "Medium", "Medium",

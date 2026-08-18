@@ -360,8 +360,8 @@ if MANIFEST.exists():
 # ---- 4h. the desktop plan vs the desktop specification --------------------
 # The second product line gets the same guarantee as the first: a requirement cannot be
 # dropped between the plan and the specification without this saying so.
-NAPP_PLAN = ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.8.xlsx"
-NAPP_SPEC = ROOT / "docs" / "PRAP_NewApp_Specification_v1.2.xlsx"
+NAPP_PLAN = ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.9.xlsx"
+NAPP_SPEC = ROOT / "docs" / "PRAP_NewApp_Specification_v1.3.xlsx"
 if NAPP_PLAN.exists() and NAPP_SPEC.exists():
     np_ = load_workbook(NAPP_PLAN, data_only=True)["03_Requirements"]
     ns_ = load_workbook(NAPP_SPEC, data_only=True)["11_Traceability"]

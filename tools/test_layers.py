@@ -15,6 +15,7 @@ nobody notices until the desktop shell will not start.
     python tools/test_layers.py
 """
 
+import importlib.util
 import pathlib
 import re
 import sys
@@ -116,7 +117,19 @@ check(not missing, "every part the build names exists", "; ".join(missing[:3]) o
 # main process requires its own modules directly rather than being concatenated.
 DESKTOP_ONLY = {"storage/desktop", "shell/desktop"}
 BUILT_PAGES = {"shell/desktop/index.html"}          # emitted by build_desktop.py
-reachable = set(build_app.PARTS) | BUILT_PAGES
+
+# The Python shell is not concatenated - it is copied into a package tree - so its
+# files are named by tools/build_python_app.py rather than by build_app.PARTS. Read
+# that list rather than trusting a folder name, so a Python file nobody ships still
+# shows up here as an orphan.
+_pyspec = importlib.util.spec_from_file_location(
+    "build_python_app", ROOT / "tools" / "build_python_app.py")
+build_python_app = importlib.util.module_from_spec(_pyspec)
+_pyspec.loader.exec_module(build_python_app)
+PYTHON_PARTS = set(build_python_app.MODULES) | {
+    "shell/python/bridge.js", "shell/python/chrome.css", "shell/python/chrome.html"}
+
+reachable = set(build_app.PARTS) | BUILT_PAGES | PYTHON_PARTS
 orphans = sorted(
     n for n in (str(p.relative_to(SRC)).replace("\\", "/")
                 for p in SRC.rglob("*") if p.is_file())
@@ -124,7 +137,34 @@ orphans = sorted(
 check(not orphans,
       "and nothing in src/ is left out of a build — an unbuilt file is a file nobody runs",
       "; ".join(orphans[:3]) if orphans else
-      f"{len(build_app.PARTS)} web parts, plus the desktop modules")
+      f"{len(build_app.PARTS)} web parts, the desktop modules, "
+      f"{len(PYTHON_PARTS)} Python-shell parts")
+
+# NR-DEP-05, and it is the requirement the whole delivery route rests on: the Python
+# shell must run on a machine where nobody may install anything. One import of a
+# package that is not in the standard library turns "double-click it" into "raise a
+# ticket", so the imports are read rather than promised.
+STDLIB = set(getattr(sys, "stdlib_module_names", ())) | {"pmapp"}
+third_party = []
+for rel in sorted(build_python_app.MODULES):
+    src_text = (SRC / rel).read_text(encoding="utf-8")
+    for m in re.finditer(r"^\s*(?:from|import)\s+([A-Za-z_][A-Za-z0-9_]*)", src_text,
+                         re.M):
+        mod = m.group(1)
+        if mod not in STDLIB and not src_text[m.start():m.end()].lstrip().startswith(
+                ("from .", "from ..")):
+            third_party.append(f"{rel} imports {mod}")
+check(not third_party,
+      "the Python shell imports nothing but the standard library (NR-DEP-05)",
+      "; ".join(third_party[:3]) if third_party else
+      f"{len(build_python_app.MODULES)} modules, no pip install")
+
+py_dom = [rel for rel in build_python_app.MODULES
+          if re.search(r"\bdocument\.|\bwindow\.", (SRC / rel).read_text(encoding="utf-8"))]
+check(not py_dom,
+      "and it decides where files go, never what a number is",
+      "; ".join(py_dom[:3]) if py_dom else
+      f"{len(build_python_app.MODULES)} modules, no page in any of them")
 
 built = build_app.render()
 current = (ROOT / "app" / "PRAP.html").read_text(encoding="utf-8")

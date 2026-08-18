@@ -22,11 +22,13 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.2"
-DOC_STATUS = ("APPROVED - 2026-08-13. v1.0 approved at Gate N2; change C-N01 approved with the Gate N3 "
-              "review. This issue is the governing specification for Steps N4 and N5.")
+DOC_VERSION = "1.3"
+DOC_STATUS = ("v1.2 APPROVED 2026-08-13 and still governing. THIS ISSUE, v1.3, adds change C-N02 - the "
+              "Python shell - and AWAITS APPROVAL. Nothing already approved is withdrawn by it: the "
+              "Electron shell stays specified and stays the better application wherever it can be "
+              "delivered.")
 DOC_DATE = "2026-08-13"
-PLAN = "PRAP_NewApp_Development_Plan_v1.4.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.9.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Specification_v{DOC_VERSION}.xlsx"
@@ -136,8 +138,9 @@ cover = [
      f"specified once in {WEB_SPEC} and both applications are built from the same core/. "
      f"A second description here could disagree with the first, and the disagreement would "
      f"be discovered by whoever trusted the wrong one."),
-    ("Implemented in", "src/storage/desktop/, src/shell/desktop/, and additions to src/ui/. "
-                       "core/ is not modified by this specification"),
+    ("Implemented in", "src/storage/desktop/ and src/shell/desktop/ (the Electron shell); "
+                       "src/storage/python/ and src/shell/python/ (the Python shell, sheet 05a). "
+                       "core/ and ui/ are not modified by this specification"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -168,7 +171,18 @@ r = lines(ws, r, [
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
-          [["1.2", DOC_DATE, "Claude Code", "APPROVED",
+          [["1.3", "2026-08-18", "Claude Code", "Awaiting approval",
+            "A SECOND SHELL, under the same page. Change C-N02: the two company controls are now measured "
+            "rather than feared - an executable may run but may not arrive (R-N20), and data may not enter "
+            "a browser page through the file picker (R-N21). Neither is worked around. A Python shell "
+            "replaces Electron's main process: what travels is .py text rather than an executable, and the "
+            "page never asks the browser for a file because Python reads it and hands over the bytes. New "
+            "sheet 05a specifies it, including the amendment to NR-SEC-01 - this shell must open a socket, "
+            "and the six controls around it are specified rather than assumed. core/ and ui/ are untouched, "
+            "decision N-05 stands, and 1,225 person-months are compared against the reference "
+            "implementation on every test run. The Electron shell is NOT withdrawn: it is the better "
+            "application wherever it can be delivered."],
+           ["1.2", DOC_DATE, "Claude Code", "APPROVED",
             "BASELINE. Change C-N01 approved 2026-08-13 together with Gate N3. Content is v1.1 unchanged - "
             "the five clarifications from the Gate N3 review, now signed. This issue governs Steps N4 and "
             "N5; v1.0 is superseded."],
@@ -378,6 +392,95 @@ r = lines(ws, r, [
     "leave two habits to hold. Divergences are only where a desktop convention requires one, and each is",
     "listed at N3.2 rather than left to be discovered.",
 ])
+
+# ---- 05a The Python shell -------------------------------------------------
+ws, r = sheet(wb, "05a_Python_Shell", "The Python shell   [change C-N02]",
+              "A second shell under the same page, for a machine that will not accept an executable "
+              "and will not let a browser be given a file.")
+
+r = section(ws, r, "Why there are two shells")
+r = lines(ws, r, [
+    "Two company controls, measured on the requester's own machine rather than guessed at:",
+    "",
+    "    R-N20   an executable may RUN, but may not ARRIVE. E-mail refuses to carry it, and",
+    "            e-mail is the only route available.",
+    "    R-N21   data may not enter a browser page through the file picker. The dialog opens;",
+    "            on choosing a file a security message appears and nothing is imported.",
+    "",
+    "The Electron shell answers neither. This one answers both, and it does so by removing the thing",
+    "each control acts on rather than by getting around the control:",
+    "",
+    "    what travels is .py TEXT             so there is no executable to refuse",
+    "    the page never asks for a file       so there is no upload to intercept",
+])
+r += 1
+r = note(ws, r, "Neither control is worked around, disabled or hidden from, and no requirement here asks a "
+                "user to do so. An upload control governs data entering a web page; a program the user ran "
+                "on their own machine reading a file they chose is what every application on that laptop "
+                "does, Excel included. The control is not bypassed - it is not involved.")
+r += 1
+
+r = section(ws, r, "The shape of it")
+r = code(ws, r, [
+    "    the page  --fetch-->  127.0.0.1:<port>/api/...  -->  storage/python  -->  disk",
+    "",
+    "    core/     unchanged   the same JavaScript, the same figures, in the browser",
+    "    ui/       unchanged   the same tabs, tables and charts the reviewer approved",
+    "    storage/  ported      workspace.py and claim.py, from the .js beside them",
+    "    shell/    new         server.py, paths.py, files.py, launch.py - about 900 lines",
+])
+r = note(ws, r, "Decision N-05 survives intact: there is still ONE engine, and it is in the browser. Python "
+                "touches files and nothing else. tools/test_layers.py fails the build if a Python module "
+                "mentions a page, and tools/test_python_app.py compares 1,225 person-months against the "
+                "independent reference implementation on every run.")
+r += 1
+
+r = section(ws, r, "The import path - the whole point")
+imp = [
+    ["Web application, today", "Route taken here", "Which control sees it"],
+]
+r = table(ws, r, ["Step", "Web application, today", "The Python shell"],
+          [["1", "The user picks a file", "The user picks a file - in a Python dialog, or a folder "
+            "listing drawn in the page. Neither is a browser file interface."],
+           ["2", "<input type=\"file\"> receives it", "Python opens it with open()"],
+           ["3", "The File API reads the bytes  <- INTERCEPTED HERE", "Python reads the bytes"],
+           ["4", "The page parses the xlsx", "The page fetches them from 127.0.0.1 as ordinary page "
+            "content, then parses the xlsx - the same reader, unchanged"]],
+          [6, 54, 84], wrap_cols=(2, 3))
+r += 1
+r = note(ws, r, "There is no <input type=\"file\"> on the page, no drop handler and no File API call anywhere "
+                "in the shell. The web page's own picker is REMOVED at start-up rather than hidden: a button "
+                "that opens a dialog and then silently loses the file is worse than no button, because the "
+                "person who clicks it concludes the application is broken - and they are right.")
+r += 1
+
+r = section(ws, r, "Opening a socket, which needs answering rather than waving past")
+r = note(ws, r, "NR-SEC-01 said the shell opens no socket. This shell must, because that is how a browser "
+                "and a local program talk. The requirement is amended rather than quietly broken, and the "
+                "amendment carries its own controls - every one of which is checked by "
+                "tools/test_python_app.py on each run.")
+sec = [
+    ["Loopback only", "It binds 127.0.0.1, never the network interface. Nothing off the machine can reach it, and Windows Firewall does not prompt for loopback.", "NR-SEC-04"],
+    ["A fresh port each time", "Chosen by the operating system at start. Nothing is reserved, and nothing collides.", "NR-SEC-04"],
+    ["A key on every request", "32 bytes, generated at start, never written to disk. Another program on the machine cannot guess it; another web page cannot read it, because it lives in this page's own DOM and same-origin policy keeps it there.", "NR-SEC-05"],
+    ["The Host header must be loopback", "This is what stops a hostile site pointing its own name at 127.0.0.1 and talking to us through the user's browser - DNS rebinding.", "NR-SEC-05"],
+    ["No cross-site request, ever", "No CORS header is sent at all, and any Origin or Sec-Fetch-Site that is not our own is refused before it reaches an operation.", "NR-SEC-05"],
+    ["Nothing is served from disk", "One page and one API. There is no path that maps a URL onto a file, so there is nothing for '..' to escape from.", "NR-SEC-06"],
+    ["No network access of any kind", "It listens; it never connects. Standard library only, no pip install, no download.", "NR-DEP-05"],
+]
+r = table(ws, r, ["Control", "What it does", "NR"], sec, [30, 100, 14], wrap_cols=(2,))
+r += 1
+
+r = section(ws, r, "What differs from the Electron shell, and why")
+dv = [
+    ["The menu is drawn in the page", "There is no application menu bar to use. Same items, same order, same accelerators for Save and Open.", "Visible"],
+    ["The window is a browser tab", "It looks like the web application because it IS the web application. The console window that starts it is also how it is stopped, and says so.", "Visible"],
+    ["A folder listing inside the page", "For a Python built without tkinter, and for typing a path - a network share, say. It lists names and sizes only; nothing in it can read a file.", "Visible"],
+    ["The page ASKS whether it still holds the claim", "Electron pushed 'your claim was taken over' down a second channel. Here the page asks, on the same thirty-second clock the heartbeat runs on. One question every thirty seconds costs nothing and needs no second channel to go wrong.", "Invisible"],
+    ["Export by download is kept", "A download is not an upload and R-N21 does not touch it, so storage/web/export.js runs unmodified with all of its checks. 'Export to a folder…' is added for when the Downloads folder is the wrong place.", "Visible"],
+    ["No window size or position to remember", "The browser owns the window. The setting is kept in the file and ignored, so a later shell can use it.", "Invisible"],
+]
+r = table(ws, r, ["Difference", "Why", "Seen by the user?"], dv, [40, 92, 16], wrap_cols=(2,))
 
 # ---- 06 Persistence -------------------------------------------------------
 ws, r = sheet(wb, "06_Persistence", "Saving, versions, and recovery   [N2.5]",
@@ -711,6 +814,12 @@ OVERRIDE = {
     "NR-APP-03": "05_Shell", "NR-APP-08": "05_Shell",
     "NR-DEP-04": "03_Storage_Interface", "NR-DEP-10": "10_Deployment",
     "NR-PAR-02": "02_Scope", "NR-PAR-03": "02_Scope", "NR-PAR-04": "05_Shell",
+    # Change C-N02 - the Python shell. Everything the second shell adds is specified
+    # on one sheet, so a reader who only cares about the Electron build can skip it
+    # and a reader who only has the Python build has one place to look.
+    "NR-SEC-04": "05a_Python_Shell", "NR-SEC-05": "05a_Python_Shell",
+    "NR-SEC-06": "05a_Python_Shell", "NR-IMP-09": "05a_Python_Shell",
+    "NR-DEP-16": "05a_Python_Shell",
 }
 
 ws, r = sheet(wb, "11_Traceability", "Every requirement, and where it is specified   [N2.8]",

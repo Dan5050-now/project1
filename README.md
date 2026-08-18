@@ -29,7 +29,8 @@ and stays in service — the two are parallel products, not successor and predec
 | N1 | Development plan | **v1.0 APPROVED BASELINE** 2026-08-13 · Gate N1 closed |
 | N2 | Programming specification | **v1.0 APPROVED** 2026-08-13 · Gate N2 closed |
 | N3 | Desktop UI design | **v1.0 component list APPROVED** 2026-08-13 · Gate N3 closed |
-| N4 | Build | **In progress** — storage layer and shell built; the application launches |
+| N4 | Build (Electron shell) | **In progress** — storage layer and shell built; the application launches |
+| N4a | Build (Python shell) | **Built and tested** 2026-08-18 · awaiting the run on the company laptop |
 | N5 | Release | Not started |
 
 Both applications share one calculation engine, one data schema (version 5) and one
@@ -47,12 +48,35 @@ src/storage/web/       63 lines   the seam: one function reads a file, one write
 src/storage/desktop/  487 lines   workspaces, atomic saves, versions, journal, the claim
 src/shell/web/                    page markup and event wiring — the web build target
 src/shell/desktop/                the Electron window, menu, IPC and data-folder rules
+src/storage/python/   618 lines   the same storage, ported — for the Python shell
+src/shell/python/   1,003 lines   a local server, file dialogs, and the page-side bridge
 ```
 
 The desktop application runs: `npm install && npm start`. Two suites prove the parts
 that can lose work — `tools/test_storage.mjs` (33 checks in plain Node, including
 twelve kills mid-save and an eight-process race for one claim) and
 `tools/desktop_smoke.js` (23 checks inside a running Electron window).
+
+**There is a second shell under the same page.** Two company controls made it
+necessary, and neither is worked around: an executable may *run* on the target laptop
+but may not *arrive* (`R-N20` — e-mail refuses it), and data may not enter a browser
+page through the file picker (`R-N21` — the dialog opens, a security message appears,
+nothing imports). The Python shell answers both by removing what each control acts on.
+What travels is `.py` text; the page carries **no file input, no drop handler and no
+File API call at all** — Python reads the workbook and hands the bytes to the page over
+`127.0.0.1`. `core/` and `ui/` are untouched, so there is still one engine.
+
+```
+python tools/build_python_app.py --zip   # dist/PM_APP_python_v0.2.zip, 107 KB
+python tools/test_storage_py.py          # 80 checks — kills mid-save, an 8-process race
+python tools/test_python_app.py          # 42 checks — a live server, a real browser
+```
+
+`test_python_app.py` starts the packaged application, points Chromium at it, has Python
+read the 62-project dummy workbook off the disk, and compares **all 1,225 person-months
+against the independent Python reference — worst difference 0.00e+00**. Eleven of its
+checks are the socket's: loopback only, a per-launch key, `Host` and cross-site refused,
+nothing served from disk.
 
 The split was made along the fourteen section boundaries the single file already had, in
 order, so the rebuilt file is **byte-identical** to the one that passed all thirteen
@@ -107,7 +131,17 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.6.xlsx` — **current.** Records Step N4 progress,
+- `docs/PRAP_NewApp_Development_Plan_v1.9.xlsx` — **current.** Adds **change C-N02, the
+  Python shell**: `NR-SEC-01` amended (a loopback listener is permitted; an outbound
+  connection is still forbidden) with `NR-SEC-04..06` around it, `NR-IMP-09` (the page
+  carries no browser file interface), `NR-DEP-16` (Python 3.9+, standard library only),
+  risk `R-N22`, and Step N4a on the WBS. Sheet `10a_Delivery` carries the four measured
+  results and rules route C out. 75 requirements.
+- `docs/PRAP_NewApp_Specification_v1.3.xlsx` — **current specification.** New sheet
+  `05a_Python_Shell`: why there are two shells, the import path step by step, the six
+  controls around the socket, and every difference from the Electron shell with whether
+  a user can see it. Awaiting approval; nothing already approved is withdrawn.
+- `docs/PRAP_NewApp_Development_Plan_v1.6.xlsx` — superseded. Records Step N4 progress,
   and the launch probe: an unsigned executable **ran on the requester's own machine**
   on 2026-08-15, so `A-N09` is evidence rather than assumption and `R-N01` falls from
   Medium/HIGH to Low/HIGH. Evidence at `docs/review/PM_APP_probe_result_2026-08-15.txt`.
