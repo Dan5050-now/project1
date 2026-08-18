@@ -20,10 +20,11 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.7"
-DOC_STATUS = ("Baseline v1.0 + change C-N01. Gates N1-N3 closed; Step N4 in progress. A-N09 IS NOW "
-              "EVIDENCE rather than an assumption: an unsigned executable ran on the requester's own "
-              "machine on 2026-08-15.")
+DOC_VERSION = "1.8"
+DOC_STATUS = ("Baseline v1.0 + change C-N01. Gates N1-N3 closed; Step N4 in progress. TWO COMPANY "
+              "CONTROLS ARE NOW MEASURED RATHER THAN FEARED: an executable may run but may not arrive "
+              "(R-N20), and data may not enter a browser page through the file picker (R-N21). Both "
+              "point at the same answer on sheet 10a.")
 DOC_DATE = "2026-08-13"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_NewApp_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -226,7 +227,19 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.7", "2026-08-15", "Claude Code", "-",
+    [f"{MARK_NEW}1.8", "2026-08-18", "Claude Code", "-",
+     "THE SECOND CONTROL IS NAMED. IT bans data upload into HTML, and the diagnostic settles what that "
+     "means in practice: the file dialog opens normally, and on choosing a file a company security "
+     "message appears and nothing is imported. Transferring and opening the HTML file itself is not "
+     "restricted. So it is a technical control on the browser's file-input data path - the File API - "
+     "and not a policy about the document. Recorded as risk R-N21. Two consequences, both on sheet 10a. "
+     "Route C is RULED OUT rather than partial: it was to give the web application real storage through "
+     "the browser's own file access, which is the very interface being intercepted. And route B gains a "
+     "second reason to exist that has nothing to do with .exe delivery - a Python shell reads the "
+     "workbook from disk itself and hands the bytes to the page, so the page has no upload element, no "
+     "drag-and-drop and no File API call for a control to intercept. One barrier moved the "
+     "recommendation; two barriers now converge on it."],
+    ["1.7", "2026-08-15", "Claude Code", "-",
      "THE BLOCKER MOVED. The probe proved the machine will RUN an unsigned executable; the attempt to send "
      "one proved the company will not let it ARRIVE - e-mail refused the .exe on a general security check. "
      "Risk R-N20 records it, and it is a different risk from R-N01: execution policy is satisfied, "
@@ -1181,6 +1194,8 @@ risks = [
      "Much reduced at round 6: Q-N09 confirms there is no internal validation or record-keeping obligation, so nothing formal rests on this identity. It remains stated at NR-USR-08 and on the screen where the name is entered, because the limit should be visible at the point it could mislead - but it is now a courtesy rather than a control."],
     [f"{MARK_NEW}R-N20", "The company will not let an executable ARRIVE, whatever its policy on running one.", "HIGH", "HIGH",
      "PROVEN 2026-08-15, and it is now the binding constraint. The probe ran happily once it was on the machine, but e-mail refused to carry a .exe at all on a general security check. Execution policy is satisfied; transport is not. Two things follow. First, no amount of work on the package fixes this - an Electron build is an .exe however it is zipped, and defeating a mail filter is not a solution anybody should want. Second, decision N-01 is genuinely reopened: the choice of shell is now governed by what can be delivered rather than by what is pleasant to build. See sheet 10a."],
+    [f"{MARK_NEW}R-N21", "Data cannot enter a browser page at all - the company blocks the file picker, so the web application cannot be given a file.", "HIGH", "HIGH",
+     "PROVEN 2026-08-18, by diagnostic rather than by report. The file dialog opens normally; on choosing a file a company security message appears and nothing is imported. Transferring and opening the HTML file is NOT restricted. That combination identifies it precisely: a technical control on the browser's file-input data path, watching the File API, not a policy about the document and not a restriction on the browser. Three things follow. (1) The finished web application cannot be fed data on that laptop by any of its three routes - picker, drag-and-drop, or a JSON file - because all three end in the same API. It remains correct, and it remains usable anywhere the control does not apply. (2) Route C on sheet 10a is dead, not partial: it proposed persistence through the browser's own file access, which is the intercepted interface. (3) It is NOT a barrier to route B, because a Python shell reads the file from disk itself and hands the bytes to the page - there is no upload for a control to intercept. No mitigation is proposed on the browser side, and none will be: the control is deliberate, and evading it is the behaviour it exists to catch."],
     [f"{MARK_NEW}R-N18", "Company file protection encrypts a workbook or a workspace, and the application cannot read it.", "Medium", "Medium",
      "Raised from your Q-N04 answer, which is about decrypting a file before it can be imported. Where a document-security product encrypts files on a share, an ordinary application sees bytes it cannot parse. Two requirements follow: NR-IMP-06, so a protected file is reported as protected rather than as corrupt - the failure that would otherwise waste an afternoon - and NR-IMP-07, so the application never adds encryption of its own and never becomes the only thing that can open your data. Protection stays the company's, applied to the folder."],
     [f"{MARK_NEW}R-N19", "Two bad saves in a row leave nothing good to go back to.", "Low", "Medium",
@@ -1234,32 +1249,64 @@ r = table(ws, r, ["ID", "Assumption", "Status"], assum, [9, 108, 26], wrap_cols=
 r = legend(ws, r)
 
 # ---- 10a Delivery routes ---------------------------------------------------
-ws, r = sheet(wb, "10a_Delivery", "Getting it onto the laptop   [R-N20]",
-              "The probe ran, but e-mail refused to carry it. Execution is settled; delivery is not.")
+ws, r = sheet(wb, "10a_Delivery", "Getting it onto the laptop, and getting data into it   [R-N20, R-N21]",
+              "Four tests on the requester's own machine. Two passed, two failed, and the two failures "
+              "are what now chooses the design.")
 
-r = section(ws, r, "What the two tests together showed")
+r = section(ws, r, "What the tests together showed")
 r = lines(ws, r, [
     "  RUNNING an unsigned executable from a user folder    ALLOWED   (probe, 2026-08-15)",
-    "  SENDING one through company e-mail                   REFUSED   (general security check)",
+    "  WRITING beside itself in that folder                 ALLOWED   (probe, 2026-08-15)",
+    "  SENDING an executable through company e-mail         REFUSED   (general security check)",
+    "  IMPORTING a file INTO a page through the picker      REFUSED   (security message, 2026-08-18)",
     "",
-    "Those are different controls, and only the second is now in the way. It is also the one that no",
-    "amount of work on the package can fix: an Electron build is an .exe however it is zipped, renamed",
-    "or split.",
+    "  ...while TRANSFERRING and OPENING the HTML file itself was not restricted at all.",
+    "",
+    "Four different controls, and the two refusals sit at opposite ends: one stops the desktop",
+    "application ARRIVING, the other stops the web application being GIVEN DATA. Neither can be fixed by",
+    "working on the thing it blocks - an Electron build is an .exe however it is zipped, and every way",
+    "the web application can be handed a file (picker, drag-and-drop, .json) ends at the same File API",
+    "the control is watching.",
 ], mono=True)
 r += 1
-r = note(ws, r, "Working around the mail filter is not on this sheet and will not be. It is a control the "
-                "company put there deliberately; going around it is the behaviour it exists to catch, and it "
-                "would put the requester rather than the tool in the wrong.")
+r = note(ws, r, "Working around either control is not on this sheet and will not be. Both were put there "
+                "deliberately by the company; going around them is the behaviour they exist to catch, and it "
+                "would put the requester rather than the tool in the wrong. Every route below is one that "
+                "leaves both controls doing exactly their job.")
 r += 1
 
 r = section(ws, r, "The three routes")
 routes = [
     ["A", "Ask IT for the sanctioned channel", "The software-distribution share, the internal artifact store, or an allow-list entry. Nothing is rebuilt - the package is finished and tested.", "Best fidelity, no work. Depends entirely on somebody else, and the answer may be no or slow.", "Ask first - it costs one conversation"],
-    ["B", "Replace the Electron shell with a PYTHON one", "The interface and the engine do not change at all. Python does what Electron's main process does - files, folders, the claim - and serves the existing page to the browser. What travels is .py text, not an executable.", "Removes the executable from the problem. Needs Python on the laptop. Roughly 700 lines of new Python, no new engine.", "RECOMMENDED if A is slow or refused"],
-    ["C", "Persistence in the web application instead", "Give the existing HTML file real storage, through the browser's own file access. It already arrives - it is a document.", "Fastest, and it satisfies NR-STO-01. But browser storage is per profile, so the shared-folder and claim model largely goes; and it is Edge/Chrome only.", "Partial - keeps the data, loses the sharing"],
+    ["B", "Replace the Electron shell with a PYTHON one", "The interface and the engine do not change at all. Python does what Electron's main process does - files, folders, the claim - and serves the existing page to the browser. What travels is .py text, not an executable. It also READS THE WORKBOOK ITSELF and hands the bytes to the page, so nothing is ever uploaded.", "Removes the executable from one problem and the upload from the other. Needs Python on the laptop. Roughly 700 lines of new Python, no new engine.", "RECOMMENDED - and now the only route that answers both refusals"],
+    ["C", "Persistence in the web application instead", "Give the existing HTML file real storage, through the browser's own file access. It already arrives - it is a document.", "RULED OUT 2026-08-18. It depends on the browser's file access, which is the exact interface the import control intercepts (R-N21). It was never going to keep the shared folder either; now it cannot even get the first file in.", "RULED OUT - not partial"],
 ]
 r = table(ws, r, ["", "Route", "What it is", "What it costs", "Verdict"],
           routes, [4, 34, 62, 58, 30], wrap_cols=(3, 4, 5))
+r += 1
+
+r = section(ws, r, "Why the import control does not touch route B")
+r = lines(ws, r, [
+    "The control watches data crossing INTO the page. So the design simply does not cross there.",
+    "",
+    "    Web application, today          Route B",
+    "    ----------------------          -------",
+    "    user picks a file               user picks a file  (in a PYTHON dialog, not the page)",
+    "    <input type=\"file\">             Python opens it with open()",
+    "    File API reads the bytes        Python reads the bytes",
+    "    ^^^ INTERCEPTED HERE            page fetches them from 127.0.0.1 as ordinary page content",
+    "    page parses the xlsx            page parses the xlsx   <- unchanged, same code",
+    "",
+    "The page keeps the xlsx reader it already has and the figures it already produces. What it loses is",
+    "the upload element, the drag-and-drop handler and every File API call - the three things a DLP",
+    "upload control actually watches. Nothing is disabled, evaded or hidden: the file never travels that",
+    "path, because a program the user ran on their own machine read it and served it.",
+], mono=True)
+r += 1
+r = note(ws, r, "This is worth stating plainly because it can be misread as a workaround. It is not. An "
+                "upload control governs data entering a web page; a desktop program reading a local file "
+                "the user chose is the ordinary behaviour of every application on the laptop, including "
+                "Excel. The control is not bypassed - it is not involved.")
 r += 1
 
 r = section(ws, r, "Why route B is a swap rather than a rewrite")
@@ -1294,6 +1341,7 @@ q = [
     ["Is Python installed on the laptop, and which version?", "`python --version` at a command prompt. 3.9 or newer is enough. If it is absent, route B needs IT to install it - which is the same conversation as route A, but for a runtime that is far easier to approve than an unknown application."],
     ["What internal route exists for files that are not e-mail?", "SharePoint, Teams, an internal GitLab, a software share. Route B still has to arrive; .py is text rather than an executable, which most filters treat differently, but the sanctioned route is better than the tolerated one."],
     ["Would IT rather approve a runtime than an application?", "Usually yes, and it is worth asking in those terms. 'May I have Python' is a smaller request than 'may I run this 142 MB thing a contractor sent me'."],
+    ["What did the import security message actually say - which product, which policy name?", "It decides how wide R-N21 is. A message from a DLP agent about web uploads leaves route B untouched. A message from an endpoint agent about a script or an unknown process reading business documents would reach route B as well, and is better known now than after 700 lines are written. The wording, or a screenshot, is enough."],
 ]
 r = table(ws, r, ["Question", "Why it decides the route"], q, [56, 90], wrap_cols=(1, 2))
 
@@ -1379,6 +1427,9 @@ log = [
     ["35", "v0.6_reviewed - Q-N14 and Q-N15", "Both ways of using the share; and the share would be writable.", "Accepted - and the writable answer is the simpler outcome.", "NR-DEP-14: both arrangements first-class, both tested, and the user guide states what each costs in launch time rather than recommending one. NR-DEP-15: on a writable share each person gets data\\users\\<name>\\ automatically, so nobody is asked where to put anything. The read-only path stays built - a folder can be made read-only later without telling the application.", "Closed"],
     ["36", "-", "Not requester input - the state of the document.", "Every question is answered.", "Eighteen questions across six review rounds, all answered. Two items were outstanding at v0.7 - the reading at item 29 and the naming at item 34 - and both are resolved by the Gate N1 approval below: the reading is adopted, and the documents keep their prefix. Both remain correctable under a v1.1.", "Closed"],
     ["37", "Gate N1", "'Go to next step', 2026-08-13.", "Recorded as approval of the plan as a baseline.", "v1.0 issued with no content change against v0.7. Decisions N-01..N-32 are confirmed by the approval itself rather than by a seventh review round - the same route the web application plan took at its own Gate 1, where C-06..C-11 were resolved at approval. Step N2 opens with the refactor, which is gated on the 13 existing suites passing unmodified against the rebuilt HTML file.", "Closed"],
+
+    ["38", "Instruction 2026-08-18", "IT bans any data upload into HTML. How is that limitation solved?", "Accepted as a constraint, and diagnosed before it was recorded.", "The question could have meant three different things - a policy about the file, a restriction on the browser, or a technical control on the import path - and each would have led somewhere different. Rather than choose, the plan asked for one observation. Item 39 has the answer; R-N21 is the record.", "Closed"],
+    ["39", "Diagnostic 2026-08-18", "The file dialog opens normally; after choosing the file a company security message appeared and nothing was imported. No limitation on transferring or opening the HTML file.", "Decisive - it names the control exactly.", "It is a technical control on the browser's file-input data path, not a policy about the document. R-N21 added at HIGH/HIGH. Sheet 10a rewritten: route C moves from 'partial' to RULED OUT, since it depended on the intercepted interface, and route B gains a second and independent reason - a Python shell reads the file itself, so the page has no upload element, no drag-and-drop and no File API call. NO mitigation is proposed on the browser side and none will be. One further question is added to sheet 10a: what the security message actually said, which decides whether R-N21 is confined to web uploads or reaches further.", "Closed"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Source", "Input", "Response", "Action taken in v0.1", "Status"],
