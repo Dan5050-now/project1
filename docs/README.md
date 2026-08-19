@@ -33,8 +33,8 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 | Document | Version | Status | Next |
 |---|---|---|---|
 | TEA-PLAN-001 Development Plan | 1.0.0 | **APPROVED** 2026-08-17 | — |
-| TEA-SPEC-001 Programming Specification | 1.0.0 | DRAFT | Step 2 review |
-| Rule catalog | 1.0.0 | DRAFT | Frozen at the Step 2 gate |
+| TEA-SPEC-001 Programming Specification | 1.1.0 | DRAFT | Step 2 review, round 2 |
+| Rule catalog | 1.1.0 | DRAFT | Frozen at the Step 2 gate |
 
 Steps 3–6 (prototype output, UI design, code generation, final application) are gated on
 approval of the specification.
@@ -68,7 +68,7 @@ python3 tools/check_catalog_drift.py --rules-dir src/rules   # also vs implement
 ```
 
 The check compares id, family, title, guideline, severity, mode, status and confidence
-base rate for all 85 rules, and exits non-zero on any mismatch. Run it in CI on every
+base rate for all 85 rules (83 live, 2 retired), and exits non-zero on any mismatch. Run it in CI on every
 commit. Regenerate the catalog after editing `tools/rules.json`:
 
 ```bash

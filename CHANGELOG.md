@@ -3,6 +3,73 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## [1.1.0] — 2026-08-19
+
+Step 2 review, round 1 (Daniel). 85 rules dispositioned: 70 Accept, 14 Discuss, 1 Reject.
+8 interpretation decisions: 6 Accept, 1 Discuss, 1 Amend. Every item raised is resolved;
+the record is on the Rules sheet and the new Review_Log sheet.
+
+### Retired
+- **TE-RS-010** — subsumed by TE-RS-008 (overall response versus the component table),
+  TE-RS-009 (new-lesion flag versus recorded lesions) and TE-IR-001 (iUPD under iRECIST).
+  No iRECIST condition needed folding into TE-RS-008.
+- **TE-RS-011** — rejected. Imaging performed at investigator discretion routinely covers
+  regions absent from baseline, so a new lesion found there is real. The rule's premise
+  did not hold.
+- Both ids are retained permanently and never reused; the catalog stays at 85 with 83 live.
+
+### Changed — rule logic
+- **TE-RS-003** — the baseline comparison is removed from the gate, widening detection to
+  every missed progression from nadir. It is retained as a message discriminator and
+  confidence modifier for the compared-against-baseline case.
+- **TE-RS-007** — severity MAJOR → INFO, confidence 0.60 → 0.45. Collected data cannot
+  settle the guideline's exceptional-circumstance test. This removes it from the default
+  query worklist, making it a study-team observation rather than a site query.
+- **TE-RS-002 / TE-RS-003** — declared cascade children of TE-RS-001. Both are subsumed by
+  it for detection; their value is diagnostic, so they now collapse into one finding
+  carrying the specific reason rather than two.
+- **TE-RS-008** — suppressed behind TE-RS-001, TE-RS-005 and TE-RS-009 when a component
+  finding is already open for the assessment, and now names the driving component. One
+  visit yields one query.
+- **TE-BL-011** and **TE-FU-001** — ACTIVE → CONDITIONAL on the sum being site-entered
+  rather than system-derived, determined from the CRF specification at the AC-11 intake.
+  A derived sum deactivates the rule with an explicit NOT_EVALUATED. **This answers SQ-08.**
+  TE-FU-001 was accepted at round 1 but amended alongside TE-BL-011, since applying the
+  guard at baseline but not at follow-up would be incoherent.
+- **TE-FU-007** — a per-visit assessment schedule from the protocol intake replaces the
+  single interval, so protocols that vary the window by timepoint are honoured.
+- **TE-FU-009** — restricted to follow-up assessments (a nodal target cannot be absent at
+  selection, having required a short axis ≥ 15 mm) and excludes the too-small-to-measure
+  state so ID-02 handling is not flagged as an error.
+- **TE-ST-003** — nodal axis type is resolved from the CRF specification where no
+  axis-type field is collected, instead of assuming the field exists.
+- **TE-RS-013** — guarded against back-dating progression where visit j establishes PD
+  independently; back-dating applies only when the new lesion is the progression driver.
+
+### Added — Rationale / source column
+- States where each threshold comes from. TE-RS-014 cites RECIST 1.1's 4-week confirmation
+  provision and TE-XD-007 the marker-normalisation requirement for CR. **TE-FU-004 states
+  plainly that no guideline source exists** — its outlier thresholds are heuristics aimed
+  at transcription error, to be calibrated on the golden dataset at Step 3 — rather than
+  implying a citation it does not have. TE-FU-005 carries no threshold at all; its
+  parameter is interpretation decision ID-01.
+
+### Changed — interpretations
+- **ID-06 amended** — baseline is the tumor identification form at the screening visit, as
+  the CRF is designed, replacing inference from assessment dates relative to first dose.
+  The date-based rule remains as a fallback.
+- **ID-05 expanded** — worked examples for both the arithmetic tolerance and the threshold
+  boundary case, where a percent change of 19.96% displays as 20.0% but is judged SD at
+  full precision.
+
+### Added
+- **Review_Log sheet** — round-1 disposition, what was raised and how it was resolved.
+- `RETIRED` added to the RuleStatus enumeration.
+
+### Open
+- Rule_Messages has not been reviewed yet; it is the round-2 surface alongside the 14
+  amended rules. SQ-01 to SQ-07 and SQ-09 remain for the Step 2 gate.
+
 ## [1.0.0] — 2026-08-17
 
 Step 1 gate passed. Review disposition: 95 items — 78 Accept, 3 Amend, 14 open questions
