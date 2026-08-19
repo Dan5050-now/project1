@@ -1,175 +1,251 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>투자 대시보드</title>
+  <title>Project 1</title>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
-    :root {
-      --bg: #0b1120;
-      --surface: #151f32;
-      --surface2: #1c2a42;
-      --border: #2a3a56;
-      --text: #e2e8f0;
-      --muted: #7a90b0;
-      --accent: #6366f1;
-      --gold: #f5a623;
-      --purple: #a78bfa;
-      --green: #34d399;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
 
-    /* ── Header ── */
-    .hdr{
-      display:flex;align-items:center;justify-content:space-between;
-      padding:14px 24px;background:var(--surface);
-      border-bottom:1px solid var(--border);
-      position:sticky;top:0;z-index:100;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
     }
-    .hdr h1{
-      font-size:1.15rem;font-weight:700;
-      background:linear-gradient(135deg,#6366f1,#a78bfa);
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-    }
-    .hdr-btns{display:flex;gap:8px;}
-    .btn{
-      display:inline-flex;align-items:center;gap:5px;
-      padding:7px 14px;border:1px solid var(--border);border-radius:6px;
-      background:var(--surface2);color:var(--text);cursor:pointer;
-      font-size:12px;font-weight:500;transition:background .15s,border-color .15s;
-    }
-    .btn:hover{background:var(--accent);border-color:var(--accent);}
-    .btn-primary{background:var(--accent);border-color:var(--accent);}
-    .btn-primary:hover{background:#4f46e5;}
-    #fileInput{display:none;}
 
-    /* ── Main ── */
-    .main{padding:20px 24px;display:flex;flex-direction:column;gap:20px;}
-
-    /* ── Cards ── */
-    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;}
-    .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;}
-    .card-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
-    .card-val{font-size:1.6rem;font-weight:700;}
-    .card-sub{font-size:11px;color:var(--muted);margin-top:4px;}
-    .c-gold{color:var(--gold);}
-    .c-purple{color:var(--purple);}
-    .c-green{color:var(--green);}
-
-    /* ── Section ── */
-    .section{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-    .sec-hdr{
-      display:flex;align-items:center;justify-content:space-between;
-      padding:13px 18px;background:var(--surface2);border-bottom:1px solid var(--border);
+    /* ── Original hero ── */
+    .container {
+      text-align: center;
+      padding: 2rem;
     }
-    .sec-title{font-size:.85rem;font-weight:600;}
-    .sec-meta{font-size:11px;color:var(--muted);}
 
-    /* ── Scrollable table wrapper ── */
-    .tbl-wrap{
-      overflow:auto;
-      max-height:340px;
+    h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #6366f1, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
     }
-    .tbl-wrap::-webkit-scrollbar{width:6px;height:6px;}
-    .tbl-wrap::-webkit-scrollbar-track{background:var(--surface);}
-    .tbl-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-    .tbl-wrap::-webkit-scrollbar-thumb:hover{background:var(--accent);}
 
-    table{width:100%;border-collapse:collapse;font-size:13px;}
-    thead tr{background:var(--surface2);position:sticky;top:0;z-index:1;}
-    th{
-      padding:9px 16px;text-align:left;
-      font-weight:600;color:var(--muted);font-size:11px;
-      text-transform:uppercase;letter-spacing:.05em;
-      border-bottom:1px solid var(--border);white-space:nowrap;
+    p {
+      font-size: 1.25rem;
+      color: #94a3b8;
+      max-width: 480px;
+      line-height: 1.6;
+      margin: 0 auto;
     }
-    td{
-      padding:8px 16px;border-bottom:1px solid rgba(42,58,86,.55);
-      white-space:nowrap;
-    }
-    tr:last-child td{border-bottom:none;}
-    tbody tr:hover td{background:rgba(99,102,241,.06);}
-    .num{text-align:right;font-variant-numeric:tabular-nums;}
-    .gv{color:var(--gold);font-weight:500;}
 
-    .src{font-size:11px;color:var(--muted);padding:7px 18px;border-top:1px solid var(--border);background:var(--surface2);}
+    /* ── Excel toolbar (top-right) ── */
+    .toolbar {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      display: flex;
+      gap: 8px;
+      z-index: 200;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 14px;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      background: #1e293b;
+      color: #e2e8f0;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: background .15s, border-color .15s;
+    }
+    .btn:hover { background: #6366f1; border-color: #6366f1; }
+    .btn-primary { background: #6366f1; border-color: #6366f1; }
+    .btn-primary:hover { background: #4f46e5; }
+    #fileInput { display: none; }
+
+    /* ── Dashboard sections ── */
+    .dashboard {
+      padding: 0 24px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* Summary cards */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+    .card-lbl {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 8px;
+    }
+    .card-val { font-size: 1.6rem; font-weight: 700; }
+    .card-sub { font-size: 11px; color: #64748b; margin-top: 4px; }
+    .c-gold   { color: #f5a623; }
+    .c-purple { color: #a78bfa; }
+    .c-green  { color: #34d399; }
+
+    /* Section boxes */
+    .section {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .sec-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      background: #273548;
+      border-bottom: 1px solid #334155;
+    }
+    .sec-title { font-size: .85rem; font-weight: 600; }
+    .sec-meta  { font-size: 11px; color: #64748b; }
+
+    /* Scrollable table wrapper */
+    .tbl-wrap {
+      overflow: auto;
+      max-height: 320px;
+    }
+    .tbl-wrap::-webkit-scrollbar          { width: 6px; height: 6px; }
+    .tbl-wrap::-webkit-scrollbar-track    { background: #1e293b; }
+    .tbl-wrap::-webkit-scrollbar-thumb    { background: #334155; border-radius: 3px; }
+    .tbl-wrap::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: #273548; position: sticky; top: 0; z-index: 1; }
+    th {
+      padding: 9px 16px;
+      text-align: left;
+      font-weight: 600;
+      color: #64748b;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      border-bottom: 1px solid #334155;
+      white-space: nowrap;
+    }
+    td {
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(51,65,85,.5);
+      white-space: nowrap;
+    }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: rgba(99,102,241,.06); }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .gv  { color: #f5a623; font-weight: 500; }
+
+    .src {
+      font-size: 11px;
+      color: #64748b;
+      padding: 7px 18px;
+      border-top: 1px solid #334155;
+      background: #273548;
+    }
   </style>
 </head>
 <body>
 
-<header class="hdr">
-  <h1>📈 투자 대시보드</h1>
-  <div class="hdr-btns">
+  <!-- ── Excel import / export buttons (top-right) ── -->
+  <div class="toolbar">
     <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="importExcel(event)">
     <button class="btn" onclick="document.getElementById('fileInput').click()">📥 가져오기</button>
     <button class="btn btn-primary" onclick="exportExcel()">📤 내보내기</button>
   </div>
-</header>
 
-<main class="main">
-  <!-- Summary -->
-  <div class="cards">
-    <div class="card">
-      <div class="card-lbl">국내 금 시세 (KRX)</div>
-      <div class="card-val c-gold">200,056.86</div>
-      <div class="card-sub">원/g · 출처: Naver 금융</div>
-    </div>
-    <div class="card">
-      <div class="card-lbl">USD/KRW 환율</div>
-      <div class="card-val c-purple">1,385.00</div>
-      <div class="card-sub">원 · 2026.08.17 기준</div>
-    </div>
-    <div class="card">
-      <div class="card-lbl">데이터 범위</div>
-      <div class="card-val c-green" style="font-size:1.1rem;line-height:1.5">월별 127개월<br>주별 5주</div>
-      <div class="card-sub">2016.01 ~ 2026.08.17</div>
-    </div>
+  <!-- ── Original content ── -->
+  <div class="container">
+    <h1>Project 1</h1>
+    <p>Welcome. Edit this page to get started.</p>
   </div>
 
-  <!-- Monthly -->
-  <div class="section">
-    <div class="sec-hdr">
-      <span class="sec-title">📅 월별 평균 데이터</span>
-      <span class="sec-meta">2016년 1월 ~ 2026년 7월 (127개월)</span>
-    </div>
-    <div class="tbl-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>날짜</th>
-            <th class="num">USD/KRW (원)</th>
-            <th class="num">KRX 금 시세 (원/g)</th>
-          </tr>
-        </thead>
-        <tbody id="monthlyBody"></tbody>
-      </table>
-    </div>
-    <div class="src">* 월별 평균값 기준 · 출처: Naver 금융, 한국거래소(KRX)</div>
-  </div>
+  <!-- ── Added: investment dashboard ── -->
+  <div class="dashboard">
 
-  <!-- Weekly -->
-  <div class="section">
-    <div class="sec-hdr">
-      <span class="sec-title">📆 주별 평균 데이터</span>
-      <span class="sec-meta">최근 1개월 (2026.07.17 ~ 2026.08.17)</span>
+    <!-- Summary cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-lbl">국내 금 시세 (KRX)</div>
+        <div class="card-val c-gold">200,056.86</div>
+        <div class="card-sub">원/g · 출처: Naver 금융</div>
+      </div>
+      <div class="card">
+        <div class="card-lbl">USD/KRW 환율</div>
+        <div class="card-val c-purple">1,385.00</div>
+        <div class="card-sub">원 · 2026.08.17 기준</div>
+      </div>
+      <div class="card">
+        <div class="card-lbl">데이터 범위</div>
+        <div class="card-val c-green" style="font-size:1.1rem;line-height:1.5">월별 127개월<br>주별 5주</div>
+        <div class="card-sub">2016.01 ~ 2026.08.17</div>
+      </div>
     </div>
-    <div class="tbl-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>주간</th>
-            <th class="num">USD/KRW (원)</th>
-            <th class="num">KRX 금 시세 (원/g)</th>
-          </tr>
-        </thead>
-        <tbody id="weeklyBody"></tbody>
-      </table>
+
+    <!-- Monthly table -->
+    <div class="section">
+      <div class="sec-hdr">
+        <span class="sec-title">📅 월별 평균 데이터</span>
+        <span class="sec-meta">2016년 1월 ~ 2026년 7월 (127개월)</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>날짜</th>
+              <th class="num">USD/KRW (원)</th>
+              <th class="num">KRX 금 시세 (원/g)</th>
+            </tr>
+          </thead>
+          <tbody id="monthlyBody"></tbody>
+        </table>
+      </div>
+      <div class="src">* 월별 평균값 기준 · 출처: Naver 금융, 한국거래소(KRX)</div>
     </div>
-    <div class="src">* 주별 평균값 기준 (월~금) · 출처: Naver 금융, 한국거래소(KRX)</div>
-  </div>
-</main>
+
+    <!-- Weekly table -->
+    <div class="section">
+      <div class="sec-hdr">
+        <span class="sec-title">📆 주별 평균 데이터</span>
+        <span class="sec-meta">최근 1개월 (2026.07.17 ~ 2026.08.17)</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>주간</th>
+              <th class="num">USD/KRW (원)</th>
+              <th class="num">KRX 금 시세 (원/g)</th>
+            </tr>
+          </thead>
+          <tbody id="weeklyBody"></tbody>
+        </table>
+      </div>
+      <div class="src">* 주별 평균값 기준 (월~금) · 출처: Naver 금융, 한국거래소(KRX)</div>
+    </div>
+
+  </div><!-- /.dashboard -->
 
 <script>
 // ── Monthly data: [year, month, USD/KRW avg, KRX gold avg won/g] ──────────────
@@ -239,104 +315,97 @@ const weeklyData = [
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fmt(n, d = 0) {
-  return Number(n).toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d });
+function fmt(n, d) {
+  return Number(n).toLocaleString('ko-KR', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
+// ── Render tables ─────────────────────────────────────────────────────────────
 function renderMonthly(data) {
-  document.getElementById('monthlyBody').innerHTML = data.map(([y, m, fx, gold]) =>
-    `<tr>
-      <td>${y}.${String(m).padStart(2,'0')}</td>
-      <td class="num">${fmt(fx, 1)}</td>
-      <td class="num gv">${fmt(gold)}</td>
-    </tr>`
-  ).join('');
+  document.getElementById('monthlyBody').innerHTML = data.map(function(r) {
+    return '<tr><td>' + r[0] + '.' + String(r[1]).padStart(2,'0') + '</td>'
+      + '<td class="num">' + fmt(r[2], 1) + '</td>'
+      + '<td class="num gv">' + fmt(r[3]) + '</td></tr>';
+  }).join('');
 }
 
 function renderWeekly(data) {
-  document.getElementById('weeklyBody').innerHTML = data.map(([w, fx, gold]) =>
-    `<tr>
-      <td>${w}</td>
-      <td class="num">${fmt(fx, 1)}</td>
-      <td class="num gv">${fmt(gold, 2)}</td>
-    </tr>`
-  ).join('');
+  document.getElementById('weeklyBody').innerHTML = data.map(function(r) {
+    return '<tr><td>' + r[0] + '</td>'
+      + '<td class="num">' + fmt(r[1], 1) + '</td>'
+      + '<td class="num gv">' + fmt(r[2], 2) + '</td></tr>';
+  }).join('');
 }
 
-// ── Export ────────────────────────────────────────────────────────────────────
+// ── Excel Export ──────────────────────────────────────────────────────────────
 function exportExcel() {
-  const wb = XLSX.utils.book_new();
+  var wb = XLSX.utils.book_new();
 
-  // Sheet 1: monthly
-  const mRows = [['날짜', 'USD/KRW', 'KRX 금 시세 (원/g)']];
-  monthlyData.forEach(([y, m, fx, g]) => mRows.push([`${y}.${String(m).padStart(2,'0')}`, fx, g]));
-  const wsM = XLSX.utils.aoa_to_sheet(mRows);
+  var mRows = [['날짜', 'USD/KRW', 'KRX 금 시세 (원/g)']];
+  monthlyData.forEach(function(r) {
+    mRows.push([r[0] + '.' + String(r[1]).padStart(2,'0'), r[2], r[3]]);
+  });
+  var wsM = XLSX.utils.aoa_to_sheet(mRows);
   wsM['!cols'] = [{wch:10},{wch:12},{wch:22}];
   XLSX.utils.book_append_sheet(wb, wsM, '월별 데이터');
 
-  // Sheet 2: weekly
-  const wRows = [['주간', 'USD/KRW', 'KRX 금 시세 (원/g)']];
-  weeklyData.forEach(([w, fx, g]) => wRows.push([w, fx, g]));
-  const wsW = XLSX.utils.aoa_to_sheet(wRows);
+  var wRows = [['주간', 'USD/KRW', 'KRX 금 시세 (원/g)']];
+  weeklyData.forEach(function(r) { wRows.push([r[0], r[1], r[2]]); });
+  var wsW = XLSX.utils.aoa_to_sheet(wRows);
   wsW['!cols'] = [{wch:24},{wch:12},{wch:22}];
   XLSX.utils.book_append_sheet(wb, wsW, '주별 데이터');
 
-  // Sheet 3: current
-  const cRows = [
+  var cRows = [
     ['항목','값','단위'],
     ['국내 금 시세 (KRX)', 200056.86, '원/g'],
     ['USD/KRW 환율', 1385.00, '원'],
     ['기준일', '2026.08.17', ''],
     ['출처', 'Naver 금융 / KRX', ''],
   ];
-  const wsC = XLSX.utils.aoa_to_sheet(cRows);
+  var wsC = XLSX.utils.aoa_to_sheet(cRows);
   wsC['!cols'] = [{wch:22},{wch:16},{wch:8}];
   XLSX.utils.book_append_sheet(wb, wsC, '현재 시세');
 
-  const today = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `투자데이터_${today}.xlsx`);
+  XLSX.writeFile(wb, '투자데이터_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
-// ── Import ────────────────────────────────────────────────────────────────────
+// ── Excel Import ──────────────────────────────────────────────────────────────
 function importExcel(event) {
-  const file = event.target.files[0];
+  var file = event.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
+  var reader = new FileReader();
   reader.onload = function(e) {
     try {
-      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-      let ok = false;
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      var ok = false;
 
-      // Monthly sheet
-      const msName = wb.SheetNames.find(n => n.includes('월별')) || wb.SheetNames[0];
+      var msName = wb.SheetNames.find(function(n){ return n.includes('월별'); }) || wb.SheetNames[0];
       if (msName) {
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[msName], { header: 1 }).slice(1);
-        const parsed = rows.flatMap(([d, fx, g]) => {
-          if (!d || fx == null || g == null) return [];
-          const parts = String(d).split('.');
-          if (parts.length < 2) return [];
-          return [[parseInt(parts[0]), parseInt(parts[1]), parseFloat(fx), parseFloat(g)]];
+        var rows = XLSX.utils.sheet_to_json(wb.Sheets[msName], { header: 1 }).slice(1);
+        var parsed = [];
+        rows.forEach(function(r) {
+          if (!r[0] || r[1] == null || r[2] == null) return;
+          var parts = String(r[0]).split('.');
+          if (parts.length >= 2) parsed.push([parseInt(parts[0]), parseInt(parts[1]), parseFloat(r[1]), parseFloat(r[2])]);
         });
         if (parsed.length) {
           monthlyData.length = 0;
-          parsed.forEach(r => monthlyData.push(r));
+          parsed.forEach(function(r){ monthlyData.push(r); });
           renderMonthly(monthlyData);
           ok = true;
         }
       }
 
-      // Weekly sheet
-      const wsName = wb.SheetNames.find(n => n.includes('주별')) || wb.SheetNames[1];
+      var wsName = wb.SheetNames.find(function(n){ return n.includes('주별'); }) || wb.SheetNames[1];
       if (wsName) {
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wsName], { header: 1 }).slice(1);
-        const parsed = rows.flatMap(([w, fx, g]) => {
-          if (!w || fx == null || g == null) return [];
-          return [[String(w), parseFloat(fx), parseFloat(g)]];
+        var rows2 = XLSX.utils.sheet_to_json(wb.Sheets[wsName], { header: 1 }).slice(1);
+        var parsed2 = [];
+        rows2.forEach(function(r) {
+          if (!r[0] || r[1] == null || r[2] == null) return;
+          parsed2.push([String(r[0]), parseFloat(r[1]), parseFloat(r[2])]);
         });
-        if (parsed.length) {
+        if (parsed2.length) {
           weeklyData.length = 0;
-          parsed.forEach(r => weeklyData.push(r));
+          parsed2.forEach(function(r){ weeklyData.push(r); });
           renderWeekly(weeklyData);
           ok = true;
         }
