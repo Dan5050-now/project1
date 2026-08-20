@@ -3,6 +3,24 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## [1.1.1] — 2026-08-19
+
+### Fixed
+- **TEA-SPEC-001 v1.1.0 would not open cleanly in Excel.** The Interpretations sheet
+  carried an empty `<dataValidations count="0"/>` element, which is schema-invalid and
+  made Excel offer to repair the file. Introduced when the interpretation decisions moved
+  to pre-filled columns: the call adding the dropdown range was removed but the validation
+  object stayed attached to the sheet. openpyxl writes and reads such a workbook without
+  complaint, so only Excel surfaced it. No content was affected — the review record and
+  all counts are intact.
+
+### Added
+- `tools/check_workbook_integrity.py` — fails the build on workbook defects that trigger
+  an Excel repair prompt: empty or unranged data validations, XML parts that do not parse,
+  overlapping merged ranges, cells beyond the 32,767-character limit, row and column size
+  limits, and illegal control characters. Negative-tested by reproducing the exact defect.
+  Run it in CI alongside the catalog drift check.
+
 ## [1.1.0] — 2026-08-19
 
 Step 2 review, round 1 (Daniel). 85 rules dispositioned: 70 Accept, 14 Discuss, 1 Reject.

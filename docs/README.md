@@ -75,6 +75,21 @@ commit. Regenerate the catalog after editing `tools/rules.json`:
 python3 tools/build_rule_catalog.py
 ```
 
+## Workbook integrity check
+
+`tools/check_workbook_integrity.py` guards against defects that make Excel show a repair
+prompt on open — the most likely being an empty `<dataValidations count="0"/>` element,
+which openpyxl writes and reads back without complaint but Excel rejects. It also checks
+XML well-formedness, overlapping merged ranges, the 32,767-character cell limit, row and
+column size limits, and illegal control characters.
+
+```bash
+python3 tools/check_workbook_integrity.py            # every workbook under docs/
+python3 tools/check_workbook_integrity.py file.xlsx  # one workbook
+```
+
+Run it in CI alongside the drift check, and after any change to a workbook builder.
+
 ## A note on Excel formulas
 
 The workbooks contain live formulas (item counts, review progress). LibreOffice is
