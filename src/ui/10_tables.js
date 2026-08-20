@@ -131,6 +131,7 @@ function tablePeople(sids){
  *  real vocabulary that a typist should not have to remember or re-invent. */
 const LIST_FOR = {
   project_type:"project_type", clinical_phase:"clinical_phase",
+  work_scope_type:"work_scope_type",
   outsourcing_type:"outsourcing_type", status:"project_status",
   EDC_setup:"setup_party", DataReviewSystem_setup:"setup_party",
   RBQM_setup:"setup_party", DM_conduct:"setup_party",

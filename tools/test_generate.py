@@ -178,9 +178,12 @@ with sync_playwright() as pw:
           "and an Inspection after that lock opens the seventh period",
           f"from {by['After Close-out (final)'][0]}")
 
+    # Asked through stdWeight, because schema 6 keys the table on the work scope and a
+    # row with an EMPTY scope covers every scope. Reading S.model.pws straight would
+    # report a missing weight where the application finds one.
     want = pg.evaluate("""p => {const pr = S.model.projects[p];
         return Object.fromEntries(CLINICAL_PERIODS.map(n =>
-          [n, S.model.pws[[pr.project_type, pr.clinical_phase, n]] ?? null]));}""", pid)
+          [n, stdWeight(S.model, pr, n) ?? null]));}""", pid)
     check(all(want[n] is not None and abs(by[n][2] - want[n]) < 1e-9 for n in names),
           "each period carries the standard weight for this type and phase, from "
           "PeriodWeightStandard",

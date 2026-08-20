@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.0"
+DOC_VERSION = "1.1"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 PLAN = "PRAP_Development_Plan_v2.0.xlsx"
@@ -117,7 +117,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Governing document", f"{PLAN} - APPROVED BASELINE, Dan 2026-08-02"),
-    ("Schema version specified", "5"),
+    ("Schema version specified", "6"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -187,6 +187,18 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.1", "2026-08-20", "Claude Code", "Dan",
+         "SCHEMA 6. Two changes to the data model, requested 2026-08-20. (1) work_scope_type joins "
+         "PeriodWeightStandard and RoleFactor beside clinical_phase, so the keys become "
+         "(project_type, clinical_phase, work_scope_type, period_name) and that plus role_name. "
+         "Project gains the same column, because the key selects a row FOR A PROJECT and nothing "
+         "could choose between the scope rows without it. A ROW WHOSE work_scope_type IS EMPTY "
+         "APPLIES TO EVERY SCOPE, and a project falls back to it - which is what keeps RoleFactor "
+         "at 429 rows instead of 1,269, and what lets a schema 5 file go on calculating. (2) "
+         "'Biosimilar CT' becomes 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'; a type "
+         "is recognised as a clinical trial by the START of its name. New rules V-25 (the two "
+         "scope columns must not contradict) and V-26 (the retired type, reported with the two it "
+         "became). Sheets 03, 04, 05 and 06 updated. Written against plan v2.27.", "Issued"],
         ["0.7", DOC_DATE, "Claude Code", "Dan",
          "Plan change R-11 applied. The conduct phase is split by NAME: 'Conduct (interim)' where the "
          "project has an interim DB lock and the stretch runs before it, 'Conduct (final)' after it or "
@@ -304,8 +316,8 @@ sheets = [
     ["Project", "project_id", "-", "23", "Master."],
     ["Milestone", "project_id + milestone_name + milestone_date", "Project", "6", "milestone_name is NOT unique alone - 'Inspection' repeats (REQ-PRJ-13)."],
     ["ProjectPeriod", "project_id + period_name", "Project", "7", "Since R-11 no period name repeats in a project, so the name alone identifies the row. period_seq carries order, not identity (V-18)."],
-    ["PeriodWeightStandard", "project_type + clinical_phase + period_name", "-", "5", "56 rows: both trial types keyed separately (R-05), across seven periods (R-11). 'Others' take manual weights (Q-28)."],
-    ["RoleFactor", "project_type + clinical_phase + period_name + role_name", "-", "6", "289 rows after R-11 added a seventh clinical period. Keyed on all four so a role's burden can vary across the life of a project (R-10). clinical_phase is EMPTY on the nine 'Others' rows - the lookup must match null to null, not fall through."],
+    ["PeriodWeightStandard", "project_type + clinical_phase + work_scope_type + period_name", "-", "6", "84 baseline rows at schema 6: three trial types keyed separately (R-05, R-12), four phases, seven periods (R-11), with work_scope_type EMPTY. A row per scope as well would be 252. 'Others' take manual weights (Q-28)."],
+    ["RoleFactor", "project_type + clinical_phase + work_scope_type + period_name + role_name", "-", "7", "429 baseline rows at schema 6 - the largest sheet in the workbook, and 1,269 if every scope were spelled out. Keyed on all five so a role's burden can vary across the life of a project (R-10) and with how much of the work is kept (R-12). clinical_phase is EMPTY on the nine 'Others' rows - the lookup must match null to null, not fall through."],
     ["Person", "person_id", "-", "12", "Master."],
     ["Assignment", "assignment_id", "Person, Project, RoleFactor", "11", "One row per person + project + role."],
     ["PersonPeriodWeight", "assignment_id + period_start", "Assignment", "5", "Optional. Overrides person_weight for its window. period_start IS part of the key: one assignment may carry several non-overlapping windows, so assignment_id alone does not identify a row. See the note below."],
@@ -380,7 +392,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "5", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "6", "Compared with the version this application expects (sheet 08)."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
     ["over_allocation_fte", "Decimal", "1.50", "Absolute, not scaled by capacity_fte (S2-01). See sheet 05."],
     ["under_allocation_fte", "Decimal", "0.60", "Absolute, not scaled by capacity_fte. Moved from 0.80 at S2-05. See sheet 05."],
@@ -389,10 +401,13 @@ cfg = [
     ["capacity_unit", "List", "FTE", "'FTE' or 'percent'."],
 ]
 r = table(ws, r, ["parameter", "Type", "Default", "Use"], cfg, [30, 12, 12, 86], wrap_cols=(4,))
-r = note(ws, r, "schema_version stepped from 3 to 4 at R-10 (RoleFactor gained two columns), and from 4 to 5 at "
-                "R-11. R-11 changed no columns at all - but it retired the period name 'Conduct', so every "
-                "ProjectPeriod row of a v4 file would fail V-15. A value set is part of the contract, not "
-                "decoration. V-09 reports the mismatch.")
+r = note(ws, r, "schema_version stepped from 3 to 4 at R-10 (RoleFactor gained two columns), from 4 to 5 at "
+                "R-11, and from 5 to 6 at R-12. R-11 changed no columns at all - but it retired the period "
+                "name 'Conduct', so every ProjectPeriod row of a v4 file would fail V-15. A value set is part "
+                "of the contract, not decoration. R-12 does both: three new columns AND a retired "
+                "project_type. V-09 reports the mismatch, and a schema 5 file still CALCULATES - its "
+                "standards rows carry no scope, which is exactly the every-scope row - so what it needs is "
+                "the type renamed, which V-26 names.")
 r += 1
 r = note(ws, r, "A missing Config row falls back to the default above and raises a warning. A Config value that fails "
                 "coercion is an error - a threshold read as text would silently disable a flag.")
@@ -432,11 +447,13 @@ rules = [
     ["V-16", "Error", "A clinical trial lacking CTA submission or any DB lock.", "Project PRJ-007 has no DB lock milestone, so its periods cannot be derived. Enter them manually or add the milestone."],
     ["V-17", "Error", "An edit would orphan a reference (see sheet 07).", "PSN-001 cannot be deleted: 3 assignments still refer to it."],
     ["V-18", "Error", "Within a project, period_name is not unique, or period_seq is duplicated.", "Project PRJ-003: period_name 'Conduct (final)' appears 2 times; (project_id, period_name) must be unique. period_seq must also be unique - it fixes their order."],
-    ["V-19", "Error", "A clinical trial with no clinical_phase, or no PeriodWeightStandard rows for its phase.", "Project PRJ-005 is Phase 3, but PeriodWeightStandard has no Phase 3 rows. Its periods cannot be weighted."],
+    ["V-19", "Error", "A clinical trial with no clinical_phase, or no PeriodWeightStandard row for its phase AND scope - counting the every-scope row.", "Project PRJ-005: no standard weight for NewDrug CT / Phase 3 / fully in-housed / Start-up. Add a row for that scope, or one with work_scope_type empty to cover every scope."],
     ["V-20", "Warning", "A milestone other than 'Inspection' recorded more than once.", "Project PRJ-002 records 'CTA submission' twice. Only 'Inspection' is expected to repeat."],
     ["V-21", "Information", "An 'Inspection' dated on or before the final DB lock.", "Project PRJ-002: 1 inspection on or before the final DB lock is treated as a marker and does not open the final period."],
     ["V-24", "Error", "PersonPeriodWeight.assignment_id not found in Assignment, or two windows of one assignment share a period_start.", "ASG-999: PersonPeriodWeight refers to an assignment that does not exist; its override is silently ignored."],
-    ["V-23", "Error", "No RoleFactor row for a (project_type, clinical_phase, period_name, role_name) that an assignment actually spans.", "No role factor for NewDrug CT / Phase 3 / Conduct (final) / Data Analyst - assignments covering that period would be calculated at factor 1.00. 3 assignments are affected."],
+    ["V-23", "Error", "No RoleFactor row for a (project_type, clinical_phase, work_scope_type, period_name, role_name) that an assignment actually spans - counting the every-scope row.", "No role factor for NewDrug CT / Phase 3 / fully outsourced / Conduct (final) / Data Analyst - assignments covering that period would be calculated at factor 1.00."],
+    ["V-25", "Warning", "A project's work_scope_type contradicts its outsourcing_type at one of the two unambiguous ends.", "Project PRJ-012: outsourcing_type says 'Full In-house' but work_scope_type says 'fully outsourced'. The weights follow work_scope_type; check which is right."],
+    ["V-26", "Error", "A project carries a project_type that schema 6 retired.", "Project PRJ-003: project_type 'Biosimilar CT' was split in schema 6. Change it to Biosimilar CT (Healthy) or Biosimilar CT (Patient)."],
     ["V-22", "Warning", "Person.capacity_fte is below config.under_allocation_fte.", "PSN-018: capacity 0.50 FTE is below the under-allocation floor of 0.60, so this person can never clear it however fully they are booked. Lower the floor or raise the capacity."],
 ]
 r = table(ws, r, ["ID", "Severity", "Trigger", "Message shown to the user"],
@@ -531,11 +548,21 @@ r = code(ws, r, [
     "  result is FTE.  hours = FTE x config.fte_hours_per_month",
 ])
 
-r = section(ws, r, "The two weight tables now overlap   [R-10]")
+r = section(ws, r, "The two weight tables now overlap   [R-10, R-12]")
 r = lines(ws, r, [
-    "PeriodWeightStandard is keyed on (project_type, clinical_phase, period_name).",
-    "RoleFactor is now keyed on (project_type, clinical_phase, period_name, role_name).",
+    "PeriodWeightStandard is keyed on (project_type, clinical_phase, work_scope_type, period_name).",
+    "RoleFactor adds role_name to the same key.",
     "The calculation multiplies them, so the pair is mathematically collapsible into one table.",
+    "",
+    "THE LOOKUP, IN BOTH TABLES, IS TWO STEPS AND NOT ONE:",
+    "",
+    "    1. the row for this project's own work_scope_type   ->   use it",
+    "    2. otherwise the row whose work_scope_type is EMPTY  ->   use that; it means any scope",
+    "    3. otherwise nothing                                ->   V-19 or V-23 says so",
+    "",
+    "An empty scope is not a missing value. It is a row that deliberately declines to distinguish,",
+    "and it is what keeps the two tables a size a person can fill by hand. Any program reading these",
+    "sheets must do the same, or it will report a missing weight where the application finds one.",
 ])
 r = table(ws, r, ["Table", "Answers", "Change it when"],
           [["PeriodWeightStandard", "How busy is the PROJECT in this period?",

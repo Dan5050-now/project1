@@ -45,13 +45,15 @@ const REQUIRED_SHEETS = Object.keys(SHEET_COLS);
    instead of silently ignored. tools/check_consistency.py holds it to the template. */
 const SHEET_HEADERS = {
   Project:["project_id","project_name","project_type","project_category","clinical_phase",
-    "outsourcing_type","EDC_setup","DataReviewSystem_setup","RBQM_setup","DM_conduct",
+    "work_scope_type","outsourcing_type","EDC_setup","DataReviewSystem_setup","RBQM_setup","DM_conduct",
     "EDC_system","DataReviewSystem","RBQM_system","planned_member_count","start_date",
     "end_date","total_period_months","status","note_1","note_2","note_3","note_4","note_5"],
   Milestone:["project_id","project_name","milestone_name","milestone_date","milestone_seq","note_1"],
   ProjectPeriod:["project_id","period_name","period_seq","period_start","period_end","weight","note_1"],
-  PeriodWeightStandard:["project_type","clinical_phase","period_name","weight","note_1"],
-  RoleFactor:["project_type","clinical_phase","period_name","role_name","role_factor","role_note"],
+  PeriodWeightStandard:["project_type","clinical_phase","work_scope_type","period_name",
+    "weight","note_1"],
+  RoleFactor:["project_type","clinical_phase","work_scope_type","period_name","role_name",
+    "role_factor","role_note"],
   Person:["person_id","person_name","department","primary_role","capacity_fte",
     "employment_start","employment_end","note_1","note_2","note_3","note_4","note_5"],
   Assignment:["assignment_id","person_id","person_name","project_id","role_name",
@@ -60,7 +62,22 @@ const SHEET_HEADERS = {
   Lists:["list_name","value","note_1"],
   Config:["parameter","value","note"],
 };
-const CLINICAL_TYPES = new Set(["NewDrug CT","Biosimilar CT"]);
+/* Which project types are clinical trials.
+   Schema 6 split 'Biosimilar CT' into '(Healthy)' and '(Patient)', and a fixed set of
+   names would have to be edited again the next time a type is subdivided - in the code,
+   by a programmer, for what is a change to a value list. So the question is asked of the
+   NAME instead: anything that begins 'NewDrug CT' or 'Biosimilar CT' is a clinical trial
+   and takes the seven clinical periods; everything else takes the three 'Others' ones.
+   `has` rather than a bare function so every existing call site reads unchanged. */
+const CLINICAL_TYPES = {
+  has: t => /^(NewDrug CT|Biosimilar CT)/.test(String(t ?? "")),
+};
+/* The value schema 6 retired. Named here so a file carrying it gets a sentence that says
+   what to do, rather than the generic "not in the value list" - which is true, unhelpful,
+   and identical to the message for a typo. */
+const RETIRED_TYPES = {
+  "Biosimilar CT": "Biosimilar CT (Healthy) or Biosimilar CT (Patient)",
+};
 const CLINICAL_PERIODS = ["Before-Start-up","Start-up","Conduct (interim)","Close-out (interim)",
                           "Conduct (final)","Close-out (final)","After Close-out (final)"];
 const OTHER_PERIODS = ["Planning","Develop","Close"];
@@ -95,10 +112,11 @@ const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignmen
 const COLUMN_HELP = {
   project_id:"Unique identifier for the project. Editing it cascades to every row that references it.",
   project_name:"Display name. Shown wherever the project appears.",
-  project_type:"'NewDrug CT', 'Biosimilar CT' or 'Others'. The first two are clinical trials and share one period set; they differ in their weights.",
+  project_type:"'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Everything but 'Others' is a clinical trial: they share one period set and differ in their weights.",
   project_category:"Product name. Required for either clinical trial type (V-04).",
-  clinical_phase:"Phase 1 to 4. With the project type it selects the standard period weights and role factors.",
-  outsourcing_type:"Full outsourcing, Partial outsourcing, or Full In-house.",
+  clinical_phase:"Phase 1 to 4. With the project type and the work scope it selects the standard period weights and role factors.",
+  work_scope_type:"How much of the work is done in-house. Part of the key into PeriodWeightStandard and RoleFactor: a standards row with this column EMPTY applies to every scope, so only the scopes that really differ need their own row.",
+  outsourcing_type:"Full outsourcing, Partial outsourcing, or Full In-house. Descriptive only — work_scope_type is what the weights are keyed on (V-25).",
   EDC_setup:"Who sets up EDC — by CRO or by SB.",
   DataReviewSystem_setup:"Who sets up the data review system.",
   RBQM_setup:"Who sets up RBQM.",
@@ -119,7 +137,7 @@ const COLUMN_HELP = {
   weight:"Effort multiplier for this period. Multiplied by the role factor, the person weight and the month coverage.",
   weight_override:"REPLACES person_weight for the months this window covers — it does not multiply it.",
   role_name:"Must exist in RoleFactor for this project's type (V-03).",
-  role_factor:"What one person in this role costs the project per month, before their own weight and the period weight. Keyed on type, phase, period and role.",
+  role_factor:"What one person in this role costs the project per month, before their own weight and the period weight. Keyed on type, phase, work scope, period and role.",
   role_note:"Free text. The basis for the factor.",
   person_id:"Unique identifier for the person. Editing it cascades to every assignment that references it.",
   person_name:"Display name. On Assignment this is DERIVED and recomputed from the master row.",

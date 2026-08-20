@@ -35,8 +35,8 @@ CONTRACT_VERSION = "1.0"
 
 # The current issue of each controlled document. check_consistency.py verifies the
 # files exist and that the versions agree with the application's provenance strip.
-PLAN = f"PRAP_Development_Plan_v{'2.26'}.xlsx"
-SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
+PLAN = f"PRAP_Development_Plan_v{'2.27'}.xlsx"
+SPEC = "PRAP_Programming_Specification_v1.1.xlsx"
 UIL = "PRAP_UI_Component_List_v1.0.xlsx"
 TEMPLATE = f"PRAP_SourceData_Template_v{B.TEMPLATE_VERSION}.xlsx"
 DUMMY = f"PRAP_SourceData_Dummy_v{B.DUMMY_VERSION}.xlsx"
@@ -141,11 +141,19 @@ SHEET_ROLE = {
     "Milestone": {"role": "child", "key": ["project_id", "milestone_name", "milestone_date"],
                   "parent": "Project"},
     "ProjectPeriod": {"role": "child", "key": ["project_id", "period_name"], "parent": "Project"},
+    # Schema 6 put the work scope in both keys. A row whose work_scope_type is EMPTY
+    # applies to every scope, and a project falls back to it when there is no row for
+    # its own - so an outside program reading these tables must do the same, or it will
+    # report a missing weight where the application finds one.
     "PeriodWeightStandard": {"role": "reference",
-                             "key": ["project_type", "clinical_phase", "period_name"],
+                             "key": ["project_type", "clinical_phase", "work_scope_type",
+                                     "period_name"],
+                             "fallback": "work_scope_type empty means every scope",
                              "parent": None},
     "RoleFactor": {"role": "reference",
-                   "key": ["project_type", "clinical_phase", "period_name", "role_name"],
+                   "key": ["project_type", "clinical_phase", "work_scope_type",
+                           "period_name", "role_name"],
+                   "fallback": "work_scope_type empty means every scope",
                    "parent": None},
     "Person": {"role": "master", "key": ["person_id"], "parent": None},
     "Assignment": {"role": "child", "key": ["assignment_id"], "parent": "Person"},

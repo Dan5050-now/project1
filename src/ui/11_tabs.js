@@ -474,6 +474,11 @@ function selectedAssignment(asg){
   return S.selAsg;
 }
 
+/* What an empty work_scope_type says on screen. Blank would read as "not filled in
+   yet", which is the opposite of what it means: the row applies to every scope, on
+   purpose, and it is usually the only row there is. */
+const scopeLabel = r => r.work_scope_type ? String(r.work_scope_type) : "any scope";
+
 function wmatrix(rows, keyOf, labelOf, colKey, valKey){
   const cols = [], keys = [], grid = {};
   let vmax = 0;
@@ -519,18 +524,21 @@ function renderGenTab(){
   const pwsRows = M.raw.PeriodWeightStandard, rfRows = M.raw.RoleFactor;
   const pws = S.genView.pws === "rows"
     ? dataTable("PeriodWeightStandard", pwsRows,
-        ["project_type","clinical_phase","period_name","weight","note_1"])
+        ["project_type","clinical_phase","work_scope_type","period_name","weight","note_1"])
     : `<div class="scrollx tall">${wmatrix(pwsRows,
-        r => [r.project_type, r.clinical_phase], k => { const p = k.split(" · "); return [p[1], p[0]]; },
+        r => [r.project_type, r.clinical_phase, scopeLabel(r)],
+        k => { const p = k.split(" · "); return [p[1] + " · " + p[2], p[0]]; },
         "period_name", "weight")}</div>`;
 
   const ct = rfRows.filter(r => CLINICAL_TYPES.has(r.project_type));
   const ot = rfRows.filter(r => !CLINICAL_TYPES.has(r.project_type));
   const rf = S.genView.rf === "rows"
     ? dataTable("RoleFactor", rfRows,
-        ["project_type","clinical_phase","period_name","role_name","role_factor","role_note"])
-    : `<div class="scrollx tall">${wmatrix(ct, r => [r.project_type, r.clinical_phase, r.role_name],
-        k => { const p = k.split(" · "); return [p[2], p[0] + " · " + p[1]]; },
+        ["project_type","clinical_phase","work_scope_type","period_name","role_name",
+         "role_factor","role_note"])
+    : `<div class="scrollx tall">${wmatrix(ct,
+        r => [r.project_type, r.clinical_phase, scopeLabel(r), r.role_name],
+        k => { const p = k.split(" · "); return [p[3], p[0] + " · " + p[1] + " · " + p[2]]; },
         "period_name", "role_factor")}</div>
        <h2 class="subhead">Role factors — Others</h2>
        <div class="scrollx">${wmatrix(ot, r => [r.project_type, r.role_name],

@@ -17,8 +17,8 @@ docProps/core.xml, so the container differs while the data does not.
 
 Two sizes are produced, from one generator driven by PROFILES:
 
-    Dummy_v1.9         50 clinical trials + 12 'Others', 20 people - the review set
-    Dummy_10x10_v1.1    8 clinical trials +  2 'Others', 10 people - small enough to
+    Dummy_v1.10        50 clinical trials + 12 'Others', 20 people - the review set
+    Dummy_10x10_v1.2    8 clinical trials +  2 'Others', 10 people - small enough to
                         read every row and check the arithmetic by hand
 
 Both are built to exercise the rules rather than merely fill cells: interim DB locks
@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 5
-TEMPLATE_VERSION = "1.7"
-DUMMY_VERSION = "1.9"
-DUMMY_SMALL_VERSION = "1.1"
+SCHEMA_VERSION = 6
+TEMPLATE_VERSION = "1.8"
+DUMMY_VERSION = "1.10"
+DUMMY_SMALL_VERSION = "1.2"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -68,8 +68,15 @@ DATE_FMT = "yyyy-mm-dd"
 # Value lists (Lists sheet, long format per the approved data model)
 # --------------------------------------------------------------------------
 LISTS = [
-    ("project_type", ["NewDrug CT", "Biosimilar CT", "Others"]),
+    ("project_type", ["NewDrug CT", "Biosimilar CT (Healthy)", "Biosimilar CT (Patient)",
+                      "Others"]),
     ("clinical_phase", ["Phase 1", "Phase 2", "Phase 3", "Phase 4"]),
+    # Schema 6. How much of the work is done in-house decides how much of it lands on
+    # this team, so it belongs in the weights rather than only in the description of a
+    # project. Add a row inside the block to extend the list - the application reads
+    # the list from the file, so a category of your own needs no code change.
+    ("work_scope_type", ["fully in-housed", "fully outsourced",
+                         "Partially outsourced (in-house for EDC)"]),
     ("outsourcing_type", ["Full outsourcing", "Partial outsourcing", "Full In-house"]),
     ("setup_party", ["by CRO", "by SB"]),
     ("EDC_system", ["Veeva EDC", "Rave", "eSOURCE"]),
@@ -106,10 +113,11 @@ SHEETS = {
     "Project": [
         ("project_id", "Unique key, e.g. PRJ-001.", "key"),
         ("project_name", "Unique display name.", "key"),
-        ("project_type", "'NewDrug CT', 'Biosimilar CT' or 'Others'. The first two are clinical trials.", ""),
+        ("project_type", "'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Everything but 'Others' is a clinical trial.", ""),
         ("project_category", "Product name. Required for either clinical trial type.", ""),
-        ("clinical_phase", "Required for either clinical trial type - with the type it selects the period weights.", ""),
-        ("outsourcing_type", "Full / Partial outsourcing, or Full In-house.", ""),
+        ("clinical_phase", "Required for any clinical trial type - with the type and the work scope it selects the period weights.", ""),
+        ("work_scope_type", "How much of the work is done in-house. With the type and phase it selects the standard weights and role factors.", ""),
+        ("outsourcing_type", "Full / Partial outsourcing, or Full In-house. Descriptive - work_scope_type is what the weights are keyed on.", ""),
         ("EDC_setup", "Who sets up EDC. Clinical trial types only.", ""),
         ("DataReviewSystem_setup", "Who sets up the data review system.", ""),
         ("RBQM_setup", "Who sets up RBQM.", ""),
@@ -143,8 +151,9 @@ SHEETS = {
         ("note_1", "Free text. e.g. why a derived date was overridden by hand.", ""),
     ],
     "PeriodWeightStandard": [
-        ("project_type", "'NewDrug CT' or 'Biosimilar CT'. 'Others' projects take manual weights instead.", ""),
+        ("project_type", "A clinical trial type. 'Others' projects take manual weights instead.", "key"),
         ("clinical_phase", "The phase this standard applies to.", "key"),
+        ("work_scope_type", "The work scope this standard applies to. LEAVE EMPTY for a row that applies to EVERY scope - fill only the scopes that really differ.", "key"),
         ("period_name", "One of the seven clinical periods. Unique within a project (R-11).", "key"),
         ("weight", "YOU SUPPLY. Default multiplier for this phase and period.", "fill"),
         ("note_1", "Free text. e.g. the basis for this weight.", ""),
@@ -152,6 +161,7 @@ SHEETS = {
     "RoleFactor": [
         ("project_type", "Which type's role list this row belongs to.", "key"),
         ("clinical_phase", "The phase this factor applies to. Leave EMPTY for 'Others'.", "key"),
+        ("work_scope_type", "The work scope this factor applies to. LEAVE EMPTY for a row that applies to EVERY scope - fill only the scopes that really differ.", "key"),
         ("period_name", "The period this factor applies to.", "key"),
         ("role_name", "The role.", "key"),
         ("role_factor", "YOU SUPPLY. Relative burden of this role in this period.", "fill"),
@@ -210,6 +220,7 @@ DATE_COLS = {
 # Dropdown bindings: sheet -> {column: list_name}
 DROPDOWNS = {
     "Project": {"project_type": "project_type", "clinical_phase": "clinical_phase",
+                "work_scope_type": "work_scope_type",
                 "outsourcing_type": "outsourcing_type", "EDC_setup": "setup_party",
                 "DataReviewSystem_setup": "setup_party", "RBQM_setup": "setup_party",
                 "DM_conduct": "setup_party", "EDC_system": "EDC_system",
@@ -217,8 +228,10 @@ DROPDOWNS = {
                 "status": "project_status"},
     "Milestone": {"milestone_name": "milestone_name"},
     "PeriodWeightStandard": {"project_type": "project_type", "clinical_phase": "clinical_phase",
+                             "work_scope_type": "work_scope_type",
                              "period_name": "period_name_clinical"},
-    "RoleFactor": {"project_type": "project_type", "clinical_phase": "clinical_phase"},
+    "RoleFactor": {"project_type": "project_type", "clinical_phase": "clinical_phase",
+                   "work_scope_type": "work_scope_type"},
 }
 
 
@@ -440,12 +453,18 @@ def dummy_data(prof):
     CLINICAL_PERIODS = [v for k, v in LISTS if k == "period_name_clinical"][0]
     OTHER_PERIODS = [v for k, v in LISTS if k == "period_name_others"][0]
     OUTSOURCING = ["Full outsourcing", "Partial outsourcing", "Full In-house"]
+    # Schema 6. Kept in step with OUTSOURCING at the same index so the fixture never
+    # trips V-25, which reports a project whose two scope fields contradict each other.
+    WORK_SCOPE = [v for k, v in LISTS if k == "work_scope_type"][0]
+    SCOPE_FOR = {"Full outsourcing": "fully outsourced",
+                 "Partial outsourcing": "Partially outsourced (in-house for EDC)",
+                 "Full In-house": "fully in-housed"}
     PARTY = ["by CRO", "by SB"]
     EDC = ["Veeva EDC", "Rave", "eSOURCE"]
     DRS = ["Veeva DQS", "Medidata CDS", "No system (manual)"]
     RBQM = ["CluePoints", "Medidata CDS", "No system (manual)"]
 
-    CT_TYPES = ["NewDrug CT", "Biosimilar CT"]
+    CT_TYPES = ["NewDrug CT", "Biosimilar CT (Healthy)", "Biosimilar CT (Patient)"]
     CT_ROLES = ["Project oversight", "Lead data manager", "Clinical Data Associator",
                 "Clinical Database Programmer", "Data Analyst"]
     OT_ROLES = ["Project lead", "Main staff", "Other staff"]
@@ -486,8 +505,14 @@ def dummy_data(prof):
         end = start + rd(months=months) - timedelta(days=1)
         has_interim = (n % 5) in (0, 1, 2)                   # 60% carry an interim lock
         projects.append((
-            pid, f"{product[:3].upper()}-{100 + n} {phase}", CT_TYPES[n % 3 == 0], product, phase,
-            OUTSOURCING[n % 3], PARTY[n % 2], PARTY[(n + 1) % 2], PARTY[n % 2], PARTY[(n + 1) % 2],
+            # Type and scope move together on purpose, and the direction matters: it
+            # gives the filter suite a pair that CAN co-occur (NewDrug CT with
+            # 'Full In-house') and a pair that cannot (either biosimilar with it), so
+            # "a combination that matches nothing" is a real case rather than a hope.
+            pid, f"{product[:3].upper()}-{100 + n} {phase}", CT_TYPES[n % 3], product, phase,
+            SCOPE_FOR[OUTSOURCING[2 - n % 3]],
+            OUTSOURCING[2 - n % 3], PARTY[n % 2], PARTY[(n + 1) % 2], PARTY[n % 2],
+            PARTY[(n + 1) % 2],
             EDC[n % 3], DRS[n % 3], RBQM[n % 3],
             rng.randint(3, 8), start, end,
             ["Planned", "Active", "Active", "Active", "On hold", "Completed"][n % 6],
@@ -516,7 +541,8 @@ def dummy_data(prof):
         months = rng.choice([6, 9, 12, 18])
         projects.append((
             pid, f"{OT_NAMES[n - N_CT - 1]}",
-            "Others", "", "", OUTSOURCING[n % 3], "", "", "", "", "", "", "",
+            "Others", "", "", SCOPE_FOR[OUTSOURCING[n % 3]], OUTSOURCING[n % 3],
+            "", "", "", "", "", "", "",
             rng.randint(2, 5), start, start + rd(months=months) - timedelta(days=1),
             ["Planned", "Active", "Active", "Completed"][n % 4],
         ))
@@ -538,7 +564,7 @@ def dummy_data(prof):
     A = []
     cursor = {role: 0 for role in set(list(by_role) + CT_ROLES + OT_ROLES)}
     for p in projects:
-        pid, ptype, pstart, pend = p[0], p[2], p[14], p[15]
+        pid, ptype, pstart, pend = p[0], p[2], p[15], p[16]
         roles = OT_ROLES if ptype == "Others" else CT_ROLES
         for role in roles:
             pool = by_role.get(role) or by_role["Main staff"]
@@ -562,18 +588,35 @@ def dummy_data(prof):
     # run on a part-timer. PSN-001 is deliberately pushed over the ceiling for a year.
     # The dates are taken from the projects themselves so the fixture cannot drift into
     # a V-07 warning when the sizes change.
-    span = {p[0]: (p[14], p[15]) for p in projects}
+    span = {p[0]: (p[15], p[16]) for p in projects}
     extra, ppw = prof["extras"](span)
     A += extra
 
     # Keyed on type as well as phase: a biosimilar trial of a given phase is not the
     # same workload as a new-drug trial of that phase, and the split exists to say so.
+    #
+    # Schema 6 adds the WORK SCOPE to the key. The table is filled the way the
+    # application expects it to be filled in real use: a base row per type, phase and
+    # period with the scope column EMPTY - meaning "whatever the scope, unless a more
+    # specific row says otherwise" - and specific rows only where the scope really does
+    # change the number. Filling all three scopes for every combination would be 252
+    # rows of which two thirds would repeat their neighbour.
+    #
+    # The illustrative shape: work kept in-house costs this team more, work handed to a
+    # CRO costs it less, and the partial case is left to fall back on the base row so
+    # the fallback is exercised by the fixture rather than only by a unit test.
+    SCOPE_FACTOR = {None: 1.00, "fully in-housed": 1.15, "fully outsourced": 0.80}
+    TYPE_FACTOR = {"NewDrug CT": 1.00, "Biosimilar CT (Healthy)": 0.85,
+                   "Biosimilar CT (Patient)": 0.92}
     pws = []
-    for ct, factor, note in (("NewDrug CT", 1.00, "Illustrative - replace with your figure"),
-                             ("Biosimilar CT", 0.85, "Illustrative - lighter than new-drug at the same phase")):
-        for ph, prof in phase_profile.items():
-            for pn, w in prof.items():
-                pws.append((ct, ph, pn, round(w * factor, 2), note))
+    for ct in CT_TYPES:
+        for scope, sf in SCOPE_FACTOR.items():
+            note = ("Illustrative - replace with your figure" if scope is None else
+                    f"Illustrative - {scope}")
+            for ph, prof in phase_profile.items():
+                for pn, w in prof.items():
+                    pws.append((ct, ph, scope, pn,
+                                round(w * TYPE_FACTOR[ct] * sf, 2), note))
 
     # A role's share of the work is not flat across a trial: the database programmer
     # is heaviest while the database is being built, the data associator while data is
@@ -595,32 +638,48 @@ def dummy_data(prof):
     # Deliberately mild. Phase already drives PeriodWeightStandard, so a strong phase
     # term here would count the same effect twice.
     phase_role_mod = {"Phase 1": 0.95, "Phase 2": 1.00, "Phase 3": 1.05, "Phase 4": 0.90}
-    type_role_mod = {"NewDrug CT": 1.00, "Biosimilar CT": 0.95}
+    type_role_mod = {"NewDrug CT": 1.00, "Biosimilar CT (Healthy)": 0.95,
+                     "Biosimilar CT (Patient)": 0.98}
 
+    # The same arrangement as PeriodWeightStandard above: base rows with an empty
+    # scope, and scope-specific rows only for 'fully outsourced' - where the roles
+    # shift as well as shrink, because oversight barely changes while the associator
+    # and the programmer are largely doing somebody else's work.
+    ROLE_SCOPE_MOD = {
+        None: {r: 1.00 for r, _ in ct_role_base},
+        "fully outsourced": {"Project oversight": 1.05, "Lead data manager": 0.95,
+                             "Clinical Data Associator": 0.60,
+                             "Clinical Database Programmer": 0.55, "Data Analyst": 0.85},
+    }
     roles_tbl = []
     for ct in CT_TYPES:
-        for ph in PHASES:
-            for i, pn in enumerate(CLINICAL_PERIODS):
-                for rn, base in ct_role_base:
-                    f = base * role_shape[rn][i] * phase_role_mod[ph] * type_role_mod[ct]
-                    roles_tbl.append((ct, ph, pn, rn, round(f, 2),
-                                      "Illustrative - replace with your figure"))
+        for scope, mods in ROLE_SCOPE_MOD.items():
+            note = ("Illustrative - replace with your figure" if scope is None
+                    else "Illustrative - fully outsourced")
+            for ph in PHASES:
+                for i, pn in enumerate(CLINICAL_PERIODS):
+                    for rn, base in ct_role_base:
+                        f = (base * role_shape[rn][i] * phase_role_mod[ph]
+                             * type_role_mod[ct] * mods[rn])
+                        roles_tbl.append((ct, ph, scope, pn, rn, round(f, 2), note))
     ot_shape = {"Project lead": [1.10, 1.00, 0.90], "Main staff": [0.70, 1.20, 0.90],
                 "Other staff": [0.60, 1.10, 1.00]}
     ot_base = {"Project lead": 1.00, "Main staff": 0.90, "Other staff": 0.70}
     for i, pn in enumerate(OTHER_PERIODS):
         for rn in OT_ROLES:
-            roles_tbl.append(("Others", None, pn, rn,
+            roles_tbl.append(("Others", None, None, pn, rn,
                               round(ot_base[rn] * ot_shape[rn][i], 2), "Illustrative"))
 
     # ---- periods --------------------------------------------------------
     periods = []
     for p in projects:
-        pid, ptype, pstart, pend = p[0], p[2], p[14], p[15]
+        pid, ptype, pstart, pend = p[0], p[2], p[15], p[16]
         if ptype != "Others":
-            phase, fac = p[4], (0.85 if ptype == "Biosimilar CT" else 1.00)
+            phase, scope = p[4], p[5]
+            fac = TYPE_FACTOR[ptype] * SCOPE_FACTOR.get(scope, 1.00)
             for name, seq, s_, e_ in derive_periods(pstart, pend, ms[pid], inspections.get(pid, [])):
-                periods.append((pid, name, seq, s_, e_, round(phase_profile[phase][name] * fac, 2)))
+                periods.append((pid, name, seq, s_, e_,
+                                round(phase_profile[phase][name] * fac, 2)))
         else:
             span = (pend - pstart).days
             b1 = pstart + timedelta(days=int(span * 0.25))
@@ -640,8 +699,8 @@ def describe(prof, projects, ms, periods, people, A, ppw, inspections):
     """
     ct = [p for p in projects if p[2] != "Others"]
     ot = [p for p in projects if p[2] == "Others"]
-    lo = min(p[14] for p in projects)
-    hi = max(p[15] for p in projects)
+    lo = min(p[15] for p in projects)
+    hi = max(p[16] for p in projects)
     span = (hi.year - lo.year) * 12 + hi.month - lo.month + 1
     interim = sum(1 for p in ct if "interim DB lock" in ms[p[0]])
     part = [(s, cap) for s, _, _, _, cap in people if cap < 1.00]
@@ -847,9 +906,10 @@ def add_readme(wb, kind, facts=None):
         "   Project               one row per project.",
         "   Milestone             one row per milestone. Eight standard names.",
         "   ProjectPeriod         the periods each project passes through, with their weights.",
-        "   PeriodWeightStandard  default weights per clinical phase. Clinical trials only.",
-        "   RoleFactor            the relative burden of each role, per project type, clinical phase",
-        "                         and period. Leave clinical_phase empty on the 'Others' rows.",
+        "   PeriodWeightStandard  default weights per project type, clinical phase, WORK SCOPE and",
+        "                         period. Clinical trials only.",
+        "   RoleFactor            the relative burden of each role, per project type, clinical phase,",
+        "                         WORK SCOPE and period. Leave clinical_phase empty on the 'Others' rows.",
         "   Person                one row per person.",
         "   Assignment            one row per person + project + role.",
         "   PersonPeriodWeight    optional windows where a person's weight differs.",
@@ -901,7 +961,17 @@ def add_readme(wb, kind, facts=None):
         "",
         "ADDING A PERMITTED VALUE",
         "   Insert a row inside that list's block on the Lists sheet, so the block stays contiguous -",
-        "   the dropdowns read a range, not a scattered set of rows.",
+        "   the dropdowns read a range, not a scattered set of rows. work_scope_type is meant to be",
+        "   extended this way: the three values supplied are a starting point, not a closed set.",
+        "",
+        "WORK SCOPE, AND THE EMPTY ROW THAT COVERS EVERY SCOPE",
+        "   PeriodWeightStandard and RoleFactor are keyed on work_scope_type as well as on the project",
+        "   type, the phase and the period. A row with work_scope_type EMPTY applies to EVERY scope.",
+        "",
+        "   So fill the empty-scope rows first - they are your baseline - and add a scope-specific row",
+        "   only where that scope really does change the number. A project looks for its own scope",
+        "   first and falls back to the empty row, so nothing has to be entered three times to say",
+        "   the same thing three times.",
     ]
     if kind == "template":
         body += [
@@ -972,7 +1042,7 @@ def build(kind):
     if kind in PROFILES:
         projects, ms, periods, pws, roles, people, A, ppw, inspections = dummy_data(PROFILES[kind])
         P = {p[0]: p[2] for p in projects}
-        proj_rows = [list(p[:16]) + [None] + [p[16]] + [None] * 5 for p in projects]
+        proj_rows = [list(p[:17]) + [None] + [p[17]] + [None] * 5 for p in projects]
         mile_rows = []
         for pid, mm in ms.items():
             events = sorted(mm.items(), key=lambda kv: kv[1])
@@ -983,7 +1053,7 @@ def build(kind):
         period_rows = [list(x) + [("Entered by hand - no milestone mapping"
                                    if P[x[0]] == "Others" else "Derived from milestones")]
                        for x in periods]
-        pws_rows = [list(x) + ["Illustrative - replace with your figure"] for x in pws]
+        pws_rows = [list(x) for x in pws]
         role_rows = [list(x) for x in roles]
         person_rows = [list(p) + [None, None] + [None] * 5 for p in people]
         asg_rows = [[a[0], a[1], None, a[2], a[3], a[4], a[5], a[6], None, None, None] for a in A]
@@ -997,13 +1067,16 @@ def build(kind):
         # one example row per sheet (REQ-IMP-03)
         examples = {
             "Project": ["PRJ-001", "ONV-101 First-in-human", "NewDrug CT", "Onvelaris", "Phase 1",
+                        "Partially outsourced (in-house for EDC)",
                         "Partial outsourcing", "by SB", "by SB", "by CRO", "by SB", "Veeva EDC",
                         "Veeva DQS", "CluePoints", 5, date(2025, 10, 1), date(2027, 6, 30), None,
                         "Active", "example row - delete before use", None, None, None, None],
             "Milestone": ["PRJ-001", None, "CTA submission", date(2026, 1, 15), 2, "example row - delete before use"],
             "ProjectPeriod": ["PRJ-001", "Start-up", 2, date(2025, 12, 15), date(2026, 4, 14), 1.30, "example row - delete before use"],
-            "PeriodWeightStandard": ["NewDrug CT", "Phase 1", "Start-up", None, "example row - delete before use"],
-            "RoleFactor": ["NewDrug CT", "Phase 1", "Start-up", "Lead data manager", None,
+            "PeriodWeightStandard": ["NewDrug CT", "Phase 1", None, "Start-up", None,
+                                     "example row - delete before use. Leave work_scope_type "
+                                     "empty for a row that applies to every scope"],
+            "RoleFactor": ["NewDrug CT", "Phase 1", None, "Start-up", "Lead data manager", None,
                            "example row - delete before use"],
             "Person": ["PSN-001", "Kim S.", "Data Management", "Lead data manager", 1.00,
                        None, None, "example row - delete before use", None, None, None, None],

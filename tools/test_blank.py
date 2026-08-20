@@ -154,13 +154,25 @@ with sync_playwright() as pw:
       const crole = M.lists.role_clinical || [], orole = M.lists.role_others || [];
       const types = M.lists.project_type || [];
       const ct = types.filter(t => CLINICAL_TYPES.has(t)), ot = types.filter(t => !CLINICAL_TYPES.has(t));
+      // Schema 6 keys both grids on the work scope, and the seeded rows carry an EMPTY
+      // scope - the row that applies to every scope. So the grid is complete when a
+      // project of ANY scope finds a weight, which is what stdWeight/stdFactor answer.
+      // Asked through those rather than through M.pws directly, because a check that
+      // reads the table straight would pass on a grid the application cannot use.
+      const scopes = [...(M.lists.work_scope_type || []), ""];
       let pwsMissing = 0, rfMissing = 0;
-      for (const t of ct) for (const ph of phases) for (const p of cper){
-        if (M.pws[[t, ph, p]] === undefined) pwsMissing++;
-        for (const rn of crole) if (M.rf[[t, ph, p, rn]] === undefined) rfMissing++;
+      for (const t of ct) for (const ph of phases) for (const sc of scopes) {
+        const proj = {project_type: t, clinical_phase: ph, work_scope_type: sc};
+        for (const p of cper){
+          if (stdWeight(M, proj, p) === undefined) pwsMissing++;
+          for (const rn of crole) if (stdFactor(M, proj, p, rn) === undefined) rfMissing++;
+        }
       }
-      for (const t of ot) for (const p of oper) for (const rn of orole)
-        if (M.rf[[t, null, p, rn]] === undefined) rfMissing++;
+      for (const t of ot) for (const sc of scopes) {
+        const proj = {project_type: t, clinical_phase: null, work_scope_type: sc};
+        for (const p of oper) for (const rn of orole)
+          if (stdFactor(M, proj, p, rn) === undefined) rfMissing++;
+      }
       return {pws: Object.keys(M.pws).length, rf: Object.keys(M.rf).length,
               pwsMissing, rfMissing};
     }""")

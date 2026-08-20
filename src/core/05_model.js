@@ -2,6 +2,51 @@
    Every rule from spec sheet 04. The load never stops at the first problem: findings
    are collected and shown as one report (REQ-IMP-02).                            */
 
+/* ---------------------------------------------------- the work scope, schema 6 --
+   A project's workload depends on how much of the work it keeps: a trial run entirely
+   in-house costs this team more than the same trial handed to a CRO. So the two
+   standards tables are keyed on the work scope as well as on the type, the phase and
+   the period.
+
+   The three functions below are the whole of that rule, and they are together in one
+   place on purpose. The scope is consulted from four directions - seeding a derived
+   period, calculating a month, checking V-19, checking V-23 - and four copies of a
+   fallback are four chances for the number on screen to differ from the number the
+   validation was looking at.
+
+       exact row for this project's scope   ->   use it
+       no such row, but an EMPTY-scope row  ->   use that; it means "any scope"
+       neither                              ->   undefined, and V-19 or V-23 says so
+
+   An empty scope is not a missing value. It is a row that deliberately declines to
+   distinguish, which is how a table of 84 useful rows stays 84 rather than becoming
+   252 of which two thirds repeat their neighbour. */
+const ANY_SCOPE = "";
+const scopeOf = row => (row && row.work_scope_type) ? String(row.work_scope_type) : ANY_SCOPE;
+
+/** The standard period weight for this project's own scope, or the any-scope row. */
+function stdWeight(M, proj, periodName){
+  const k = [proj.project_type, proj.clinical_phase];
+  return M.pws[[...k, scopeOf(proj), periodName]]
+      ?? M.pws[[...k, ANY_SCOPE, periodName]];
+}
+
+/** The role factor, the same way. 'Others' projects carry no phase, and the table
+ *  stores them under a null phase, so the key is built from what the project has. */
+function stdFactor(M, proj, periodName, roleName){
+  const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
+  const k = [proj.project_type, ph];
+  return M.rf[[...k, scopeOf(proj), periodName, roleName]]
+      ?? M.rf[[...k, ANY_SCOPE, periodName, roleName]];
+}
+
+/* V-25's table. outsourcing_type predates work_scope_type and says something close to
+   the same thing; only the two unambiguous ends are worth checking, because 'Partial
+   outsourcing' is compatible with more than one scope and a warning nobody can act on
+   is a warning everybody learns to ignore. */
+const SCOPE_AGREES = {"Full outsourcing":"fully outsourced",
+                      "Full In-house":"fully in-housed"};
+
 function buildModel(sheets){
   const F = [];
   for (const s of REQUIRED_SHEETS){
@@ -56,10 +101,19 @@ function buildModel(sheets){
   for (const k of Object.keys(M.milestones))
     for (const n of Object.keys(M.milestones[k])) M.milestones[k][n].sort((a,b)=>a-b);
 
+  /* Schema 6: both standards tables are keyed on the WORK SCOPE as well.
+     A row whose work_scope_type is EMPTY applies to EVERY scope. That is what keeps the
+     tables a size a person can actually fill: PeriodWeightStandard would otherwise need
+     one row per scope for every type, phase and period - 252 rows, of which two thirds
+     would repeat their neighbour. So a project asks for its own scope first and falls
+     back to the empty row, and only the scopes that really change a number need a row.
+     The rule lives in stdWeight/stdFactor, once, so the calculation and the two
+     validations cannot come to different conclusions about the same project. */
   for (const r of raw.PeriodWeightStandard)
-    M.pws[[r.project_type, r.clinical_phase, r.period_name]] = num(r.weight);
+    M.pws[[r.project_type, r.clinical_phase, scopeOf(r), r.period_name]] = num(r.weight);
   for (const r of raw.RoleFactor){
-    M.rf[[r.project_type, r.clinical_phase, r.period_name, r.role_name]] = num(r.role_factor);
+    M.rf[[r.project_type, r.clinical_phase, scopeOf(r), r.period_name, r.role_name]]
+      = num(r.role_factor);
     (M.rfRoles[r.project_type] ||= new Set()).add(r.role_name);
   }
 
@@ -73,7 +127,7 @@ function buildModel(sheets){
       const derived = derivePeriods(proj, M.milestones[pid] || {});
       if (derived){
         M.periods[pid] = derived.map(d => ({...d, project_id:pid, __derived:true,
-          weight: M.pws[[proj.project_type, proj.clinical_phase, d.period_name]] ?? 1.00}));
+          weight: stdWeight(M, proj, d.period_name) ?? 1.00}));
       } else {
         F.push({sev:"error", rule:"V-16", sheet:"Project", row:proj.__row,
           msg:`Project ${pid} has no periods and cannot derive them — it is missing CTA submission `
@@ -126,12 +180,32 @@ function validate(M, F){
     if (isCT) for (const c of ["EDC_setup","DataReviewSystem_setup","RBQM_setup"])
       if (p[c] === null) add("warning","V-10","Project",p.__row,`Project ${pid} has no ${c} recorded.`);
     for (const [col,list] of [["project_type","project_type"],["outsourcing_type","outsourcing_type"],
+                              ["work_scope_type","work_scope_type"],
                               ["status","project_status"],["clinical_phase","clinical_phase"]]){
       const v = p[col];
       if (v && M.lists[list] && !M.lists[list].includes(v))
         add("warning","V-11","Project",p.__row,
           `Project ${pid}: ${col} '${v}' is not a known value. Valid: ${M.lists[list].join(", ")}.`);
     }
+    /* V-26: the value schema 6 retired. Reported as itself rather than as a generic
+       unknown value, because the remedy is a choice the file cannot make on the user's
+       behalf - only they know whether the trial ran in healthy volunteers or in
+       patients, and guessing would put a wrong weight on real work. */
+    if (RETIRED_TYPES[p.project_type])
+      add("error","V-26","Project",p.__row,
+        `Project ${pid}: project_type '${p.project_type}' was split in schema 6. Change it to `
+        + `${RETIRED_TYPES[p.project_type]} — and change the matching rows on `
+        + `PeriodWeightStandard and RoleFactor too.`);
+    /* V-25: two columns on the same axis, and only one of them is used. outsourcing_type
+       predates work_scope_type and stays for the sake of files that carry it, so the one
+       thing worth checking is that they do not say opposite things - a project marked
+       'Full In-house' and 'fully outsourced' is a slip, and the weights would quietly
+       follow the field nobody was looking at. */
+    const want = SCOPE_AGREES[p.outsourcing_type];
+    if (want && p.work_scope_type && p.work_scope_type !== want)
+      add("warning","V-25","Project",p.__row,
+        `Project ${pid}: outsourcing_type says '${p.outsourcing_type}' but work_scope_type says `
+        + `'${p.work_scope_type}'. The weights follow work_scope_type; check which is right.`);
   }
 
   // V-11 / V-20 / V-21 on milestones
@@ -221,10 +295,11 @@ function validate(M, F){
       }
       prevEnd = s.period_end;
       if (CLINICAL_TYPES.has(proj.project_type) && proj.clinical_phase &&
-          M.pws[[proj.project_type, proj.clinical_phase, s.period_name]] === undefined)
+          stdWeight(M, proj, s.period_name) === undefined)
         add("error","V-19","PeriodWeightStandard","",
           `Project ${pid}: no standard weight for ${proj.project_type} / ${proj.clinical_phase} / `
-          + `${s.period_name}. Its periods cannot be weighted.`);
+          + `${proj.work_scope_type || "any scope"} / ${s.period_name}. Add a row for that scope, `
+          + `or one with work_scope_type empty to cover every scope.`);
     }
   }
 
@@ -311,15 +386,18 @@ function validate(M, F){
   for (const a of M.assignments){
     const proj = M.projects[a.project_id];
     if (!proj || !M.people[a.person_id]) continue;
-    const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
     for (const s of (M.periods[a.project_id] || []))
-      need.set([proj.project_type, ph, s.period_name, a.role_name].join(""),
-               [proj.project_type, ph, s.period_name, a.role_name]);
+      need.set([proj.project_type, proj.clinical_phase, scopeOf(proj), s.period_name,
+                a.role_name].join(""), [proj, s.period_name, a.role_name]);
   }
-  for (const [, k] of need)
-    if (M.rf[[k[0], k[1], k[2], k[3]]] === undefined)
-      add("error","V-23","RoleFactor","",
-        `No role factor for ${k[0]} / ${k[1] || "-"} / ${k[2]} / ${k[3]} — assignments covering that `
-        + `period would be calculated at factor 1.00.`);
+  for (const [, [proj, pn, role]] of need){
+    if (stdFactor(M, proj, pn, role) !== undefined) continue;
+    const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
+    add("error","V-23","RoleFactor","",
+      `No role factor for ${proj.project_type} / ${ph || "-"} / `
+      + `${proj.work_scope_type || "any scope"} / ${pn} / ${role} — assignments covering that `
+      + `period would be calculated at factor 1.00. Add a row for that scope, or one with `
+      + `work_scope_type empty to cover every scope.`);
+  }
 }
 

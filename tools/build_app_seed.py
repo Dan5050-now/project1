@@ -1,4 +1,4 @@
-"""Embed the blank-start seed into app/PRAP.html.
+"""Embed the blank-start seed into src/core/02_xlsx_write.js.
 
 A user can now start a plan in the application itself, with no workbook to load. That
 needs a starting point, and a genuinely empty one is unusable: with no `Lists` sheet
@@ -16,7 +16,14 @@ grid without anybody regenerating anything. Their numbers start at a placeholder
 because an invented weight that looks like a company standard is worse than an obvious
 placeholder - the application says so on screen, and the note on every row repeats it.
 
-    python tools/build_app_seed.py            # rewrites the SEED block in app/PRAP.html
+    python tools/build_app_seed.py            # rewrites the SEED block in src/core/
+    python tools/build_app.py                 # ...and then rebuild the page from src/
+
+The seed goes into the SOURCE, not into the built page. It used to be written straight
+into app/PRAP.html, which was correct until N2.1 made that file a build output: from
+then on the next `build_app.py` silently discarded it. Nothing noticed, because the
+seed had not needed regenerating since - until schema 6 changed the value lists, and
+check_consistency caught the seed and the template disagreeing.
 
 tools/check_consistency.py verifies the embedded block still matches the template.
 """
@@ -29,8 +36,8 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-APP = ROOT / "app" / "PRAP.html"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.7.xlsx"
+SRC = ROOT / "src" / "core" / "02_xlsx_write.js"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.8.xlsx"
 BEGIN = "/* SEED-BEGIN"
 END = "/* SEED-END */"
 
@@ -70,22 +77,25 @@ def js_block(rows, template_name):
 
 
 def main():
-    src = APP.read_text(encoding="utf-8")
+    src = SRC.read_text(encoding="utf-8")
     block = js_block(seed_rows(), TEMPLATE.name)
     if BEGIN in src:
         i = src.index(BEGIN)
         j = src.index(END) + len(END)
         src = src[:i] + block + src[j:]
     else:
-        raise SystemExit(f"app/PRAP.html has no {BEGIN} … {END} block to fill in")
-    APP.write_text(src, encoding="utf-8")
+        raise SystemExit(f"{SRC.relative_to(ROOT)} has no {BEGIN} … {END} block to fill in")
+    SRC.write_text(src, encoding="utf-8")
     n = sum(len(v) for v in seed_rows().values())
-    print(f"embedded {n} seed rows from {TEMPLATE.name} into {APP.relative_to(ROOT)}")
+    print(f"embedded {n} seed rows from {TEMPLATE.name} into {SRC.relative_to(ROOT)}")
+    print("now run: python tools/build_app.py")
 
 
 def embedded(src=None):
-    """The SEED_LISTS / SEED_CONFIG currently in the application, for the consistency check."""
-    src = src or APP.read_text(encoding="utf-8")
+    """The SEED_LISTS / SEED_CONFIG currently in the application, for the consistency
+    check. Read from the BUILT page by default, because that is what a user runs - if
+    the source were checked instead, a forgotten build_app.py would pass."""
+    src = src or (ROOT / "app" / "PRAP.html").read_text(encoding="utf-8")
     out = {}
     for const, sheet in (("SEED_LISTS", "Lists"), ("SEED_CONFIG", "Config")):
         m = re.search(rf"const {const} = (\[.*?\n\]);", src, re.S)

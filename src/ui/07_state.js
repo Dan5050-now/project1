@@ -61,10 +61,15 @@ function listedPeople(){
 }
 const grid = () => { const g = []; for (let k = S.from; k <= S.to; k++) g.push(k); return g; };
 
-const TYPE_RANK = {"NewDrug CT":0, "Biosimilar CT":1, "Others":2};
+/* Sort order for the project lists: new-drug trials, then biosimilars, then everything
+   else. Schema 6 split the biosimilar type in two, so the rank is taken from the START
+   of the name rather than from an exact match - otherwise both new types would fall to
+   the catch-all and sort after 'Others'. */
+const TYPE_RANK = [[/^NewDrug CT/, 0], [/^Biosimilar CT/, 1], [/^Others$/, 2]];
+const typeRank = t => (TYPE_RANK.find(([re]) => re.test(String(t ?? ""))) || [null, 9])[1];
 function prank(pid){
   const p = S.model.projects[pid];
-  return [TYPE_RANK[p.project_type] ?? 9, p.start_date ? p.start_date.getTime() : 0, pid];
+  return [typeRank(p.project_type), p.start_date ? p.start_date.getTime() : 0, pid];
 }
 const byRank = (a, b) => { const x = prank(a), y = prank(b);
   return x[0]-y[0] || x[1]-y[1] || (x[2] < y[2] ? -1 : 1); };

@@ -23,8 +23,8 @@ APP = (ROOT / "app" / "PRAP.html").as_uri()
 # Both dummy sizes are checked. The small one is not a lighter version of the same
 # test - it has a different period mix, a different overlap profile and a single-person
 # role pool, so it exercises paths the large set happens not to reach.
-FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.9.xlsx",
-            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.1.xlsx"]
+FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.10.xlsx",
+            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.2.xlsx"]
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 sys.path.insert(0, str(ROOT / "tools"))
@@ -38,8 +38,10 @@ def reference_person_months(path):
     PER = defaultdict(list)
     for r in rows(wb["ProjectPeriod"]):
         PER[r["project_id"]].append(r)
-    RF = {(r["project_type"], r["clinical_phase"], r["period_name"], r["role_name"]): r["role_factor"]
-          for r in rows(wb["RoleFactor"])}
+    # Schema 6 keys the table on the work scope too, with an EMPTY scope meaning every
+    # scope - see lookup() in verify_source_workbook.py, which this reuses.
+    RF = {(r["project_type"], r["clinical_phase"], scope_of(r), r["period_name"],
+           r["role_name"]): r["role_factor"] for r in rows(wb["RoleFactor"])}
     PPW = defaultdict(list)
     for r in rows(wb["PersonPeriodWeight"]):
         PPW[r["assignment_id"]].append(r)
@@ -67,7 +69,9 @@ def reference_person_months(path):
             if cov <= 0:
                 continue
             sg = seg(a["project_id"], y, m)
-            rf = RF.get((pr["project_type"], ph, sg["period_name"] if sg else None, a["role_name"]), 1.0)
+            rf = lookup(RF, (pr["project_type"], ph), scope_of(pr),
+                        (sg["period_name"] if sg else None, a["role_name"]))
+            rf = 1.0 if rf is None else rf
             out[(a["person_id"], y * 12 + m - 1)] += (sg["weight"] if sg else 1.0) * rf * weight(a, y, m) * cov
     return out
 

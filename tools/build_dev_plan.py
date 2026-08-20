@@ -17,8 +17,9 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.26"
-DOC_STATUS = "Baseline v2.0 + Step 4 progress. Application v1.5 - Gate 4 refinements rounds 1-5."
+DOC_VERSION = "2.27"
+DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
+              "plus SCHEMA 6: the work scope on both standards sheets, and the biosimilar split.")
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -366,7 +367,28 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.26", DOC_DATE, "Claude Code", "Pending",
+    [f"{MARK_NEW}2.27", "2026-08-20", "Claude Code", "Pending",
+     "SCHEMA 6 - THE WORK SCOPE, AND THE BIOSIMILAR SPLIT. Requested 2026-08-20, and the "
+     "first change to the data model since the plan was baselined. (1) work_scope_type joins "
+     "PeriodWeightStandard and RoleFactor beside clinical_phase, and the keys become "
+     "(project_type, clinical_phase, work_scope_type, period_name) and that plus role_name. "
+     "How much of the work is kept in-house changes how much of it lands on this team, and "
+     "until now the model had nowhere to say so. (2) A ROW WITH AN EMPTY work_scope_type "
+     "APPLIES TO EVERY SCOPE, and a project falls back to it when there is no row for its own "
+     "scope. That is a judgment made here rather than requested: without it RoleFactor is "
+     "1,269 hand-entered rows instead of 429, two thirds of them repeating their neighbour, "
+     "and every schema 5 file would stop calculating on the day it was opened. With it, a "
+     "schema 5 file's rows ARE the every-scope rows and keep working. (3) Project gains "
+     "work_scope_type, because the key selects a row FOR A PROJECT and nothing could choose "
+     "between the three scope rows without it - implied by the request rather than stated in "
+     "it. outsourcing_type stays, descriptive, and V-25 reports the two contradicting each "
+     "other. (4) 'Biosimilar CT' becomes 'Biosimilar CT (Healthy)' and 'Biosimilar CT "
+     "(Patient)'. A project type is now recognised as a clinical trial by the START of its "
+     "name, so the next subdivision is a value-list change rather than a code change. V-26 "
+     "reports the retired value with the two it became, because only the reader knows which "
+     "of them a given trial was. Template v1.8, dummies v1.10 and v1.2.",
+     "Issued for review"],
+    ["2.26", DOC_DATE, "Claude Code", "Pending",
      "Gate 4 round 25, application v1.24. (1) EVERY FILTER NOW TAKES SEVERAL VALUES AT ONCE. "
      "Each is a drop-down of tick boxes built on <details>, which gives open, close, keyboard "
      "operation and focus for nothing; a plain <select multiple> would have cost seven tall "
@@ -1173,10 +1195,11 @@ r = section(ws, r, "Sheet: Project")
 proj = [
     ["project_id", "Text", "Yes", "Unique key, e.g. PRJ-001. Referenced by every other sheet.", "REQ-PRJ-03"],
     ["project_name", "Text", "Yes", "Unique display name.", "REQ-PRJ-03"],
-    [f"{MARK_CHG}project_type", "List", "Yes", "'NewDrug CT', 'Biosimilar CT' or 'Others'. The first two are clinical trials.", "REQ-PRJ-01"],
+    [f"{MARK_CHG}project_type", "List", "Yes", "'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Everything but 'Others' is a clinical trial. SCHEMA 6 split the single 'Biosimilar CT' in two: a healthy-volunteer study and a patient study are not the same workload, and one value could not say which. A project type is recognised as a trial by the START of its name, so a further subdivision is a change to the value list rather than to the code.", "REQ-PRJ-01, R-12"],
     ["project_category", "Text", "Conditional", "Product name. Required for either clinical trial type.", "REQ-PRJ-02"],
     [f"{MARK_NEW}clinical_phase", "List", "Conditional", "'Phase 1' / 'Phase 2' / 'Phase 3' / 'Phase 4'. Required for either clinical trial type.", "REQ-PRJ-09"],
-    [f"{MARK_CHG}outsourcing_type", "List", "Yes", "'Full outsourcing' / 'Partial outsourcing' / 'Full In-house'. Three values, fixed at Q-14.", "REQ-PRJ-04"],
+    [f"{MARK_NEW}work_scope_type", "List", "Yes", "How much of the work is done in-house: 'fully in-housed' / 'fully outsourced' / 'Partially outsourced (in-house for EDC)', extensible on the Lists sheet. SCHEMA 6. Part of the key into PeriodWeightStandard and RoleFactor - a trial run entirely in-house costs this team more than the same trial handed to a CRO, and the weights are where that belongs.", "R-12"],
+    [f"{MARK_CHG}outsourcing_type", "List", "Yes", "'Full outsourcing' / 'Partial outsourcing' / 'Full In-house'. Three values, fixed at Q-14. DESCRIPTIVE ONLY since schema 6 - work_scope_type is what the weights are keyed on. The two are checked against each other (V-25) but not merged: merging them would rewrite a column in every existing file.", "REQ-PRJ-04, R-12"],
     [f"{MARK_NEW}EDC_setup", "List", "Conditional", "Who sets up the EDC system. 'by CRO' / 'by SB'. Required for either clinical trial type.", "REQ-PRJ-10"],
     [f"{MARK_NEW}DataReviewSystem_setup", "List", "Conditional", "Who sets up the data review system. 'by CRO' / 'by SB'.", "REQ-PRJ-10"],
     [f"{MARK_NEW}RBQM_setup", "List", "Conditional", "Who sets up the RBQM system. 'by CRO' / 'by SB'.", "REQ-PRJ-10"],
@@ -1230,14 +1253,23 @@ r = table(ws, r, ["project_type", "Period set", "How boundaries are set"], sets,
 
 r = section(ws, r, "Sheet: PeriodWeightStandard")
 pws = [
-    [f"{MARK_CHG}project_type", "List", "Yes", "'NewDrug CT' or 'Biosimilar CT'. Part of the key: a biosimilar trial at a given phase is not the same workload as a new-drug trial at that phase. 'Others' take manual weights (Q-28).", "R-05"],
-    [f"{MARK_CHG}clinical_phase", "List", "Yes", "The phase the standard applies to. This is the key that selects a clinical trial's weights.", "Q-26"],
+    [f"{MARK_CHG}project_type", "List", "Yes", "A clinical trial type. Part of the key: a biosimilar trial at a given phase is not the same workload as a new-drug trial at that phase. 'Others' take manual weights (Q-28).", "R-05"],
+    [f"{MARK_CHG}clinical_phase", "List", "Yes", "The phase the standard applies to.", "Q-26"],
+    [f"{MARK_NEW}work_scope_type", "List", "No", "The work scope this standard applies to. SCHEMA 6. EMPTY means the row applies to EVERY scope - see the note below, which is the important part of this change.", "R-12"],
     ["period_name", "List", "Yes", "A period from that type's set.", "Q-04, Q-18"],
     [f"{MARK_CHG}weight", "Decimal", "Yes", "Default multiplier. You fill these in the source workbook (Q-17); the plan fixes only where they live.", "Q-01"],
     [f"{MARK_NEW}note_1", "Text", "No", "Free extension column, e.g. the basis for the weight.", "Q-01"],
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "Basis"],
           pws, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
+r = note(ws, r, "SCHEMA 6 - THE EMPTY SCOPE. The key is (project_type, clinical_phase, work_scope_type, "
+                "period_name) and it is unique. A row whose work_scope_type is EMPTY applies to every scope; a "
+                "project looks for its own scope first and falls back to that row. Without the fallback this "
+                "sheet would need 3 types x 4 phases x 7 periods x 3 scopes = 252 rows, of which two thirds would "
+                "repeat their neighbour, and every one of them hand-entered. With it, 84 rows carry the baseline "
+                "and a scope-specific row is added only where the scope really changes the number. It also means "
+                "a schema 5 file keeps working: its rows have no scope, so they are the every-scope rows.")
+r += 1
 r = note(ws, r, "Re-keyed at Q-26: a clinical trial's weights come from its CLINICAL PHASE, not its product category. "
                 "So a phase 1 trial and a phase 3 trial of the same product carry different period weights, which is "
                 "the intended behaviour. Q-28 then confirmed that 'Others' projects are not distinguished at all and "
@@ -1246,8 +1278,9 @@ r = note(ws, r, "Re-keyed at Q-26: a clinical trial's weights come from its CLIN
 
 r = section(ws, r, "Sheet: RoleFactor   [key extended at R-10]")
 rf = [
-    ["project_type", "List", "Yes", "'NewDrug CT', 'Biosimilar CT' or 'Others'. Roles are keyed by type, so a factor can differ between the two trial types.", "Q-03, R-05"],
+    [f"{MARK_CHG}project_type", "List", "Yes", "'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Roles are keyed by type, so a factor can differ between the trial types.", "Q-03, R-05, R-12"],
     [f"{MARK_NEW}clinical_phase", "List", "Trials only", "The phase this factor applies to. EMPTY on 'Others' rows, which carry no phase.", "R-10"],
+    [f"{MARK_NEW}work_scope_type", "List", "No", "The work scope this factor applies to. SCHEMA 6. EMPTY means EVERY scope, exactly as on PeriodWeightStandard - and it matters more here, because this is the larger sheet.", "R-12"],
     [f"{MARK_CHG}period_name", "Text", "Yes", "The period this factor applies to. One of the seven clinical periods, or one of the three 'Others' periods, matching the project_type.", "R-10, R-11"],
     ["role_name", "Text", "Yes", "Clinical Trial: 'Project oversight', 'Lead data manager', 'Clinical Data Associator', 'Clinical Database Programmer', 'Data Analyst'. Others: 'Project lead', 'Main staff', 'Other staff'.", "Q-03"],
     [f"{MARK_CHG}role_factor", "Decimal", "Yes", "Relative burden of THIS role in THIS period, the same for everyone holding the role. A role's share of the work is not flat across a project: the database programmer is heaviest while the database is built, the data associator while data arrives, the analyst at lock.", "Q-01, R-10"],
@@ -1255,9 +1288,12 @@ rf = [
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "Basis"],
           rf, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
-r = note(ws, r, "The key is now (project_type, clinical_phase, period_name, role_name), which makes this the "
-                "largest sheet in the workbook: 2 types x 4 phases x 6 periods x 5 roles = 240 rows, plus 9 for "
-                "'Others'. That is the cost of the change and it falls on whoever maintains the file.")
+r = note(ws, r, "The key is (project_type, clinical_phase, work_scope_type, period_name, role_name) since "
+                "schema 6, which makes this comfortably the largest sheet in the workbook: 3 types x 4 phases x 7 "
+                "periods x 5 roles = 420 baseline rows, plus 9 for 'Others'. Filling all three scopes as well "
+                "would make it 1,269. THAT is why the empty scope exists: fill the baseline once, and add a "
+                "scope-specific row only where the scope really changes the number. The cost of the change still "
+                "falls on whoever maintains the file, and the fallback is what keeps it payable.")
 r += 1
 r = note(ws, r, "NOTE A CONSEQUENCE. PeriodWeightStandard and RoleFactor now both vary over (project_type, "
                 "clinical_phase, period_name), and the calculation multiplies them together. The pair is "
@@ -1311,7 +1347,7 @@ r = note(ws, r, "Changed at Q-01. The answer named exactly three factors, so a f
 
 r = section(ws, r, "Sheet: Config")
 cfg = [
-    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8.", "5", "REQ-VC-02"],
+    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12).", "6", "REQ-VC-02"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],
     [f"{MARK_NEW}over_allocation_fte", "Person-month total above this is over-allocated.", "1.50", "REQ-CAL-04"],
     [f"{MARK_CHG}under_allocation_fte", "Person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity.", "0.60", "REQ-CAL-07"],
@@ -1337,6 +1373,8 @@ rules = [
     ["V-02", "Every Assignment.person_id exists in Person.", "Error - row rejected."],
     [f"{MARK_CHG}V-03", "Every Assignment.role_name appears in RoleFactor for that project's type.", "Error - row rejected. Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error."],
     [f"{MARK_NEW}V-24", "Every PersonPeriodWeight.assignment_id exists in Assignment, and (assignment_id, period_start) is unique.", "Error - an override on an assignment that does not exist is silently ignored, so the weight the user typed never applies and nothing says so."],
+    [f"{MARK_NEW}V-25", "A project's work_scope_type does not contradict its outsourcing_type. The two unambiguous ends are checked: 'Full outsourcing' against 'fully outsourced', and 'Full In-house' against 'fully in-housed'.", "Warning - two columns on the same axis and only one of them drives the weights. A project marked 'Full In-house' and 'fully outsourced' is a slip, and the calculation would follow the field nobody was looking at. 'Partial outsourcing' is compatible with more than one scope and is not checked: a warning nobody can act on is a warning everybody learns to ignore."],
+    [f"{MARK_NEW}V-26", "No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'.", "Error - reported as itself rather than as a generic unknown value, because the remedy is a choice the file cannot make on the user's behalf. Only they know whether the trial ran in healthy volunteers or in patients, and guessing would put a wrong weight on real work."],
     [f"{MARK_NEW}V-23", "For every (project_type, clinical_phase, period_name, role_name) an assignment can actually reach, a RoleFactor row exists.", "Error - a factor missing for ONE period of a project silently drops that stretch to 1.00, which is a wrong number rather than an obvious gap. Checked against the periods each assignment spans, not against the whole cross-product."],
     ["V-04", "project_category is present for either clinical trial type.", "Warning - shown as blank in the dashboard."],
     ["V-05", "end_date is on or after start_date, for projects, assignments and all weight periods.", "Error - row rejected."],

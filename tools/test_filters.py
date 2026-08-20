@@ -33,7 +33,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.1.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.2.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 P = "#t-proj .data-t[data-sheet='Project']"
 
@@ -157,7 +157,9 @@ with sync_playwright() as pw:
     # ---- 3. the guards --------------------------------------------------------
     before = horizon(pg)
     unpick(pg, "fType", "NewDrug CT")
-    pick(pg, "fType", "Biosimilar CT")     # with Full In-house: matches nothing
+    # Schema 6 split the biosimilar type; the fixture keeps type and scope in step, so
+    # a biosimilar trial is never 'Full In-house' and this pair still matches nothing.
+    pick(pg, "fType", "Biosimilar CT (Healthy)")
     check(pg.evaluate("activeProjects().length") == 0 and horizon(pg) == before,
           "a combination that matches nothing leaves the window where it was",
           f"{before} kept, {pg.evaluate('activeProjects().length')} projects match")

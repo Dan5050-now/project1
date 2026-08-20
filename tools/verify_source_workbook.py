@@ -19,7 +19,34 @@ CLINICAL_PERIODS = ["Before-Start-up", "Start-up", "Conduct (interim)",
                     "Close-out (interim)", "Conduct (final)",
                     "Close-out (final)", "After Close-out (final)"]
 OTHER_PERIODS = ["Planning", "Develop", "Close"]
-CLINICAL_TYPES = {"NewDrug CT", "Biosimilar CT"}   # both are clinical trials
+class _ClinicalTypes:
+    """Anything whose name begins 'NewDrug CT' or 'Biosimilar CT' is a clinical trial.
+    Schema 6 split the biosimilar type in two; asking the name rather than holding a
+    fixed set means the next subdivision is a value-list change, not a code change."""
+
+    def __contains__(self, t):
+        return str(t or "").startswith(("NewDrug CT", "Biosimilar CT"))
+
+
+CLINICAL_TYPES = _ClinicalTypes()
+
+ANY_SCOPE = ""                                    # schema 6: 'this row fits any scope'
+
+
+def scope_of(row):
+    return str((row or {}).get("work_scope_type") or "")
+
+
+def lookup(table, key, scope, tail):
+    """Schema 6's two-step: the project's own scope first, then the any-scope row.
+
+    An empty work_scope_type is a row that deliberately declines to distinguish, not a
+    row somebody forgot to fill in - which is why the fallback is part of the contract
+    rather than leniency. Any program reading these sheets must do the same, or it will
+    report a missing weight where the application finds one.
+    """
+    v = table.get((*key, scope, *tail))
+    return table.get((*key, ANY_SCOPE, *tail)) if v is None else v
 
 
 def rows(ws):
@@ -63,13 +90,13 @@ def main(path):
         PER[r["project_id"]].append(r)
     # R-10: the factor is keyed on type + phase + period + role, so a role's burden can
     # move across the life of a project rather than being one number for the whole run.
-    RF = {(r["project_type"], r["clinical_phase"], r["period_name"], r["role_name"]):
-          r["role_factor"] for r in rows(wb["RoleFactor"])}
+    RF = {(r["project_type"], r["clinical_phase"], scope_of(r), r["period_name"],
+           r["role_name"]): r["role_factor"] for r in rows(wb["RoleFactor"])}
     RF_ROLES = defaultdict(set)                 # project_type -> {role_name}
     for k in RF:
-        RF_ROLES[k[0]].add(k[3])
-    PWS = {(r["project_type"], r["clinical_phase"], r["period_name"]): r["weight"]
-           for r in rows(wb["PeriodWeightStandard"])}
+        RF_ROLES[k[0]].add(k[4])
+    PWS = {(r["project_type"], r["clinical_phase"], scope_of(r), r["period_name"]):
+           r["weight"] for r in rows(wb["PeriodWeightStandard"])}
     PSN = {r["person_id"]: r for r in rows(wb["Person"])}
     ASG = list(rows(wb["Assignment"]))
     PPW = defaultdict(list)
@@ -169,7 +196,8 @@ def main(path):
             errors.append(f"V-19 {pid}: clinical trial with no clinical_phase")
             continue
         for s in PER.get(pid, []):
-            if (proj["project_type"], ph, s["period_name"]) not in PWS:
+            if lookup(PWS, (proj["project_type"], ph), scope_of(proj),
+                      (s["period_name"],)) is None:
                 errors.append(f"V-19 {pid}: no standard weight for "
                               f"{proj['project_type']} / {ph} / {s['period_name']}")
 
@@ -183,10 +211,14 @@ def main(path):
             continue
         ph = proj["clinical_phase"] if proj["project_type"] in CLINICAL_TYPES else None
         for s in PER.get(a["project_id"], []):
-            need.add((proj["project_type"], ph, s["period_name"], a["role_name"]))
-    for k in sorted(need - set(RF), key=lambda x: tuple(str(v) for v in x)):
-        errors.append(f"V-23: no role factor for {k[0]} / {k[1] or '-'} / {k[2]} / {k[3]} - "
-                      f"assignments covering that period would be calculated at factor 1.00")
+            need.add((proj["project_type"], ph, scope_of(proj), s["period_name"],
+                      a["role_name"]))
+    for k in sorted(need, key=lambda x: tuple(str(v) for v in x)):
+        if lookup(RF, k[:2], k[2], k[3:]) is not None:
+            continue
+        errors.append(f"V-23: no role factor for {k[0]} / {k[1] or '-'} / "
+                      f"{k[2] or 'any scope'} / {k[3]} / {k[4]} - assignments covering that "
+                      f"period would be calculated at factor 1.00")
 
     # ---- list membership (V-11) ----
     for pid, proj in P.items():
@@ -226,7 +258,8 @@ def main(path):
     def role_factor(proj, a, y, m):
         ph = proj["clinical_phase"] if proj["project_type"] in CLINICAL_TYPES else None
         pn = period_of(a["project_id"], y, m)
-        return RF.get((proj["project_type"], ph, pn, a["role_name"]), 1.00)
+        v = lookup(RF, (proj["project_type"], ph), scope_of(proj), (pn, a["role_name"]))
+        return 1.00 if v is None else v
 
     def person_weight(a, y, m):
         for w in PPW.get(a["assignment_id"], []):

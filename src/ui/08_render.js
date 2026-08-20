@@ -8,10 +8,10 @@ const unitLabel = () => S.model.UNIT === "hours" ? "hours" : "FTE";
 
 function typePill(pid){
   const t = S.model.projects[pid].project_type;
-  const k = {"NewDrug CT":"nd","Biosimilar CT":"bs"}[t] || "ot";
+  const k = /^NewDrug CT/.test(t) ? "nd" : /^Biosimilar CT/.test(t) ? "bs" : "ot";
   const tip = CLINICAL_TYPES.has(t)
     ? `<b>${esc(t)}</b><br>A clinical trial. Uses the seven-period set derived from milestone dates, and `
-      + `takes its weights from the standard table for its type and phase.`
+      + `takes its weights from the standard table for its type, phase and work scope.`
     : `<b>${esc(t)}</b><br>A non-trial project. Uses the three-period set — Planning, Develop, Close — `
       + `entered by hand, with hand-entered weights.`;
   return `<span class="ty ${k}" data-tip="${att(tip)}">${esc(t)}</span>`;

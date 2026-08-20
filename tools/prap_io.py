@@ -51,7 +51,58 @@ NUM_COLS = {
     "PersonPeriodWeight": {"weight_override"},
     "Lists": set(), "Config": set(),
 }
-CLINICAL_TYPES = {"NewDrug CT", "Biosimilar CT"}
+class _ClinicalTypes:
+    """Which project types are clinical trials.
+
+    Schema 6 split 'Biosimilar CT' into '(Healthy)' and '(Patient)', and a fixed set of
+    names would have to be edited by a programmer the next time a type is subdivided -
+    for what is a change to a value list. So the question is asked of the NAME: anything
+    beginning 'NewDrug CT' or 'Biosimilar CT' is a clinical trial and takes the seven
+    clinical periods. `in` rather than a bare function so every call site reads as it
+    did, and so this stays a mirror of the JavaScript rather than a variation on it.
+    """
+
+    PREFIXES = ("NewDrug CT", "Biosimilar CT")
+
+    def __contains__(self, t):
+        return str(t or "").startswith(self.PREFIXES)
+
+
+CLINICAL_TYPES = _ClinicalTypes()
+
+# Schema 6 retired this value. Named so a file carrying it gets a sentence saying what
+# to do, rather than the generic "not a known value" - which is true, unhelpful, and
+# identical to the message for a typo.
+RETIRED_TYPES = {"Biosimilar CT": "Biosimilar CT (Healthy) or Biosimilar CT (Patient)"}
+
+# V-25's table. Only the two unambiguous ends are worth checking: 'Partial outsourcing'
+# is compatible with more than one scope, and a warning nobody can act on is a warning
+# everybody learns to ignore.
+SCOPE_AGREES = {"Full outsourcing": "fully outsourced",
+                "Full In-house": "fully in-housed"}
+
+ANY_SCOPE = ""
+
+
+def scope_of(row):
+    """A row's work scope, with an empty one meaning 'every scope' (schema 6)."""
+    return str(row.get("work_scope_type") or "") if row else ANY_SCOPE
+
+
+def std_weight(M, proj, period_name):
+    """The standard period weight: this project's own scope first, then the any-scope
+    row. One function, so the calculation and V-19 cannot disagree."""
+    k = (proj.get("project_type"), proj.get("clinical_phase"))
+    v = M.pws.get((*k, scope_of(proj), period_name))
+    return M.pws.get((*k, ANY_SCOPE, period_name)) if v is None else v
+
+
+def std_factor(M, proj, period_name, role_name):
+    """The role factor, the same way."""
+    ph = proj.get("clinical_phase") if proj.get("project_type") in CLINICAL_TYPES else None
+    k = (proj.get("project_type"), ph)
+    v = M.rf.get((*k, scope_of(proj), period_name, role_name))
+    return M.rf.get((*k, ANY_SCOPE, period_name, role_name)) if v is None else v
 CLINICAL_PERIODS = ["Before-Start-up", "Start-up", "Conduct (interim)", "Close-out (interim)",
                     "Conduct (final)", "Close-out (final)", "After Close-out (final)"]
 OTHER_PERIODS = ["Planning", "Develop", "Close"]
@@ -390,11 +441,14 @@ class Model:
             for n in self.milestones[pid]:
                 self.milestones[pid][n].sort()
 
-        self.pws = {(r.get("project_type"), r.get("clinical_phase"), r.get("period_name")):
-                    _as_num(r.get("weight")) for r in sheets["PeriodWeightStandard"]}
+        # Schema 6: both standards tables are keyed on the work scope as well, and a
+        # row with an EMPTY scope applies to every scope.
+        self.pws = {(r.get("project_type"), r.get("clinical_phase"), scope_of(r),
+                     r.get("period_name")): _as_num(r.get("weight"))
+                    for r in sheets["PeriodWeightStandard"]}
         self.rf, self.rf_roles = {}, defaultdict(set)
         for r in sheets["RoleFactor"]:
-            self.rf[(r.get("project_type"), r.get("clinical_phase"),
+            self.rf[(r.get("project_type"), r.get("clinical_phase"), scope_of(r),
                      r.get("period_name"), r.get("role_name"))] = _as_num(r.get("role_factor"))
             self.rf_roles[r.get("project_type")].add(r.get("role_name"))
 
@@ -407,9 +461,8 @@ class Model:
                 if got:
                     for d in got:
                         d["project_id"] = pid
-                        d["weight"] = self.pws.get(
-                            (proj.get("project_type"), proj.get("clinical_phase"),
-                             d["period_name"]), 1.00)
+                        w = std_weight(self, proj, d["period_name"])
+                        d["weight"] = 1.00 if w is None else w
                     self.periods[pid] = got
                 else:
                     self.add("error", "V-16", "Project", proj.get("__row", ""),
@@ -465,11 +518,28 @@ def validate(M):
                     M.add("warning", "V-10", "Project", p["__row"],
                           f"Project {pid} has no {c} recorded.")
         for col, lst in (("project_type", "project_type"), ("outsourcing_type", "outsourcing_type"),
+                         ("work_scope_type", "work_scope_type"),
                          ("status", "project_status"), ("clinical_phase", "clinical_phase")):
             v = p.get(col)
             if v and M.lists.get(lst) and v not in M.lists[lst]:
                 M.add("warning", "V-11", "Project", p["__row"],
                       f"Project {pid}: {col} '{v}' is not a known value.")
+        # V-26: the value schema 6 retired. Only the user knows whether a biosimilar
+        # trial ran in healthy volunteers or in patients, so it is reported rather than
+        # guessed at - a wrong guess puts a wrong weight on real work.
+        if p.get("project_type") in RETIRED_TYPES:
+            M.add("error", "V-26", "Project", p["__row"],
+                  f"Project {pid}: project_type '{p['project_type']}' was split in schema 6. "
+                  f"Change it to {RETIRED_TYPES[p['project_type']]}.")
+        # V-25: outsourcing_type and work_scope_type sit on the same axis and only one
+        # of them drives the weights. They need not agree in detail; they must not
+        # contradict.
+        want = SCOPE_AGREES.get(p.get("outsourcing_type"))
+        if want and p.get("work_scope_type") and p["work_scope_type"] != want:
+            M.add("warning", "V-25", "Project", p["__row"],
+                  f"Project {pid}: outsourcing_type says '{p['outsourcing_type']}' but "
+                  f"work_scope_type says '{p['work_scope_type']}'. The weights follow "
+                  f"work_scope_type.")
 
     for pid, mm in M.milestones.items():
         for nm, dates in mm.items():
@@ -554,11 +624,12 @@ def validate(M):
                           f"Project {pid}: periods overlap at {s.get('period_name')}.")
             prev_end = s.get("period_end")
             if (proj.get("project_type") in CLINICAL_TYPES and proj.get("clinical_phase")
-                    and (proj["project_type"], proj["clinical_phase"],
-                         s.get("period_name")) not in M.pws):
+                    and std_weight(M, proj, s.get("period_name")) is None):
                 M.add("error", "V-19", "PeriodWeightStandard", "",
                       f"Project {pid}: no standard weight for {proj['project_type']} / "
-                      f"{proj['clinical_phase']} / {s.get('period_name')}.")
+                      f"{proj['clinical_phase']} / "
+                      f"{proj.get('work_scope_type') or 'any scope'} / "
+                      f"{s.get('period_name')}.")
 
     seen = set()
     for a in M.raw["Assignment"]:
@@ -634,12 +705,14 @@ def validate(M):
             continue
         ph = proj.get("clinical_phase") if proj.get("project_type") in CLINICAL_TYPES else None
         for s in M.periods.get(a.get("project_id"), []):
-            k = (proj.get("project_type"), ph, s.get("period_name"), a.get("role_name"))
-            need[k] = k
-    for k in need:
-        if k not in M.rf:
+            k = (proj.get("project_type"), ph, scope_of(proj), s.get("period_name"),
+                 a.get("role_name"))
+            need[k] = (proj, s.get("period_name"), a.get("role_name"))
+    for k, (proj, pn, role) in need.items():
+        if std_factor(M, proj, pn, role) is None:
             M.add("error", "V-23", "RoleFactor", "",
-                  f"No role factor for {k[0]} / {k[1] or '-'} / {k[2]} / {k[3]}.")
+                  f"No role factor for {k[0]} / {k[1] or '-'} / "
+                  f"{proj.get('work_scope_type') or 'any scope'} / {pn} / {role}.")
 
 
 # =============================================================== 4. calculation
@@ -674,7 +747,6 @@ def calculate(M):
         e = a.get("assign_end_date") or proj.get("end_date")
         if not s or not e:
             continue
-        ph = proj.get("clinical_phase") if proj.get("project_type") in CLINICAL_TYPES else None
         for y, m in months_between(s, e):
             cov = coverage(y, m, s, e)
             if cov <= 0:
@@ -682,8 +754,8 @@ def calculate(M):
             seg = period_at(a["project_id"], y, m)
             pw = (_as_num(seg.get("weight")) if seg else None)
             pw = 1.0 if pw is None else pw
-            rf = M.rf.get((proj.get("project_type"), ph,
-                           seg.get("period_name") if seg else None, a.get("role_name")))
+            rf = std_factor(M, proj, seg.get("period_name") if seg else None,
+                            a.get("role_name"))
             rf = 1.0 if rf is None else rf
             v = pw * rf * person_weight(a, y, m) * cov
             k = month_key(y, m - 1)

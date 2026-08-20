@@ -6,11 +6,11 @@ This document is written for a language model or an agent, not for a person. It 
 
 |  |  |
 |---|---|
-| Application | `app/PRAP.html` v1.24 |
-| Source schema version | 5 |
+| Application | `app/PRAP.html` v1.25 |
+| Source schema version | 6 |
 | Contract version | 1.0 |
 | Guide version | 1.0 |
-| Generated | 2026-08-08 |
+| Generated | 2026-08-20 |
 
 ---
 
@@ -64,12 +64,12 @@ The repository keeps every issue of every document, so pick from `docs/PRAP_Mani
 
 | What | Path |
 |---|---|
-| Development plan | `docs/PRAP_Development_Plan_v2.26.xlsx` |
-| Programming specification | `docs/PRAP_Programming_Specification_v1.0.xlsx` |
+| Development plan | `docs/PRAP_Development_Plan_v2.27.xlsx` |
+| Programming specification | `docs/PRAP_Programming_Specification_v1.1.xlsx` |
 | UI component list | `docs/PRAP_UI_Component_List_v1.0.xlsx` |
-| Source data template | `templates/PRAP_SourceData_Template_v1.7.xlsx` |
-| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.9.xlsx` |
-| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.1.xlsx` |
+| Source data template | `templates/PRAP_SourceData_Template_v1.8.xlsx` |
+| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.10.xlsx` |
+| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.2.xlsx` |
 | This guide | `docs/PRAP_AI_Agent_Guide.md` |
 
 ## 2. The eight words you need
@@ -91,11 +91,11 @@ Ten sheets, all required, in this order. A missing sheet is fatal (V-00).
 
 | Sheet | Role | Parent | Key | Columns |
 |---|---|---|---|---|
-| `Project` | master | — | `project_id` | 23 |
+| `Project` | master | — | `project_id` | 24 |
 | `Milestone` | child | `Project` | `project_id`, `milestone_name`, `milestone_date` | 6 |
 | `ProjectPeriod` | child | `Project` | `project_id`, `period_name` | 7 |
-| `PeriodWeightStandard` | reference | — | `project_type`, `clinical_phase`, `period_name` | 5 |
-| `RoleFactor` | reference | — | `project_type`, `clinical_phase`, `period_name`, `role_name` | 6 |
+| `PeriodWeightStandard` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name` | 6 |
+| `RoleFactor` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name`, `role_name` | 7 |
 | `Person` | master | — | `person_id` | 12 |
 | `Assignment` | child | `Person` | `assignment_id` | 11 |
 | `PersonPeriodWeight` | child | `Assignment` | `assignment_id`, `period_start` | 5 |
@@ -120,10 +120,11 @@ Lists, Config                      vocabulary and settings
 |---|---|---|
 | `project_id` | identifier | Unique key, e.g. PRJ-001. |
 | `project_name` | identifier | Unique display name. |
-| `project_type` | text · list `project_type` | 'NewDrug CT', 'Biosimilar CT' or 'Others'. The first two are clinical trials. |
+| `project_type` | text · list `project_type` | 'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Everything but 'Others' is a clinical trial. |
 | `project_category` | text | Product name. Required for either clinical trial type. |
-| `clinical_phase` | text · list `clinical_phase` | Required for either clinical trial type - with the type it selects the period weights. |
-| `outsourcing_type` | text · list `outsourcing_type` | Full / Partial outsourcing, or Full In-house. |
+| `clinical_phase` | text · list `clinical_phase` | Required for any clinical trial type - with the type and the work scope it selects the period weights. |
+| `work_scope_type` | text · list `work_scope_type` | How much of the work is done in-house. With the type and phase it selects the standard weights and role factors. |
+| `outsourcing_type` | text · list `outsourcing_type` | Full / Partial outsourcing, or Full In-house. Descriptive - work_scope_type is what the weights are keyed on. |
 | `EDC_setup` | text · list `setup_party` | Who sets up EDC. Clinical trial types only. |
 | `DataReviewSystem_setup` | text · list `setup_party` | Who sets up the data review system. |
 | `RBQM_setup` | text · list `setup_party` | Who sets up RBQM. |
@@ -169,8 +170,9 @@ Lists, Config                      vocabulary and settings
 
 | Column | Type | Meaning |
 |---|---|---|
-| `project_type` | text · list `project_type` | 'NewDrug CT' or 'Biosimilar CT'. 'Others' projects take manual weights instead. |
+| `project_type` | identifier · list `project_type` | A clinical trial type. 'Others' projects take manual weights instead. |
 | `clinical_phase` | identifier · list `clinical_phase` | The phase this standard applies to. |
+| `work_scope_type` | identifier · list `work_scope_type` | The work scope this standard applies to. LEAVE EMPTY for a row that applies to EVERY scope - fill only the scopes that really differ. |
 | `period_name` | identifier · list `period_name_clinical` | One of the seven clinical periods. Unique within a project (R-11). |
 | `weight` | decimal | YOU SUPPLY. Default multiplier for this phase and period. |
 | `note_1` | text | Free text. e.g. the basis for this weight. |
@@ -181,6 +183,7 @@ Lists, Config                      vocabulary and settings
 |---|---|---|
 | `project_type` | identifier · list `project_type` | Which type's role list this row belongs to. |
 | `clinical_phase` | identifier · list `clinical_phase` | The phase this factor applies to. Leave EMPTY for 'Others'. |
+| `work_scope_type` | identifier · list `work_scope_type` | The work scope this factor applies to. LEAVE EMPTY for a row that applies to EVERY scope - fill only the scopes that really differ. |
 | `period_name` | identifier | The period this factor applies to. |
 | `role_name` | identifier | The role. |
 | `role_factor` | decimal | YOU SUPPLY. Relative burden of this role in this period. |
@@ -282,8 +285,9 @@ These live on the `Lists` sheet of the workbook you are given — read them from
 
 | List | Values |
 |---|---|
-| `project_type` | `NewDrug CT`, `Biosimilar CT`, `Others` |
+| `project_type` | `NewDrug CT`, `Biosimilar CT (Healthy)`, `Biosimilar CT (Patient)`, `Others` |
 | `clinical_phase` | `Phase 1`, `Phase 2`, `Phase 3`, `Phase 4` |
+| `work_scope_type` | `fully in-housed`, `fully outsourced`, `Partially outsourced (in-house for EDC)` |
 | `outsourcing_type` | `Full outsourcing`, `Partial outsourcing`, `Full In-house` |
 | `setup_party` | `by CRO`, `by SB` |
 | `EDC_system` | `Veeva EDC`, `Rave`, `eSOURCE` |
@@ -367,7 +371,7 @@ over_allocation_fte and under_allocation_fte are ABSOLUTE FTE figures. They are 
 
 | Parameter | Default | Controls |
 |---|---|---|
-| `schema_version` | 5 | Structure version of this workbook. The application warns on a mismatch. |
+| `schema_version` | 6 | Structure version of this workbook. The application warns on a mismatch. |
 | `fte_hours_per_month` | 160 | Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month. |
 | `over_allocation_fte` | 1.5 | A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01). |
 | `under_allocation_fte` | 0.6 | A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01). |
@@ -424,6 +428,8 @@ Severities: **fatal** nothing loads · **error** the figures would be wrong · *
 | **V-22** | warning | No person carries a capacity_fte below the under-allocation floor. |
 | **V-23** | error | For every (project_type, clinical_phase, period_name, role_name) an assignment can actually reach, a RoleFactor row exists. |
 | **V-24** | error | Every PersonPeriodWeight.assignment_id exists in Assignment, and (assignment_id, period_start) is unique. |
+| **V-25** | warning | A project's work_scope_type does not contradict its outsourcing_type. The two unambiguous ends are checked: 'Full outsourcing' against 'fully outsourced', and 'Full In-house' against 'fully in-housed'. |
+| **V-26** | error | No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'. |
 
 **Aim for zero errors and zero warnings you cannot explain.** A file that loads with errors still shows numbers, and those numbers are wrong in ways the user will not see.
 
@@ -567,4 +573,4 @@ A plain-text form of the source workbook, so a program or an AI agent that canno
 
 ---
 
-Generated by `tools/build_ai_reference.py` on 2026-08-08 from `app/PRAP.html` v1.24, `PRAP_Development_Plan_v2.26.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.
+Generated by `tools/build_ai_reference.py` on 2026-08-20 from `app/PRAP.html` v1.25, `PRAP_Development_Plan_v2.27.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.

@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.26 records Step 4 progress |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.27 records Step 4 progress and schema 6 |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -33,7 +33,7 @@ and stays in service — the two are parallel products, not successor and predec
 | N4a | Build (Python shell) | **Built and tested** 2026-08-18 · awaiting the run on the company laptop |
 | N5 | Release | Not started |
 
-Both applications share one calculation engine, one data schema (version 5) and one
+Both applications share one calculation engine, one data schema (version 6) and one
 JSON interchange format, so they cannot disagree about a number. Nothing in that plan
 amends the web application's plan, specification, component list or code.
 
@@ -207,8 +207,15 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.26.xlsx` — **current.** 70 requirements, 24 validation
-  rules, source schema version 5. Records Step 4 progress against the approved baseline.
+- `docs/PRAP_Development_Plan_v2.27.xlsx` — **current.** 70 requirements, 26 validation
+  rules, source schema version 6. Records Step 4 progress against the approved baseline,
+  and change **R-12 — the work scope, and the biosimilar split** (2026-08-20):
+  `work_scope_type` joins `PeriodWeightStandard`, `RoleFactor` and `Project`, so both
+  standards keys become `project_type + clinical_phase + work_scope_type + period_name`
+  (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
+  and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
+- `docs/PRAP_Programming_Specification_v1.1.xlsx` — **current specification.** Schema 6:
+  the two-step lookup, the new keys, the two new rules.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
   R-05 (`project_type` splits into `NewDrug CT` and `Biosimilar CT`, schema version 3),
@@ -686,9 +693,9 @@ document through the manifest rather than by sorting filenames.
   covering all 70 requirements. Sheet 10 records the six open points from the v0.3
   review, the answers given, and what each one changed. None open.
 
-- `templates/PRAP_SourceData_Template_v1.7.xlsx` — blank workbook: 10 sheets, headers,
+- `templates/PRAP_SourceData_Template_v1.8.xlsx` — blank workbook: 10 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README. Every sheet
-  carries at least one free-text note column (schema version 5).
+  carries at least one free-text note column (schema version 6).
 
   **Derived columns are locked.** Three columns are computed rather than entered —
   `Project.total_period_months`, `Milestone.project_name`, `Assignment.person_name`. Their
@@ -698,10 +705,14 @@ document through the manifest rather than by sorting filenames.
   inserting, deleting and sorting rows all still work. Only adding or removing *columns*
   is blocked, because the column set is the schema. The application's export writes the
   same locks, so the guard rail survives a round trip.
-- `templates/PRAP_SourceData_Dummy_v1.9.xlsx` — the same structure populated with
-  **34 NewDrug CT + 16 Biosimilar CT + 12 `Others` projects and 20 people**
-  (289 assignments, 372 milestones, 308 periods across 73 months).
-- `templates/PRAP_SourceData_Dummy_10x10_v1.1.xlsx` — the same again at **10 projects
+- `templates/PRAP_SourceData_Dummy_v1.10.xlsx` — the same structure populated with
+  **16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12
+  `Others` projects and 20 people** (289 assignments, 372 milestones, 308 periods
+  across 73 months). At schema 6 it also carries **252 `PeriodWeightStandard` rows and
+  849 `RoleFactor` rows** — a baseline set with `work_scope_type` empty, plus
+  scope-specific rows for two of the three scopes, so the fallback is exercised by the
+  fixture and not only by a unit test.
+- `templates/PRAP_SourceData_Dummy_10x10_v1.2.xlsx` — the same again at **10 projects
   and 10 people** (8 clinical trials + 2 `Others`, 50 assignments, 60 milestones,
   50 periods across 50 months): small enough to read every row on screen and check the
   arithmetic by hand. It is not a lighter test — it carries both clinical types, all
@@ -718,7 +729,7 @@ schema the other follows. The data is seeded: every sheet rebuilds byte-for-byte
 Validate any of them with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.1.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.2.xlsx
 ```
 
 And check the application against the reference implementation:
@@ -920,8 +931,17 @@ Requires `openpyxl`.
   instruction.
 - **A row can be inserted anywhere**, landing directly below the row acted on rather
   than at the bottom of the table (P-01/S-01, REQ-IMP-11).
-- **Three project types**: `NewDrug CT`, `Biosimilar CT`, `Others`. The two trial
-  types share one period set and one derivation, and differ in their weights.
+- **Four project types**: `NewDrug CT`, `Biosimilar CT (Healthy)`,
+  `Biosimilar CT (Patient)`, `Others`. The three trial types share one period set and
+  one derivation, and differ in their weights. A type is recognised as a trial by the
+  **start** of its name, so subdividing one again is a value-list change, not a code
+  change (R-12, schema 6).
+- **Work scope is part of the weights** (R-12, schema 6). `PeriodWeightStandard` and
+  `RoleFactor` are keyed on `work_scope_type` as well, and **a row whose
+  `work_scope_type` is empty applies to every scope** — a project looks for its own
+  scope first and falls back to that row. Without the fallback `RoleFactor` would be
+  1,269 hand-entered rows instead of 429, two thirds of them repeating their neighbour,
+  and every schema 5 file would stop calculating the day it was opened.
 - **Period sets differ by project type**: both trial types use Before-Start-up /
   Start-up / Conduct (interim) / Close-out (interim) / Conduct (final) / Close-out
   (final) / After Close-out (final) — seven names, derived from milestone dates;

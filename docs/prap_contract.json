@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.24",
+  "version": "1.25",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -22,14 +22,14 @@
    "both_end_the_same": "A plan started blank exports to the same .xlsx and the same .prap.json as any other, so nothing downstream needs to know which way it began."
   }
  },
- "schema_version": 5,
+ "schema_version": 6,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.26.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.0.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.27.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.1.xlsx",
   "ui_component_list": "docs/PRAP_UI_Component_List_v1.0.xlsx",
-  "source_data_template": "templates/PRAP_SourceData_Template_v1.7.xlsx",
-  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.9.xlsx",
-  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.1.xlsx",
+  "source_data_template": "templates/PRAP_SourceData_Template_v1.8.xlsx",
+  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.10.xlsx",
+  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.2.xlsx",
   "agent_guide": "docs/PRAP_AI_Agent_Guide.md"
  },
  "sheets": {
@@ -64,7 +64,7 @@
      "name": "project_type",
      "type": "text",
      "editable": true,
-     "note": "'NewDrug CT', 'Biosimilar CT' or 'Others'. The first two are clinical trials.",
+     "note": "'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Everything but 'Others' is a clinical trial.",
      "value_list": "project_type"
     },
     {
@@ -77,14 +77,21 @@
      "name": "clinical_phase",
      "type": "text",
      "editable": true,
-     "note": "Required for either clinical trial type - with the type it selects the period weights.",
+     "note": "Required for any clinical trial type - with the type and the work scope it selects the period weights.",
      "value_list": "clinical_phase"
+    },
+    {
+     "name": "work_scope_type",
+     "type": "text",
+     "editable": true,
+     "note": "How much of the work is done in-house. With the type and phase it selects the standard weights and role factors.",
+     "value_list": "work_scope_type"
     },
     {
      "name": "outsourcing_type",
      "type": "text",
      "editable": true,
-     "note": "Full / Partial outsourcing, or Full In-house.",
+     "note": "Full / Partial outsourcing, or Full In-house. Descriptive - work_scope_type is what the weights are keyed on.",
      "value_list": "outsourcing_type"
     },
     {
@@ -318,6 +325,7 @@
    "key": [
     "project_type",
     "clinical_phase",
+    "work_scope_type",
     "period_name"
    ],
    "identifier_column": "project_type",
@@ -326,9 +334,9 @@
    "columns": [
     {
      "name": "project_type",
-     "type": "text",
+     "type": "identifier",
      "editable": true,
-     "note": "'NewDrug CT' or 'Biosimilar CT'. 'Others' projects take manual weights instead.",
+     "note": "A clinical trial type. 'Others' projects take manual weights instead.",
      "value_list": "project_type"
     },
     {
@@ -337,6 +345,13 @@
      "editable": true,
      "note": "The phase this standard applies to.",
      "value_list": "clinical_phase"
+    },
+    {
+     "name": "work_scope_type",
+     "type": "identifier",
+     "editable": true,
+     "note": "The work scope this standard applies to. LEAVE EMPTY for a row that applies to EVERY scope - fill only the scopes that really differ.",
+     "value_list": "work_scope_type"
     },
     {
      "name": "period_name",
@@ -365,6 +380,7 @@
    "key": [
     "project_type",
     "clinical_phase",
+    "work_scope_type",
     "period_name",
     "role_name"
    ],
@@ -385,6 +401,13 @@
      "editable": true,
      "note": "The phase this factor applies to. Leave EMPTY for 'Others'.",
      "value_list": "clinical_phase"
+    },
+    {
+     "name": "work_scope_type",
+     "type": "identifier",
+     "editable": true,
+     "note": "The work scope this factor applies to. LEAVE EMPTY for a row that applies to EVERY scope - fill only the scopes that really differ.",
+     "value_list": "work_scope_type"
     },
     {
      "name": "period_name",
@@ -732,7 +755,8 @@
  "value_lists": {
   "project_type": [
    "NewDrug CT",
-   "Biosimilar CT",
+   "Biosimilar CT (Healthy)",
+   "Biosimilar CT (Patient)",
    "Others"
   ],
   "clinical_phase": [
@@ -740,6 +764,11 @@
    "Phase 2",
    "Phase 3",
    "Phase 4"
+  ],
+  "work_scope_type": [
+   "fully in-housed",
+   "fully outsourced",
+   "Partially outsourced (in-house for EDC)"
   ],
   "outsourcing_type": [
    "Full outsourcing",
@@ -812,7 +841,7 @@
  },
  "config": {
   "schema_version": {
-   "default": 5,
+   "default": 6,
    "meaning": "Structure version of this workbook. The application warns on a mismatch."
   },
   "fte_hours_per_month": {
@@ -1099,6 +1128,22 @@
   "V-24": {
    "statement": "Every PersonPeriodWeight.assignment_id exists in Assignment, and (assignment_id, period_start) is unique.",
    "effect": "Error - an override on an assignment that does not exist is silently ignored, so the weight the user typed never applies and nothing says so.",
+   "severity_reported_by_app": [
+    "error"
+   ],
+   "enforced_by_application": true
+  },
+  "V-25": {
+   "statement": "A project's work_scope_type does not contradict its outsourcing_type. The two unambiguous ends are checked: 'Full outsourcing' against 'fully outsourced', and 'Full In-house' against 'fully in-housed'.",
+   "effect": "Warning - two columns on the same axis and only one of them drives the weights. A project marked 'Full In-house' and 'fully outsourced' is a slip, and the calculation would follow the field nobody was looking at. 'Partial outsourcing' is compatible with more than one scope and is not checked: a warning nobody can act on is a warning everybody learns to ignore.",
+   "severity_reported_by_app": [
+    "warning"
+   ],
+   "enforced_by_application": true
+  },
+  "V-26": {
+   "statement": "No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'.",
+   "effect": "Error - reported as itself rather than as a generic unknown value, because the remedy is a choice the file cannot make on the user's behalf. Only they know whether the trial ran in healthy volunteers or in patients, and guessing would put a wrong weight on real work.",
    "severity_reported_by_app": [
     "error"
    ],

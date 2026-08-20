@@ -53,13 +53,14 @@ function calculate(M){
     if (!proj || !M.people[a.person_id] || a.__bad) continue;
     const s = a.assign_start_date, e = a.assign_end_date || proj.end_date;
     if (!s || !e || a.__new) continue;              // an incomplete row contributes nothing
-    const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
     for (const [y, m] of monthsBetween(s, e)){
       const cov = coverage(y, m, s, e);
       if (cov <= 0) continue;
       const seg = periodAt(a.project_id, y, m);
       const pw = seg ? (num(seg.weight) ?? 1) : 1;                       // no period -> 1.00, V-12
-      const rf = M.rf[[proj.project_type, ph, seg ? seg.period_name : null, a.role_name]] ?? 1;
+      // Schema 6: the project's own work scope first, then the any-scope row. One
+      // function, shared with the validation, so the figure and the finding agree.
+      const rf = stdFactor(M, proj, seg ? seg.period_name : null, a.role_name) ?? 1;
       const v = pw * rf * personWeight(a, y, m) * cov;
       const k = monthKey(y, m);
       lo = Math.min(lo, k); hi = Math.max(hi, k);
