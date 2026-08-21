@@ -3,6 +3,24 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## Concept overview, slide deck — 2026-08-21
+
+### Added
+- `docs/concept/TEA-concept-overview.pptx` — the concept overview as a 15-slide deck, for
+  walking a room through the system. Same content and identity as the HTML page: the three
+  clocks, the development gates, the review pipeline, data lineage, roles, the identifier
+  decoder, and the five things that decide whether this works. Speaker notes throughout.
+- `docs/concept/build_deck.js` — regenerates the deck (pptxgenjs).
+- `docs/concept/qa_deck.py` — geometry QA: off-slide shapes, 0.5" edge margins, text-frame
+  overlap, estimated text overflow.
+- `docs/concept/render_deck.py` — renders slides to PNG with Pillow for visual QA.
+  LibreOffice cannot convert in this environment, so the usual PDF-and-look pass is
+  unavailable; this draws from the real coordinates and text using Carlito and Caladea,
+  metric-compatible with Calibri and Cambria, so text fit is faithful.
+
+Fonts are Cambria, Calibri and Courier New — all ship with Office and all render
+true-to-width in QA. The deck passes the pptx validator and carries no placeholder text.
+
 ## Concept overview — 2026-08-21
 
 ### Added

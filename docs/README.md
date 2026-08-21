@@ -12,6 +12,9 @@ docs/
   spec/TEA-SPEC-001_programming-specification.xlsx   TEA-SPEC-001  v1.0.0  DRAFT
   spec/rule-catalog.yaml                             machine-readable rule catalog
   concept/tea-system-map.html                        concept overview — read this first
+  concept/TEA-concept-overview.pptx                  the same overview as slides
+  concept/build_deck.js                              regenerates the deck
+  concept/qa_deck.py, render_deck.py                 deck QA (no LibreOffice here)
   contracts/*.json                                   input and finding data contracts
   superseded/                                        v0.1.0 XML drafts, history only
 tools/
@@ -36,7 +39,7 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 | TEA-PLAN-001 Development Plan | 1.0.0 | **APPROVED** 2026-08-17 | — |
 | TEA-SPEC-001 Programming Specification | 1.1.1 | DRAFT | Step 2 review, round 2 |
 | Rule catalog | 1.1.0 | DRAFT | Frozen at the Step 2 gate |
-| Concept overview | — | Current | Regenerate when the plan or spec changes |
+| Concept overview (HTML + PPTX) | — | Current | Regenerate when the plan or spec changes |
 
 ## Where to start
 
@@ -98,6 +101,22 @@ python3 tools/check_workbook_integrity.py file.xlsx  # one workbook
 ```
 
 Run it in CI alongside the drift check, and after any change to a workbook builder.
+
+## Regenerating the slide deck
+
+```bash
+cd docs/concept
+npm install pptxgenjs          # once
+node build_deck.js
+python3 qa_deck.py             # geometry: bounds, margins, overlap, estimated overflow
+python3 render_deck.py TEA-concept-overview.pptx /tmp/deckpreview   # then look at the PNGs
+```
+
+LibreOffice cannot convert files in this environment, so the usual
+`soffice --convert-to pdf` visual QA is unavailable. `render_deck.py` draws the slides
+with Pillow from the real coordinates and text in the file, using Carlito and Caladea —
+metric-compatible with Calibri and Cambria — so text fit in the preview is faithful.
+It approximates: no shadows, no dash patterns, no gradients.
 
 ## A note on Excel formulas
 
