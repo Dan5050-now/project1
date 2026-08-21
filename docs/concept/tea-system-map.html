@@ -1,0 +1,765 @@
+<title>Tumor Agent System Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+
+<style>
+:root{
+  --ink:#16201C; --ink-soft:#454F49; --ink-mute:#5C665F;
+  --accent:#1D4A3A; --accent-lift:#2F7358; --wash:#E3EDE7;
+  --ground:#F7F8F5; --surface:#FFFFFF; --rule:#D4DAD2; --rule-soft:#E6EAE4;
+  --critical:#8C2F39; --major:#B06A1F; --minor:#4A6B8A; --info:#5C665F;
+  --shadow:0 1px 2px rgba(22,32,28,.05), 0 6px 20px -12px rgba(22,32,28,.18);
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --serif:"Spectral",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sp:clamp(1rem,.6rem + 1.6vw,1.6rem);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ink:#E4E9E1; --ink-soft:#B3BCB2; --ink-mute:#8B958A;
+    --accent:#7FBF9E; --accent-lift:#9AD3B5; --wash:#1D2A23;
+    --ground:#11150F; --surface:#181D17; --rule:#2C342B; --rule-soft:#232A22;
+    --critical:#E08A92; --major:#E0AC6B; --minor:#93B3D1; --info:#98A296;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 22px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#E4E9E1; --ink-soft:#B3BCB2; --ink-mute:#8B958A;
+  --accent:#7FBF9E; --accent-lift:#9AD3B5; --wash:#1D2A23;
+  --ground:#11150F; --surface:#181D17; --rule:#2C342B; --rule-soft:#232A22;
+  --critical:#E08A92; --major:#E0AC6B; --minor:#93B3D1; --info:#98A296;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 22px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1320px; margin:0 auto; padding:0 var(--sp) 5rem}
+.spine{max-width:68ch}
+h1,h2,h3{font-family:var(--serif); font-weight:600; text-wrap:balance; margin:0}
+h1{font-size:clamp(2rem,1.3rem + 2.7vw,3rem); line-height:1.1; letter-spacing:-.015em}
+h2{font-size:clamp(1.35rem,1.1rem + .9vw,1.8rem); line-height:1.2}
+h3{font-size:1.05rem; line-height:1.3; font-family:var(--sans); font-weight:600}
+p{margin:0}
+.eyebrow{
+  font-family:var(--mono); font-size:.7rem; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--accent); font-weight:500;
+}
+.lede{font-size:1.1rem; color:var(--ink-soft); line-height:1.65}
+.stack{display:flex; flex-direction:column; gap:1rem}
+
+/* ---------- masthead ---------- */
+header.masthead{
+  border-bottom:1px solid var(--rule);
+  padding:clamp(2.5rem,1.5rem + 4vw,4.5rem) 0 clamp(1.8rem,1rem + 3vw,2.8rem);
+  margin-bottom:clamp(2rem,1.2rem + 3vw,3.2rem);
+}
+.masthead .stack{gap:1.1rem}
+.docline{
+  display:flex; flex-wrap:wrap; gap:.4rem 1.4rem; padding-top:.4rem;
+  font-family:var(--mono); font-size:.75rem; color:var(--ink-mute);
+}
+.docline b{color:var(--ink-soft); font-weight:500}
+
+/* ---------- sections ---------- */
+section{margin-top:clamp(2.6rem,1.6rem + 3.5vw,4.2rem)}
+.sechead{display:flex; flex-direction:column; gap:.5rem; margin-bottom:1.5rem}
+
+/* ---------- three clocks ---------- */
+.clocks{display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(268px,1fr))}
+.clock{
+  background:var(--surface); border:1px solid var(--rule); border-radius:3px;
+  padding:1.25rem 1.35rem 1.4rem; display:flex; flex-direction:column; gap:.7rem;
+  box-shadow:var(--shadow); position:relative; overflow:hidden;
+}
+.clock::before{content:""; position:absolute; inset:0 auto 0 0; width:3px; background:var(--accent)}
+.clock .cadence{
+  font-family:var(--mono); font-size:.7rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--accent); font-weight:500;
+}
+.clock h3{font-size:1.15rem; font-family:var(--serif); font-weight:600}
+.clock p{font-size:.9rem; color:var(--ink-soft); line-height:1.55}
+.clock dl{margin:.2rem 0 0; display:grid; grid-template-columns:auto 1fr; gap:.3rem .8rem; font-size:.82rem}
+.clock dt{font-family:var(--mono); font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-mute); padding-top:.12rem}
+.clock dd{margin:0; color:var(--ink)}
+
+/* ---------- figures ---------- */
+figure{margin:0}
+.fig-scroll{
+  overflow-x:auto; background:var(--surface); border:1px solid var(--rule);
+  border-radius:3px; padding:1.4rem 1.2rem; box-shadow:var(--shadow);
+}
+.fig-scroll svg{display:block; min-width:980px; width:100%; height:auto}
+figcaption{
+  margin-top:.85rem; font-size:.85rem; color:var(--ink-mute);
+  line-height:1.55; max-width:76ch;
+}
+.legend{display:flex; flex-wrap:wrap; gap:.5rem 1.5rem; margin-top:1rem; font-size:.8rem; color:var(--ink-soft)}
+.legend span{display:inline-flex; align-items:center; gap:.45rem}
+.key{width:22px; height:11px; border-radius:2px; flex:none; border:1px solid var(--rule)}
+
+/* ---------- svg type ---------- */
+svg text{font-family:var(--sans); fill:var(--ink)}
+.s-id{font-family:var(--mono); font-size:11px; font-weight:500; letter-spacing:.03em}
+.s-name{font-size:11.5px; font-weight:500}
+.s-sub{font-size:10px; fill:var(--ink-mute)}
+.s-band{font-family:var(--mono); font-size:10px; letter-spacing:.08em; fill:var(--ink-mute); text-transform:uppercase}
+.s-col{font-family:var(--mono); font-size:10px; letter-spacing:.1em; fill:var(--accent); font-weight:500}
+.s-item{font-size:11px}
+.s-gate{font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; fill:var(--ink-mute)}
+
+/* ---------- roles table ---------- */
+.tablewrap{overflow-x:auto; border:1px solid var(--rule); border-radius:3px; background:var(--surface); box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; min-width:820px; font-size:.86rem}
+th,td{text-align:left; padding:.7rem .85rem; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{
+  background:var(--wash); color:var(--accent); font-family:var(--mono);
+  font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; font-weight:500;
+  border-bottom:1px solid var(--rule);
+}
+tbody tr:last-child td{border-bottom:none}
+td.activity{color:var(--ink); font-weight:500; min-width:220px}
+td.who{color:var(--ink-soft)}
+.tag{
+  display:inline-block; font-family:var(--mono); font-size:.66rem; letter-spacing:.05em;
+  text-transform:uppercase; padding:.16rem .45rem; border-radius:2px; white-space:nowrap;
+  border:1px solid currentColor; font-weight:500;
+}
+.t-clock{color:var(--accent)}
+
+/* ---------- callout ---------- */
+.note{
+  border-left:3px solid var(--accent); background:var(--wash);
+  padding:1rem 1.2rem; border-radius:0 3px 3px 0; font-size:.9rem;
+  color:var(--ink-soft); line-height:1.6;
+}
+.note b{color:var(--ink); font-weight:600}
+
+/* ---------- decoder ---------- */
+.decoder{display:grid; gap:.75rem; grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.dec{
+  display:flex; gap:.9rem; padding:.95rem 1.1rem; background:var(--surface);
+  border:1px solid var(--rule); border-radius:3px; align-items:flex-start;
+}
+.dec .n{font-family:var(--mono); font-size:.74rem; color:var(--accent); font-weight:500; white-space:nowrap; padding-top:.15rem}
+.dec .d{font-size:.85rem; color:var(--ink-soft); line-height:1.5}
+.dec .d b{display:block; color:var(--ink); font-weight:600; font-size:.9rem; margin-bottom:.15rem}
+
+ul.plain{margin:0; padding-left:1.1rem; display:flex; flex-direction:column; gap:.5rem}
+ul.plain li{color:var(--ink-soft); font-size:.95rem; line-height:1.6}
+ul.plain li b{color:var(--ink); font-weight:600}
+
+footer{
+  margin-top:4rem; padding-top:1.4rem; border-top:1px solid var(--rule);
+  font-size:.8rem; color:var(--ink-mute); font-family:var(--mono);
+  display:flex; flex-wrap:wrap; gap:.4rem 1.5rem;
+}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent-lift); outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){
+  .clock,.dec{transition:border-color .18s ease}
+}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <div class="stack">
+    <span class="eyebrow">Tumor Evaluation Review Agent</span>
+    <h1>What the system is,<br>and how its parts fit</h1>
+    <p class="lede spine">An orientation map for the agent that re-derives RECIST&nbsp;1.1 and iRECIST response data,
+    reconciles it against the query history, and hands suspected issues to a person to adjudicate.
+    Read this before the plan or the specification — it exists to make those two documents navigable.</p>
+    <div class="docline">
+      <span><b>Governs</b> TEA-PLAN-001 v1.0.0 · TEA-SPEC-001 v1.1.1</span>
+      <span><b>Catalog</b> 85 review points, 83 live</span>
+      <span><b>Guidelines</b> RECIST 1.1 + iRECIST</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ THREE CLOCKS ============ -->
+<section id="clocks">
+  <div class="sechead spine">
+    <span class="eyebrow">The organising idea</span>
+    <h2>Three clocks, running at different speeds</h2>
+    <p class="lede">Most of the confusion about this system comes from reading it as one long process.
+    It is three, and they tick at different rates with different people involved. Nearly every question
+    of the form <em>“wait, when does that happen?”</em> resolves once you know which clock a thing belongs to.</p>
+  </div>
+
+  <div class="clocks">
+    <article class="clock">
+      <span class="cadence">Once · for the product</span>
+      <h3>Build the agent</h3>
+      <p>Six delivery steps, each with an approval gate. Produces the engine, the rule pack and the
+      web application. This is the clock we are on now, at Step&nbsp;2.</p>
+      <dl>
+        <dt>Runs</dt><dd>Once, then change-controlled</dd>
+        <dt>Owns</dt><dd>Clinical programming + CDM</dd>
+        <dt>Yields</dt><dd>Software and a frozen rule pack</dd>
+      </dl>
+    </article>
+
+    <article class="clock">
+      <span class="cadence">Once · per study</span>
+      <h3>Configure for a trial</h3>
+      <p>The protocol intake assistant reads the protocol and imaging charter, proposes every parameter
+      the rules depend on, and waits for a human to confirm or correct each one.</p>
+      <dl>
+        <dt>Runs</dt><dd>Before the first review run</dd>
+        <dt>Owns</dt><dd>Study data manager, with the medical monitor</dd>
+        <dt>Yields</dt><dd>A signed-off protocol configuration</dd>
+      </dl>
+    </article>
+
+    <article class="clock">
+      <span class="cadence">Every · data cut</span>
+      <h3>Review the data</h3>
+      <p>Ingest, derive, run the rules, reconcile against past queries, score confidence, write the
+      narrative. A person reads the findings and decides which become queries.</p>
+      <dl>
+        <dt>Runs</dt><dd>On demand, per data cut</dd>
+        <dt>Owns</dt><dd>Whoever is reviewing that study</dd>
+        <dt>Yields</dt><dd>Findings, and query text for manual issuing</dd>
+      </dl>
+    </article>
+  </div>
+
+  <div class="note spine" style="margin-top:1.4rem">
+    <b>The one rule that explains the architecture.</b> Every number and every verdict is computed by
+    ordinary code. The language model never does arithmetic, never creates or deletes a finding, and
+    never decides a response category. It writes explanations, reads free text, and offers a judgement
+    where the guideline itself asks for one. That single split is why the same verdicts come out of a
+    commercial API and a locally hosted model, and why validation stays tractable.
+  </div>
+</section>
+
+<!-- ============ DEVELOPMENT FLOW ============ -->
+<section id="delivery">
+  <div class="sechead spine">
+    <span class="eyebrow">Clock one</span>
+    <h2>Development process and its gates</h2>
+    <p class="lede">The steps are strictly sequential because each one’s output is the next one’s input.
+    The gates are where work stops until someone approves — they are the real schedule risk, not the build effort.</p>
+  </div>
+
+  <figure>
+    <div class="fig-scroll">
+      <svg viewBox="0 0 1180 268" role="img" aria-labelledby="d1t d1d">
+        <title id="d1t">Development process: six steps with approval gates</title>
+        <desc id="d1d">Step 1 development plan is complete. Step 2 programming specification is in progress.
+        Steps 3 to 6 — prototype output, UI design, code generation and finalisation — have not started.
+        Each step is separated by an approval gate.</desc>
+
+        <g>
+          <!-- step 1 : complete -->
+          <rect x="16" y="64" width="164" height="86" rx="3" fill="var(--accent)" stroke="var(--accent)"/>
+          <text class="s-id" x="30" y="86" fill="var(--ground)">STEP 1</text>
+          <text class="s-name" x="30" y="106" fill="var(--ground)">Development plan</text>
+          <text class="s-sub" x="30" y="123" fill="var(--wash)">TEA-PLAN-001</text>
+          <text class="s-sub" x="30" y="138" fill="var(--wash)">Approved 17 Aug</text>
+
+          <!-- step 2 : in progress -->
+          <rect x="212" y="64" width="164" height="86" rx="3" fill="var(--wash)" stroke="var(--accent)" stroke-width="2"/>
+          <text class="s-id" x="226" y="86" fill="var(--accent)">STEP 2</text>
+          <text class="s-name" x="226" y="106">Programming spec</text>
+          <text class="s-sub" x="226" y="123">TEA-SPEC-001</text>
+          <text class="s-sub" x="226" y="138" fill="var(--major)">Review round 2</text>
+
+          <!-- steps 3-6 : not started -->
+          <rect x="408" y="64" width="164" height="86" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-id" x="422" y="86" fill="var(--ink-mute)">STEP 3</text>
+          <text class="s-name" x="422" y="106">Prototype output</text>
+          <text class="s-sub" x="422" y="123">Dummy dataset</text>
+          <text class="s-sub" x="422" y="138">Findings, read by humans</text>
+
+          <rect x="604" y="64" width="164" height="86" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-id" x="618" y="86" fill="var(--ink-mute)">STEP 4</text>
+          <text class="s-name" x="618" y="106">UI design</text>
+          <text class="s-sub" x="618" y="123">8 screens</text>
+          <text class="s-sub" x="618" y="138">No code before approval</text>
+
+          <rect x="800" y="64" width="164" height="86" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-id" x="814" y="86" fill="var(--ink-mute)">STEP 5</text>
+          <text class="s-name" x="814" y="106">Code generation</text>
+          <text class="s-sub" x="814" y="123">Engine, rules, app</text>
+          <text class="s-sub" x="814" y="138">Validation package</text>
+
+          <rect x="996" y="64" width="164" height="86" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-id" x="1010" y="86" fill="var(--ink-mute)">STEP 6</text>
+          <text class="s-name" x="1010" y="106">Finalisation</text>
+          <text class="s-sub" x="1010" y="123">UAT on a real study</text>
+          <text class="s-sub" x="1010" y="138">Release 1.0.0</text>
+        </g>
+
+        <!-- connectors + gates -->
+        <g stroke="var(--rule)" stroke-width="1.5" fill="none">
+          <path d="M180 107 H212"/><path d="M376 107 H408"/><path d="M572 107 H604"/>
+          <path d="M768 107 H800"/><path d="M964 107 H996"/>
+        </g>
+        <g fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5">
+          <circle cx="196" cy="107" r="6"/><circle cx="392" cy="107" r="6"/>
+          <circle cx="588" cy="107" r="6"/><circle cx="784" cy="107" r="6"/><circle cx="980" cy="107" r="6"/>
+        </g>
+
+        <!-- gate labels -->
+        <g class="s-gate" text-anchor="middle">
+          <text x="196" y="176">GATE</text><text x="196" y="189">CDM + MM</text>
+          <text x="392" y="176">GATE</text><text x="392" y="189">rule pack frozen</text>
+          <text x="588" y="176">GATE</text><text x="588" y="189">output accepted</text>
+          <text x="784" y="176">GATE</text><text x="784" y="189">design approved</text>
+          <text x="980" y="176">GATE</text><text x="980" y="189">tests green</text>
+        </g>
+
+        <!-- what each gate protects -->
+        <line x1="16" y1="212" x2="1160" y2="212" stroke="var(--rule-soft)" stroke-width="1"/>
+        <text class="s-band" x="16" y="236">Gates exist so a wrong rule is caught on paper, not after 400 queries have reached sites</text>
+      </svg>
+    </div>
+    <figcaption>Steps 3 and 6 need a pilot study chosen; that decision is still open. The rule pack freezes at
+    the Step&nbsp;2 gate, which is why the specification review is the most consequential meeting in the schedule.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ RUNTIME PIPELINE ============ -->
+<section id="pipeline">
+  <div class="sechead spine">
+    <span class="eyebrow">Clocks two and three</span>
+    <h2>What happens inside one review run</h2>
+    <p class="lede">Eleven components in a fixed order. Vertical position is not decoration — it shows
+    which components are ordinary deterministic code and which call a language model. Read the lower
+    track as “this is arithmetic” and the upper track as “this is language”.</p>
+  </div>
+
+  <figure>
+    <div class="fig-scroll">
+      <svg viewBox="0 0 1290 372" role="img" aria-labelledby="d2t d2d">
+        <title id="d2t">Review pipeline: eleven components split by determinism</title>
+        <desc id="d2d">Components AC-11, AC-05 and AC-08 are LLM-assisted. AC-06 is hybrid.
+        AC-01, AC-02, AC-03, AC-04, AC-07, AC-09 and AC-10 are deterministic. Flow runs left to right
+        from protocol intake through ingestion, configuration, derivation, rules, adjudication,
+        query reconciliation, confidence, narrative, reporting and feedback.</desc>
+
+        <!-- track bands -->
+        <rect x="146" y="44" width="1130" height="76" fill="var(--wash)" opacity=".55" rx="3"/>
+        <rect x="146" y="216" width="1130" height="76" fill="var(--wash)" opacity=".28" rx="3"/>
+        <text class="s-band" x="16" y="78">LLM</text>
+        <text class="s-band" x="16" y="92">ASSISTED</text>
+        <text class="s-band" x="16" y="172">HYBRID</text>
+        <text class="s-band" x="16" y="250">DETERMIN-</text>
+        <text class="s-band" x="16" y="264">ISTIC</text>
+
+        <!-- connector through centres -->
+        <polyline points="196,82 298,254 400,254 502,254 604,254 706,82 808,168 910,254 1012,82 1114,254 1216,254"
+                  fill="none" stroke="var(--rule)" stroke-width="1.5"/>
+
+        <!-- LLM row -->
+        <g>
+          <rect x="150" y="54" width="92" height="56" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 2.5"/>
+          <text class="s-id" x="160" y="74" fill="var(--accent)">AC-11</text>
+          <text class="s-sub" x="160" y="90">Protocol</text>
+          <text class="s-sub" x="160" y="102">intake</text>
+
+          <rect x="660" y="54" width="92" height="56" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 2.5"/>
+          <text class="s-id" x="670" y="74" fill="var(--accent)">AC-05</text>
+          <text class="s-sub" x="670" y="90">Judgement</text>
+          <text class="s-sub" x="670" y="102">adjudicator</text>
+
+          <rect x="966" y="54" width="92" height="56" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 2.5"/>
+          <text class="s-id" x="976" y="74" fill="var(--accent)">AC-08</text>
+          <text class="s-sub" x="976" y="90">Narrative</text>
+          <text class="s-sub" x="976" y="102">composer</text>
+        </g>
+
+        <!-- hybrid row -->
+        <rect x="762" y="140" width="92" height="56" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="8 3"/>
+        <text class="s-id" x="772" y="160" fill="var(--accent)">AC-06</text>
+        <text class="s-sub" x="772" y="176">Query</text>
+        <text class="s-sub" x="772" y="188">reconciler</text>
+
+        <!-- deterministic row -->
+        <g>
+          <rect x="252" y="226" width="92" height="56" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text class="s-id" x="262" y="246" fill="var(--accent)">AC-01</text>
+          <text class="s-sub" x="262" y="262">Ingestion</text>
+
+          <rect x="354" y="226" width="92" height="56" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text class="s-id" x="364" y="246" fill="var(--accent)">AC-02</text>
+          <text class="s-sub" x="364" y="262">Config</text>
+
+          <rect x="456" y="226" width="92" height="56" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text class="s-id" x="466" y="246" fill="var(--accent)">AC-03</text>
+          <text class="s-sub" x="466" y="262">Derivations</text>
+
+          <rect x="558" y="226" width="92" height="56" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text class="s-id" x="568" y="246" fill="var(--accent)">AC-04</text>
+          <text class="s-sub" x="568" y="262">Rule engine</text>
+
+          <rect x="864" y="226" width="92" height="56" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text class="s-id" x="874" y="246" fill="var(--accent)">AC-07</text>
+          <text class="s-sub" x="874" y="262">Confidence</text>
+
+          <rect x="1068" y="226" width="92" height="56" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text class="s-id" x="1078" y="246" fill="var(--accent)">AC-09</text>
+          <text class="s-sub" x="1078" y="262">Reporting</text>
+
+          <rect x="1170" y="226" width="92" height="56" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text class="s-id" x="1180" y="246" fill="var(--accent)">AC-10</text>
+          <text class="s-sub" x="1180" y="262">Feedback</text>
+        </g>
+
+        <!-- annotations -->
+        <line x1="146" y1="314" x2="1276" y2="314" stroke="var(--rule-soft)"/>
+        <g stroke="var(--rule)" stroke-width="1" fill="none">
+          <path d="M196 292 V314"/><path d="M502 282 V314"/><path d="M1216 282 V314"/>
+        </g>
+        <text class="s-sub" x="150" y="334">AC-11 runs once per study,</text>
+        <text class="s-sub" x="150" y="348">before any review run</text>
+        <text class="s-sub" x="456" y="334">The arithmetic every</text>
+        <text class="s-sub" x="456" y="348">rule depends on</text>
+        <text class="s-sub" x="820" y="334">Where hundreds of findings</text>
+        <text class="s-sub" x="820" y="348">become a ranked worklist</text>
+        <text class="s-sub" x="1120" y="334">Dispositions feed the</text>
+        <text class="s-sub" x="1120" y="348">next run’s confidence</text>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><i class="key" style="background:var(--surface); border-color:var(--accent)"></i> Deterministic — code only, identical across providers</span>
+      <span><i class="key" style="background:var(--surface); border-color:var(--accent); border-style:dashed"></i> LLM-assisted — language, never verdicts</span>
+      <span><i class="key" style="background:var(--wash)"></i> Track band</span>
+    </div>
+    <figcaption>If the model is unavailable, the run still completes: every LLM task has a deterministic
+    template fallback, and confidence falls back to the rule’s own base rate. The findings get plainer, never wrong.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ DATA LINEAGE ============ -->
+<section id="lineage">
+  <div class="sechead spine">
+    <span class="eyebrow">Source data to output data</span>
+    <h2>Where the data comes from, and where it goes</h2>
+    <p class="lede">The important shape here is the loop at the bottom. The agent reads an export and
+    produces text; a person issues the query. Nothing the agent writes reaches the EDC on its own,
+    which is what keeps it decision support rather than a system of record.</p>
+  </div>
+
+  <figure>
+    <div class="fig-scroll">
+      <svg viewBox="0 0 1280 486" role="img" aria-labelledby="d3t d3d">
+        <title id="d3t">Data lineage from source systems to issued query</title>
+        <desc id="d3d">Five source inputs feed a canonical model, which feeds derivations and the rule
+        catalog, producing findings. A human reviews findings and issues approved query text manually
+        into the EDC, whose answers return as source data at the next data cut.</desc>
+
+        <!-- column headers -->
+        <text class="s-col" x="20" y="24">SOURCE DATA</text>
+        <text class="s-col" x="272" y="24">CANONICAL MODEL</text>
+        <text class="s-col" x="524" y="24">AGENT COMPUTATION</text>
+        <text class="s-col" x="776" y="24">OUTPUT DATA</text>
+        <text class="s-col" x="1028" y="24">HUMAN ACTION</text>
+        <line x1="20" y1="34" x2="1260" y2="34" stroke="var(--rule)"/>
+
+        <!-- col 1 : sources -->
+        <g>
+          <rect x="20" y="50" width="216" height="46" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-name" x="32" y="70">Veeva EDC export</text>
+          <text class="s-sub" x="32" y="86">Lesions, measurements, responses</text>
+
+          <rect x="20" y="104" width="216" height="46" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-name" x="32" y="124">CRF specification</text>
+          <text class="s-sub" x="32" y="140">Structured — drives the mapping</text>
+
+          <rect x="20" y="158" width="216" height="46" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-name" x="32" y="178">Protocol + imaging charter</text>
+          <text class="s-sub" x="32" y="194">Thresholds, windows, confirmation</text>
+
+          <rect x="20" y="212" width="216" height="46" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-name" x="32" y="232">Query report</text>
+          <text class="s-sub" x="32" y="248">Open, answered and closed</text>
+
+          <rect x="20" y="266" width="216" height="46" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-name" x="32" y="286">Cross-domain data</text>
+          <text class="s-sub" x="32" y="302">Dosing, AEs, therapy, disposition</text>
+        </g>
+
+        <!-- col 2 : canonical -->
+        <rect x="272" y="50" width="216" height="262" rx="3" fill="var(--wash)" stroke="var(--accent)"/>
+        <text class="s-id" x="284" y="72" fill="var(--accent)">TEA-CTR-001</text>
+        <text class="s-sub" x="284" y="90">12 entities, units normalised,</text>
+        <text class="s-sub" x="284" y="104">lesion identity resolved</text>
+        <line x1="284" y1="116" x2="476" y2="116" stroke="var(--rule)"/>
+        <g class="s-item">
+          <text x="284" y="136">Study · ProtocolConfig</text>
+          <text x="284" y="156">Subject · Assessment</text>
+          <text x="284" y="176">Lesion · LesionMeasurement</text>
+          <text x="284" y="196">ReportedResponse</text>
+          <text x="284" y="216">Query</text>
+        </g>
+        <text class="s-sub" x="284" y="248">Rules never see a source</text>
+        <text class="s-sub" x="284" y="262">system’s field names — that</text>
+        <text class="s-sub" x="284" y="276">is what makes a second EDC</text>
+        <text class="s-sub" x="284" y="290">an adapter, not a rewrite.</text>
+
+        <!-- col 3 : computation -->
+        <g>
+          <rect x="524" y="50" width="216" height="76" rx="3" fill="var(--surface)" stroke="var(--accent)"/>
+          <text class="s-id" x="536" y="70" fill="var(--accent)">D-01 … D-10</text>
+          <text class="s-name" x="536" y="90">Derivations</text>
+          <text class="s-sub" x="536" y="106">Sum, nadir, % change, responses,</text>
+          <text class="s-sub" x="536" y="118">best overall, progression date</text>
+
+          <rect x="524" y="134" width="216" height="90" rx="3" fill="var(--surface)" stroke="var(--accent)"/>
+          <text class="s-id" x="536" y="154" fill="var(--accent)">85 review points</text>
+          <text class="s-name" x="536" y="174">Rule catalog</text>
+          <text class="s-sub" x="536" y="190">ST 5 · BL 17 · FU 14 · RS 21</text>
+          <text class="s-sub" x="536" y="204">IR 10 · XD 12 · QM 6</text>
+          <text class="s-sub" x="536" y="218">83 live, 2 retired</text>
+
+          <rect x="524" y="232" width="216" height="80" rx="3" fill="var(--surface)" stroke="var(--accent)"/>
+          <text class="s-id" x="536" y="252" fill="var(--accent)">CONFIDENCE</text>
+          <text class="s-sub" x="536" y="270">Base rate × evidence ×</text>
+          <text class="s-sub" x="536" y="284">adjudication × acceptance</text>
+          <text class="s-sub" x="536" y="298">history × query history</text>
+        </g>
+
+        <!-- col 4 : output -->
+        <g>
+          <rect x="776" y="50" width="216" height="152" rx="3" fill="var(--wash)" stroke="var(--accent)"/>
+          <text class="s-id" x="788" y="70" fill="var(--accent)">TEA-CTR-002</text>
+          <text class="s-name" x="788" y="90">Finding</text>
+          <line x1="788" y1="100" x2="980" y2="100" stroke="var(--rule)"/>
+          <g class="s-item">
+            <text x="788" y="120">Severity + confidence %</text>
+            <text x="788" y="140">Evidence + derivation trace</text>
+            <text x="788" y="160">Five reviewer-facing texts</text>
+            <text x="788" y="180">Query link status</text>
+            <text x="788" y="196">Provenance stamp</text>
+          </g>
+
+          <rect x="776" y="212" width="216" height="46" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-name" x="788" y="232">Coverage report</text>
+          <text class="s-sub" x="788" y="248">What was not checked, and why</text>
+
+          <rect x="776" y="266" width="216" height="46" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-name" x="788" y="286">Exports</text>
+          <text class="s-sub" x="788" y="302">XLSX, CSV, formatted report</text>
+        </g>
+
+        <!-- col 5 : human -->
+        <g>
+          <rect x="1028" y="50" width="216" height="76" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-name" x="1040" y="70">Review and disposition</text>
+          <text class="s-sub" x="1040" y="88">Worklist, subject 360,</text>
+          <text class="s-sub" x="1040" y="102">evidence panel</text>
+          <text class="s-sub" x="1040" y="116" fill="var(--accent)">A person decides. Always.</text>
+
+          <rect x="1028" y="134" width="216" height="62" rx="3" fill="var(--surface)" stroke="var(--rule)"/>
+          <text class="s-name" x="1040" y="154">Approved query text</text>
+          <text class="s-sub" x="1040" y="172">Edited before it goes out</text>
+          <text class="s-sub" x="1040" y="186">Issued manually into the EDC</text>
+
+          <rect x="1028" y="204" width="216" height="62" rx="3" fill="var(--surface)" stroke="var(--critical)" stroke-width="1.5"/>
+          <text class="s-name" x="1040" y="224" fill="var(--critical)">Never automatic</text>
+          <text class="s-sub" x="1040" y="242">The agent has no write path</text>
+          <text class="s-sub" x="1040" y="256">to any external system</text>
+        </g>
+
+        <!-- forward arrows -->
+        <g stroke="var(--accent)" stroke-width="1.5" fill="none" marker-end="url(#ar)">
+          <path d="M236 181 H266"/>
+          <path d="M488 181 H518"/>
+          <path d="M740 181 H770"/>
+          <path d="M992 126 H1022"/>
+        </g>
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/>
+          </marker>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--minor)"/>
+          </marker>
+          <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--rule)"/>
+          </marker>
+        </defs>
+
+        <!-- loop A : site answers return as source data -->
+        <path d="M1136 266 V400 H128 V322" fill="none" stroke="var(--minor)" stroke-width="1.5"
+              stroke-dasharray="6 4" marker-end="url(#ar2)"/>
+        <rect x="430" y="386" width="304" height="28" rx="3" fill="var(--ground)"/>
+        <text class="s-sub" x="442" y="404" fill="var(--minor)">Site answers return as source data at the next cut</text>
+
+        <!-- loop B : dispositions tune confidence -->
+        <path d="M1244 88 H1262 V444 H632 V322" fill="none" stroke="var(--rule)" stroke-width="1.5"
+              stroke-dasharray="3 4" marker-end="url(#ar3)"/>
+        <rect x="770" y="430" width="322" height="28" rx="3" fill="var(--ground)"/>
+        <text class="s-sub" x="782" y="448">Dispositions tune confidence — no rule release needed</text>
+      </svg>
+    </div>
+    <figcaption>Two loops close the system. Site answers come back as ordinary source data, where the
+    reconciler judges whether the answer justified the data. Reviewer dispositions feed the confidence
+    model, so a rule people keep rejecting is down-weighted inside the study rather than waiting for a release.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ ROLES ============ -->
+<section id="roles">
+  <div class="sechead spine">
+    <span class="eyebrow">Who does what</span>
+    <h2>Roles and responsibilities</h2>
+    <p class="lede">These are responsibilities, not system permissions. Release&nbsp;1 deliberately does
+    not enforce role-based access — anyone may review and approve, because no query is issued
+    automatically and review and issuing are often the same person.</p>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Activity</th><th>Clock</th><th>Leads</th><th>Approves</th><th>Contributes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="activity">Define review points and severities</td>
+          <td><span class="tag t-clock">Build</span></td>
+          <td class="who">Clinical data management</td>
+          <td class="who">Medical monitor</td>
+          <td class="who">Clinical programming</td>
+        </tr>
+        <tr>
+          <td class="activity">Agree confidence base rates</td>
+          <td><span class="tag t-clock">Build</span></td>
+          <td class="who">Clinical data management</td>
+          <td class="who">Medical monitor</td>
+          <td class="who">Clinical programming</td>
+        </tr>
+        <tr>
+          <td class="activity">Implement engine, rules and application</td>
+          <td><span class="tag t-clock">Build</span></td>
+          <td class="who">Clinical programming</td>
+          <td class="who">CDM at each gate</td>
+          <td class="who">Quality / validation</td>
+        </tr>
+        <tr>
+          <td class="activity">Validation package and change control</td>
+          <td><span class="tag t-clock">Build</span></td>
+          <td class="who">Quality / validation</td>
+          <td class="who">Quality / validation</td>
+          <td class="who">Clinical programming</td>
+        </tr>
+        <tr>
+          <td class="activity">Approve model deployment and data egress</td>
+          <td><span class="tag t-clock">Build</span></td>
+          <td class="who">IT security / privacy</td>
+          <td class="who">IT security / privacy</td>
+          <td class="who">Clinical programming</td>
+        </tr>
+        <tr>
+          <td class="activity">Confirm protocol parameter checkpoints</td>
+          <td><span class="tag t-clock">Per study</span></td>
+          <td class="who">Study data manager</td>
+          <td class="who">Medical monitor</td>
+          <td class="who">Agent proposes, human confirms</td>
+        </tr>
+        <tr>
+          <td class="activity">Map the CRF and verify field availability</td>
+          <td><span class="tag t-clock">Per study</span></td>
+          <td class="who">Clinical programming</td>
+          <td class="who">Study data manager</td>
+          <td class="who">CRF specification</td>
+        </tr>
+        <tr>
+          <td class="activity">Trigger a review run and triage findings</td>
+          <td><span class="tag t-clock">Per data cut</span></td>
+          <td class="who">Study data manager</td>
+          <td class="who">—</td>
+          <td class="who">Agent ranks by confidence</td>
+        </tr>
+        <tr>
+          <td class="activity">Adjudicate clinical judgement findings</td>
+          <td><span class="tag t-clock">Per data cut</span></td>
+          <td class="who">Medical monitor</td>
+          <td class="who">Medical monitor</td>
+          <td class="who">Study data manager</td>
+        </tr>
+        <tr>
+          <td class="activity">Edit and issue the query into the EDC</td>
+          <td><span class="tag t-clock">Per data cut</span></td>
+          <td class="who">Study data manager</td>
+          <td class="who">Study data manager</td>
+          <td class="who">Never the agent</td>
+        </tr>
+        <tr>
+          <td class="activity">Answer the query, correct the data</td>
+          <td><span class="tag t-clock">Per data cut</span></td>
+          <td class="who">Investigator site</td>
+          <td class="who">Investigator site</td>
+          <td class="who">—</td>
+        </tr>
+        <tr>
+          <td class="activity">Review rule performance and retune</td>
+          <td><span class="tag t-clock">Per data cut</span></td>
+          <td class="who">Clinical data management</td>
+          <td class="who">Medical monitor</td>
+          <td class="who">Dispositions feed this automatically</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note spine" style="margin-top:1.4rem">
+    <b>One responsibility never moves.</b> The agent produces suspicions. A qualified person confirms
+    every issue and issues every query. Findings are phrased as things to check, the confidence rate
+    and determination mode are always on screen, and rejecting a finding takes one click — all of it
+    designed to keep the reviewer’s judgement engaged rather than deferring to the machine.
+  </div>
+</section>
+
+<!-- ============ DECODER ============ -->
+<section id="decoder">
+  <div class="sechead spine">
+    <span class="eyebrow">Reading the documents</span>
+    <h2>Which artifact governs what</h2>
+    <p class="lede">Identifiers appear constantly across the workbooks. This is what each family means
+    and which document owns it.</p>
+  </div>
+
+  <div class="decoder">
+    <div class="dec"><span class="n">OBJ · FR · NFR · REG</span><span class="d"><b>Development plan</b>Objectives and requirements. Approved, and the parent of everything below.</span></div>
+    <div class="dec"><span class="n">AC-01 … AC-11</span><span class="d"><b>Components</b>The eleven runtime parts. Named in the plan, specified in the pipeline.</span></div>
+    <div class="dec"><span class="n">D-01 … D-10</span><span class="d"><b>Derivations</b>The arithmetic. If one of these is wrong, many rules are wrong together.</span></div>
+    <div class="dec"><span class="n">TE-XX-000</span><span class="d"><b>Review points</b>The 85 rules, by family. Ids are permanent and never reused, even when retired.</span></div>
+    <div class="dec"><span class="n">ID-01 … ID-08</span><span class="d"><b>Interpretations</b>Where the guideline is silent. Each has a stated default, confirmed per study.</span></div>
+    <div class="dec"><span class="n">TEA-CTR-001 / 002</span><span class="d"><b>Data contracts</b>What goes in, what comes out. Adapters target these, not each other.</span></div>
+    <div class="dec"><span class="n">P-ADJ · P-MATCH · P-NARRATE</span><span class="d"><b>Prompt contracts</b>Every model call, with its input and its required output schema.</span></div>
+    <div class="dec"><span class="n">G-01 … G-07</span><span class="d"><b>Guardrails</b>What the model is structurally prevented from doing, not merely asked not to do.</span></div>
+    <div class="dec"><span class="n">SQ · OI</span><span class="d"><b>Open items</b>Decisions still needed. SQ at the specification gate, OI carried from the plan review.</span></div>
+  </div>
+</section>
+
+<!-- ============ WHAT TO WATCH ============ -->
+<section id="watch">
+  <div class="sechead spine">
+    <span class="eyebrow">If you read nothing else</span>
+    <h2>Five things that decide whether this works</h2>
+  </div>
+  <ul class="plain spine">
+    <li><b>The deterministic split holds or it doesn’t.</b> It is what makes local-model hosting, reproducibility and validation possible at once. Erode it and all three go.</li>
+    <li><b>Silence is a feature.</b> A reviewer handed 400 findings reviews none. Deduplication, query reconciliation and confidence ranking are load-bearing, not polish.</li>
+    <li><b>Confidence must be calibrated, not asserted.</b> A confidence rate people learn to distrust is worse than none, because it invites unread query issuing. It gets measured against actual acceptance.</li>
+    <li><b>Coverage has to be published.</b> The danger is a reviewer assuming the agent checked something it never checked. Every run states what was not evaluated, and why.</li>
+    <li><b>The rule pack has to stay cheap to change.</b> Adding a review point is a declarative change with its own tests. The moment it needs engine surgery, the catalog stops growing.</li>
+  </ul>
+</section>
+
+<footer>
+  <span>TEA concept overview</span>
+  <span>Derived from TEA-PLAN-001 v1.0.0 and TEA-SPEC-001 v1.1.1</span>
+  <span>Rule pack 1.1.0 — 85 points, 83 live</span>
+</footer>
+
+</div>

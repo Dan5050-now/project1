@@ -11,6 +11,7 @@ docs/
   plan/TEA-PLAN-001_development-plan.xlsx            TEA-PLAN-001  v1.0.0  APPROVED
   spec/TEA-SPEC-001_programming-specification.xlsx   TEA-SPEC-001  v1.0.0  DRAFT
   spec/rule-catalog.yaml                             machine-readable rule catalog
+  concept/tea-system-map.html                        concept overview — read this first
   contracts/*.json                                   input and finding data contracts
   superseded/                                        v0.1.0 XML drafts, history only
 tools/
@@ -33,8 +34,16 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 | Document | Version | Status | Next |
 |---|---|---|---|
 | TEA-PLAN-001 Development Plan | 1.0.0 | **APPROVED** 2026-08-17 | — |
-| TEA-SPEC-001 Programming Specification | 1.1.0 | DRAFT | Step 2 review, round 2 |
+| TEA-SPEC-001 Programming Specification | 1.1.1 | DRAFT | Step 2 review, round 2 |
 | Rule catalog | 1.1.0 | DRAFT | Frozen at the Step 2 gate |
+| Concept overview | — | Current | Regenerate when the plan or spec changes |
+
+## Where to start
+
+`docs/concept/tea-system-map.html` is the orientation map: the three clocks the system runs
+on, the development gates, the review pipeline, data lineage from EDC export to issued
+query, and roles and responsibilities. It is derived from the plan and the specification
+and carries no independent authority — where it disagrees with them, they win.
 
 Steps 3–6 (prototype output, UI design, code generation, final application) are gated on
 approval of the specification.

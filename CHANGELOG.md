@@ -3,6 +3,26 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## Concept overview — 2026-08-21
+
+### Added
+- `docs/concept/tea-system-map.html` — a visual orientation map for readers coming to the
+  project cold, published as an artifact. Frames the system as **three clocks** running at
+  different cadences (build once, configure once per study, review every data cut), which
+  is what makes the eleven components and six delivery steps legible as one thing.
+- Three diagrams: the development process with its approval gates; the review pipeline,
+  where vertical position encodes the deterministic-versus-LLM split rather than decorating
+  it; and data lineage from source systems through the canonical model to an issued query,
+  including the two feedback loops that close the system.
+- A roles and responsibilities matrix spanning all three clocks, stating explicitly that
+  these are responsibilities rather than system permissions, since release 1 does not
+  enforce role-based access (OQ-08).
+- An identifier decoder mapping each id family (OBJ, AC, D, TE-XX-000, ID, TEA-CTR, P-, G-,
+  SQ, OI) to the document that owns it.
+
+The overview is derived from the controlled documents and has no independent authority.
+Where it disagrees with the plan or the specification, they win.
+
 ## [1.1.1] — 2026-08-19
 
 ### Fixed
