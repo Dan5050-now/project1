@@ -37,8 +37,8 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 | Document | Version | Status | Next |
 |---|---|---|---|
 | TEA-PLAN-001 Development Plan | 1.0.0 | **APPROVED** 2026-08-17 | — |
-| TEA-SPEC-001 Programming Specification | 1.2.0 | DRAFT | Rule_Messages review |
-| Rule catalog | 1.2.0 | Logic confirmed | Freezes when Rule_Messages is accepted |
+| TEA-SPEC-001 Programming Specification | 1.3.0 | DRAFT | Confirm the 27 round-3 changes |
+| Rule catalog | 1.3.0 | Logic confirmed | Freezes when the round-3 changes are confirmed |
 | Concept overview (HTML + PPTX) | — | Current | Regenerate when the plan or spec changes |
 
 ## Where to start
@@ -48,10 +48,11 @@ on, the development gates, the review pipeline, data lineage from EDC export to 
 query, and roles and responsibilities. It is derived from the plan and the specification
 and carries no independent authority — where it disagrees with them, they win.
 
-Step 2 is part-done. All 85 rules were dispositioned across two review rounds
-(2026-08-19 and 2026-08-21) and the logic, severities and confidence base rates are settled.
-**Rule_Messages — the query wording a site actually reads — has not been reviewed**, and the
-rule pack does not freeze until it is accepted.
+Step 2 is nearly done. All 85 rules, all 85 query messages and all nine open questions were
+accepted across three rounds. A final reviewer-lens pass — reading the rules as a clinical
+data manager and as a medical monitor would — then changed **27 rules**: 19 query texts
+rewritten and 8 rule logics amended. Those 27 are what remains to confirm before the rule
+pack freezes.
 
 Steps 3–6 (prototype output, UI design, code generation, final application) are gated on
 approval of the specification.
@@ -106,6 +107,21 @@ python3 tools/check_workbook_integrity.py file.xlsx  # one workbook
 ```
 
 Run it in CI alongside the drift check, and after any change to a workbook builder.
+
+## Query style check
+
+`tools/check_query_style.py` enforces the query message house rules (TEA-QS-001, the
+Query_Style sheet). The reviewer-lens pass removed guideline citations and statements of the
+expected answer from 19 query templates; this keeps them out.
+
+```bash
+python3 tools/check_query_style.py
+```
+
+It fails on: a guideline cited as authority (SQ-05), a query that states the expected answer,
+one that instructs deletion of recorded data, one that asks site staff for a medical
+judgement, and anything over 400 characters. Naming a CRF field — "the iRECIST response
+field" — is allowed and is not treated as a citation.
 
 ## Regenerating the slide deck
 

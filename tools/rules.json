@@ -24,7 +24,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-ST-002",
@@ -36,10 +40,10 @@
   "mode": "DETERMINISTIC",
   "status": "ACTIVE",
   "downgradeable": false,
-  "confidence_base_rate": 0.72,
+  "confidence_base_rate": 0.8,
   "intent": "The same anatomical lesion must not be recorded twice.",
   "required_fields": "",
-  "logic": "group lesions by (subject, organ, laterality, normalised location_detail)\nif group size > 1 and both are TARGET or both NON_TARGET: raise finding",
+  "logic": "group lesions by (subject, organ, laterality, normalised location_detail)\nif group size > 1 and all members share the same category:\n    if baseline values differ by <= config.duplicate_size_tolerance_mm (default 2)\n       or any member has no baseline value:\n           raise finding\n\nguards:\n  - no finding where the descriptions carry distinguishing detail\n    (segment, lobe, station, numbering) \u2014 two separate lesions, not a duplicate\n  - no finding where baseline values differ materially: distinct lesions",
   "msg_review_point": "Duplicate recording of the same lesion under two lesion numbers.",
   "msg_issue": "Subject {subject_id}: lesions {lesion_id_a} and {lesion_id_b} are both recorded as {category} at {organ} {laterality} ({location_a} / {location_b}).",
   "msg_reason": "If the same lesion is recorded twice, it is counted twice in the sum of diameters, inflating tumor burden and distorting percent change and the nadir.",
@@ -51,7 +55,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "MM",
+  "r3_change": "Grouping on normalised location text collides two genuinely separate lesions in the same organ \u2014 two distinct liver metastases are routine. Added the size and description discriminators a monitor would apply before calling it a duplicate.",
+  "msg_query_before": "",
+  "logic_before": "group lesions by (subject, organ, laterality, normalised location_detail)\nif group size > 1 and both are TARGET or both NON_TARGET: raise finding"
  },
  {
   "id": "TE-ST-003",
@@ -70,7 +78,7 @@
   "msg_review_point": "Measurement axis for lymph node lesions.",
   "msg_issue": "Subject {subject_id}, {visit}, lesion {lesion_id} ({organ} node): the recorded measurement appears to be a longest diameter rather than a short axis.",
   "msg_reason": "RECIST 1.1 requires the short axis for nodal lesions, at baseline and at every follow-up. Using the longest diameter overstates the nodal contribution to the sum and can mask a response or create a false progression.",
-  "msg_query": "Lesion {lesion_id} is a lymph node. Please confirm the measurement recorded at {visit} is the short axis; if the longest diameter was recorded, please correct it.",
+  "msg_query": "Lesion {lesion_id} is recorded as a lymph node. Please confirm, against the source imaging report, which axis the measurement recorded at {visit} represents and whether the value is correct.",
   "msg_tips": "Nodal lesions were only formally distinguished from RECIST 1.0 onwards in version 1.1; sites experienced with older studies frequently record the long axis out of habit.",
   "tests": [],
   "rationale": "RECIST 1.1 requires nodal lesions to be measured in short axis. The check is on whether short axis can be established, not on whether a particular field was collected.",
@@ -78,7 +86,11 @@
   "r1_comment": "Some CRF doesn't collect the type of size, instead the CRF directly asks sites to enter size based on the appropriate type. Consider the field name directly mentions right size type, if there's no size type selection field in the CRF.",
   "r1_response": "AMENDED. Axis type is now resolved at ingestion in priority order rather than assumed to be a collected field: an explicit axis-type field if one exists, otherwise the axis implied by the CRF field itself as declared in the structured CRF specification, otherwise the protocol default. The rule fires only when no source establishes that a nodal measurement is a short axis.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the instruction to correct the value. The query now asks the site to check the source rather than telling them which axis is wrong.",
+  "msg_query_before": "Lesion {lesion_id} is a lymph node. Please confirm the measurement recorded at {visit} is the short axis; if the longest diameter was recorded, please correct it.",
+  "logic_before": ""
  },
  {
   "id": "TE-ST-004",
@@ -105,7 +117,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-ST-005",
@@ -132,7 +148,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-001",
@@ -163,7 +183,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-002",
@@ -190,7 +214,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-003",
@@ -217,7 +245,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-004",
@@ -236,7 +268,7 @@
   "msg_review_point": "Eligibility of lymph nodes as target lesions (short axis \u2265 15 mm).",
   "msg_issue": "Subject {subject_id}: nodal target lesion {lesion_id} ({organ}) has a baseline short axis of {value} mm, below the 15 mm requirement.",
   "msg_reason": "RECIST 1.1 requires a short axis of at least 15 mm for a node to be measurable and selectable as a target lesion. Nodes with a short axis of 10 to under 15 mm are pathological but non-measurable and should be recorded as non-target; nodes under 10 mm are non-pathological and should not be recorded at all.",
-  "msg_query": "Nodal target lesion {lesion_id} has a baseline short axis of {value} mm. Please confirm the measurement; a node with short axis below 15 mm should be recorded as a non-target lesion (10 to <15 mm) or not recorded (<10 mm).",
+  "msg_query": "Nodal target lesion {lesion_id} has a baseline short axis of {value} mm recorded at {visit}. Please confirm against the source imaging report whether this measurement is correct, and whether this node was intended to be recorded as a target lesion.",
   "msg_tips": "This is one of the most frequent baseline errors. Verify that the recorded value is a short axis and not a longest diameter before concluding the selection was wrong.",
   "tests": [
    "short axis exactly 15 mm \u2192 no finding",
@@ -247,7 +279,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the sentence stating what the node should have been recorded as. That is the investigator's call, and stating it invites the site to confirm rather than check.",
+  "msg_query_before": "Nodal target lesion {lesion_id} has a baseline short axis of {value} mm. Please confirm the measurement; a node with short axis below 15 mm should be recorded as a non-target lesion (10 to <15 mm) or not recorded (<10 mm).",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-005",
@@ -266,7 +302,7 @@
   "msg_review_point": "Recording of lymph nodes that do not meet the pathological threshold.",
   "msg_issue": "Subject {subject_id}: node {lesion_id} ({organ}) has a baseline short axis of {value} mm and is recorded as a {category} lesion.",
   "msg_reason": "Under RECIST 1.1 a node with a short axis below 10 mm is considered non-pathological and is not recorded or followed. Recording it adds normal tissue to the disease assessment and can prevent a complete response from being assigned.",
-  "msg_query": "Node {lesion_id} has a baseline short axis of {value} mm, below the 10 mm pathological threshold. Please confirm whether this node should be recorded as disease; if not, please remove it from the assessment.",
+  "msg_query": "Node {lesion_id} has a baseline short axis of {value} mm recorded at {visit}. Please confirm whether this node was intended to be recorded as disease for this subject, and correct the record if it was not.",
   "msg_tips": "Where a node is clinically relevant despite being below threshold (for example biopsy-proven involvement), the site should document the rationale; consider accepting with a comment rather than a data change.",
   "tests": [],
   "rationale": "",
@@ -274,7 +310,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Removed 'please remove it from the assessment'. A query should never instruct a site to delete recorded data; it asks them to confirm intent and act on their own record.",
+  "msg_query_before": "Node {lesion_id} has a baseline short axis of {value} mm, below the 10 mm pathological threshold. Please confirm whether this node should be recorded as disease; if not, please remove it from the assessment.",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-006",
@@ -301,7 +341,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-007",
@@ -320,7 +364,7 @@
   "msg_review_point": "Selection of lesion types that RECIST classifies as non-measurable.",
   "msg_issue": "Subject {subject_id}: target lesion {lesion_id} is described as \"{location_detail}\" in {organ}, which appears to be {non_measurable_category}.",
   "msg_reason": "RECIST classifies {non_measurable_category} as non-measurable disease: it cannot be reproducibly measured in one dimension. Such disease must be recorded as non-target and assessed qualitatively. A non-measurable lesion inside the target sum makes the sum, and every percent change derived from it, unreliable.",
-  "msg_query": "Target lesion {lesion_id} is described as \"{location_detail}\". This appears to represent non-measurable disease under RECIST. Please confirm the lesion selection and, if appropriate, re-classify it as a non-target lesion.",
+  "msg_query": "Target lesion {lesion_id} is described as '{location_detail}'. Please confirm the lesion type, and whether this finding can be measured reproducibly in one dimension on the source imaging. If the description is incomplete, please add the detail from the imaging report.",
   "msg_tips": "Blastic bone lesions are non-measurable, but a lytic or mixed lytic-blastic lesion with an identifiable soft tissue component can be measurable on CT/MRI. Cystic metastases can be measurable, but where non-cystic lesions are available they are preferred as targets.",
   "tests": [],
   "rationale": "",
@@ -328,7 +372,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the guideline reference (SQ-05) and the instruction to re-classify. Asks the measurability question in plain terms instead.",
+  "msg_query_before": "Target lesion {lesion_id} is described as \"{location_detail}\". This appears to represent non-measurable disease under RECIST. Please confirm the lesion selection and, if appropriate, re-classify it as a non-target lesion.",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-008",
@@ -347,7 +395,7 @@
   "msg_review_point": "Eligibility of lesions within a prior radiotherapy field as target lesions.",
   "msg_issue": "Subject {subject_id}: target lesion {lesion_id} ({organ}) lies in a previously irradiated field (radiotherapy {rt_date}), with no documented progression at that site after treatment.",
   "msg_reason": "RECIST treats lesions in a previously irradiated area, or subjected to other locoregional therapy, as non-measurable unless progression of that lesion has been demonstrated since the treatment. Post-radiation change can mimic both response and progression.",
-  "msg_query": "Target lesion {lesion_id} is located within a prior radiotherapy field. Please confirm whether progression of this lesion has been documented since radiotherapy; if not, the lesion should be recorded as non-target.",
+  "msg_query": "Target lesion {lesion_id} is recorded within a prior radiotherapy field. Please confirm whether progression of this specific lesion has been documented since that radiotherapy, and provide the date and source document if so.",
   "msg_tips": "Also relevant for lesions treated with ablation, embolisation or surgery during the study \u2014 see TE-XD-004 for on-study local therapy.",
   "tests": [],
   "rationale": "",
@@ -355,7 +403,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the clause telling the site to record it as non-target. Asks for the evidence that decides the question, which is what the reviewer actually needs.",
+  "msg_query_before": "Target lesion {lesion_id} is located within a prior radiotherapy field. Please confirm whether progression of this lesion has been documented since radiotherapy; if not, the lesion should be recorded as non-target.",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-009",
@@ -382,7 +434,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-010",
@@ -409,7 +465,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-011",
@@ -436,7 +496,11 @@
   "r1_comment": "In case of the CRF not collecting manual entry for the reported sum, this rule should be ignored. The LLM needs to identify study's CRF capture the information by CRF specification.",
   "r1_response": "AMENDED, and this answers SQ-08. Status moves from ACTIVE to CONDITIONAL: the rule requires a site-entered sum field. Whether the sum is site-entered or system-derived is determined from the structured CRF specification at the AC-11 intake, and a derived sum deactivates the rule with an explicit NOT_EVALUATED in the coverage report rather than a silent pass. Applied to TE-FU-001 as well, which carries the identical condition at follow-up.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-012",
@@ -463,7 +527,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-013",
@@ -490,7 +558,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-014",
@@ -502,10 +574,10 @@
   "mode": "DETERMINISTIC",
   "status": "ACTIVE",
   "downgradeable": false,
-  "confidence_base_rate": 0.55,
+  "confidence_base_rate": 0.62,
   "intent": "The same lesion should be followed by the same modality throughout.",
   "required_fields": "",
-  "logic": "for lesion, visits in measurements grouped by lesion:\n    if distinct method_at_visit values > 1: raise finding",
+  "logic": "for lesion, visits in measurements grouped by lesion:\n    if distinct method_at_visit values > 1:\n        candidate = lesion\n\nif the same method change affects >= config.method_change_study_wide_pct (default 50)\n   of lesions at the same visit:\n       raise ONE study-level finding, audience STUDY_TEAM\nelse:\n       raise a per-lesion finding\n\nguards:\n  - no finding where the method change is recorded with a reason",
   "msg_review_point": "Consistency of imaging modality for each lesion across visits.",
   "msg_issue": "Subject {subject_id}: lesion {lesion_id} is measured by {method_a} at {visit_a} and by {method_b} at {visit_b}.",
   "msg_reason": "RECIST requires the same method of assessment and the same technique at baseline and during follow-up. Different modalities measure different things \u2014 a change of modality can produce an apparent size change of the order of the response thresholds without any true biological change.",
@@ -517,7 +589,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "MM",
+  "r3_change": "A study-wide modality change \u2014 a protocol amendment, a scanner replacement \u2014 was raising a finding on every lesion in every subject. That is a study-level observation, not a per-lesion data query.",
+  "msg_query_before": "",
+  "logic_before": "for lesion, visits in measurements grouped by lesion:\n    if distinct method_at_visit values > 1: raise finding"
  },
  {
   "id": "TE-BL-015",
@@ -544,7 +620,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-016",
@@ -571,7 +651,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-BL-017",
@@ -598,7 +682,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-001",
@@ -625,7 +713,11 @@
   "r1_comment": "",
   "r1_response": "AMENDED alongside TE-BL-011, which carries the identical condition. Accepted at round 1, but the same CRF-dependency applies at follow-up and the pair must move together.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-002",
@@ -652,7 +744,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-003",
@@ -679,7 +775,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-004",
@@ -706,7 +806,11 @@
   "r1_comment": "Provide the rationale insisting the proposed threshold. What material or information is referred to make this validation rule.",
   "r1_response": "RATIONALE ADDED. These thresholds are not drawn from RECIST \u2014 the guideline sets no outlier limits. They are heuristics aimed at transcription error, and they are declared as such rather than dressed up with a citation. Proposed for calibration against the golden dataset at Step 3, where the false-positive rate can actually be measured.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-005",
@@ -733,7 +837,11 @@
   "r1_comment": "Provide the rationale insisting the proposed threshold. What material or information is referred to make this validation rule.",
   "r1_response": "RATIONALE ADDED. This rule carries no numeric threshold; the parameter in it is the interpretation decision ID-01, which is a protocol question rather than a guideline constant.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-006",
@@ -760,7 +868,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-007",
@@ -787,7 +899,11 @@
   "r1_comment": "The proposed condition is fine. Since a protocol may define different assessment window for particular assessment timing, consider to get information about study's individual tumor assessment window period.",
   "r1_response": "AMENDED. The scalar interval and window are replaced by a per-visit schedule captured at the AC-11 protocol intake, so a protocol that tightens or widens the window at particular timepoints is honoured. The scalar remains as a fallback for protocols with a uniform interval.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-008",
@@ -814,7 +930,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-009",
@@ -833,7 +953,7 @@
   "msg_review_point": "Treatment of nodal target lesions that shrink below the pathological threshold.",
   "msg_issue": "Subject {subject_id}, {visit}: nodal target lesion {lesion_id} ({organ}) is recorded as {state_or_zero}.",
   "msg_reason": "Under RECIST 1.1 lymph nodes always retain a measurable short axis and are never recorded as absent; they continue to contribute their short axis to the sum even when it falls below 10 mm. The sum therefore need not reach zero for a complete response \u2014 what is required is that every pathological node has a short axis below 10 mm. Recording the node as zero understates the sum by its true short axis and can produce a false partial response or complete response.",
-  "msg_query": "Nodal target lesion {lesion_id} is recorded as {state_or_zero} at {visit}. Lymph nodes should continue to be measured in short axis at every visit, including when they normalise. Please enter the measured short axis.",
+  "msg_query": "Nodal target lesion {lesion_id} is recorded as {state_or_zero} at {visit}. Please confirm whether this node was measured at this visit and, if so, record the short axis from the source imaging report. If it could not be measured, please record the reason.",
   "msg_tips": "This is the single most common nodal error and it usually reflects a well-intentioned attempt to make the arithmetic produce a complete response. Explain the rule to the site rather than only requesting the correction.",
   "tests": [
    "nodal target with state ABSENT at cycle 4 \u2192 finding",
@@ -844,7 +964,11 @@
   "r1_comment": "The proposed condition could be applied to follow-up assessment? It's okay to check at baseline's tumor identification, but I'm not sure to check under follow-up assessment.",
   "r1_response": "AMENDED, and the scope was the wrong way round. The rule is only meaningful at follow-up: a nodal target cannot be absent at baseline, since it was selected for having a short axis of at least 15 mm. What it catches is a node recorded as absent or zero at follow-up once it has normalised, which drops it out of the sum and produces a falsely low sum and a spurious response. The rule is now explicitly restricted to follow-up, and the too-small-to-measure state is excluded so that ID-02 handling is not flagged as an error.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the guideline sentence (SQ-05) and the bare instruction to enter a measurement. Now allows for the case where the node genuinely was not measurable.",
+  "msg_query_before": "Nodal target lesion {lesion_id} is recorded as {state_or_zero} at {visit}. Lymph nodes should continue to be measured in short axis at every visit, including when they normalise. Please enter the measured short axis.",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-010",
@@ -871,7 +995,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-011",
@@ -883,10 +1011,10 @@
   "mode": "DETERMINISTIC",
   "status": "ACTIVE",
   "downgradeable": false,
-  "confidence_base_rate": 0.92,
+  "confidence_base_rate": 0.9,
   "intent": "Temporal plausibility against subject-level dates.",
   "required_fields": "subjects.death_date or subjects.discontinuation_date",
-  "logic": "if assessment_date > death_date: raise CRITICAL\nif assessment_date > discontinuation_date + config.post_treatment_followup_days: raise MAJOR",
+  "logic": "if assessment_date > death_date\n   or assessment_date > end_of_participation_date:\n       raise finding\n\nguards:\n  - no finding where assessment_date == death_date: the assessment may legitimately\n    precede death on the same day\n  - no finding where either date is partial to the point that the comparison cannot\n    be made \u2014 report NOT_EVALUATED rather than guessing",
   "msg_review_point": "Consistency of tumor assessment dates with subject disposition and vital status.",
   "msg_issue": "Subject {subject_id}: tumor assessment dated {date} at {visit}, after the recorded {reference_event} of {reference_date}.",
   "msg_reason": "An assessment dated after death or well beyond the end of follow-up indicates an error in one of the two dates. Either error affects analysis: an incorrect assessment date can move the progression date, and an incorrect death date affects survival analysis.",
@@ -898,7 +1026,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "MM",
+  "r3_change": "An assessment dated the same day as death is common and legitimate \u2014 the scan preceded the death that day. Firing on it produced an unanswerable query. Partial dates were also being treated as full ones.",
+  "msg_query_before": "",
+  "logic_before": "if assessment_date > death_date: raise CRITICAL\nif assessment_date > discontinuation_date + config.post_treatment_followup_days: raise MAJOR"
  },
  {
   "id": "TE-FU-012",
@@ -925,7 +1057,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-013",
@@ -952,7 +1088,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-FU-014",
@@ -964,10 +1104,10 @@
   "mode": "DETERMINISTIC",
   "status": "ACTIVE",
   "downgradeable": false,
-  "confidence_base_rate": 0.3,
+  "confidence_base_rate": 0.55,
   "intent": "Detect carried-forward values rather than genuine measurement.",
   "required_fields": "",
-  "logic": "if a lesion has the identical value at >= 3 consecutive assessments\n   and the lesion is > config.identical_value_min_mm (default 15): raise finding",
+  "logic": "if ALL target lesions for a subject carry identical values at >= 3 consecutive\n   assessments, and at least one lesion is > config.identical_value_min_mm (default 15):\n       raise finding\n\nguards:\n  - no finding where only some lesions repeat: genuinely stable disease does this\n  - no finding where the assessments are within config.identical_min_interval_days\n    of each other (default 21), where a real repeat read is plausible",
   "msg_review_point": "Detection of measurements that may have been carried forward rather than re-measured.",
   "msg_issue": "Subject {subject_id}: lesion {lesion_id} measures exactly {value} mm at {visits}.",
   "msg_reason": "Identical measurements of a lesion of this size across several timepoints are uncommon given normal measurement variability, and may indicate that a previous value was copied rather than the lesion re-measured. If so, the sum does not reflect the current tumor burden.",
@@ -979,7 +1119,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "MM",
+  "r3_change": "Per-lesion identical values are common in genuinely stable disease, which is why this sat at a 0.30 base rate. The pattern that actually signals copied data is every target lesion identical across visits. Narrowed to that, and the base rate rises accordingly.",
+  "msg_query_before": "",
+  "logic_before": "if a lesion has the identical value at >= 3 consecutive assessments\n   and the lesion is > config.identical_value_min_mm (default 15): raise finding"
  },
  {
   "id": "TE-RS-001",
@@ -998,7 +1142,7 @@
   "msg_review_point": "Derivation of the target lesion response from the sum of diameters, the baseline sum and the nadir.",
   "msg_issue": "Subject {subject_id}, {visit}: target lesion response is reported as {reported} but derives as {derived}. Sum of diameters {sum} mm; baseline {baseline_sum} mm ({pct_baseline}%); nadir {nadir_sum} mm at {nadir_visit} ({pct_nadir}%, absolute change {abs_nadir} mm).",
   "msg_reason": "{derivation_explanation}",
-  "msg_query": "The target lesion response recorded at {visit} is {reported}. Based on the recorded lesion measurements the sum of diameters is {sum} mm, a {pct_baseline}% change from baseline and a {pct_nadir}% change from the nadir of {nadir_sum} mm, which corresponds to {derived}. Please review the recorded response and the underlying measurements.",
+  "msg_query": "The target lesion response recorded at {visit} is {reported}, while the individual lesion measurements recorded for the same visit sum to {sum} mm. Please review the recorded response together with the lesion measurements against the source imaging report, and correct whichever does not match the source.",
   "msg_tips": "Before querying the response, confirm the measurements themselves: a response mismatch is frequently a symptom of a measurement or sum error already flagged for this subject. Check the linked findings for this subject first.",
   "tests": [
    "nadir 50 mm, current 60 mm (+20%, +10 mm) \u2192 PD",
@@ -1012,7 +1156,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the agent's derivation from the query. The percent-change arithmetic is reviewer-facing context, not something a site coordinator needs in order to re-check a record.",
+  "msg_query_before": "The target lesion response recorded at {visit} is {reported}. Based on the recorded lesion measurements the sum of diameters is {sum} mm, a {pct_baseline}% change from baseline and a {pct_nadir}% change from the nadir of {nadir_sum} mm, which corresponds to {derived}. Please review the recorded response and the underlying measurements.",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-002",
@@ -1031,7 +1179,7 @@
   "msg_review_point": "Application of both progression criteria: a relative increase of at least 20% and an absolute increase of at least 5 mm from the nadir.",
   "msg_issue": "Subject {subject_id}, {visit}: progression is reported. The sum increased from a nadir of {nadir_sum} mm to {sum} mm, a {pct_nadir}% increase but only {abs_nadir} mm in absolute terms.",
   "msg_reason": "RECIST 1.1 requires both a relative increase of at least {pd_pct}% and an absolute increase of at least {pd_abs} mm from the nadir. The absolute criterion was introduced precisely for small tumor burdens, where a 20% increase can fall within measurement variability. Here the absolute increase of {abs_nadir} mm does not reach {pd_abs} mm, so the derived response is {derived}.",
-  "msg_query": "Progressive disease is recorded at {visit} based on an increase from the nadir of {nadir_sum} mm to {sum} mm. This is a {pct_nadir}% increase but only {abs_nadir} mm in absolute terms, which does not meet the {pd_abs} mm absolute increase also required by RECIST 1.1. Please review the response assessment, unless progression is based on a new lesion or on unequivocal non-target progression.",
+  "msg_query": "Progressive disease is recorded at {visit}. The sum of diameters has increased from {nadir_sum} mm at {nadir_visit} to {sum} mm, a change of {abs_nadir} mm. Please confirm what the progression assessment at this visit was based on \u2014 the target lesion measurements, a new lesion, or worsening of non-target disease.",
   "msg_tips": "Confirm first whether progression was actually driven by a new lesion or by non-target progression, in which case the response is correct and this finding can be rejected. This check applies only to progression driven by the target sum.",
   "tests": [],
   "rationale": "RECIST 1.1 requires both a relative increase of at least 20% from nadir and an absolute increase of at least 5 mm. Applying only the relative criterion is the single most common progression error in collected data, and it deserves its own query text rather than the generic response-mismatch wording. Detection is guaranteed by TE-RS-001; this rule supplies the explanation.",
@@ -1040,7 +1188,11 @@
   "r1_response": "KEPT, with the relationship now declared explicitly. On the logic: the proposed variant uses AND, but PD requires both criteria, so 'PD not met' is pct < 20 OR abs < 5 \u2014 the AND form is narrower than the correct negation and would miss cases. That complete check already exists as TE-RS-001, which recomputes the response and compares. On duplication: yes, TE-RS-002 and TE-RS-003 are both subsumed by TE-RS-001 for detection. Their value is diagnostic, not detective \u2014 TE-RS-001 says the response is wrong, these say why, and the query text differs accordingly. They are now declared as cascade children of TE-RS-001, so when both fire the reviewer sees one finding carrying the specific reason, not two.",
   "cascade_parent": "TE-RS-001",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the guideline citation and the threshold arithmetic (SQ-05). Asks the one question that resolves the finding: what drove the PD call.",
+  "msg_query_before": "Progressive disease is recorded at {visit} based on an increase from the nadir of {nadir_sum} mm to {sum} mm. This is a {pct_nadir}% increase but only {abs_nadir} mm in absolute terms, which does not meet the {pd_abs} mm absolute increase also required by RECIST 1.1. Please review the response assessment, unless progression is based on a new lesion or on unequivocal non-target progression.",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-003",
@@ -1059,7 +1211,7 @@
   "msg_review_point": "Use of the nadir, rather than baseline, as the reference for progression.",
   "msg_issue": "Subject {subject_id}, {visit}: target response is reported as {reported}. The sum is {sum} mm, which is {pct_baseline}% relative to baseline ({baseline_sum} mm) but {pct_nadir}% relative to the nadir of {nadir_sum} mm recorded at {nadir_visit} \u2014 an absolute increase of {abs_nadir} mm.",
   "msg_reason": "Progression is assessed against the smallest sum recorded on study, including baseline, not against baseline itself. Because this subject responded before progressing, the comparison against baseline still looks favourable while the comparison against the nadir meets the progression criteria. The derived response is progressive disease.",
-  "msg_query": "At {visit} the sum of diameters is {sum} mm compared with a nadir of {nadir_sum} mm at {nadir_visit}, a {pct_nadir}% increase of {abs_nadir} mm, which meets the RECIST criteria for progression. The recorded response is {reported}. Please review the response assessment.",
+  "msg_query": "At {visit} the sum of diameters is {sum} mm, compared with the smallest sum recorded on study of {nadir_sum} mm at {nadir_visit}. The response recorded at {visit} is {reported}. Please confirm the response assessment for this visit against the source imaging report.",
   "msg_tips": "This is the most consequential single error class in tumor data: it delays or entirely misses the progression date and directly biases progression-free survival. Always check the nadir visit shown above is itself a complete assessment.",
   "tests": [],
   "rationale": "Removing the third condition widens detection, which is the safer direction. The nadir is the reference for progression under RECIST 1.1, and comparing against baseline after tumor shrinkage is the classic error this rule was written for \u2014 but it is not the only way to miss progression, and gating on it let the other ways through.",
@@ -1068,7 +1220,11 @@
   "r1_response": "AMENDED as suggested. The baseline comparison is removed from the gate, so the rule now catches every case where progression criteria are met from nadir but progression was not reported. The baseline comparison is retained purely as a discriminator: where percent change from baseline also falls short of the threshold, the site almost certainly compared against baseline instead of nadir, and the finding carries that specific wording and a higher confidence. Where it does not, the finding is still raised with generic wording.",
   "cascade_parent": "TE-RS-001",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the guideline citation (SQ-05) and replaced 'nadir' with 'the smallest sum recorded on study', which a site coordinator can act on without knowing the term.",
+  "msg_query_before": "At {visit} the sum of diameters is {sum} mm compared with a nadir of {nadir_sum} mm at {nadir_visit}, a {pct_nadir}% increase of {abs_nadir} mm, which meets the RECIST criteria for progression. The recorded response is {reported}. Please review the response assessment.",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-004",
@@ -1095,7 +1251,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-005",
@@ -1122,7 +1282,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-006",
@@ -1149,7 +1313,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-007",
@@ -1168,7 +1336,7 @@
   "msg_review_point": "Threshold for declaring unequivocal progression of non-target disease when measurable disease is present.",
   "msg_issue": "Subject {subject_id}, {visit}: unequivocal progression of non-target disease is reported while the target lesion response is {target_response} (sum {sum} mm, {pct_nadir}% from nadir) and no new lesion is recorded. Non-target findings: {non_target_breakdown}.",
   "msg_reason": "RECIST states that where measurable disease is present, unequivocal progression based on non-target disease alone should be an exceptional circumstance: the increase in overall tumor burden must be comparable in magnitude to the increase that would be required to declare progression for measurable disease. A modest increase in one non-target lesion is not sufficient, particularly while the target lesions are {target_response}.",
-  "msg_query": "Unequivocal progression of non-target disease is recorded at {visit} while the target lesions show {target_response}. Please confirm that the overall tumor burden has increased substantially, and provide the radiological description supporting unequivocal progression.",
+  "msg_query": "Progression of non-target disease is recorded at {visit} while the target lesions are recorded as {target_response}. Please provide the radiological description supporting the non-target assessment at this visit, from the source imaging report.",
   "msg_tips": "Genuine cases exist \u2014 for example a marked increase in a pleural effusion or in lymphangitic disease. The question to the site is not \"is this wrong\" but \"what supports unequivocal\". Where the answer supports it, accept and record the rationale so the same finding is not re-raised.",
   "tests": [],
   "rationale": "RECIST 1.1 treats unequivocal non-target progression in the presence of responding or stable measurable disease as an exceptional circumstance requiring substantial worsening of overall tumor burden. That judgement rests on the images and the investigator's overall impression, neither of which is in the collected data. Raising it as a site query invites a defensive answer; raising it to the study team invites a look at the images.",
@@ -1176,7 +1344,11 @@
   "r1_comment": "This isn't decisive with entered data only. Check whether it could downgrade the severity to 'INFO'.",
   "r1_response": "AMENDED to INFO. You are right that collected data cannot settle this \u2014 the guideline's test is a judgement about overall tumor burden that the recorded non-target states do not capture. Note the consequence, which is intended: INFO findings do not enter the default query worklist, so this becomes a study-team observation rather than a site query. The adjudicator can still escalate to MAJOR where the recorded descriptions actively contradict the reported progression.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "CDM",
+  "r3_change": "Removed 'please confirm that the overall tumor burden has increased substantially'. That is a medical judgement and does not belong in a query answered by site data staff. The query now asks only for the radiology description, which is a data request; the judgement stays with the monitor.",
+  "msg_query_before": "Unequivocal progression of non-target disease is recorded at {visit} while the target lesions show {target_response}. Please confirm that the overall tumor burden has increased substantially, and provide the radiological description supporting unequivocal progression.",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-008",
@@ -1195,7 +1367,7 @@
   "msg_review_point": "Application of the RECIST overall response table to the reported target, non-target and new lesion components.",
   "msg_issue": "Subject {subject_id}, {visit}: overall response is reported as {reported_overall}, while the recorded components (target {target}, non-target {non_target}, new lesion {new_lesion}) correspond to {derived_overall}.",
   "msg_reason": "{table_explanation}",
-  "msg_query": "The overall response recorded at {visit} is {reported_overall}. Based on the recorded components \u2014 target lesion response {target}, non-target response {non_target}, new lesions {new_lesion} \u2014 the overall response should be {derived_overall}. Please review.",
+  "msg_query": "The overall response recorded at {visit} is {reported_overall}, with target lesion response {target}, non-target response {non_target} and new lesions {new_lesion} recorded at the same visit. Please review the overall response against these components and correct whichever does not reflect the assessment.",
   "msg_tips": "The combinations most often mis-applied are: target complete response with persisting non-target disease, which is a partial response rather than a complete response; and any new lesion, which is progression regardless of the target and non-target results.",
   "tests": [
    "target CR, non-target Non-CR/Non-PD, no new \u2192 PR",
@@ -1208,7 +1380,11 @@
   "r1_response": "AMENDED. The rule now declares its component dependencies, and the cascade grouping suppresses the separate overall-response query whenever a component finding is already open for the same assessment. Where no component finding exists, the overall-response finding is raised alone and names which component drove the expected value, so the site receives one query identifying the specific field rather than two queries about the same visit.",
   "cascade_children": "TE-RS-001, TE-RS-005, TE-RS-009",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "CDM",
+  "r3_change": "Removed 'the overall response should be {derived_overall}'. Naming the expected value turns a check into an instruction, and if the derivation is wrong the site confirms the error.",
+  "msg_query_before": "The overall response recorded at {visit} is {reported_overall}. Based on the recorded components \u2014 target lesion response {target}, non-target response {non_target}, new lesions {new_lesion} \u2014 the overall response should be {derived_overall}. Please review.",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-009",
@@ -1235,7 +1411,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-010",
@@ -1262,7 +1442,11 @@
   "r1_comment": "Check if this rule is duplicate, considering TE-RS-008.\nIf duplicate rule, I suggest remove this rule, instead, add only iRECIST condition to the TE-RS-008.",
   "r1_response": "RETIRED \u2014 you are right. TE-RS-008 derives the overall response from the reported components, and the new-lesion flag is one of those components, so a recorded new lesion with a non-PD overall response already fires TE-RS-008. The one case that is not covered \u2014 a new lesion present in the lesion table while the flag says NO \u2014 is TE-RS-009. The iRECIST expectation needs no folding in, because TE-IR-001 already requires iUPD rather than PD where iRECIST applies. The id is retained permanently and never reused, so historical findings stay interpretable.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-011",
@@ -1289,7 +1473,11 @@
   "r1_comment": "New lesion could be confirmed by other organ/region not covered by the baseline image, because of doing other image by investigator's discretion. Suggest not to run this rule.",
   "r1_response": "RETIRED as rejected. Imaging performed at investigator discretion outside the baseline coverage is routine and entirely legitimate, and a new lesion found that way is a real new lesion. The rule assumed baseline coverage bounded where disease could be found, which is not how imaging is actually ordered. The id is retained permanently and never reused.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-012",
@@ -1316,7 +1504,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-013",
@@ -1335,7 +1527,7 @@
   "msg_review_point": "Dating of progression when an equivocal finding is subsequently confirmed.",
   "msg_issue": "Subject {subject_id}: lesion {lesion_id} was recorded as equivocal at {first_visit} ({first_date}) and confirmed at {confirm_visit} ({confirm_date}); the progression date is recorded as {recorded_pd_date}.",
   "msg_reason": "Where therapy continues after an equivocal finding and the finding is subsequently confirmed as a new lesion, progression is dated to the time of the initial observation, not to the confirming assessment. Using the later date overstates progression-free survival by {days_difference} days.",
-  "msg_query": "Lesion {lesion_id} was equivocal at {first_visit} and confirmed at {confirm_visit}. Please confirm the date of progression; per RECIST the progression date should be the date of the initial observation ({first_date}).",
+  "msg_query": "Lesion {lesion_id} was recorded as equivocal at {first_visit} and as confirmed at {confirm_visit}. The progression date recorded for this subject is {reported_pd_date}. Please confirm the progression date against the source imaging reports for both visits.",
   "msg_tips": "Under iRECIST the handling differs \u2014 the iUPD and iCPD dates are both retained and the analysis convention is protocol-specific. Check which criteria govern before applying this rule.",
   "tests": [],
   "rationale": "RECIST 1.1 dates progression to the first observation of a lesion subsequently confirmed as new. That provision governs only when the new lesion is the progression driver. Applying it where progression arose independently at the later visit would wrongly move the date earlier and shorten PFS.",
@@ -1343,7 +1535,11 @@
   "r1_comment": "This rule should consider the case that the visit j's data has definitive rationale of PD. E.g. At the visit j, there is evidence to determine PD due to other conditions (e.g. target lesion sum mm passes 20% worsen and over minimum increase)",
   "r1_response": "AMENDED. A guard now suppresses the finding where progression at visit j is independently established by the target or non-target criteria. Back-dating is only correct where the equivocal-then-confirmed lesion is what drove progression; where the target sum crossed the threshold at visit j in its own right, visit j is the correct progression date and the earlier equivocal observation is irrelevant to it.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "CDM",
+  "r3_change": "Removed 'per RECIST the progression date should be {first_date}' \u2014 both a guideline citation (SQ-05) and a statement of the answer.",
+  "msg_query_before": "Lesion {lesion_id} was equivocal at {first_visit} and confirmed at {confirm_visit}. Please confirm the date of progression; per RECIST the progression date should be the date of the initial observation ({first_date}).",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-014",
@@ -1370,7 +1566,11 @@
   "r1_comment": "Provide the rationale insisting the proposed threshold. What material or information is referred to make this validation rule.",
   "r1_response": "RATIONALE ADDED, and this one does have a guideline source, unlike TE-FU-004.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-015",
@@ -1397,7 +1597,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-016",
@@ -1416,7 +1620,7 @@
   "msg_review_point": "Permitted response categories for subjects with non-measurable disease only.",
   "msg_issue": "Subject {subject_id}, {visit}: overall response is reported as {reported_overall}, but no target lesions were selected at baseline.",
   "msg_reason": "A subject with non-measurable disease only can be assigned a complete response, Non-CR/Non-PD, progressive disease or not evaluable. Partial response and stable disease require measurable disease, since both are defined by a change in the sum of diameters. The corresponding category here is Non-CR/Non-PD.",
-  "msg_query": "The overall response at {visit} is recorded as {reported_overall} although no target lesions were identified at baseline. Please review; for subjects with non-measurable disease only, the appropriate categories are complete response, Non-CR/Non-PD, progressive disease or not evaluable.",
+  "msg_query": "The overall response at {visit} is recorded as {reported_overall}, and no target lesions are recorded at baseline for this subject. Please confirm the baseline lesion records and the overall response at this visit.",
   "msg_tips": "Check first whether target lesions were in fact selected but failed to load \u2014 a missing target lesion record produces this finding spuriously. Look for a companion structural finding on this subject.",
   "tests": [],
   "rationale": "",
@@ -1424,7 +1628,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the list of permitted response categories. The finding may equally be a missing baseline target lesion rather than a wrong response, and the original wording pointed at only one of the two.",
+  "msg_query_before": "The overall response at {visit} is recorded as {reported_overall} although no target lesions were identified at baseline. Please review; for subjects with non-measurable disease only, the appropriate categories are complete response, Non-CR/Non-PD, progressive disease or not evaluable.",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-017",
@@ -1451,7 +1659,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-018",
@@ -1478,7 +1690,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-019",
@@ -1505,7 +1721,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-020",
@@ -1520,7 +1740,7 @@
   "confidence_base_rate": 0.5,
   "intent": "Surface discordance where both streams exist.",
   "required_fields": "protocol_config.bicr_collected = true",
-  "logic": "for each assessment with both INVESTIGATOR and BICR responses:\n    if responses differ, or progression dates differ by > config.bicr_date_tolerance_days:\n        raise finding (INFO by default when the difference does not cross a PD boundary)",
+  "logic": "for each subject with both INVESTIGATOR and BICR streams:\n    discordant = assessments where responses differ,\n                 or progression dates differ by > config.bicr_date_tolerance_days\n    if discordant is non-empty:\n        raise ONE finding per subject listing the discordant assessments\n        severity MAJOR when any difference changes best overall response or the\n                       progression date; INFO otherwise\n\nguards:\n  - disabled by default; enabled per study in configuration (FR-12)\n  - audience STUDY_TEAM \u2014 never issued as a site query",
   "msg_review_point": "Concordance between the investigator assessment and the independent central review.",
   "msg_issue": "Subject {subject_id}, {visit}: investigator response {inv_response}, central review response {bicr_response}. {date_note}",
   "msg_reason": "Discordance between the investigator and central review is expected at some rate, but discordance that crosses a progression boundary affects the primary endpoint where the central review is the basis of analysis, and may indicate a systematic difference in lesion selection or measurement at this site.",
@@ -1532,7 +1752,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "MM",
+  "r3_change": "Was raising a finding per discordant assessment. A subject whose whole response history differs between investigator and BICR produced a finding at every visit. Now one finding per subject, listing the discordant timepoints, which is also how a monitor reconciles it.",
+  "msg_query_before": "",
+  "logic_before": "for each assessment with both INVESTIGATOR and BICR responses:\n    if responses differ, or progression dates differ by > config.bicr_date_tolerance_days:\n        raise finding (INFO by default when the difference does not cross a PD boundary)"
  },
  {
   "id": "TE-IR-001",
@@ -1551,7 +1775,7 @@
   "msg_review_point": "Assignment of unconfirmed progression when RECIST 1.1 progression criteria are first met under iRECIST.",
   "msg_issue": "Subject {subject_id}, {visit}: RECIST 1.1 progression criteria are met ({pd_driver_description}) and the iRECIST response is recorded as {reported_irecist}, with no preceding unconfirmed progression.",
   "msg_reason": "Under iRECIST, the first timepoint at which RECIST 1.1 progression criteria are met is assigned unconfirmed progression (iUPD). Confirmed progression (iCPD) can only be assigned at a subsequent assessment that demonstrates further worsening. Recording confirmed progression at first occurrence removes the confirmation step that iRECIST exists to provide, and may lead to treatment being discontinued for pseudoprogression.",
-  "msg_query": "RECIST 1.1 progression criteria are met at {visit} and the iRECIST response is recorded as {reported_irecist}. Under iRECIST the first occurrence of progression should be recorded as unconfirmed progression (iUPD), with confirmation at the next assessment. Please review.",
+  "msg_query": "The iRECIST response at {visit} is recorded as {reported_irecist}. The lesion measurements at this visit show an increase against the smallest sum recorded on study ({nadir_sum} mm). Please confirm the iRECIST response recorded for this visit against the source imaging report.",
   "msg_tips": "The commonest cause is the site applying RECIST 1.1 habits to an iRECIST study. Where both RECIST 1.1 and iRECIST responses are collected, the RECIST 1.1 field correctly reads PD while the iRECIST field should read iUPD \u2014 the two are not in conflict.",
   "tests": [],
   "rationale": "",
@@ -1559,7 +1783,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the guideline explanation and the statement that iUPD should have been recorded (SQ-05). iUPD stays in the reviewer-facing tips, where the explanation belongs.",
+  "msg_query_before": "RECIST 1.1 progression criteria are met at {visit} and the iRECIST response is recorded as {reported_irecist}. Under iRECIST the first occurrence of progression should be recorded as unconfirmed progression (iUPD), with confirmation at the next assessment. Please review.",
+  "logic_before": ""
  },
  {
   "id": "TE-IR-002",
@@ -1586,7 +1814,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-IR-003",
@@ -1605,7 +1837,7 @@
   "msg_review_point": "Criteria for confirming progression under iRECIST.",
   "msg_issue": "Subject {subject_id}, {visit}: confirmed progression is recorded. Unconfirmed progression was driven by {driver} at {iupd_visit}; at this assessment {confirmation_evidence}.",
   "msg_reason": "Confirmation of progression requires further worsening in the category that drove the unconfirmed progression: an increase of at least {target_increment} mm in the target lesion sum relative to the unconfirmed progression timepoint, further unequivocal worsening of non-target disease, an increase of at least {new_increment} mm in the sum of new measurable lesions, or the appearance of additional new lesions. A new category independently meeting RECIST 1.1 progression criteria also confirms. None of these is evident here, so the response should remain unconfirmed progression or reset according to the current burden.",
-  "msg_query": "Confirmed progression is recorded at {visit}. The unconfirmed progression at {iupd_visit} was driven by {driver}, and the current assessment shows {confirmation_evidence}. Please review the confirmation of progression against the iRECIST criteria.",
+  "msg_query": "Confirmed progression is recorded at {visit}. Unconfirmed progression was recorded at {iupd_visit}, driven by {driver}, and the current assessment shows {confirmation_evidence}. Please confirm the response recorded at {visit} against the source imaging report.",
   "msg_tips": "Note the reference point: confirmation compares against the unconfirmed progression timepoint, not against the nadir. This differs from RECIST 1.1 and is a frequent source of confusion.",
   "tests": [],
   "rationale": "",
@@ -1613,7 +1845,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Removed 'against the iRECIST criteria' (SQ-05). The comparison rule is in the tips.",
+  "msg_query_before": "Confirmed progression is recorded at {visit}. The unconfirmed progression at {iupd_visit} was driven by {driver}, and the current assessment shows {confirmation_evidence}. Please review the confirmation of progression against the iRECIST criteria.",
+  "logic_before": ""
  },
  {
   "id": "TE-IR-004",
@@ -1632,7 +1868,7 @@
   "msg_review_point": "Separate recording of new lesion measurements from the baseline target lesion sum under iRECIST.",
   "msg_issue": "Subject {subject_id}, {visit}: the reported sum of {reported} mm matches the baseline target sum ({target_sum} mm) plus the new lesion measurements ({new_sum} mm) rather than the target sum alone.",
   "msg_reason": "Under iRECIST, new lesions are recorded and measured separately from the baseline target lesions, with their own sum of up to five new measurable lesions, two per organ. They are never added to the baseline target sum, because the baseline sum must remain comparable to baseline for response assessment, while the new lesion sum is used to judge confirmation of progression. Combining them corrupts both.",
-  "msg_query": "The sum of diameters at {visit} appears to include the measurements of new lesions. Under iRECIST new lesions are recorded and summed separately from the baseline target lesions. Please review the sum of diameters and the new lesion records.",
+  "msg_query": "The sum of diameters recorded at {visit} appears to include measurements of lesions recorded as new. Please confirm which lesions are included in the sum of diameters at this visit.",
   "msg_tips": "Confirm the eCRF design supports separate new lesion recording; where it does not, this is a study set-up issue affecting every iRECIST subject rather than a site error.",
   "tests": [],
   "rationale": "",
@@ -1640,7 +1876,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the guideline explanation of separate new-lesion sums (SQ-05), and narrowed the query to the single factual question.",
+  "msg_query_before": "The sum of diameters at {visit} appears to include the measurements of new lesions. Under iRECIST new lesions are recorded and summed separately from the baseline target lesions. Please review the sum of diameters and the new lesion records.",
+  "logic_before": ""
  },
  {
   "id": "TE-IR-005",
@@ -1659,7 +1899,7 @@
   "msg_review_point": "Reassignment of response when progression is not confirmed at the next assessment.",
   "msg_issue": "Subject {subject_id}, {visit}: unconfirmed progression at {iupd_visit} was not confirmed, and the response is recorded as {reported_irecist}; the derived response is {derived_irecist} (sum {sum} mm against the nadir of {nadir_sum} mm at {nadir_visit}).",
   "msg_reason": "If confirmation criteria are not met, the subject's response resets to iCR, iPR or iSD according to the current tumor burden measured against the original nadir. The nadir is not reset by the unconfirmed progression, so a later increase can again produce unconfirmed progression. This is the mechanism by which iRECIST accommodates pseudoprogression.",
-  "msg_query": "Unconfirmed progression was recorded at {iupd_visit} and was not confirmed at {visit}. The response at {visit} is recorded as {reported_irecist}; based on the current sum of {sum} mm against the nadir of {nadir_sum} mm the response derives as {derived_irecist}. Please review.",
+  "msg_query": "Unconfirmed progression was recorded at {iupd_visit} and was not confirmed at {visit}. The iRECIST response at {visit} is recorded as {reported_irecist}, with a sum of diameters of {sum} mm. Please confirm the iRECIST response recorded for this visit.",
   "msg_tips": "Multiple episodes of unconfirmed progression are permitted and are not an error. What is not permitted is treating the unconfirmed progression sum as the new reference.",
   "tests": [],
   "rationale": "",
@@ -1667,7 +1907,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Removed the derived-response arithmetic from the query; it remains in the reviewer-facing reason.",
+  "msg_query_before": "Unconfirmed progression was recorded at {iupd_visit} and was not confirmed at {visit}. The response at {visit} is recorded as {reported_irecist}; based on the current sum of {sum} mm against the nadir of {nadir_sum} mm the response derives as {derived_irecist}. Please review.",
+  "logic_before": ""
  },
  {
   "id": "TE-IR-006",
@@ -1686,7 +1930,7 @@
   "msg_review_point": "Limits on the number of new measurable lesions recorded and measured under iRECIST.",
   "msg_issue": "Subject {subject_id}: {n} new measurable lesions are recorded ({per_organ_breakdown}); iRECIST permits up to {max_total} in total and {max_per_organ} per organ.",
   "msg_reason": "The new lesion sum is used to judge confirmation of progression, so it must be constructed consistently. Additional new lesions beyond the limits are recorded as new non-target lesions rather than measured.",
-  "msg_query": "{n} new measurable lesions are recorded for this subject. iRECIST permits up to {max_total} new measurable lesions in total, and {max_per_organ} per organ, with any further new lesions recorded as non-target. Please review the new lesion records.",
+  "msg_query": "{n} new measurable lesions are recorded for this subject. This study records up to {max_total} new measurable lesions in total and {max_per_organ} per organ, with any further new lesions recorded as non-target. Please review the new lesion records.",
   "msg_tips": "The appearance of numerous new lesions is itself strong evidence of true progression, so this finding is usually a recording issue rather than a clinical question.",
   "tests": [],
   "rationale": "",
@@ -1694,7 +1938,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Replaced the guideline citation with the study's own configured limits (SQ-05). Naming study configuration is not a guideline reference and is what the site can act on.",
+  "msg_query_before": "{n} new measurable lesions are recorded for this subject. iRECIST permits up to {max_total} new measurable lesions in total, and {max_per_organ} per organ, with any further new lesions recorded as non-target. Please review the new lesion records.",
+  "logic_before": ""
  },
  {
   "id": "TE-IR-007",
@@ -1721,7 +1969,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-IR-008",
@@ -1748,7 +2000,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-IR-009",
@@ -1767,7 +2023,7 @@
   "msg_review_point": "Consistency between the parallel RECIST 1.1 and iRECIST response assessments.",
   "msg_issue": "Subject {subject_id}, {visit}: RECIST 1.1 response {r11_response}, iRECIST response {reported_irecist}; the iRECIST response derived from the RECIST 1.1 sequence is {expected_irecist}.",
   "msg_reason": "The iRECIST assessment is derived from the same underlying measurements as the RECIST 1.1 assessment, differing only in the treatment of progression and new lesions. Given the RECIST 1.1 result at this timepoint and the preceding response history, the iRECIST response should be {expected_irecist}.",
-  "msg_query": "The RECIST 1.1 and iRECIST responses recorded at {visit} are {r11_response} and {reported_irecist}. Based on the response history the iRECIST response would be expected to be {expected_irecist}. Please review.",
+  "msg_query": "The RECIST 1.1 and iRECIST responses recorded at {visit} are {r11_response} and {reported_irecist}. Please confirm both response fields for this visit against the source imaging report.",
   "msg_tips": "Where the two fields are on separate forms completed by different people, expect systematic divergence at a site; treat that as a training signal rather than a per-record query.",
   "tests": [],
   "rationale": "",
@@ -1775,7 +2031,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "CDM",
+  "r3_change": "Removed 'the iRECIST response would be expected to be {expected_irecist}'. The two guideline names are retained because here they are the names of CRF fields, not a citation of authority.",
+  "msg_query_before": "The RECIST 1.1 and iRECIST responses recorded at {visit} are {r11_response} and {reported_irecist}. Based on the response history the iRECIST response would be expected to be {expected_irecist}. Please review.",
+  "logic_before": ""
  },
  {
   "id": "TE-IR-010",
@@ -1802,7 +2062,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-XD-001",
@@ -1829,7 +2093,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-XD-002",
@@ -1856,7 +2124,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-XD-003",
@@ -1868,10 +2140,10 @@
   "mode": "DETERMINISTIC",
   "status": "CONDITIONAL",
   "downgradeable": false,
-  "confidence_base_rate": 0.7,
+  "confidence_base_rate": 0.75,
   "intent": "",
   "required_fields": "cross_domain.anticancer_therapy",
-  "logic": "if a new systemic anticancer therapy starts before the recorded progression date\n   (or before any recorded progression): raise finding",
+  "logic": "if a new systemic anticancer therapy starts before the recorded progression date\n   (or before any recorded progression):\n       raise finding\n\nguards:\n  - suppress therapies listed in config.permitted_concomitant_therapies\n    (bone-modifying agents, hormonal maintenance, protocol-permitted supportive care)\n  - suppress where the therapy is local rather than systemic \u2014 that is TE-XD-004\n  - suppress where the start date is within config.therapy_date_tolerance_days\n    (default 7) of a recorded progression: date-entry noise, not a real sequence error",
   "msg_review_point": "Timing of new anticancer therapy relative to the recorded progression.",
   "msg_issue": "Subject {subject_id}: new anticancer therapy ({therapy}) started on {therapy_date}; recorded progression date {pd_date_or_none}.",
   "msg_reason": "Starting a new anticancer therapy before recorded progression usually indicates that progression occurred but was not captured, or that treatment changed for another documented reason. In progression-free survival analyses the start of new therapy is commonly a censoring or event-defining event, so the discrepancy has direct analytical consequences, and any tumor assessment after the new therapy no longer reflects the study treatment.",
@@ -1883,7 +2155,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "MM",
+  "r3_change": "Fires on any new systemic anticancer therapy, including protocol-permitted maintenance and supportive regimens. A monitor would not query those.",
+  "msg_query_before": "",
+  "logic_before": "if a new systemic anticancer therapy starts before the recorded progression date\n   (or before any recorded progression): raise finding"
  },
  {
   "id": "TE-XD-004",
@@ -1895,10 +2171,10 @@
   "mode": "DETERMINISTIC",
   "status": "CONDITIONAL",
   "downgradeable": false,
-  "confidence_base_rate": 0.75,
+  "confidence_base_rate": 0.8,
   "intent": "",
   "required_fields": "cross_domain.radiotherapy or procedures",
-  "logic": "if radiotherapy, surgery or ablation is recorded at a site matching a target lesion\n   after baseline: raise finding on all subsequent assessments of that lesion",
+  "logic": "if radiotherapy, surgery or ablation is recorded at a site matching a target lesion\n   after baseline:\n       raise ONE finding for that lesion, listing every subsequent assessment\n       in which the lesion still contributes to the sum\n\nguards:\n  - suppress where the lesion was already excluded from the sum after the therapy\n  - suppress where the therapy date precedes baseline (covered by TE-BL-008)",
   "msg_review_point": "Effect of locoregional therapy on the interpretation of a target lesion.",
   "msg_issue": "Subject {subject_id}: {procedure} was applied to {site} on {procedure_date}, matching target lesion {lesion_id}; measurements of this lesion continue at {later_visits}.",
   "msg_reason": "Once a lesion has received locoregional therapy, its subsequent size no longer reflects the systemic treatment effect, and RECIST treats such lesions as non-measurable unless progression is demonstrated. Continuing to include it in the sum understates tumor burden and can produce a spurious partial response.",
@@ -1910,7 +2186,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "MM",
+  "r3_change": "One event was producing one finding per subsequent visit. A single course of radiotherapy to a target lesion in a 12-visit study raised eleven findings for one fact. Now one finding per lesion, listing the affected assessments.",
+  "msg_query_before": "",
+  "logic_before": "if radiotherapy, surgery or ablation is recorded at a site matching a target lesion\n   after baseline: raise finding on all subsequent assessments of that lesion"
  },
  {
   "id": "TE-XD-005",
@@ -1922,10 +2202,10 @@
   "mode": "DETERMINISTIC",
   "status": "CONDITIONAL",
   "downgradeable": false,
-  "confidence_base_rate": 0.65,
+  "confidence_base_rate": 0.7,
   "intent": "",
   "required_fields": "cross_domain.adverse_events",
-  "logic": "if an AE term maps to disease progression / malignant neoplasm progression\n   and no PD assessment exists within config.ae_pd_window_days (default 60): raise finding",
+  "logic": "if an AE term maps to disease progression / malignant neoplasm progression\n   and no PD assessment exists within config.ae_pd_window_days (default 60):\n       raise finding\n\nguards:\n  - suppress where the subject died, or discontinued for clinical deterioration,\n    before the next scheduled assessment was due\n  - suppress where an assessment exists in the window but is NOT EVALUABLE with\n    a recorded reason\n  - audience STUDY_TEAM where suppressed: the endpoint still needs a decision",
   "msg_review_point": "Consistency between adverse events indicating disease progression and the tumor assessment data.",
   "msg_issue": "Subject {subject_id}: adverse event \"{ae_term}\" with onset {ae_date}; no tumor assessment recording progression within {window} days.",
   "msg_reason": "An adverse event of disease progression implies a clinical determination of progression. If the tumor data does not reflect it, the progression event may be missing from the efficacy analysis, or the adverse event may have been coded inappropriately \u2014 disease progression is frequently reported as an adverse event when it should be captured as an efficacy outcome.",
@@ -1937,7 +2217,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "MM",
+  "r3_change": "An adverse event of disease progression with no PD assessment is often correct: the subject deteriorated and no further imaging was possible. Querying the site for a scan that could not be done is exactly the kind of query that costs credibility.",
+  "msg_query_before": "",
+  "logic_before": "if an AE term maps to disease progression / malignant neoplasm progression\n   and no PD assessment exists within config.ae_pd_window_days (default 60): raise finding"
  },
  {
   "id": "TE-XD-006",
@@ -1964,7 +2248,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-XD-007",
@@ -1991,7 +2279,11 @@
   "r1_comment": "Provide the rationale insisting the proposed threshold. What material or information is referred to make this validation rule.",
   "r1_response": "RATIONALE ADDED. The threshold is the laboratory's own upper limit of normal, not a value the agent chooses.",
   "r2_decision": "Accept",
-  "r2_reviewer": "Daniel"
+  "r2_reviewer": "Daniel",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-XD-008",
@@ -2018,7 +2310,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-XD-009",
@@ -2045,7 +2341,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-XD-010",
@@ -2072,7 +2372,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-XD-011",
@@ -2099,7 +2403,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-XD-012",
@@ -2126,7 +2434,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-QM-001",
@@ -2153,7 +2465,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-QM-002",
@@ -2180,7 +2496,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-QM-003",
@@ -2207,7 +2527,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-QM-004",
@@ -2234,7 +2558,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-QM-005",
@@ -2261,7 +2589,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-QM-006",
@@ -2288,7 +2620,11 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  },
  {
   "id": "TE-RS-021",
@@ -2315,6 +2651,10 @@
   "r1_comment": "",
   "r1_response": "",
   "r2_decision": "-",
-  "r2_reviewer": ""
+  "r2_reviewer": "",
+  "r3_lens": "",
+  "r3_change": "",
+  "msg_query_before": "",
+  "logic_before": ""
  }
 ]

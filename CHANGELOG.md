@@ -3,6 +3,58 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## [1.3.0] — 2026-08-21
+
+Everything was accepted — all 85 rules, all 85 query messages, all nine open questions. This
+revision is a **quality pass, not a disposition**: the rules and query messages were re-read
+through a clinical data manager's eyes and a medical monitor's eyes. 27 rules changed. The
+other 58 are exactly as accepted.
+
+### SQ-05 answered and applied
+- Decision: the guideline reference appears only in the reviewer-facing tips. Nine query
+  texts cited a guideline as authority; all nine were rewritten. Guideline words are kept
+  only where they name a CRF field or a recorded value, which the site needs to find the record.
+
+### CDM lens — 19 query messages rewritten
+- **Nine queries stated the expected answer** ("the overall response should be PD", "the
+  lesion should be recorded as non-target"). That converts a check into an instruction: the
+  site confirms rather than verifies, and if the derivation is wrong the error returns signed
+  by the site. This was the commonest fault in the set.
+- **TE-RS-007 asked site staff for a medical judgement** — whether overall tumor burden had
+  increased substantially. Now asks only for the radiological description; the judgement
+  stays with the monitor.
+- **TE-BL-005 instructed a site to delete recorded data.** Now asks them to confirm intent.
+- Four queries carried the agent's arithmetic; it moved to the reviewer-facing reason.
+- "Nadir" replaced with "the smallest sum recorded on study" throughout.
+
+### MM lens — 8 rule logics amended
+- **TE-XD-004** raised one finding per subsequent visit for a single course of local therapy
+  — eleven findings for one fact in a 12-visit study. Now one finding per lesion.
+- **TE-RS-020** raised a finding per discordant assessment. Now one per subject.
+- **TE-XD-005** queried a site for a scan the subject was too unwell to have. Now suppressed
+  where the subject died or discontinued before the next assessment was due.
+- **TE-FU-014** fired on any single lesion repeating a value, which stable disease does
+  routinely. Narrowed to all target lesions repeating — the actual copy-forward signal —
+  and the base rate rises 0.30 → 0.55.
+- **TE-ST-002** collided two genuinely separate lesions in one organ. Added size and
+  description discriminators; 0.72 → 0.80.
+- **TE-XD-003** fired on protocol-permitted maintenance therapy. Guarded.
+- **TE-BL-014** raised a per-lesion finding for a study-wide modality change. Now one
+  study-level finding when it affects most lesions at a visit.
+- **TE-FU-011** fired on an assessment dated the same day as death, which is legitimate,
+  and treated partial dates as full ones. Both guarded.
+
+### Added
+- **Query_Style sheet (TEA-QS-001)** — 12 house rules for query text, so a future review
+  point does not reintroduce what was just fixed.
+- `tools/check_query_style.py` — CI enforcement of those rules. Negative-tested against four
+  injected violations; all four caught.
+- Rules and Rule_Messages carry the previous logic and previous query text beside each
+  change, and Review_Log lists all 27 with the reason.
+
+### Open
+- The 27 changed rules, in the amber columns. Nothing else is outstanding.
+
 ## [1.2.0] — 2026-08-21
 
 Step 2 review, round 2 (Daniel). All 16 rules amended or explained at round 1 were re-read
