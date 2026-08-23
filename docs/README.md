@@ -37,8 +37,8 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 | Document | Version | Status | Next |
 |---|---|---|---|
 | TEA-PLAN-001 Development Plan | 1.0.0 | **APPROVED** 2026-08-17 | — |
-| TEA-SPEC-001 Programming Specification | 1.1.1 | DRAFT | Step 2 review, round 2 |
-| Rule catalog | 1.1.0 | DRAFT | Frozen at the Step 2 gate |
+| TEA-SPEC-001 Programming Specification | 1.2.0 | DRAFT | Rule_Messages review |
+| Rule catalog | 1.2.0 | Logic confirmed | Freezes when Rule_Messages is accepted |
 | Concept overview (HTML + PPTX) | — | Current | Regenerate when the plan or spec changes |
 
 ## Where to start
@@ -47,6 +47,11 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 on, the development gates, the review pipeline, data lineage from EDC export to issued
 query, and roles and responsibilities. It is derived from the plan and the specification
 and carries no independent authority — where it disagrees with them, they win.
+
+Step 2 is part-done. All 85 rules were dispositioned across two review rounds
+(2026-08-19 and 2026-08-21) and the logic, severities and confidence base rates are settled.
+**Rule_Messages — the query wording a site actually reads — has not been reviewed**, and the
+rule pack does not freeze until it is accepted.
 
 Steps 3–6 (prototype output, UI design, code generation, final application) are gated on
 approval of the specification.

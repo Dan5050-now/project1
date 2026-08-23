@@ -3,6 +3,40 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## [1.2.0] — 2026-08-21
+
+Step 2 review, round 2 (Daniel). All 16 rules amended or explained at round 1 were re-read
+and confirmed Accept, with no comments and no further changes. **No rule logic changed at
+this revision** — this is a disposition record, not an edit.
+
+### Rule review complete
+- All 85 rules now carry a decision: 70 accepted outright at round 1, 15 raised and
+  resolved there, all 16 of those confirmed at round 2. Logic, severities, modes and
+  confidence base rates are settled.
+- The Rules sheet is closed: its decision columns are read-only history and it no longer
+  offers a reviewer input column.
+- Review_Log carries both rounds side by side, with the round-2 outcome per item.
+
+### Still open — the pack is NOT frozen
+- **Rule_Messages has not been reviewed.** It holds the query text that reaches a site, and
+  it is the last surface before the Step 2 gate. The rule pack freezes when it is accepted,
+  not before. Both the catalog header and the plan's Step 2 exit criteria say so explicitly.
+- Interpretations ID-05 and ID-06 were amended at round 1 and were not re-reviewed. Flagged
+  on Review_Log and on Contents rather than assumed accepted.
+- Open_Questions gains a status column recording what the two rounds settled: SQ-08 answered;
+  SQ-01 and SQ-02 covered by the rule-by-rule acceptance but with no separate decision
+  recorded; the remaining six open.
+
+### Changed elsewhere
+- `rule-catalog.yaml` → 1.2.0, with a header stating the logic is confirmed and the pack is
+  not yet frozen.
+- **TEA-PLAN-001** — Step 2 status becomes "Rules complete" with exit criteria split into
+  done and remaining; Review_Scope retitled to 85 points / 83 live; **OI-02 closed**, since
+  confidence base rates were carried on every accepted rule row.
+- **Concept overview and slide deck** — status lines corrected to "rule logic settled, query
+  wording still to review", and a sixth item added to the closing list: query wording is not
+  a detail, and gets its own review by people who talk to sites.
+
 ## Concept overview, slide deck — 2026-08-21
 
 ### Added

@@ -22,7 +22,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-ST-002",
@@ -47,7 +49,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-ST-003",
@@ -72,7 +76,9 @@
   "rationale": "RECIST 1.1 requires nodal lesions to be measured in short axis. The check is on whether short axis can be established, not on whether a particular field was collected.",
   "r1_decision": "Discuss",
   "r1_comment": "Some CRF doesn't collect the type of size, instead the CRF directly asks sites to enter size based on the appropriate type. Consider the field name directly mentions right size type, if there's no size type selection field in the CRF.",
-  "r1_response": "AMENDED. Axis type is now resolved at ingestion in priority order rather than assumed to be a collected field: an explicit axis-type field if one exists, otherwise the axis implied by the CRF field itself as declared in the structured CRF specification, otherwise the protocol default. The rule fires only when no source establishes that a nodal measurement is a short axis."
+  "r1_response": "AMENDED. Axis type is now resolved at ingestion in priority order rather than assumed to be a collected field: an explicit axis-type field if one exists, otherwise the axis implied by the CRF field itself as declared in the structured CRF specification, otherwise the protocol default. The rule fires only when no source establishes that a nodal measurement is a short axis.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-ST-004",
@@ -97,7 +103,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-ST-005",
@@ -122,7 +130,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-001",
@@ -151,7 +161,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-002",
@@ -176,7 +188,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-003",
@@ -201,7 +215,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-004",
@@ -229,7 +245,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-005",
@@ -254,7 +272,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-006",
@@ -279,7 +299,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-007",
@@ -304,7 +326,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-008",
@@ -329,7 +353,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-009",
@@ -354,7 +380,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-010",
@@ -379,7 +407,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-011",
@@ -404,7 +434,9 @@
   "rationale": "Verifying a site-entered sum detects transcription error. Verifying a system-derived sum only re-tests the EDC's own arithmetic and would produce noise, so the rule stands down.",
   "r1_decision": "Discuss",
   "r1_comment": "In case of the CRF not collecting manual entry for the reported sum, this rule should be ignored. The LLM needs to identify study's CRF capture the information by CRF specification.",
-  "r1_response": "AMENDED, and this answers SQ-08. Status moves from ACTIVE to CONDITIONAL: the rule requires a site-entered sum field. Whether the sum is site-entered or system-derived is determined from the structured CRF specification at the AC-11 intake, and a derived sum deactivates the rule with an explicit NOT_EVALUATED in the coverage report rather than a silent pass. Applied to TE-FU-001 as well, which carries the identical condition at follow-up."
+  "r1_response": "AMENDED, and this answers SQ-08. Status moves from ACTIVE to CONDITIONAL: the rule requires a site-entered sum field. Whether the sum is site-entered or system-derived is determined from the structured CRF specification at the AC-11 intake, and a derived sum deactivates the rule with an explicit NOT_EVALUATED in the coverage report rather than a silent pass. Applied to TE-FU-001 as well, which carries the identical condition at follow-up.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-BL-012",
@@ -429,7 +461,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-013",
@@ -454,7 +488,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-014",
@@ -479,7 +515,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-015",
@@ -504,7 +542,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-016",
@@ -529,7 +569,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-BL-017",
@@ -554,7 +596,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-FU-001",
@@ -579,7 +623,9 @@
   "rationale": "Same condition as TE-BL-011, applied at follow-up. Amended alongside it for consistency: applying the guard at baseline but not at follow-up would be incoherent.",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": "AMENDED alongside TE-BL-011, which carries the identical condition. Accepted at round 1, but the same CRF-dependency applies at follow-up and the pair must move together."
+  "r1_response": "AMENDED alongside TE-BL-011, which carries the identical condition. Accepted at round 1, but the same CRF-dependency applies at follow-up and the pair must move together.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-FU-002",
@@ -604,7 +650,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-FU-003",
@@ -629,7 +677,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-FU-004",
@@ -654,7 +704,9 @@
   "rationale": "No guideline source exists; RECIST 1.1 specifies no plausibility limits on lesion trajectories. The defaults (20 mm absolute, 50% relative, within a 90-day window) are set to catch the common data-entry failures \u2014 a decimal shift, a cm/mm confusion, a measurement attributed to the wrong lesion \u2014 while staying silent on genuine rapid change, which is clinically real in this population. Thresholds are configuration, to be calibrated on the golden dataset at Step 3 against the observed false-positive rate. Until calibrated, the rule is MINOR with a 0.45 confidence base rate, so it ranks below anything derived from the guideline.",
   "r1_decision": "Discuss",
   "r1_comment": "Provide the rationale insisting the proposed threshold. What material or information is referred to make this validation rule.",
-  "r1_response": "RATIONALE ADDED. These thresholds are not drawn from RECIST \u2014 the guideline sets no outlier limits. They are heuristics aimed at transcription error, and they are declared as such rather than dressed up with a citation. Proposed for calibration against the golden dataset at Step 3, where the false-positive rate can actually be measured."
+  "r1_response": "RATIONALE ADDED. These thresholds are not drawn from RECIST \u2014 the guideline sets no outlier limits. They are heuristics aimed at transcription error, and they are declared as such rather than dressed up with a citation. Proposed for calibration against the golden dataset at Step 3, where the false-positive rate can actually be measured.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-FU-005",
@@ -679,7 +731,9 @@
   "rationale": "RECIST 1.1 does not state whether a target lesion that resolved and later reappears constitutes new-lesion progression, and practice differs. The agent therefore does not assert an answer: ID-01 sets the study convention at intake (default \u2014 the lesion re-enters the sum at its measured size and progression is judged by the nadir rule; alternative \u2014 reappearance after CR is progression). The rule detects the pattern and checks it was handled consistently with whichever convention the study declared. It escalates only where the site both re-measured the lesion and flagged it as new, which is internally contradictory under either convention.",
   "r1_decision": "Discuss",
   "r1_comment": "Provide the rationale insisting the proposed threshold. What material or information is referred to make this validation rule.",
-  "r1_response": "RATIONALE ADDED. This rule carries no numeric threshold; the parameter in it is the interpretation decision ID-01, which is a protocol question rather than a guideline constant."
+  "r1_response": "RATIONALE ADDED. This rule carries no numeric threshold; the parameter in it is the interpretation decision ID-01, which is a protocol question rather than a guideline constant.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-FU-006",
@@ -704,7 +758,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-FU-007",
@@ -729,7 +785,9 @@
   "rationale": "Protocols commonly schedule every 6 weeks early and every 12 weeks later, and often widen the window after a defined timepoint. A single interval would raise findings against the protocol's own schedule.",
   "r1_decision": "Discuss",
   "r1_comment": "The proposed condition is fine. Since a protocol may define different assessment window for particular assessment timing, consider to get information about study's individual tumor assessment window period.",
-  "r1_response": "AMENDED. The scalar interval and window are replaced by a per-visit schedule captured at the AC-11 protocol intake, so a protocol that tightens or widens the window at particular timepoints is honoured. The scalar remains as a fallback for protocols with a uniform interval."
+  "r1_response": "AMENDED. The scalar interval and window are replaced by a per-visit schedule captured at the AC-11 protocol intake, so a protocol that tightens or widens the window at particular timepoints is honoured. The scalar remains as a fallback for protocols with a uniform interval.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-FU-008",
@@ -754,7 +812,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-FU-009",
@@ -782,7 +842,9 @@
   "rationale": "RECIST 1.1 keeps nodal target lesions in the sum for the whole study even when they fall below 10 mm and are no longer pathological. Their short axis continues to be recorded; they are never set to absent or zero. Removing a normalised node from the sum understates tumor burden and can manufacture a partial response.",
   "r1_decision": "Discuss",
   "r1_comment": "The proposed condition could be applied to follow-up assessment? It's okay to check at baseline's tumor identification, but I'm not sure to check under follow-up assessment.",
-  "r1_response": "AMENDED, and the scope was the wrong way round. The rule is only meaningful at follow-up: a nodal target cannot be absent at baseline, since it was selected for having a short axis of at least 15 mm. What it catches is a node recorded as absent or zero at follow-up once it has normalised, which drops it out of the sum and produces a falsely low sum and a spurious response. The rule is now explicitly restricted to follow-up, and the too-small-to-measure state is excluded so that ID-02 handling is not flagged as an error."
+  "r1_response": "AMENDED, and the scope was the wrong way round. The rule is only meaningful at follow-up: a nodal target cannot be absent at baseline, since it was selected for having a short axis of at least 15 mm. What it catches is a node recorded as absent or zero at follow-up once it has normalised, which drops it out of the sum and produces a falsely low sum and a spurious response. The rule is now explicitly restricted to follow-up, and the too-small-to-measure state is excluded so that ID-02 handling is not flagged as an error.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-FU-010",
@@ -807,7 +869,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-FU-011",
@@ -832,7 +896,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-FU-012",
@@ -857,7 +923,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-FU-013",
@@ -882,7 +950,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-FU-014",
@@ -907,7 +977,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-001",
@@ -938,7 +1010,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-002",
@@ -964,7 +1038,9 @@
   "r1_decision": "Discuss",
   "r1_comment": "In order to check both conditions indicating that the reported target response=PD is incorrect, should it have condition as below?\n- \"if reported_target_response == PD\n   and pct_from_nadir < config.pd_relative_increase_pct\n   and abs_from_nadir_mm < config.pd_absolute_increase_mm: raise finding\".\nIn addition, the 'TE-RS-002' and 'TE-RS-003' are duplicate with 'TE-RS-001'? If yes, should we keep the two rules in the rule list?",
   "r1_response": "KEPT, with the relationship now declared explicitly. On the logic: the proposed variant uses AND, but PD requires both criteria, so 'PD not met' is pct < 20 OR abs < 5 \u2014 the AND form is narrower than the correct negation and would miss cases. That complete check already exists as TE-RS-001, which recomputes the response and compares. On duplication: yes, TE-RS-002 and TE-RS-003 are both subsumed by TE-RS-001 for detection. Their value is diagnostic, not detective \u2014 TE-RS-001 says the response is wrong, these say why, and the query text differs accordingly. They are now declared as cascade children of TE-RS-001, so when both fire the reviewer sees one finding carrying the specific reason, not two.",
-  "cascade_parent": "TE-RS-001"
+  "cascade_parent": "TE-RS-001",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-RS-003",
@@ -990,7 +1066,9 @@
   "r1_decision": "Discuss",
   "r1_comment": "Question to this rule. Should it consider the pct_from_baseline condition? Given that the proposed condition could check incorrect data well with the 1st and 2nd line (i.e. \"if reported_target_response != PD and pct_from_nadir >= pd_pct and abs_from_nadir_mm >= pd_abs\"), if 3rd line condition isn't definitely deciding data consistency, I suggest to have rule conditions without 3rd line condition.",
   "r1_response": "AMENDED as suggested. The baseline comparison is removed from the gate, so the rule now catches every case where progression criteria are met from nadir but progression was not reported. The baseline comparison is retained purely as a discriminator: where percent change from baseline also falls short of the threshold, the site almost certainly compared against baseline instead of nadir, and the finding carries that specific wording and a higher confidence. Where it does not, the finding is still raised with generic wording.",
-  "cascade_parent": "TE-RS-001"
+  "cascade_parent": "TE-RS-001",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-RS-004",
@@ -1015,7 +1093,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-005",
@@ -1040,7 +1120,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-006",
@@ -1065,7 +1147,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-007",
@@ -1090,7 +1174,9 @@
   "rationale": "RECIST 1.1 treats unequivocal non-target progression in the presence of responding or stable measurable disease as an exceptional circumstance requiring substantial worsening of overall tumor burden. That judgement rests on the images and the investigator's overall impression, neither of which is in the collected data. Raising it as a site query invites a defensive answer; raising it to the study team invites a look at the images.",
   "r1_decision": "Discuss",
   "r1_comment": "This isn't decisive with entered data only. Check whether it could downgrade the severity to 'INFO'.",
-  "r1_response": "AMENDED to INFO. You are right that collected data cannot settle this \u2014 the guideline's test is a judgement about overall tumor burden that the recorded non-target states do not capture. Note the consequence, which is intended: INFO findings do not enter the default query worklist, so this becomes a study-team observation rather than a site query. The adjudicator can still escalate to MAJOR where the recorded descriptions actively contradict the reported progression."
+  "r1_response": "AMENDED to INFO. You are right that collected data cannot settle this \u2014 the guideline's test is a judgement about overall tumor burden that the recorded non-target states do not capture. Note the consequence, which is intended: INFO findings do not enter the default query worklist, so this becomes a study-team observation rather than a site query. The adjudicator can still escalate to MAJOR where the recorded descriptions actively contradict the reported progression.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-RS-008",
@@ -1120,7 +1206,9 @@
   "r1_decision": "Discuss",
   "r1_comment": "Is it possible to give information whether any issue in the individual response (target, non-target) and their relevant detail data (e.g. tumor size, individual lesion response) in order not to avoid duplicate query in both sides (i.e. overall response, target/non-target response)",
   "r1_response": "AMENDED. The rule now declares its component dependencies, and the cascade grouping suppresses the separate overall-response query whenever a component finding is already open for the same assessment. Where no component finding exists, the overall-response finding is raised alone and names which component drove the expected value, so the site receives one query identifying the specific field rather than two queries about the same visit.",
-  "cascade_children": "TE-RS-001, TE-RS-005, TE-RS-009"
+  "cascade_children": "TE-RS-001, TE-RS-005, TE-RS-009",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-RS-009",
@@ -1145,7 +1233,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-010",
@@ -1170,7 +1260,9 @@
   "rationale": "Retired at the Step 2 review as fully subsumed by TE-RS-008 (overall response versus the component table), TE-RS-009 (flag versus recorded lesions) and TE-IR-001 (iUPD under iRECIST).",
   "r1_decision": "Discuss",
   "r1_comment": "Check if this rule is duplicate, considering TE-RS-008.\nIf duplicate rule, I suggest remove this rule, instead, add only iRECIST condition to the TE-RS-008.",
-  "r1_response": "RETIRED \u2014 you are right. TE-RS-008 derives the overall response from the reported components, and the new-lesion flag is one of those components, so a recorded new lesion with a non-PD overall response already fires TE-RS-008. The one case that is not covered \u2014 a new lesion present in the lesion table while the flag says NO \u2014 is TE-RS-009. The iRECIST expectation needs no folding in, because TE-IR-001 already requires iUPD rather than PD where iRECIST applies. The id is retained permanently and never reused, so historical findings stay interpretable."
+  "r1_response": "RETIRED \u2014 you are right. TE-RS-008 derives the overall response from the reported components, and the new-lesion flag is one of those components, so a recorded new lesion with a non-PD overall response already fires TE-RS-008. The one case that is not covered \u2014 a new lesion present in the lesion table while the flag says NO \u2014 is TE-RS-009. The iRECIST expectation needs no folding in, because TE-IR-001 already requires iUPD rather than PD where iRECIST applies. The id is retained permanently and never reused, so historical findings stay interpretable.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-RS-011",
@@ -1195,7 +1287,9 @@
   "rationale": "Rejected at the Step 2 review. The premise does not hold: investigator-discretion imaging routinely covers regions absent from the baseline protocol imaging, so region coverage is not evidence of a data problem.",
   "r1_decision": "Reject",
   "r1_comment": "New lesion could be confirmed by other organ/region not covered by the baseline image, because of doing other image by investigator's discretion. Suggest not to run this rule.",
-  "r1_response": "RETIRED as rejected. Imaging performed at investigator discretion outside the baseline coverage is routine and entirely legitimate, and a new lesion found that way is a real new lesion. The rule assumed baseline coverage bounded where disease could be found, which is not how imaging is actually ordered. The id is retained permanently and never reused."
+  "r1_response": "RETIRED as rejected. Imaging performed at investigator discretion outside the baseline coverage is routine and entirely legitimate, and a new lesion found that way is a real new lesion. The rule assumed baseline coverage bounded where disease could be found, which is not how imaging is actually ordered. The id is retained permanently and never reused.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-RS-012",
@@ -1220,7 +1314,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-013",
@@ -1245,7 +1341,9 @@
   "rationale": "RECIST 1.1 dates progression to the first observation of a lesion subsequently confirmed as new. That provision governs only when the new lesion is the progression driver. Applying it where progression arose independently at the later visit would wrongly move the date earlier and shorten PFS.",
   "r1_decision": "Discuss",
   "r1_comment": "This rule should consider the case that the visit j's data has definitive rationale of PD. E.g. At the visit j, there is evidence to determine PD due to other conditions (e.g. target lesion sum mm passes 20% worsen and over minimum increase)",
-  "r1_response": "AMENDED. A guard now suppresses the finding where progression at visit j is independently established by the target or non-target criteria. Back-dating is only correct where the equivocal-then-confirmed lesion is what drove progression; where the target sum crossed the threshold at visit j in its own right, visit j is the correct progression date and the earlier equivocal observation is irrelevant to it."
+  "r1_response": "AMENDED. A guard now suppresses the finding where progression at visit j is independently established by the target or non-target criteria. Back-dating is only correct where the equivocal-then-confirmed lesion is what drove progression; where the target sum crossed the threshold at visit j in its own right, visit j is the correct progression date and the earlier equivocal observation is irrelevant to it.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-RS-014",
@@ -1270,7 +1368,9 @@
   "rationale": "RECIST 1.1 (Eisenhauer 2009, section on confirmatory measurement) requires that in non-randomised trials where response is the primary endpoint, a complete or partial response be confirmed by a repeat assessment performed no less than 4 weeks after the criteria for response are first met. The default confirmation_min_interval_days is therefore 28. The rule is CONDITIONAL on the protocol requiring confirmation at all \u2014 randomised trials with a time-to-event primary endpoint commonly do not \u2014 and the interval is protocol configuration confirmed at the AC-11 intake, not a hard-coded constant.",
   "r1_decision": "Discuss",
   "r1_comment": "Provide the rationale insisting the proposed threshold. What material or information is referred to make this validation rule.",
-  "r1_response": "RATIONALE ADDED, and this one does have a guideline source, unlike TE-FU-004."
+  "r1_response": "RATIONALE ADDED, and this one does have a guideline source, unlike TE-FU-004.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-RS-015",
@@ -1295,7 +1395,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-016",
@@ -1320,7 +1422,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-017",
@@ -1345,7 +1449,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-018",
@@ -1370,7 +1476,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-019",
@@ -1395,7 +1503,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-020",
@@ -1420,7 +1530,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-IR-001",
@@ -1445,7 +1557,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-IR-002",
@@ -1470,7 +1584,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-IR-003",
@@ -1495,7 +1611,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-IR-004",
@@ -1520,7 +1638,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-IR-005",
@@ -1545,7 +1665,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-IR-006",
@@ -1570,7 +1692,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-IR-007",
@@ -1595,7 +1719,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-IR-008",
@@ -1620,7 +1746,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-IR-009",
@@ -1645,7 +1773,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-IR-010",
@@ -1670,7 +1800,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-XD-001",
@@ -1695,7 +1827,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-XD-002",
@@ -1720,7 +1854,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-XD-003",
@@ -1745,7 +1881,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-XD-004",
@@ -1770,7 +1908,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-XD-005",
@@ -1795,7 +1935,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-XD-006",
@@ -1820,7 +1962,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-XD-007",
@@ -1845,7 +1989,9 @@
   "rationale": "RECIST 1.1 states that where tumour markers are initially above the upper limit of normal, they must normalise for a subject to be considered in complete response, alongside the disappearance of all lesions. The comparator is the reporting laboratory's ULN carried on the lab record, so no threshold is invented here. The rule is CONDITIONAL on the protocol declaring that markers contribute to the CR determination, since many solid-tumor protocols collect markers without giving them a role in response.",
   "r1_decision": "Discuss",
   "r1_comment": "Provide the rationale insisting the proposed threshold. What material or information is referred to make this validation rule.",
-  "r1_response": "RATIONALE ADDED. The threshold is the laboratory's own upper limit of normal, not a value the agent chooses."
+  "r1_response": "RATIONALE ADDED. The threshold is the laboratory's own upper limit of normal, not a value the agent chooses.",
+  "r2_decision": "Accept",
+  "r2_reviewer": "Daniel"
  },
  {
   "id": "TE-XD-008",
@@ -1870,7 +2016,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-XD-009",
@@ -1895,7 +2043,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-XD-010",
@@ -1920,7 +2070,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-XD-011",
@@ -1945,7 +2097,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-XD-012",
@@ -1970,7 +2124,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-QM-001",
@@ -1995,7 +2151,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-QM-002",
@@ -2020,7 +2178,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-QM-003",
@@ -2045,7 +2205,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-QM-004",
@@ -2070,7 +2232,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-QM-005",
@@ -2095,7 +2259,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-QM-006",
@@ -2120,7 +2286,9 @@
   "rationale": "",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  },
  {
   "id": "TE-RS-021",
@@ -2145,6 +2313,8 @@
   "rationale": "RECIST 1.1 requires cytological confirmation of an effusion appearing or worsening on treatment before it is taken as progression, where the measurable disease is responding or stable.",
   "r1_decision": "Accept",
   "r1_comment": "",
-  "r1_response": ""
+  "r1_response": "",
+  "r2_decision": "-",
+  "r2_reviewer": ""
  }
 ]
