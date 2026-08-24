@@ -28,7 +28,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-ST-002",
@@ -59,7 +61,9 @@
   "r3_lens": "MM",
   "r3_change": "Grouping on normalised location text collides two genuinely separate lesions in the same organ \u2014 two distinct liver metastases are routine. Added the size and description discriminators a monitor would apply before calling it a duplicate.",
   "msg_query_before": "",
-  "logic_before": "group lesions by (subject, organ, laterality, normalised location_detail)\nif group size > 1 and both are TARGET or both NON_TARGET: raise finding"
+  "logic_before": "group lesions by (subject, organ, laterality, normalised location_detail)\nif group size > 1 and both are TARGET or both NON_TARGET: raise finding",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-ST-003",
@@ -90,7 +94,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the instruction to correct the value. The query now asks the site to check the source rather than telling them which axis is wrong.",
   "msg_query_before": "Lesion {lesion_id} is a lymph node. Please confirm the measurement recorded at {visit} is the short axis; if the longest diameter was recorded, please correct it.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-ST-004",
@@ -121,7 +127,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-ST-005",
@@ -152,7 +160,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-001",
@@ -187,7 +197,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-002",
@@ -218,7 +230,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-003",
@@ -249,7 +263,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-004",
@@ -283,7 +299,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the sentence stating what the node should have been recorded as. That is the investigator's call, and stating it invites the site to confirm rather than check.",
   "msg_query_before": "Nodal target lesion {lesion_id} has a baseline short axis of {value} mm. Please confirm the measurement; a node with short axis below 15 mm should be recorded as a non-target lesion (10 to <15 mm) or not recorded (<10 mm).",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-BL-005",
@@ -314,7 +332,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed 'please remove it from the assessment'. A query should never instruct a site to delete recorded data; it asks them to confirm intent and act on their own record.",
   "msg_query_before": "Node {lesion_id} has a baseline short axis of {value} mm, below the 10 mm pathological threshold. Please confirm whether this node should be recorded as disease; if not, please remove it from the assessment.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-BL-006",
@@ -345,7 +365,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-007",
@@ -376,7 +398,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the guideline reference (SQ-05) and the instruction to re-classify. Asks the measurability question in plain terms instead.",
   "msg_query_before": "Target lesion {lesion_id} is described as \"{location_detail}\". This appears to represent non-measurable disease under RECIST. Please confirm the lesion selection and, if appropriate, re-classify it as a non-target lesion.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-BL-008",
@@ -407,7 +431,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the clause telling the site to record it as non-target. Asks for the evidence that decides the question, which is what the reviewer actually needs.",
   "msg_query_before": "Target lesion {lesion_id} is located within a prior radiotherapy field. Please confirm whether progression of this lesion has been documented since radiotherapy; if not, the lesion should be recorded as non-target.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-BL-009",
@@ -438,7 +464,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-010",
@@ -469,7 +497,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-011",
@@ -500,7 +530,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-012",
@@ -531,7 +563,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-013",
@@ -562,7 +596,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-014",
@@ -593,7 +629,9 @@
   "r3_lens": "MM",
   "r3_change": "A study-wide modality change \u2014 a protocol amendment, a scanner replacement \u2014 was raising a finding on every lesion in every subject. That is a study-level observation, not a per-lesion data query.",
   "msg_query_before": "",
-  "logic_before": "for lesion, visits in measurements grouped by lesion:\n    if distinct method_at_visit values > 1: raise finding"
+  "logic_before": "for lesion, visits in measurements grouped by lesion:\n    if distinct method_at_visit values > 1: raise finding",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-BL-015",
@@ -624,7 +662,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-016",
@@ -655,7 +695,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-BL-017",
@@ -686,7 +728,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-001",
@@ -717,7 +761,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-002",
@@ -748,7 +794,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-003",
@@ -779,7 +827,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-004",
@@ -810,7 +860,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-005",
@@ -841,7 +893,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-006",
@@ -872,7 +926,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-007",
@@ -903,7 +959,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-008",
@@ -934,7 +992,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-009",
@@ -968,7 +1028,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the guideline sentence (SQ-05) and the bare instruction to enter a measurement. Now allows for the case where the node genuinely was not measurable.",
   "msg_query_before": "Nodal target lesion {lesion_id} is recorded as {state_or_zero} at {visit}. Lymph nodes should continue to be measured in short axis at every visit, including when they normalise. Please enter the measured short axis.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-FU-010",
@@ -999,7 +1061,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-011",
@@ -1030,7 +1094,9 @@
   "r3_lens": "MM",
   "r3_change": "An assessment dated the same day as death is common and legitimate \u2014 the scan preceded the death that day. Firing on it produced an unanswerable query. Partial dates were also being treated as full ones.",
   "msg_query_before": "",
-  "logic_before": "if assessment_date > death_date: raise CRITICAL\nif assessment_date > discontinuation_date + config.post_treatment_followup_days: raise MAJOR"
+  "logic_before": "if assessment_date > death_date: raise CRITICAL\nif assessment_date > discontinuation_date + config.post_treatment_followup_days: raise MAJOR",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-FU-012",
@@ -1061,7 +1127,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-013",
@@ -1092,7 +1160,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-FU-014",
@@ -1123,7 +1193,9 @@
   "r3_lens": "MM",
   "r3_change": "Per-lesion identical values are common in genuinely stable disease, which is why this sat at a 0.30 base rate. The pattern that actually signals copied data is every target lesion identical across visits. Narrowed to that, and the base rate rises accordingly.",
   "msg_query_before": "",
-  "logic_before": "if a lesion has the identical value at >= 3 consecutive assessments\n   and the lesion is > config.identical_value_min_mm (default 15): raise finding"
+  "logic_before": "if a lesion has the identical value at >= 3 consecutive assessments\n   and the lesion is > config.identical_value_min_mm (default 15): raise finding",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-RS-001",
@@ -1160,7 +1232,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the agent's derivation from the query. The percent-change arithmetic is reviewer-facing context, not something a site coordinator needs in order to re-check a record.",
   "msg_query_before": "The target lesion response recorded at {visit} is {reported}. Based on the recorded lesion measurements the sum of diameters is {sum} mm, a {pct_baseline}% change from baseline and a {pct_nadir}% change from the nadir of {nadir_sum} mm, which corresponds to {derived}. Please review the recorded response and the underlying measurements.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-RS-002",
@@ -1192,7 +1266,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the guideline citation and the threshold arithmetic (SQ-05). Asks the one question that resolves the finding: what drove the PD call.",
   "msg_query_before": "Progressive disease is recorded at {visit} based on an increase from the nadir of {nadir_sum} mm to {sum} mm. This is a {pct_nadir}% increase but only {abs_nadir} mm in absolute terms, which does not meet the {pd_abs} mm absolute increase also required by RECIST 1.1. Please review the response assessment, unless progression is based on a new lesion or on unequivocal non-target progression.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-RS-003",
@@ -1224,7 +1300,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the guideline citation (SQ-05) and replaced 'nadir' with 'the smallest sum recorded on study', which a site coordinator can act on without knowing the term.",
   "msg_query_before": "At {visit} the sum of diameters is {sum} mm compared with a nadir of {nadir_sum} mm at {nadir_visit}, a {pct_nadir}% increase of {abs_nadir} mm, which meets the RECIST criteria for progression. The recorded response is {reported}. Please review the response assessment.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-RS-004",
@@ -1255,7 +1333,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-005",
@@ -1286,7 +1366,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-006",
@@ -1317,7 +1399,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-007",
@@ -1348,7 +1432,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed 'please confirm that the overall tumor burden has increased substantially'. That is a medical judgement and does not belong in a query answered by site data staff. The query now asks only for the radiology description, which is a data request; the judgement stays with the monitor.",
   "msg_query_before": "Unequivocal progression of non-target disease is recorded at {visit} while the target lesions show {target_response}. Please confirm that the overall tumor burden has increased substantially, and provide the radiological description supporting unequivocal progression.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-RS-008",
@@ -1384,7 +1470,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed 'the overall response should be {derived_overall}'. Naming the expected value turns a check into an instruction, and if the derivation is wrong the site confirms the error.",
   "msg_query_before": "The overall response recorded at {visit} is {reported_overall}. Based on the recorded components \u2014 target lesion response {target}, non-target response {non_target}, new lesions {new_lesion} \u2014 the overall response should be {derived_overall}. Please review.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-RS-009",
@@ -1415,7 +1503,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-010",
@@ -1446,7 +1536,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-011",
@@ -1477,7 +1569,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-012",
@@ -1508,7 +1602,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-013",
@@ -1539,7 +1635,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed 'per RECIST the progression date should be {first_date}' \u2014 both a guideline citation (SQ-05) and a statement of the answer.",
   "msg_query_before": "Lesion {lesion_id} was equivocal at {first_visit} and confirmed at {confirm_visit}. Please confirm the date of progression; per RECIST the progression date should be the date of the initial observation ({first_date}).",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-RS-014",
@@ -1570,7 +1668,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-015",
@@ -1601,7 +1701,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-016",
@@ -1632,7 +1734,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the list of permitted response categories. The finding may equally be a missing baseline target lesion rather than a wrong response, and the original wording pointed at only one of the two.",
   "msg_query_before": "The overall response at {visit} is recorded as {reported_overall} although no target lesions were identified at baseline. Please review; for subjects with non-measurable disease only, the appropriate categories are complete response, Non-CR/Non-PD, progressive disease or not evaluable.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-RS-017",
@@ -1663,7 +1767,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-018",
@@ -1694,7 +1800,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-019",
@@ -1725,7 +1833,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-020",
@@ -1756,7 +1866,9 @@
   "r3_lens": "MM",
   "r3_change": "Was raising a finding per discordant assessment. A subject whose whole response history differs between investigator and BICR produced a finding at every visit. Now one finding per subject, listing the discordant timepoints, which is also how a monitor reconciles it.",
   "msg_query_before": "",
-  "logic_before": "for each assessment with both INVESTIGATOR and BICR responses:\n    if responses differ, or progression dates differ by > config.bicr_date_tolerance_days:\n        raise finding (INFO by default when the difference does not cross a PD boundary)"
+  "logic_before": "for each assessment with both INVESTIGATOR and BICR responses:\n    if responses differ, or progression dates differ by > config.bicr_date_tolerance_days:\n        raise finding (INFO by default when the difference does not cross a PD boundary)",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-IR-001",
@@ -1787,7 +1899,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the guideline explanation and the statement that iUPD should have been recorded (SQ-05). iUPD stays in the reviewer-facing tips, where the explanation belongs.",
   "msg_query_before": "RECIST 1.1 progression criteria are met at {visit} and the iRECIST response is recorded as {reported_irecist}. Under iRECIST the first occurrence of progression should be recorded as unconfirmed progression (iUPD), with confirmation at the next assessment. Please review.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-IR-002",
@@ -1818,7 +1932,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-IR-003",
@@ -1849,7 +1965,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed 'against the iRECIST criteria' (SQ-05). The comparison rule is in the tips.",
   "msg_query_before": "Confirmed progression is recorded at {visit}. The unconfirmed progression at {iupd_visit} was driven by {driver}, and the current assessment shows {confirmation_evidence}. Please review the confirmation of progression against the iRECIST criteria.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-IR-004",
@@ -1880,7 +1998,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the guideline explanation of separate new-lesion sums (SQ-05), and narrowed the query to the single factual question.",
   "msg_query_before": "The sum of diameters at {visit} appears to include the measurements of new lesions. Under iRECIST new lesions are recorded and summed separately from the baseline target lesions. Please review the sum of diameters and the new lesion records.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-IR-005",
@@ -1911,7 +2031,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed the derived-response arithmetic from the query; it remains in the reviewer-facing reason.",
   "msg_query_before": "Unconfirmed progression was recorded at {iupd_visit} and was not confirmed at {visit}. The response at {visit} is recorded as {reported_irecist}; based on the current sum of {sum} mm against the nadir of {nadir_sum} mm the response derives as {derived_irecist}. Please review.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-IR-006",
@@ -1942,7 +2064,9 @@
   "r3_lens": "CDM",
   "r3_change": "Replaced the guideline citation with the study's own configured limits (SQ-05). Naming study configuration is not a guideline reference and is what the site can act on.",
   "msg_query_before": "{n} new measurable lesions are recorded for this subject. iRECIST permits up to {max_total} new measurable lesions in total, and {max_per_organ} per organ, with any further new lesions recorded as non-target. Please review the new lesion records.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-IR-007",
@@ -1973,7 +2097,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-IR-008",
@@ -2004,7 +2130,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-IR-009",
@@ -2035,7 +2163,9 @@
   "r3_lens": "CDM",
   "r3_change": "Removed 'the iRECIST response would be expected to be {expected_irecist}'. The two guideline names are retained because here they are the names of CRF fields, not a citation of authority.",
   "msg_query_before": "The RECIST 1.1 and iRECIST responses recorded at {visit} are {r11_response} and {reported_irecist}. Based on the response history the iRECIST response would be expected to be {expected_irecist}. Please review.",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-IR-010",
@@ -2066,7 +2196,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-XD-001",
@@ -2097,7 +2229,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-XD-002",
@@ -2128,7 +2262,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-XD-003",
@@ -2159,7 +2295,9 @@
   "r3_lens": "MM",
   "r3_change": "Fires on any new systemic anticancer therapy, including protocol-permitted maintenance and supportive regimens. A monitor would not query those.",
   "msg_query_before": "",
-  "logic_before": "if a new systemic anticancer therapy starts before the recorded progression date\n   (or before any recorded progression): raise finding"
+  "logic_before": "if a new systemic anticancer therapy starts before the recorded progression date\n   (or before any recorded progression): raise finding",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-XD-004",
@@ -2190,7 +2328,9 @@
   "r3_lens": "MM",
   "r3_change": "One event was producing one finding per subsequent visit. A single course of radiotherapy to a target lesion in a 12-visit study raised eleven findings for one fact. Now one finding per lesion, listing the affected assessments.",
   "msg_query_before": "",
-  "logic_before": "if radiotherapy, surgery or ablation is recorded at a site matching a target lesion\n   after baseline: raise finding on all subsequent assessments of that lesion"
+  "logic_before": "if radiotherapy, surgery or ablation is recorded at a site matching a target lesion\n   after baseline: raise finding on all subsequent assessments of that lesion",
+  "r3_decision": "Accept",
+  "r3_basis": "Marked individually"
  },
  {
   "id": "TE-XD-005",
@@ -2221,7 +2361,9 @@
   "r3_lens": "MM",
   "r3_change": "An adverse event of disease progression with no PD assessment is often correct: the subject deteriorated and no further imaging was possible. Querying the site for a scan that could not be done is exactly the kind of query that costs credibility.",
   "msg_query_before": "",
-  "logic_before": "if an AE term maps to disease progression / malignant neoplasm progression\n   and no PD assessment exists within config.ae_pd_window_days (default 60): raise finding"
+  "logic_before": "if an AE term maps to disease progression / malignant neoplasm progression\n   and no PD assessment exists within config.ae_pd_window_days (default 60): raise finding",
+  "r3_decision": "Accept",
+  "r3_basis": "Blanket approval only - not marked individually"
  },
  {
   "id": "TE-XD-006",
@@ -2252,7 +2394,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-XD-007",
@@ -2283,7 +2427,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-XD-008",
@@ -2314,7 +2460,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-XD-009",
@@ -2345,7 +2493,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-XD-010",
@@ -2376,7 +2526,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-XD-011",
@@ -2407,7 +2559,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-XD-012",
@@ -2438,7 +2592,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-QM-001",
@@ -2469,7 +2625,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-QM-002",
@@ -2500,7 +2658,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-QM-003",
@@ -2531,7 +2691,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-QM-004",
@@ -2562,7 +2724,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-QM-005",
@@ -2593,7 +2757,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-QM-006",
@@ -2624,7 +2790,9 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  },
  {
   "id": "TE-RS-021",
@@ -2655,6 +2823,8 @@
   "r3_lens": "",
   "r3_change": "",
   "msg_query_before": "",
-  "logic_before": ""
+  "logic_before": "",
+  "r3_decision": "",
+  "r3_basis": ""
  }
 ]

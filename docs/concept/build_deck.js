@@ -126,7 +126,7 @@ let cx1 = M;
   chip(s, cx1, 4.95, t, { w: cw, h: 0.3, fill: DEEPD, line: MOSS, color: MOSS, fs: 9 });
   cx1 += cw + 0.22;
 });
-s.addText("Concept overview  ·  derived from TEA-PLAN-001 v1.0.0 and TEA-SPEC-001 v1.2.0", {
+s.addText("Concept overview  ·  derived from TEA-PLAN-001 v1.0.0 and TEA-SPEC-001 v2.0.0", {
   x: M, y: 6.5, w: 11, h: 0.3, fontFace: MONO, fontSize: 9, color: "6E7D72",
   margin: 0, valign: "middle" });
 s.addNotes("This deck is an orientation map. It carries no independent authority: where it disagrees with the plan or the specification, those documents win.");
@@ -259,8 +259,8 @@ title(s, "Six steps and the gates between them");
 
 const steps = [
   ["STEP 1", "Development plan", "TEA-PLAN-001", "Approved 17 Aug", "done"],
-  ["STEP 2", "Programming spec", "TEA-SPEC-001", "Rules done; wording next", "now"],
-  ["STEP 3", "Prototype output", "Dummy dataset", "Findings read by humans", ""],
+  ["STEP 2", "Programming spec", "TEA-SPEC-001", "Approved 21 Aug", "done"],
+  ["STEP 3", "Prototype output", "Dummy dataset", "Next - needs a pilot study", "now"],
   ["STEP 4", "UI design", "8 screens", "No code before approval", ""],
   ["STEP 5", "Code generation", "Engine, rules, app", "Validation package", ""],
   ["STEP 6", "Finalisation", "UAT on a real study", "Release 1.0.0", ""],
@@ -542,14 +542,14 @@ footer(s, 14);
 // =====================================================================
 s = pres.addSlide(); s.background = { color: DEEPD };
 eyebrow(s, M, 1.5, "Where we are", MOSS);
-s.addText("Step 2, part-done", {
+s.addText("Step 2 closed. Step 3 next.", {
   x: M, y: 1.85, w: 11, h: 0.85, fontFace: HEAD, fontSize: 38, bold: true,
   color: PAPER, margin: 0, valign: "middle" });
 
 const status = [
-  ["RULES SETTLED", "All 85 rules dispositioned over two rounds. Logic, severities and confidence base rates confirmed; 2 rules retired."],
-  ["OPEN NOW", "Rule_Messages - the query wording a site actually reads. Reviewed on its own, by people who talk to sites."],
-  ["THEN", "The rule pack freezes and Step 3 begins: prototype output on a curated dummy dataset."],
+  ["APPROVED 21 AUG", "Three review rounds, then a reviewer-lens pass that changed 27 rules. Rule pack frozen at 2.0.0 - changes now need change control."],
+  ["BLOCKED ON", "Choosing the pilot study. Step 3 cannot start without it: it decides the golden dataset and the UAT study."],
+  ["WATCH AT STEP 3", "The 8 rules whose logic changed last have no test history, and 27 confidence rates are still estimates rather than measurements."],
 ];
 status.forEach((st, i) => {
   const x = M + i * 4.03, y = 3.1;
@@ -563,7 +563,7 @@ status.forEach((st, i) => {
 s.addText("This overview is derived from the controlled documents and carries no independent authority.\nWhere it disagrees with TEA-PLAN-001 or TEA-SPEC-001, those documents win.", {
   x: M, y: 5.5, w: 11, h: 0.7, fontFace: BODY, fontSize: 12, color: "9FB3A6",
   margin: 0, lineSpacing: 17, valign: "top" });
-s.addNotes("Close by naming the next decision: reviewing the query wording in Rule_Messages. Nothing freezes until that is accepted.");
+s.addNotes("The approval was a reasonableness review, not line-by-line. That is workable because Step 3 confirms the detail by evidence - the golden dataset tests all 83 live rules against known expected findings.");
 
 pres.writeFile({ fileName: "/home/user/project1/docs/concept/TEA-concept-overview.pptx" })
   .then((f) => console.log("written:", f));

@@ -37,8 +37,8 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 | Document | Version | Status | Next |
 |---|---|---|---|
 | TEA-PLAN-001 Development Plan | 1.0.0 | **APPROVED** 2026-08-17 | — |
-| TEA-SPEC-001 Programming Specification | 1.3.0 | DRAFT | Confirm the 27 round-3 changes |
-| Rule catalog | 1.3.0 | Logic confirmed | Freezes when the round-3 changes are confirmed |
+| TEA-SPEC-001 Programming Specification | 2.0.0 | **APPROVED** 2026-08-21 | — |
+| Rule catalog | 2.0.0 | **FROZEN** 2026-08-21 | Changes need change control |
 | Concept overview (HTML + PPTX) | — | Current | Regenerate when the plan or spec changes |
 
 ## Where to start
@@ -48,11 +48,19 @@ on, the development gates, the review pipeline, data lineage from EDC export to 
 query, and roles and responsibilities. It is derived from the plan and the specification
 and carries no independent authority — where it disagrees with them, they win.
 
-Step 2 is nearly done. All 85 rules, all 85 query messages and all nine open questions were
-accepted across three rounds. A final reviewer-lens pass — reading the rules as a clinical
-data manager and as a medical monitor would — then changed **27 rules**: 19 query texts
-rewritten and 8 rule logics amended. Those 27 are what remains to confirm before the rule
-pack freezes.
+**Step 2 is closed.** The specification is approved and the rule pack is frozen at 2.0.0 —
+a rule change from here needs change control, a version bump and an impact assessment on
+findings already issued, not an edit.
+
+The approval was given as a *reasonableness review*: the reviewer's own words were that the
+changes look reasonable but the detail was not individually confirmed. The specification's
+**Approval** sheet records that, along with the two items covered by the blanket statement
+rather than marked individually. Step 3 is what makes that basis workable — the golden
+dataset tests all 83 live rules against a signed-off expected finding list, confirming the
+detail by evidence rather than by reading.
+
+**Step 3 is blocked on one decision: choosing the pilot study** (OI-03). It determines the
+golden dataset and the UAT study.
 
 Steps 3–6 (prototype output, UI design, code generation, final application) are gated on
 approval of the specification.

@@ -3,6 +3,41 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## [2.0.0] — 2026-08-21 — APPROVED
+
+**Step 2 gate passed.** TEA-SPEC-001 is approved for implementation and the rule pack is
+frozen at 2.0.0.
+
+### Approval, recorded as given
+- Approved by Daniel, 2026-08-21, as a **reasonableness review**: *"All the change looks
+  reasonable. I haven't confirmed all the detail, but good to final."*
+- The new **Approval sheet** records that verbatim, states what the approval does *not*
+  claim, and names the mitigation: Step 3 tests all 83 live rules against a curated dataset
+  with a signed-off expected finding list, so detail not confirmed by reading is confirmed
+  there by evidence.
+- Two items were approved by the blanket statement rather than marked individually and are
+  flagged rather than smoothed over: **TE-XD-005** (26 of the 27 round-3 rows carry an
+  individual Accept; this one does not) and the **19 Rule_Messages rewrites** (the same
+  changes are marked individually on the Rules sheet, so this is duplication, not a gap).
+- **ID-05 and ID-06** are flagged a third time: amended at round 1, accepted under SQ-03,
+  never separately re-read. ID-06 changed where baseline comes from, and every derivation
+  depends on baseline.
+
+### Frozen
+- `rule-catalog.yaml` → 2.0.0, `status: FROZEN`, with the change-control requirement in the
+  file header where anyone editing it will see it.
+- The Rules and Rule_Messages sheets no longer carry reviewer input columns. Every decision
+  column is closed history: three review rounds plus the gate.
+
+### Changed elsewhere
+- **TEA-PLAN-001** — Step 2 marked COMPLETE with the gate outcome and the approval basis;
+  Step 3 marked NEXT; cover's next gate updated. **OI-03 (pilot study) is now blocking** —
+  Step 3 cannot start without it.
+- **Concept overview and slide deck** — Step 2 shown as approved, Step 3 as current and
+  blocked on the pilot study. The closing slide now names what to watch at Step 3: the 8
+  rules whose logic changed last have no test history, and 27 confidence base rates are
+  still estimates rather than measurements.
+
 ## [1.3.0] — 2026-08-21
 
 Everything was accepted — all 85 rules, all 85 query messages, all nine open questions. This
