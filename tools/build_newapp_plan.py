@@ -20,7 +20,7 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.9"
+DOC_VERSION = "1.10"
 DOC_STATUS = ("Baseline v1.0 + changes C-N01 and C-N02. Gates N1-N3 closed; Step N4 in progress and "
               "Step N4a - the Python shell - BUILT AND TESTED, awaiting your run on the company laptop. "
               "Two company controls are measured rather than feared: an executable may run but may not "
@@ -228,7 +228,19 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.9", "2026-08-18", "Claude Code", "-",
+    [f"{MARK_NEW}1.10", "2026-08-22", "Claude Code", "-",
+     "DELIVERY IS SOLVED, AND R-N20 WAS WIDER THAN THE EVIDENCE. The Python package went "
+     "through company e-mail without complaint, and the requester identified what had "
+     "stopped the earlier attempt: the EXECUTABLE inside the zip, not the zip. So the "
+     "filter judges what an archive CONTAINS, which is what a competent one does - and "
+     "the constraint is narrower than it was recorded as. R-N20 drops from HIGH/HIGH to "
+     "Low/HIGH: it still bars the Electron package, because that is an .exe however it "
+     "is wrapped, but it does not bar this. Route B's premise - 'what travels is .py "
+     "text' - is now measured rather than reasoned. Nothing is worked around: the filter "
+     "did exactly its job on the executable and had no reason to object to source text. "
+     "Sheet 10a records the fifth measured result. What is still not known is whether "
+     "the application RUNS on that laptop - Gate N4a, and the one thing now waiting."],
+    ["1.9", "2026-08-18", "Claude Code", "-",
      "CHANGE C-N02 - THE PYTHON SHELL, BUILT. The two answers that were missing arrived: Python 3.14 is "
      "installed on the laptop, and e-mail is the only route in. Route B on sheet 10a is therefore the "
      "route, and it is no longer a proposal - src/storage/python/ and src/shell/python/ exist, 80 storage "
@@ -1218,8 +1230,16 @@ risks = [
      "The one failure that would break the guarantee rather than inconvenience somebody. SMB client caching can delay both the visibility of a new file and a change to modification time. Three defences: the claim uses create-if-absent, which the server decides rather than the client; the heartbeat is re-read rather than remembered; and every save re-checks the claim before writing (step 5 on sheet 05a), so a lost race still stops short of overwriting. Must be tested on your actual share - N5.6b - because share behaviour is a property of the server, not of the application."],
     [f"{MARK_CHG}R-N16", "A declared name is mistaken for a verified one, and somebody relies on the tool to say who did what.", "Low", "Low",
      "Much reduced at round 6: Q-N09 confirms there is no internal validation or record-keeping obligation, so nothing formal rests on this identity. It remains stated at NR-USR-08 and on the screen where the name is entered, because the limit should be visible at the point it could mislead - but it is now a courtesy rather than a control."],
-    [f"{MARK_NEW}R-N20", "The company will not let an executable ARRIVE, whatever its policy on running one.", "HIGH", "HIGH",
-     "PROVEN 2026-08-15, and it is now the binding constraint. The probe ran happily once it was on the machine, but e-mail refused to carry a .exe at all on a general security check. Execution policy is satisfied; transport is not. Two things follow. First, no amount of work on the package fixes this - an Electron build is an .exe however it is zipped, and defeating a mail filter is not a solution anybody should want. Second, decision N-01 is genuinely reopened: the choice of shell is now governed by what can be delivered rather than by what is pleasant to build. See sheet 10a."],
+    [f"{MARK_CHG}R-N20", "The company will not let an executable ARRIVE, whatever its policy on running one.", "Low", "HIGH",
+     "NARROWED 2026-08-22, and no longer the binding constraint. The Python package - a zip of "
+     "plain text - went through company e-mail without complaint, and the requester identified "
+     "what had stopped the earlier attempt: the EXECUTABLE inside the zip rather than the zip "
+     "itself. The filter judges what an archive contains, which is what a competent one does. "
+     "So the risk is real but confined: it still bars the Electron package, because that is an "
+     ".exe however it is wrapped, and it does not bar the shell that was built to answer it. "
+     "Likelihood falls from HIGH to Low - it now applies only to a route nobody is taking - and "
+     "the impact stays HIGH because it would still be fatal to that route. Route B's premise is "
+     "now measured rather than reasoned. ORIGINAL FINDING, 2026-08-15: The probe ran happily once it was on the machine, but e-mail refused to carry a .exe at all on a general security check. Execution policy is satisfied; transport is not. Two things follow. First, no amount of work on the package fixes this - an Electron build is an .exe however it is zipped, and defeating a mail filter is not a solution anybody should want. Second, decision N-01 is genuinely reopened: the choice of shell is now governed by what can be delivered rather than by what is pleasant to build. See sheet 10a."],
     [f"{MARK_NEW}R-N22", "The Python shell listens on a socket, and a listening socket on a company laptop is an attack surface.", "Low", "HIGH", "CREATED by change C-N02, and the honest price of route B: a browser and a local program can only talk over one. It is answered rather than accepted. Loopback only, so nothing off the machine can reach it and Windows Firewall is never asked for anything (NR-SEC-04). A port the operating system picks at start, so nothing is predictable. A 32-byte key on every request, generated at start and never written to disk - another program cannot guess it, and another web page cannot read it because same-origin policy keeps this page's DOM to itself (NR-SEC-05). The Host header must be loopback, which is what stops DNS rebinding. No CORS header is ever sent and any cross-site request is refused. No URL is mapped onto a path on disk, so there is nothing to escape from (NR-SEC-06). Every one of those is checked by tools/test_python_app.py on each run - eleven checks, before the application is even looked at."],
     [f"{MARK_NEW}R-N21", "Data cannot enter a browser page at all - the company blocks the file picker, so the web application cannot be given a file.", "HIGH", "HIGH",
      "PROVEN 2026-08-18, by diagnostic rather than by report. The file dialog opens normally; on choosing a file a company security message appears and nothing is imported. Transferring and opening the HTML file is NOT restricted. That combination identifies it precisely: a technical control on the browser's file-input data path, watching the File API, not a policy about the document and not a restriction on the browser. Three things follow. (1) The finished web application cannot be fed data on that laptop by any of its three routes - picker, drag-and-drop, or a JSON file - because all three end in the same API. It remains correct, and it remains usable anywhere the control does not apply. (2) Route C on sheet 10a is dead, not partial: it proposed persistence through the browser's own file access, which is the intercepted interface. (3) It is NOT a barrier to route B, because a Python shell reads the file from disk itself and hands the bytes to the page - there is no upload for a control to intercept. No mitigation is proposed on the browser side, and none will be: the control is deliberate, and evading it is the behaviour it exists to catch."],
@@ -1286,14 +1306,19 @@ r = lines(ws, r, [
     "  WRITING beside itself in that folder                 ALLOWED   (probe, 2026-08-15)",
     "  SENDING an executable through company e-mail         REFUSED   (general security check)",
     "  IMPORTING a file INTO a page through the picker      REFUSED   (security message, 2026-08-18)",
+    "  SENDING A ZIP OF PLAIN TEXT through the same e-mail  ALLOWED   (2026-08-22)",
     "",
     "  ...while TRANSFERRING and OPENING the HTML file itself was not restricted at all.",
     "",
-    "Four different controls, and the two refusals sit at opposite ends: one stops the desktop",
-    "application ARRIVING, the other stops the web application being GIVEN DATA. Neither can be fixed by",
-    "working on the thing it blocks - an Electron build is an .exe however it is zipped, and every way",
-    "the web application can be handed a file (picker, drag-and-drop, .json) ends at the same File API",
-    "the control is watching.",
+    "The fifth result is the one that settles the first. The mail filter was not refusing archives; it",
+    "was refusing the EXECUTABLE inside one, which is what a competent filter does. So the constraint",
+    "is narrower than it was first recorded as, and it is narrower in exactly the direction route B was",
+    "built for: what travels here is .py source, and it arrives.",
+    "",
+    "What remains is the import control, and it is unmoved: every way the web application can be handed",
+    "a file - picker, drag-and-drop, .json - ends at the same File API the control is watching. That is",
+    "the barrier the Python shell removes, and the only one still standing between the requester and a",
+    "working tool is whether the application RUNS on that laptop.",
 ], mono=True)
 r += 1
 r = note(ws, r, "Working around either control is not on this sheet and will not be. Both were put there "
@@ -1304,8 +1329,8 @@ r += 1
 
 r = section(ws, r, "The three routes")
 routes = [
-    ["A", "Ask IT for the sanctioned channel", "The software-distribution share, the internal artifact store, or an allow-list entry. Nothing is rebuilt - the package is finished and tested.", "Best fidelity, no work. Depends entirely on somebody else, and the answer may be no or slow.", "Ask first - it costs one conversation"],
-    ["B", "Replace the Electron shell with a PYTHON one", "The interface and the engine do not change at all. Python does what Electron's main process does - files, folders, the claim - and serves the existing page to the browser. What travels is .py text, not an executable. It also READS THE WORKBOOK ITSELF and hands the bytes to the page, so nothing is ever uploaded.", "Removes the executable from one problem and the upload from the other. Needs Python on the laptop. Roughly 700 lines of new Python, no new engine.", "RECOMMENDED - and now the only route that answers both refusals"],
+    ["A", "Ask IT for the sanctioned channel", "The software-distribution share, the internal artifact store, or an allow-list entry. Nothing is rebuilt - the package is finished and tested.", "Best fidelity, no work. Depends entirely on somebody else, and the answer may be no or slow.", "NOT NEEDED for route B - it arrived by e-mail. Still the only way the Electron package could"],
+    ["B", "Replace the Electron shell with a PYTHON one   [DELIVERED 2026-08-22]", "The interface and the engine do not change at all. Python does what Electron's main process does - files, folders, the claim - and serves the existing page to the browser. What travels is .py text, not an executable. It also READS THE WORKBOOK ITSELF and hands the bytes to the page, so nothing is ever uploaded.", "Removes the executable from one problem and the upload from the other. Needs Python on the laptop. Roughly 700 lines of new Python, no new engine.", "RECOMMENDED - and now the only route that answers both refusals"],
     ["C", "Persistence in the web application instead", "Give the existing HTML file real storage, through the browser's own file access. It already arrives - it is a document.", "RULED OUT 2026-08-18. It depends on the browser's file access, which is the exact interface the import control intercepts (R-N21). It was never going to keep the shared folder either; now it cannot even get the first file in.", "RULED OUT - not partial"],
 ]
 r = table(ws, r, ["", "Route", "What it is", "What it costs", "Verdict"],
@@ -1457,6 +1482,8 @@ log = [
 
     ["38", "Instruction 2026-08-18", "IT bans any data upload into HTML. How is that limitation solved?", "Accepted as a constraint, and diagnosed before it was recorded.", "The question could have meant three different things - a policy about the file, a restriction on the browser, or a technical control on the import path - and each would have led somewhere different. Rather than choose, the plan asked for one observation. Item 39 has the answer; R-N21 is the record.", "Closed"],
     ["39", "Diagnostic 2026-08-18", "The file dialog opens normally; after choosing the file a company security message appeared and nothing was imported. No limitation on transferring or opening the HTML file.", "Decisive - it names the control exactly.", "It is a technical control on the browser's file-input data path, not a policy about the document. R-N21 added at HIGH/HIGH. Sheet 10a rewritten: route C moves from 'partial' to RULED OUT, since it depended on the intercepted interface, and route B gains a second and independent reason - a Python shell reads the file itself, so the page has no upload element, no drag-and-drop and no File API call. NO mitigation is proposed on the browser side and none will be. One further question is added to sheet 10a: what the security message actually said, which decides whether R-N21 is confined to web uploads or reaches further.", "Closed"],
+    ["40", "Answers 2026-08-20", "Python 3.14 is installed. No internal file route is allowed yet - use e-mail with Python code. The import message said data upload is not allowed except to permitted paths.", "All three decided the route, and the third decided whether the route existed.", "Route B is chosen and built: src/storage/python/ and src/shell/python/, change C-N02 on this plan and sheet 05a of the specification. The third answer is the one that mattered - a DLP control on upload DESTINATIONS watches data leaving into a web page, and leaves a local program reading a local file entirely alone. Had it named a process reading business documents, route B would have been in doubt too.", "Closed"],
+    ["41", "Result 2026-08-22", "The Python package went through e-mail with no problem. The earlier refusal was caused by the EXECUTABLE enclosed in the zip.", "Decisive, and it narrows a risk this plan had recorded too widely.", "R-N20 falls from HIGH/HIGH to Low/HIGH and stops being the binding constraint. The filter judges what an archive CONTAINS rather than refusing archives - which is what a competent filter does, and which the plan should have said rather than concluding that nothing could be sent. Route B's premise, 'what travels is .py text', is now measured. Sheet 10a records the fifth result. Delivery is closed; whether the application RUNS on that laptop is Gate N4a and is the only thing outstanding.", "Closed"],
 ]
 r_start = r
 r = table(ws, r, ["No.", "Source", "Input", "Response", "Action taken in v0.1", "Status"],

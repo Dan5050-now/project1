@@ -28,7 +28,7 @@ DOC_STATUS = ("v1.2 APPROVED 2026-08-13 and still governing. THIS ISSUE, v1.3, a
               "Electron shell stays specified and stays the better application wherever it can be "
               "delivered.")
 DOC_DATE = "2026-08-13"
-PLAN = "PRAP_NewApp_Development_Plan_v1.9.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.10.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Specification_v{DOC_VERSION}.xlsx"

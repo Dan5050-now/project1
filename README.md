@@ -30,7 +30,7 @@ and stays in service — the two are parallel products, not successor and predec
 | N2 | Programming specification | **v1.0 APPROVED** 2026-08-13 · Gate N2 closed |
 | N3 | Desktop UI design | **v1.0 component list APPROVED** 2026-08-13 · Gate N3 closed |
 | N4 | Build (Electron shell) | **In progress** — storage layer and shell built; the application launches |
-| N4a | Build (Python shell) | **Built and tested** 2026-08-18 · awaiting the run on the company laptop |
+| N4a | Build (Python shell) | **Built, tested and DELIVERED** — arrived by e-mail 2026-08-22 · awaiting the run on the company laptop |
 | N5 | Release | Not started |
 
 Both applications share one calculation engine, one data schema (version 6) and one
@@ -131,7 +131,11 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.9.xlsx` — **current.** Adds **change C-N02, the
+- `docs/PRAP_NewApp_Development_Plan_v1.10.xlsx` — **current.** Records that **delivery is
+  solved**: the Python package went through company e-mail without complaint, and the
+  refusal that started this line was caused by the **executable inside** the earlier zip,
+  not by the zip. `R-N20` narrows from HIGH/HIGH to Low/HIGH — it still bars an Electron
+  package, and no longer bars anything anybody is building. Also adds **change C-N02, the
   Python shell**: `NR-SEC-01` amended (a loopback listener is permitted; an outbound
   connection is still forbidden) with `NR-SEC-04..06` around it, `NR-IMP-09` (the page
   carries no browser file interface), `NR-DEP-16` (Python 3.9+, standard library only),
