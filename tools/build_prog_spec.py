@@ -14,10 +14,16 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.1"
+DOC_VERSION = "1.2"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
-PLAN = "PRAP_Development_Plan_v2.0.xlsx"
+# The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
+# It has to read from the CURRENT issue instead: a requirement added after the
+# baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
+# check_consistency.py reported it as untraced, which is the drift both documents
+# exist to prevent.
+PLAN = "PRAP_Development_Plan_v2.28.xlsx"
+PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
 
@@ -187,6 +193,17 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.2", "2026-08-22", "Claude Code", "Dan",
+         "TWO CHANGES. (1) R-13: the role factor is DIVIDED between the people holding "
+         "that role on that project in that month. Sheet 05 carries the formula, the "
+         "counting rule and the worked example; the count is per month, by distinct "
+         "people, and each person's own weight applies to their share afterwards. New "
+         "setting split_shared_role_fte, default 1, restores the previous arithmetic when "
+         "set to 0. (2) R-14: PeriodWeightStandard and RoleFactor are DELIVERED FILLED IN "
+         "- 84 and 429 rows of default assumptions - and the application's blank start "
+         "seeds the identical figures, read from the template rather than restated. Sheet "
+         "03 records where they come from and what a company is expected to do with them. "
+         "Written against plan v2.28.", "Issued"],
         ["1.1", "2026-08-20", "Claude Code", "Dan",
          "SCHEMA 6. Two changes to the data model, requested 2026-08-20. (1) work_scope_type joins "
          "PeriodWeightStandard and RoleFactor beside clinical_phase, so the keys become "
@@ -390,9 +407,35 @@ r = note(ws, r, "A note column that is absent is not an error - it is optional o
                 "fail because someone deleted a column they were not using.")
 r += 1
 
+r = section(ws, r, "The delivered default assumptions   [R-14]")
+r = lines(ws, r, [
+    "PeriodWeightStandard and RoleFactor are DELIVERED FILLED IN - 84 and 429 rows. They used",
+    "to arrive empty, and a plan started inside the application filled both grids with a",
+    "placeholder 1.00.",
+    "",
+    "1.00 everywhere is not a cautious starting point; it is the absence of one. At 1.00 the",
+    "period weight and the role factor cancel out of the multiplication, so every project",
+    "reduced to person_weight x coverage and the application produced figures that looked",
+    "like an answer and were not one. Nothing said so, because nothing was wrong.",
+])
+r += 1
+dflt = [
+    ["Defined once", "tools/build_source_workbook.py - DEFAULT_PHASE_PROFILE and the tables beside it.", "One definition"],
+    ["Read by the template", "PeriodWeightStandard and RoleFactor are written from it at build time.", "R-14"],
+    ["Read by the blank start", "tools/build_app_seed.py lifts the same rows OUT OF THE TEMPLATE into SEED_PWS and SEED_RF. Not restated - lifted, so 'the workbook and the application hold the same assumptions' is a fact rather than a promise.", "R-14"],
+    ["Read by the dummy data", "The same baseline, plus illustrative scope-specific rows on top.", "R-12"],
+    ["Checked", "check_consistency.py compares the embedded seed with the template row for row, and fails if either grid has reverted to one flat value.", "R-14"],
+    ["Still built from the lists", "The blank start builds the GRID from the value lists, so a company that adds a role gets that combination immediately. It arrives at 1.00, marked as a placeholder, because nobody has supplied a figure for a role nobody had yesterday.", "-"],
+    ["Baseline only", "Every default row has work_scope_type EMPTY, which covers every scope. Shipping scope-specific defaults would mean asserting how much cheaper an outsourced trial is - the judgment a company has to make for itself.", "R-12"],
+    ["Marked as defaults", "Every row carries 'Default assumption - replace with your own figure' in its note column, so a figure nobody has reviewed can be told from one somebody chose.", "R-14"],
+]
+r = table(ws, r, ["Point", "Detail", "Basis"], dflt, [30, 100, 14], wrap_cols=(2,))
+r += 1
+
 r = section(ws, r, "Config parameters")
 cfg = [
     ["schema_version", "Integer", "6", "Compared with the version this application expects (sheet 08)."],
+    ["split_shared_role_fte", "Integer", "1", "1 = the role factor is divided between the people sharing a role in a month (sheet 05). 0 = each carries the whole factor, the arithmetic of every version before this one. A switch, not a threshold - so the Config reader must distinguish a value of 0 from an absent value, which is the defect this setting exposed."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
     ["over_allocation_fte", "Decimal", "1.50", "Absolute, not scaled by capacity_fte (S2-01). See sheet 05."],
     ["under_allocation_fte", "Decimal", "0.60", "Absolute, not scaled by capacity_fte. Moved from 0.80 at S2-05. See sheet 05."],
@@ -526,11 +569,15 @@ r += 1
 r = note(ws, r, "For 'Others' the derivation does not run at all: periods are read from ProjectPeriod as entered (Q-25, Q-28).")
 r += 1
 
-r = section(ws, r, "Monthly load   [REQ-CAL-02, REQ-CAL-05, REQ-CAL-08]")
+r = section(ws, r, "Monthly load   [REQ-CAL-02, REQ-CAL-05, REQ-CAL-08, REQ-CAL-14]")
 r = code(ws, r, [
     "  load(assignment, month) = project_period_weight( project, month )",
-    "                          x role_factor( project.type, project.phase,",
+    "",
+    "                            role_factor( project.type, project.phase, project.scope,",
     "                                         period_name( project, month ), assignment.role )",
+    "                          x -------------------------------------------------------------",
+    "                            sharers( project, assignment.role, month )",
+    "",
     "                          x person_weight( assignment, month )",
     "                          x coverage( assignment, month )",
     "",
@@ -539,13 +586,38 @@ r = code(ws, r, [
     "  role_factor           : selected by the SAME period as the weight above, so the two always",
     "                          agree about which period the month is in  (R-10)",
     "                          project.phase is NULL for 'Others'; the lookup matches null to null",
+    "                          project.scope falls back to the empty-scope row  (R-12)",
     "                          no row matches -> 1.00, and raise V-23",
+    "  sharers               : how many DISTINCT PEOPLE hold that role on that project in that",
+    "                          month, counting anyone whose assignment touches it  (R-13)",
+    "                          never 0; when nobody else holds the role it is 1",
+    "                          config.split_shared_role_fte = 0 -> always 1, the old arithmetic",
     "  person_weight         : PersonPeriodWeight.weight_override if a window covers the",
     "                          first day of the month, else assignment.person_weight",
     "  coverage              : calendar days of the month inside [assign_start, assign_end]",
     "                          divided by the days in that month",
     "",
     "  result is FTE.  hours = FTE x config.fte_hours_per_month",
+    "",
+    "  WHY THE FACTOR IS DIVIDED  [REQ-CAL-14]",
+    "  role_factor answers 'what does this ROLE cost the project in this period', not 'what",
+    "  does each person holding it cost'. Charge every holder the whole factor and a trial run",
+    "  by two data managers costs twice a trial run by one - the same work, priced by how many",
+    "  people happen to be named against it. The property to preserve is that the PROJECT'S",
+    "  total does not move when the same work is shared out differently, and dividing by the",
+    "  headcount is what preserves it.",
+    "",
+    "  COUNTED PER MONTH, not once per assignment. When one of two sharers leaves in June, the",
+    "  other must be back to a full share in July - by itself, with nobody editing anything.",
+    "  A per-assignment divisor would halve them for the whole project.",
+    "",
+    "  COUNTED BY PEOPLE, not by rows. Two rows for one person on the same project and role are",
+    "  one person doing one job, and must not halve their own load.",
+    "",
+    "  PERSON WEIGHT APPLIES AFTERWARDS, to the share. Two people at 1.00 and 0.50 on a factor",
+    "  of 2.00 carry 1.00 and 0.50, not 1.33 and 0.67: the division is by headcount, which is",
+    "  what was asked for, and a person's own weight then says how much of their share they",
+    "  actually give it.",
 ])
 
 r = section(ws, r, "The two weight tables now overlap   [R-10, R-12]")

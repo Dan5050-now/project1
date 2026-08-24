@@ -73,6 +73,12 @@ function buildModel(sheets){
   M.HOURS = cfg("fte_hours_per_month", 160);
   M.HORIZON = cfg("default_horizon_months", 24);
   M.UNIT = M.config.capacity_unit || "FTE";
+  /* Whether the role factor is divided between the people sharing a role. On by
+     default, and a setting rather than a constant for one reason: it changes every
+     figure a shared role ever produced, and somebody comparing this month's report
+     with last year's needs to be able to turn it off, see the old number, and know
+     that is where the difference came from. */
+  M.SPLIT = cfg("split_shared_role_fte", 1) !== 0;
 
   const sv = num(M.config.schema_version);
   if (sv === null) F.push({sev:"warning", rule:"V-09", sheet:"Config", row:"",

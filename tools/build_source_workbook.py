@@ -95,6 +95,124 @@ LISTS = [
     ("role_others", ["Project lead", "Main staff", "Other staff"]),
 ]
 
+
+# --------------------------------------------------------------------------
+# The DEFAULT ASSUMPTIONS - the starting figures for every scenario.
+#
+# Until now these lived inside the dummy-data generator, so the delivered template
+# arrived with PeriodWeightStandard and RoleFactor EMPTY and the application's blank
+# start filled them with a placeholder 1.00. Both were honest and both were useless:
+# a weight of 1.00 everywhere means the period weight and the role factor cancel out
+# of the arithmetic entirely, and the first person to open either one had to invent
+# several hundred numbers before the tool could say anything at all.
+#
+# So they are defined ONCE, here, and three things read them: the delivered template,
+# the application's blank start (through tools/build_app_seed.py), and the dummy
+# datasets. tools/check_consistency.py fails if the three ever disagree.
+#
+# THEY ARE A STARTING POINT, NOT A COMPANY STANDARD. Every row carries a note saying
+# so, and the shape is what matters more than the magnitudes: start-up and close-out
+# are heavier than conduct, later phases heavier than earlier ones, and each role's
+# burden moves across the life of a trial rather than sitting flat.
+#
+# Only the BASELINE is shipped - the rows whose work_scope_type is empty, which cover
+# every scope. Shipping scope-specific defaults would mean asserting how much cheaper
+# an outsourced trial is, which is exactly the judgment a company has to make for
+# itself. The dummy datasets add illustrative scope rows on top so that the fallback
+# is exercised; the template does not, and its README says where to add them.
+# --------------------------------------------------------------------------
+DEFAULT_NOTE = "Default assumption - replace with your own figure"
+
+# Keyed by clinical phase, then by period. The two Conduct entries carry the SAME
+# weight, deliberately: R-11 split the name, and a rename must not reweight anything.
+DEFAULT_PHASE_PROFILE = {
+    "Phase 1": {"Before-Start-up": 0.60, "Start-up": 1.30, "Conduct (interim)": 1.00,
+                "Close-out (interim)": 1.20, "Conduct (final)": 1.00,
+                "Close-out (final)": 1.40, "After Close-out (final)": 0.84},
+    "Phase 2": {"Before-Start-up": 0.70, "Start-up": 1.40, "Conduct (interim)": 1.10,
+                "Close-out (interim)": 1.30, "Conduct (final)": 1.10,
+                "Close-out (final)": 1.50, "After Close-out (final)": 0.90},
+    "Phase 3": {"Before-Start-up": 0.80, "Start-up": 1.60, "Conduct (interim)": 1.20,
+                "Close-out (interim)": 1.40, "Conduct (final)": 1.20,
+                "Close-out (final)": 1.70, "After Close-out (final)": 1.02},
+    "Phase 4": {"Before-Start-up": 0.50, "Start-up": 1.10, "Conduct (interim)": 0.90,
+                "Close-out (interim)": 1.00, "Conduct (final)": 0.90,
+                "Close-out (final)": 1.20, "After Close-out (final)": 0.72},
+}
+# A biosimilar trial is lighter than a new-drug trial at the same phase; a patient
+# study is heavier than a healthy-volunteer one.
+DEFAULT_TYPE_FACTOR = {"NewDrug CT": 1.00, "Biosimilar CT (Healthy)": 0.85,
+                       "Biosimilar CT (Patient)": 0.92}
+
+# A role's share of the work is not flat across a trial: the database programmer is
+# heaviest while the database is being built, the data associator while data is coming
+# in, the analyst at lock. That shape is what makes the factor worth keying on the
+# period as well as the role (R-10).
+DEFAULT_CT_ROLE_BASE = [("Project oversight", 0.80), ("Lead data manager", 1.20),
+                        ("Clinical Data Associator", 1.00),
+                        ("Clinical Database Programmer", 1.10), ("Data Analyst", 0.90)]
+# Indexed by the seven clinical periods, in timeline order.
+DEFAULT_ROLE_SHAPE = {
+    "Project oversight":            [0.90, 1.00, 1.00, 1.00, 1.00, 1.00, 0.80],
+    "Lead data manager":            [0.80, 1.20, 1.00, 1.10, 1.00, 1.20, 0.70],
+    "Clinical Data Associator":     [0.50, 0.80, 1.30, 1.10, 1.30, 0.90, 0.50],
+    "Clinical Database Programmer": [0.70, 1.50, 0.80, 1.00, 0.80, 1.10, 0.40],
+    "Data Analyst":                 [0.40, 0.60, 0.90, 1.30, 0.90, 1.50, 0.90],
+}
+# Deliberately mild. Phase already drives PeriodWeightStandard, so a strong phase term
+# here would count the same effect twice.
+DEFAULT_PHASE_ROLE_MOD = {"Phase 1": 0.95, "Phase 2": 1.00, "Phase 3": 1.05,
+                          "Phase 4": 0.90}
+DEFAULT_TYPE_ROLE_MOD = {"NewDrug CT": 1.00, "Biosimilar CT (Healthy)": 0.95,
+                         "Biosimilar CT (Patient)": 0.98}
+# 'Others' projects: three periods, three roles, no phase.
+DEFAULT_OT_BASE = {"Project lead": 1.00, "Main staff": 0.90, "Other staff": 0.70}
+DEFAULT_OT_SHAPE = {"Project lead": [1.10, 1.00, 0.90], "Main staff": [0.70, 1.20, 0.90],
+                    "Other staff": [0.60, 1.10, 1.00]}
+
+
+def _listed(name):
+    return [v for k, v in LISTS if k == name][0]
+
+
+def clinical_types():
+    """Every project type that is a clinical trial, read from the value list rather
+    than held as a second copy of it."""
+    return [t for t in _listed("project_type")
+            if t.startswith(("NewDrug CT", "Biosimilar CT"))]
+
+
+def default_period_weights():
+    """The baseline PeriodWeightStandard rows: every trial type, phase and period,
+    with work_scope_type EMPTY so one row covers every scope."""
+    out = []
+    for ct in clinical_types():
+        for ph in _listed("clinical_phase"):
+            for pn in _listed("period_name_clinical"):
+                w = DEFAULT_PHASE_PROFILE[ph][pn] * DEFAULT_TYPE_FACTOR.get(ct, 1.00)
+                out.append((ct, ph, None, pn, round(w, 2), DEFAULT_NOTE))
+    return out
+
+
+def default_role_factors():
+    """The baseline RoleFactor rows - the same shape, plus the role, plus the nine
+    'Others' rows which carry no phase and no scope."""
+    out = []
+    for ct in clinical_types():
+        for ph in _listed("clinical_phase"):
+            for i, pn in enumerate(_listed("period_name_clinical")):
+                for rn, base in DEFAULT_CT_ROLE_BASE:
+                    f = (base * DEFAULT_ROLE_SHAPE[rn][i] * DEFAULT_PHASE_ROLE_MOD[ph]
+                         * DEFAULT_TYPE_ROLE_MOD.get(ct, 1.00))
+                    out.append((ct, ph, None, pn, rn, round(f, 2), DEFAULT_NOTE))
+    for i, pn in enumerate(_listed("period_name_others")):
+        for rn in _listed("role_others"):
+            out.append(("Others", None, None, pn, rn,
+                        round(DEFAULT_OT_BASE[rn] * DEFAULT_OT_SHAPE[rn][i], 2),
+                        DEFAULT_NOTE))
+    return out
+
+
 CONFIG = [
     ("schema_version", SCHEMA_VERSION, "Structure version of this workbook. The application warns on a mismatch."),
     ("fte_hours_per_month", 160, "Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month."),
@@ -103,6 +221,7 @@ CONFIG = [
     ("under_allocation_min_months", 3, "Consecutive months below the threshold before a run is flagged."),
     ("default_horizon_months", 24, "Months shown when the dashboard opens."),
     ("capacity_unit", "FTE", "Display unit: 'FTE' or 'percent'."),
+    ("split_shared_role_fte", 1, "1 = when several people hold the same role on one project in a month, the role factor is divided between them. 0 = each is charged the whole factor, which is how versions before this one behaved."),
 ]
 
 # --------------------------------------------------------------------------
@@ -469,23 +588,7 @@ def dummy_data(prof):
                 "Clinical Database Programmer", "Data Analyst"]
     OT_ROLES = ["Project lead", "Main staff", "Other staff"]
 
-    phase_profile = {
-        # The two Conduct entries carry the SAME weight as the single 'Conduct' did
-        # before R-11. Splitting the name should not silently reweight anything; if the
-        # two stretches really do differ in burden, that is a data edit, not a default.
-        "Phase 1": {"Before-Start-up": 0.60, "Start-up": 1.30, "Conduct (interim)": 1.00,
-                    "Close-out (interim)": 1.20, "Conduct (final)": 1.00,
-                    "Close-out (final)": 1.40, "After Close-out (final)": 0.84},
-        "Phase 2": {"Before-Start-up": 0.70, "Start-up": 1.40, "Conduct (interim)": 1.10,
-                    "Close-out (interim)": 1.30, "Conduct (final)": 1.10,
-                    "Close-out (final)": 1.50, "After Close-out (final)": 0.90},
-        "Phase 3": {"Before-Start-up": 0.80, "Start-up": 1.60, "Conduct (interim)": 1.20,
-                    "Close-out (interim)": 1.40, "Conduct (final)": 1.20,
-                    "Close-out (final)": 1.70, "After Close-out (final)": 1.02},
-        "Phase 4": {"Before-Start-up": 0.50, "Start-up": 1.10, "Conduct (interim)": 0.90,
-                    "Close-out (interim)": 1.00, "Conduct (final)": 0.90,
-                    "Close-out (final)": 1.20, "After Close-out (final)": 0.72},
-    }
+    phase_profile = DEFAULT_PHASE_PROFILE
 
     N_CT, N_OT = prof["n_ct"], prof["n_other"]
     OT_NAMES = ['CDISC library migration', 'eTMF rollout', 'EDC vendor evaluation',
@@ -605,70 +708,36 @@ def dummy_data(prof):
     # The illustrative shape: work kept in-house costs this team more, work handed to a
     # CRO costs it less, and the partial case is left to fall back on the base row so
     # the fallback is exercised by the fixture rather than only by a unit test.
-    SCOPE_FACTOR = {None: 1.00, "fully in-housed": 1.15, "fully outsourced": 0.80}
-    TYPE_FACTOR = {"NewDrug CT": 1.00, "Biosimilar CT (Healthy)": 0.85,
-                   "Biosimilar CT (Patient)": 0.92}
-    pws = []
-    for ct in CT_TYPES:
-        for scope, sf in SCOPE_FACTOR.items():
-            note = ("Illustrative - replace with your figure" if scope is None else
-                    f"Illustrative - {scope}")
-            for ph, prof in phase_profile.items():
-                for pn, w in prof.items():
-                    pws.append((ct, ph, scope, pn,
-                                round(w * TYPE_FACTOR[ct] * sf, 2), note))
+    SCOPE_FACTOR = {"fully in-housed": 1.15, "fully outsourced": 0.80}
+    TYPE_FACTOR = DEFAULT_TYPE_FACTOR
+    pws = list(default_period_weights())          # the baseline, empty scope
+    for scope, sf in SCOPE_FACTOR.items():
+        for ct, ph, _none, pn, w, _note in default_period_weights():
+            pws.append((ct, ph, scope, pn, round(w * sf, 2),
+                        f"Illustrative - {scope}"))
 
     # A role's share of the work is not flat across a trial: the database programmer
     # is heaviest while the database is being built, the data associator while data is
     # coming in, the analyst at lock. That shape is what makes the factor worth keying
     # on the period as well as the role (R-10).
-    ct_role_base = [("Project oversight", 0.80), ("Lead data manager", 1.20),
-                    ("Clinical Data Associator", 1.00),
-                    ("Clinical Database Programmer", 1.10), ("Data Analyst", 0.90)]
-    # Indexed by CLINICAL_PERIODS: BSU, Start-up, Conduct (i), Close-out (i),
-    # Conduct (f), Close-out (f), After Close-out. The two Conduct values match, for
-    # the same reason the period weights do - R-11 renames, it does not reweight.
-    role_shape = {
-        "Project oversight":            [0.90, 1.00, 1.00, 1.00, 1.00, 1.00, 0.80],
-        "Lead data manager":            [0.80, 1.20, 1.00, 1.10, 1.00, 1.20, 0.70],
-        "Clinical Data Associator":     [0.50, 0.80, 1.30, 1.10, 1.30, 0.90, 0.50],
-        "Clinical Database Programmer": [0.70, 1.50, 0.80, 1.00, 0.80, 1.10, 0.40],
-        "Data Analyst":                 [0.40, 0.60, 0.90, 1.30, 0.90, 1.50, 0.90],
-    }
-    # Deliberately mild. Phase already drives PeriodWeightStandard, so a strong phase
-    # term here would count the same effect twice.
-    phase_role_mod = {"Phase 1": 0.95, "Phase 2": 1.00, "Phase 3": 1.05, "Phase 4": 0.90}
-    type_role_mod = {"NewDrug CT": 1.00, "Biosimilar CT (Healthy)": 0.95,
-                     "Biosimilar CT (Patient)": 0.98}
+    ct_role_base = DEFAULT_CT_ROLE_BASE
 
-    # The same arrangement as PeriodWeightStandard above: base rows with an empty
-    # scope, and scope-specific rows only for 'fully outsourced' - where the roles
-    # shift as well as shrink, because oversight barely changes while the associator
-    # and the programmer are largely doing somebody else's work.
-    ROLE_SCOPE_MOD = {
-        None: {r: 1.00 for r, _ in ct_role_base},
-        "fully outsourced": {"Project oversight": 1.05, "Lead data manager": 0.95,
-                             "Clinical Data Associator": 0.60,
-                             "Clinical Database Programmer": 0.55, "Data Analyst": 0.85},
-    }
-    roles_tbl = []
-    for ct in CT_TYPES:
-        for scope, mods in ROLE_SCOPE_MOD.items():
-            note = ("Illustrative - replace with your figure" if scope is None
-                    else "Illustrative - fully outsourced")
-            for ph in PHASES:
-                for i, pn in enumerate(CLINICAL_PERIODS):
-                    for rn, base in ct_role_base:
-                        f = (base * role_shape[rn][i] * phase_role_mod[ph]
-                             * type_role_mod[ct] * mods[rn])
-                        roles_tbl.append((ct, ph, scope, pn, rn, round(f, 2), note))
-    ot_shape = {"Project lead": [1.10, 1.00, 0.90], "Main staff": [0.70, 1.20, 0.90],
-                "Other staff": [0.60, 1.10, 1.00]}
-    ot_base = {"Project lead": 1.00, "Main staff": 0.90, "Other staff": 0.70}
-    for i, pn in enumerate(OTHER_PERIODS):
-        for rn in OT_ROLES:
-            roles_tbl.append(("Others", None, None, pn, rn,
-                              round(ot_base[rn] * ot_shape[rn][i], 2), "Illustrative"))
+    # Baseline rows come from the shared defaults; the fixture adds ONE scope-specific
+    # set, for 'fully outsourced', where the roles shift as well as shrink - oversight
+    # barely changes while the associator and the programmer are largely watching
+    # somebody else do the work. 'fully in-housed' is deliberately left out so the
+    # fallback to the baseline row is exercised by the fixture, not only by a test.
+    ROLE_SCOPE_MOD = {"fully outsourced": {
+        "Project oversight": 1.05, "Lead data manager": 0.95,
+        "Clinical Data Associator": 0.60, "Clinical Database Programmer": 0.55,
+        "Data Analyst": 0.85}}
+    roles_tbl = list(default_role_factors())      # the baseline, empty scope
+    for scope, mods in ROLE_SCOPE_MOD.items():
+        for ct, ph, _none, pn, rn, f, _note in default_role_factors():
+            if ct == "Others":
+                continue                          # 'Others' carry no scope variants
+            roles_tbl.append((ct, ph, scope, pn, rn, round(f * mods[rn], 2),
+                              f"Illustrative - {scope}"))
 
     # ---- periods --------------------------------------------------------
     periods = []
@@ -977,10 +1046,28 @@ def add_readme(wb, kind, facts=None):
         body += [
             "",
             "BEFORE YOU USE THIS FILE",
-            "   1. Delete the grey example row from every sheet.",
-            "   2. Fill in the yellow columns: PeriodWeightStandard.weight and RoleFactor.role_factor.",
-            "      Nothing simulates correctly until those are set.",
-            "   3. Enter your projects, people and assignments.",
+            "   1. Delete the grey example row from every sheet that has one.",
+            "   2. Enter your projects, people and assignments.",
+            "   3. Then, when you have seen the figures: review the DEFAULT ASSUMPTIONS.",
+            "",
+            "THE DEFAULT ASSUMPTIONS",
+            f"   PeriodWeightStandard ({len(default_period_weights())} rows) and RoleFactor "
+            f"({len(default_role_factors())} rows) arrive FILLED IN.",
+            "   They are the same figures the application starts a blank plan with, so the two agree",
+            "   from the first day, and they are a STARTING POINT rather than a company standard.",
+            "",
+            "   The shape is what to judge first, before any single number: start-up and close-out",
+            "   are heavier than conduct; later phases are heavier than earlier ones; a biosimilar",
+            "   trial is lighter than a new-drug trial at the same phase; and each role's burden",
+            "   moves across the life of a trial rather than sitting flat.",
+            "",
+            "   Every row says 'Default assumption - replace with your own figure' in its note",
+            "   column. Replacing a figure is an ordinary edit; the note is there so that a number",
+            "   nobody has reviewed can still be told apart from one somebody chose.",
+            "",
+            "   work_scope_type is EMPTY on every default row, which means each one applies to every",
+            "   scope. Add a row with a scope filled in only where that scope really changes the",
+            "   number - the project will find it first and fall back to the default otherwise.",
         ]
     elif kind != "dummy":
         # Every count here is read off the rows that were actually generated, so the
@@ -1062,8 +1149,14 @@ def build(kind):
         facts = describe(PROFILES[kind], projects, ms, periods, people, A, ppw, inspections)
     else:
         facts = None
-        proj_rows = mile_rows = period_rows = pws_rows = role_rows = []
+        proj_rows = mile_rows = period_rows = []
         person_rows = asg_rows = ppw_rows = []
+        # The template no longer arrives with these two sheets empty. They hold the
+        # DEFAULT ASSUMPTIONS - the same figures the application starts a blank plan
+        # with - so the workbook says something the moment it is opened, instead of
+        # asking for several hundred numbers first.
+        pws_rows = [list(x) for x in default_period_weights()]
+        role_rows = [list(x) for x in default_role_factors()]
         # one example row per sheet (REQ-IMP-03)
         examples = {
             "Project": ["PRJ-001", "ONV-101 First-in-human", "NewDrug CT", "Onvelaris", "Phase 1",
@@ -1073,11 +1166,11 @@ def build(kind):
                         "Active", "example row - delete before use", None, None, None, None],
             "Milestone": ["PRJ-001", None, "CTA submission", date(2026, 1, 15), 2, "example row - delete before use"],
             "ProjectPeriod": ["PRJ-001", "Start-up", 2, date(2025, 12, 15), date(2026, 4, 14), 1.30, "example row - delete before use"],
-            "PeriodWeightStandard": ["NewDrug CT", "Phase 1", None, "Start-up", None,
-                                     "example row - delete before use. Leave work_scope_type "
-                                     "empty for a row that applies to every scope"],
-            "RoleFactor": ["NewDrug CT", "Phase 1", None, "Start-up", "Lead data manager", None,
-                           "example row - delete before use"],
+            # No example row: these two sheets now arrive full of real defaults, and
+            # a grey "delete before use" row among them would be the one thing on the
+            # sheet that was not a default.
+            "PeriodWeightStandard": None,
+            "RoleFactor": None,
             "Person": ["PSN-001", "Kim S.", "Data Management", "Lead data manager", 1.00,
                        None, None, "example row - delete before use", None, None, None, None],
             "Assignment": ["ASG-001", "PSN-001", None, "PRJ-001", "Lead data manager",

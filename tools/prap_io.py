@@ -396,12 +396,26 @@ class Model:
                 self.lists[r["list_name"]].append(r.get("value"))
         self.config = {r["parameter"]: r.get("value")
                        for r in sheets["Config"] if r.get("parameter")}
-        cfg = lambda k, d: (_as_num(self.config.get(k)) if self.config.get(k) is not None  # noqa
-                            else None) or d
+        def cfg(k, d):
+            """A Config value, or the default if it is absent or unreadable.
+
+            Written out rather than left as a one-liner because the one-liner ended
+            in `or d`, which treats a legitimate ZERO as a missing value - so a
+            setting deliberately turned off silently came back on. It cost nothing
+            while every setting was a positive threshold, and became a real defect
+            the moment one of them was a switch.
+            """
+            v = _as_num(self.config.get(k))
+            return d if v is None else v
         self.OVER = cfg("over_allocation_fte", 1.50)
         self.UNDER = cfg("under_allocation_fte", 0.60)
         self.MINM = int(cfg("under_allocation_min_months", 3))
         self.HOURS = cfg("fte_hours_per_month", 160)
+        # Whether the role factor is divided between the people sharing a role. A
+        # setting rather than a constant because it changes every figure a shared role
+        # ever produced, and somebody comparing this month's report with last year's
+        # needs to be able to turn it off and see where the difference came from.
+        self.SPLIT = cfg("split_shared_role_fte", 1) != 0
 
         sv = _as_num(self.config.get("schema_version"))
         if sv is None:
@@ -739,6 +753,26 @@ def calculate(M):
                 return _as_num(w.get("weight_override")) or 0.0
         return _as_num(a.get("person_weight")) or 0.0
 
+    # Who shares a role, and when. The role factor is what the ROLE costs the project
+    # in a period, not what each person holding it costs - so two data managers on one
+    # trial share it rather than being charged for two. Counted PER MONTH, because that
+    # is the only count that conserves the total when one of them leaves mid-project,
+    # and by distinct PEOPLE, so two rows for one person do not halve their own load.
+    sharers = defaultdict(set)
+    if M.SPLIT:
+        for a in M.assignments:
+            proj = M.projects.get(a.get("project_id"))
+            if not proj or a.get("person_id") not in M.people:
+                continue
+            s = a.get("assign_start_date")
+            e = a.get("assign_end_date") or proj.get("end_date")
+            if not s or not e:
+                continue
+            for y, m in months_between(s, e):
+                if coverage(y, m, s, e) > 0:
+                    sharers[(a["project_id"], a.get("role_name"),
+                             month_key(y, m - 1))].add(a["person_id"])
+
     for a in M.assignments:
         proj = M.projects.get(a.get("project_id"))
         if not proj or a.get("person_id") not in M.people:
@@ -757,8 +791,9 @@ def calculate(M):
             rf = std_factor(M, proj, seg.get("period_name") if seg else None,
                             a.get("role_name"))
             rf = 1.0 if rf is None else rf
-            v = pw * rf * person_weight(a, y, m) * cov
             k = month_key(y, m - 1)
+            share = len(sharers.get((a["project_id"], a.get("role_name"), k), ())) or 1
+            v = pw * (rf / share) * person_weight(a, y, m) * cov
             lo = k if lo is None else min(lo, k)
             hi = k if hi is None else max(hi, k)
             proj_month[(a["project_id"], k)] += v

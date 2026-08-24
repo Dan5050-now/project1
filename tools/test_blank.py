@@ -295,17 +295,28 @@ with sync_playwright() as pw:
     # tz handling would be one more thing to get right for no gain.
     periods = pg.evaluate("() => (S.model.periods['PRJ-001'] || []).map(s => "
                           "[s.period_name, ymd(s.period_start), ymd(s.period_end), s.weight])")
+    # A blank start now seeds the DELIVERED DEFAULTS rather than a placeholder 1.00, so
+    # the role factor varies by period and has to be read rather than assumed. Read from
+    # the RoleFactor ROWS, not through the application's own lookup, so this stays an
+    # independent计算 of the same thing.
+    factors = pg.evaluate("""() => Object.fromEntries(S.model.raw.RoleFactor
+        .filter(r => r.project_type === 'NewDrug CT' && r.clinical_phase === 'Phase 2'
+                  && !r.work_scope_type && r.role_name === 'Lead data manager')
+        .map(r => [r.period_name, r.role_factor]))""")
     start, end = date(2027, 4, 10), date(2029, 3, 31)
     segs = [(n, date.fromisoformat(a), date.fromisoformat(b), w) for n, a, b, w in periods]
 
-    def expect(y, m):
+    def expect(y, m, weight=0.40):
         cov = coverage(y, m, start, end)
         if cov <= 0:
             return 0.0
         first = date(y, m, 1)
         seg = next((s for s in segs if s[1] <= first <= s[2]), None)
         pw = (seg[3] if seg else 1.0) or 1.0
-        return pw * 1.00 * 0.40 * cov          # role factor is the placeholder 1.00
+        rf = factors.get(seg[0]) if seg else None
+        rf = 1.0 if rf is None else rf         # no row for the period -> 1.00, V-23
+        # One person on the role, so nothing is shared and the divisor is 1 (REQ-CAL-14).
+        return pw * rf * weight * cov
 
     bad = []
     for k, v in got["pm"].items():
@@ -334,8 +345,12 @@ with sync_playwright() as pw:
     moved = {k: round(after[f"PSN-001|{k}"], 4) for k in covered if f"PSN-001|{k}" in after}
     untouched = [k for k in got["pm"] if int(k.split("|")[1]) not in covered
                  and abs(after.get(k, 0) - got["pm"][k]) > 1e-9]
+    # The override REPLACES person_weight for those months - it does not multiply it -
+    # so the expected figure is the same formula with 0.70 where 0.40 was.
+    want_moved = {k: expect(k // 12, k % 12 + 1, 0.70) for k in covered}
     check(w and w["aid"] == "ASG-001" and w["ov"] == 0.7
-          and all(abs(v - 0.70) < 1e-9 for v in moved.values()) and not untouched,
+          and all(abs(after[f"PSN-001|{k}"] - want_moved[k]) < 1e-9 for k in covered)
+          and not untouched,
           "the override attaches to the selected assignment and REPLACES the weight for "
           "its months only",
           f"{w}; the three covered months are now {sorted(set(moved.values()))} FTE, "

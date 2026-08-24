@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.27 records Step 4 progress and schema 6 |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.28 records Step 4 progress, schema 6, the shared-role division and the delivered defaults |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -207,15 +207,20 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.27.xlsx` — **current.** 70 requirements, 26 validation
-  rules, source schema version 6. Records Step 4 progress against the approved baseline,
-  and change **R-12 — the work scope, and the biosimilar split** (2026-08-20):
+- `docs/PRAP_Development_Plan_v2.28.xlsx` — **current.** 71 requirements, 26 validation
+  rules, source schema version 6. Carries change **R-13 — a shared role is a shared
+  cost** (`REQ-CAL-14`: where several people hold the same role on one project in one
+  month, the role factor is divided between them) and **R-14 — the delivered default
+  assumptions** (`PeriodWeightStandard` and `RoleFactor` arrive filled in, and the
+  application's blank start seeds the identical figures). It also records change
+  **R-12 — the work scope, and the biosimilar split** (2026-08-20):
   `work_scope_type` joins `PeriodWeightStandard`, `RoleFactor` and `Project`, so both
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.1.xlsx` — **current specification.** Schema 6:
-  the two-step lookup, the new keys, the two new rules.
+- `docs/PRAP_Programming_Specification_v1.2.xlsx` — **current specification.** Schema 6
+  (the two-step lookup, the new keys, the two new rules), the shared-role division with
+  its worked reasoning, and where the delivered defaults come from.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
   R-05 (`project_type` splits into `NewDrug CT` and `Biosimilar CT`, schema version 3),
@@ -936,6 +941,22 @@ Requires `openpyxl`.
   one derivation, and differ in their weights. A type is recognised as a trial by the
   **start** of its name, so subdividing one again is a value-list change, not a code
   change (R-12, schema 6).
+- **A shared role is a shared cost** (R-13, `REQ-CAL-14`). The role factor says what the
+  *role* costs the project in a period, not what each person holding it costs — so where
+  several people hold the same role on the same project in the same month, they divide
+  it. Counted **per month** (a sharer leaving restores the others with no edit), by
+  **distinct people** (one person on two rows is one person), and each person's own
+  `person_weight` then applies to their share. The property this preserves is that the
+  *project's* total does not move when the same work is staffed differently.
+  `split_shared_role_fte = 0` restores the arithmetic of every earlier version.
+- **The two standards sheets arrive filled in** (R-14). They used to be empty in the
+  template and a placeholder `1.00` in a blank start — and 1.00 everywhere is not a
+  cautious starting point, it is the absence of one: the period weight and the role
+  factor cancel out of the multiplication, so the application produced figures that
+  looked like an answer and were not. 84 default period weights and 429 default role
+  factors are now defined once and read by the template, the blank start and the dummy
+  data alike; `check_consistency.py` fails if they drift apart, or if either grid ever
+  reverts to one flat value.
 - **Work scope is part of the weights** (R-12, schema 6). `PeriodWeightStandard` and
   `RoleFactor` are keyed on `work_scope_type` as well, and **a row whose
   `work_scope_type` is empty applies to every scope** — a project looks for its own

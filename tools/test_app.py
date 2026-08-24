@@ -58,8 +58,22 @@ def reference_person_months(path):
                 return w["weight_override"]
         return a["person_weight"]
 
+    # Who holds which role on which project, month by month. The role factor is what
+    # the ROLE costs the project, not what each person holding it costs, so it is
+    # divided between them - worked out here independently of the application, which
+    # is the whole point of a reference.
+    ASG = list(rows(wb["Assignment"]))
+    sharers = defaultdict(set)
+    for a in ASG:
+        pr = P[a["project_id"]]
+        s = d(a["assign_start_date"])
+        e = d(a["assign_end_date"]) or d(pr["end_date"])
+        for y, m in months_between(s, e):
+            if coverage(y, m, s, e) > 0:
+                sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
+
     out = defaultdict(float)
-    for a in rows(wb["Assignment"]):
+    for a in ASG:
         pr = P[a["project_id"]]
         s = d(a["assign_start_date"])
         e = d(a["assign_end_date"]) or d(pr["end_date"])
@@ -72,7 +86,9 @@ def reference_person_months(path):
             rf = lookup(RF, (pr["project_type"], ph), scope_of(pr),
                         (sg["period_name"] if sg else None, a["role_name"]))
             rf = 1.0 if rf is None else rf
-            out[(a["person_id"], y * 12 + m - 1)] += (sg["weight"] if sg else 1.0) * rf * weight(a, y, m) * cov
+            share = len(sharers[(a["project_id"], a["role_name"], y, m)]) or 1
+            out[(a["person_id"], y * 12 + m - 1)] += (
+                (sg["weight"] if sg else 1.0) * (rf / share) * weight(a, y, m) * cov)
     return out
 
 

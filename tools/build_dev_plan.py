@@ -17,9 +17,10 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.27"
+DOC_VERSION = "2.28"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
-              "plus SCHEMA 6: the work scope on both standards sheets, and the biosimilar split.")
+              "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
+              "and the delivered default assumptions.")
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -367,7 +368,29 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.27", "2026-08-20", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.28", "2026-08-22", "Claude Code", "Pending",
+     "TWO CHANGES, BOTH REQUESTED, AND THE FIRST CHANGES EVERY FIGURE A SHARED ROLE EVER "
+     "PRODUCED. (1) R-13, REQ-CAL-14: where several people hold the same role on the same "
+     "project in the same month, the role factor is DIVIDED BETWEEN THEM. The factor states "
+     "what the ROLE costs the project in that period, not what each holder costs, so until "
+     "now a trial staffed by two data managers cost twice a trial staffed by one - the same "
+     "work, priced by how many people were named against it. Counted per month, so a sharer "
+     "leaving restores the others without an edit; by distinct people, so one person on two "
+     "rows is one person; and each person's own weight still applies to their share. Kept "
+     "as the setting split_shared_role_fte, default 1, so a figure produced before this "
+     "rule can still be reproduced and compared. (2) R-14: THE DELIVERED DEFAULTS. "
+     "PeriodWeightStandard and RoleFactor arrived empty in the template and were filled "
+     "with a placeholder 1.00 by a blank start - and 1.00 everywhere is not a starting "
+     "point, it is the absence of one: at 1.00 the period weight and the role factor cancel "
+     "out of the arithmetic entirely, so the application produced figures that looked like "
+     "an answer and were not. Both now arrive filled in - 84 period weights and 429 role "
+     "factors - defined once and read by the template, the blank start and the dummy "
+     "datasets alike, so the workbook and the application hold the same assumptions by "
+     "construction. check_consistency.py fails if they drift, and fails too if the figures "
+     "ever revert to one flat value. A defect was found while testing: prap_io read Config "
+     "with `or default`, so a setting deliberately set to 0 silently came back on.",
+     "Issued for review"],
+    ["2.27", "2026-08-20", "Claude Code", "Pending",
      "SCHEMA 6 - THE WORK SCOPE, AND THE BIOSIMILAR SPLIT. Requested 2026-08-20, and the "
      "first change to the data model since the plan was baselined. (1) work_scope_type joins "
      "PeriodWeightStandard and RoleFactor beside clinical_phase, and the keys become "
@@ -1097,7 +1120,8 @@ reqs = [
     ["REQ-PSN-07", "Person data", "One person may hold assignments on several projects simultaneously, and may hold more than one role on the same project.", "Must", "Derived", "2"],
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
-    [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x role factor x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, the period the month falls in, and the role - so a role's burden can vary across the life of a project.", "Must", "Q-01, R-10", "2,4"],
+    [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-CAL-14", "Calculation", "Where SEVERAL PEOPLE hold the same role on the same project in the same month, the role factor is DIVIDED BETWEEN THEM. The role factor states what the ROLE costs the project in that period, not what each person holding it costs, so a project staffed by two data managers must not cost twice a project staffed by one. The count is per month, so a sharer leaving restores the others' full share without any edit; it counts distinct PEOPLE, so one person recorded on two rows is one person; and each person's own person_weight then applies to their share. Kept as the setting split_shared_role_fte so a figure produced before this rule can still be reproduced.", "Must", "R-13", "4"],
     ["REQ-CAL-03", "Calculation", "Project monthly load is the sum of its assignments; person monthly load is the sum across all their projects.", "Must", "Requester", "4"],
     [f"{MARK_CHG}REQ-CAL-04", "Calculation", "A person-month whose total exceeds the over-allocation threshold (default 1.50 FTE) is flagged as over-allocated. The threshold is absolute, not scaled by capacity (S2-01).", "Must", "Q-08, S2-01", "4"],
     [f"{MARK_CHG}REQ-CAL-05", "Calculation", "A partial first or last month is pro-rated by calendar days worked, not counted as a whole month.", "Must", "Q-02", "4"],
@@ -1348,6 +1372,7 @@ r = note(ws, r, "Changed at Q-01. The answer named exactly three factors, so a f
 r = section(ws, r, "Sheet: Config")
 cfg = [
     [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12).", "6", "REQ-VC-02"],
+    [f"{MARK_NEW}split_shared_role_fte", "1 = where several people hold the same role on one project in a month, the role factor is divided between them (REQ-CAL-14). 0 = each carries the whole factor, which is how every version before v2.28 behaved. A setting rather than a constant because it changes every figure a shared role ever produced, and somebody comparing this month's report with last year's has to be able to see where the difference came from.", "1", "REQ-CAL-14"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],
     [f"{MARK_NEW}over_allocation_fte", "Person-month total above this is over-allocated.", "1.50", "REQ-CAL-04"],
     [f"{MARK_CHG}under_allocation_fte", "Person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity.", "0.60", "REQ-CAL-07"],

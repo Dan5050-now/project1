@@ -16,8 +16,8 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.27.xlsx"
-SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.1.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.28.xlsx"
+SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.2.xlsx"
 TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.8.xlsx"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.10.xlsx"
 DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.2.xlsx"
@@ -266,37 +266,54 @@ if APP.exists():
 
 # ---- 4e2. the blank-start seed vs the template it was taken from ----------
 # A plan started inside the application begins from the template's reference content -
-# the value lists and the settings - embedded in the HTML. Embedded means copied, and a
-# copy that falls behind the template would give someone starting a new plan a different
-# vocabulary from someone who loaded a workbook, which is exactly the kind of divergence
-# nothing would announce.
+# the value lists, the settings, and the DEFAULT ASSUMPTIONS - embedded in the HTML.
+# Embedded means copied, and a copy that falls behind the template would give someone
+# starting a new plan different figures from someone who loaded a workbook. That is the
+# divergence this check exists to prevent, and it is the one the requester asked for in
+# so many words: the template's assumptions and the application's must be the same.
 sys.path.insert(0, str(ROOT / "tools"))
 import build_app_seed                                              # noqa: E402
 
 if APP.exists():
     seeded = build_app_seed.embedded(src)
     if seeded is None:
-        problems.append("app/PRAP.html has no SEED_LISTS / SEED_CONFIG block - "
-                        "run python tools/build_app_seed.py")
+        problems.append("app/PRAP.html has no SEED_LISTS / SEED_CONFIG / SEED_PWS / "
+                        "SEED_RF block - run python tools/build_app_seed.py")
     else:
         want = build_app_seed.seed_rows(TEMPLATE)
-        for sheet in ("Lists", "Config"):
+        for sheet in build_app_seed.SEEDED:
             got = [[None if v == "" else v for v in r] for r in seeded[sheet]]
             exp = [[None if v == "" else v for v in r] for r in want[sheet]]
             if got != exp:
                 problems.append(f"the blank-start seed for {sheet} does not match "
                                 f"{TEMPLATE.name} ({len(got)} rows vs {len(exp)}) - "
                                 f"run python tools/build_app_seed.py")
-        # The weight and role-factor grids are BUILT from those lists rather than
-        # embedded, so what has to hold is that the lists the builder reads all exist.
+        # The GRID is still built from the value lists rather than from the seed, so a
+        # company that adds a role gets that combination without a new build. What has
+        # to hold is that the lists the builder reads all exist.
         names = {r[0] for r in seeded["Lists"]}
         for needed in ("project_type", "clinical_phase", "period_name_clinical",
                        "period_name_others", "role_clinical", "role_others"):
             if needed not in names:
                 problems.append(f"the blank-start seed has no '{needed}' list, so a new "
                                 f"plan could not build its reference grid")
-        notes.append(f"blank-start seed: {len(seeded['Lists'])} list values and "
-                     f"{len(seeded['Config'])} settings, matching {TEMPLATE.name}")
+        # And the defaults must actually BE defaults. A grid of 1.00 everywhere is
+        # arithmetically the same as no grid at all - the period weight and the role
+        # factor cancel out - so a seed that had quietly reverted to placeholders would
+        # pass every other check here while making the application say nothing.
+        flat_w = {r[4] for r in seeded["PeriodWeightStandard"]}
+        flat_f = {r[5] for r in seeded["RoleFactor"]}
+        if len(flat_w) < 2 or flat_w == {1.0}:
+            problems.append("the blank-start period weights are all the same value, so "
+                            "they are placeholders rather than default assumptions")
+        if len(flat_f) < 2 or flat_f == {1.0}:
+            problems.append("the blank-start role factors are all the same value, so "
+                            "they are placeholders rather than default assumptions")
+        notes.append(f"blank-start seed: {len(seeded['Lists'])} list values, "
+                     f"{len(seeded['Config'])} settings, "
+                     f"{len(seeded['PeriodWeightStandard'])} default period weights and "
+                     f"{len(seeded['RoleFactor'])} default role factors — all matching "
+                     f"{TEMPLATE.name}")
 
 # ---- 4f. the AI-agent reference vs the artifacts it describes --------------
 # docs/prap_contract.json is what another AI system reads INSTEAD of opening these

@@ -176,15 +176,20 @@ function autoPeriods(pid){
     const r = newRow("ProjectPeriod", {
       project_id:pid, period_name:d.period_name, period_seq:d.period_seq,
       period_start:d.period_start, period_end:d.period_end,
-      weight: M.pws[[pr.project_type, pr.clinical_phase, d.period_name]] ?? 1.00});
+      // Through stdWeight, not straight at M.pws: schema 6 put the work scope in the
+      // key, and a lookup that leaves it out matches nothing and quietly derives every
+      // period at 1.00 - which is what happened, and what the suite caught.
+      weight: stdWeight(M, pr, d.period_name) ?? 1.00});
     S.pending.push({at:new Date(), sheet:"ProjectPeriod", row:r.__row, col:"(new row)",
                     from:null, to:`${d.period_name} ${ymd(d.period_start)}..${ymd(d.period_end)}`});
   }
   renderKeepingTab();
-  const w = M.pws[[pr.project_type, pr.clinical_phase, segs[0].period_name]] === undefined
-    ? " No standard weights exist for this type and phase, so every period is at 1.00 —"
-      + " set them on General assumptions."
-    : ` Each period carries the standard weight for ${pr.project_type} / ${pr.clinical_phase}.`;
+  const scope = pr.work_scope_type ? ` / ${pr.work_scope_type}` : "";
+  const w = stdWeight(M, pr, segs[0].period_name) === undefined
+    ? " No standard weights exist for this type, phase and scope, so every period is at"
+      + " 1.00 — set them on General assumptions."
+    : ` Each period carries the standard weight for ${pr.project_type} / `
+      + `${pr.clinical_phase}${scope}.`;
   showBanner("", `Derived ${segs.length} periods for ${pid} from its milestones.${w} `
     + `They are ordinary rows — edit any of them, then Save.`);
 }

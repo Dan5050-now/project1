@@ -267,6 +267,21 @@ def main(path):
                 return w["weight_override"]
         return a["person_weight"]
 
+    # Who shares a role, and when. The role factor is what the ROLE costs the project,
+    # not what each person holding it costs, so it is divided between them - counted
+    # per month, by distinct people. Off when split_shared_role_fte is 0.
+    split = str(CFG.get("split_shared_role_fte", 1)) not in ("0", "0.0", "False")
+    sharers = defaultdict(set)
+    if split:
+        for a in ASG:
+            if a["project_id"] not in P or a["person_id"] not in PSN:
+                continue
+            s = d(a["assign_start_date"])
+            e = d(a["assign_end_date"]) or d(P[a["project_id"]]["end_date"])
+            for y, m in months_between(s, e):
+                if coverage(y, m, s, e) > 0:
+                    sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
+
     load = defaultdict(float)          # (person, y, m) -> FTE
     horizon = set()
     for a in ASG:
@@ -279,7 +294,9 @@ def main(path):
             cov = coverage(y, m, s, e)
             if cov <= 0:
                 continue
-            v = (period_weight(a["project_id"], y, m) * role_factor(proj, a, y, m)
+            share = len(sharers.get((a["project_id"], a["role_name"], y, m), ())) or 1
+            v = (period_weight(a["project_id"], y, m)
+                 * (role_factor(proj, a, y, m) / share)
                  * person_weight(a, y, m) * cov)
             load[(a["person_id"], y, m)] += v
             horizon.add((y, m))
