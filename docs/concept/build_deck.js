@@ -121,12 +121,12 @@ s.addText(
   { x: M, y: 4.0, w: 8.8, h: 0.6, fontFace: BODY, fontSize: 16, color: WASH,
     margin: 0, lineSpacing: 23, valign: "top" });
 let cx1 = M;
-["RECIST 1.1 + iRECIST", "85 REVIEW POINTS", "83 LIVE"].forEach((t) => {
+["RECIST 1.1 + iRECIST", "85 REVIEW POINTS", "GLM v5.2"].forEach((t) => {
   const cw = t.length * 0.105 + 0.34;
   chip(s, cx1, 4.95, t, { w: cw, h: 0.3, fill: DEEPD, line: MOSS, color: MOSS, fs: 9 });
   cx1 += cw + 0.22;
 });
-s.addText("Concept overview  ·  derived from TEA-PLAN-001 v1.0.0 and TEA-SPEC-001 v2.0.0", {
+s.addText("Concept overview  ·  derived from TEA-PLAN-001 v1.0.0 and TEA-SPEC-001 v2.1.0", {
   x: M, y: 6.5, w: 11, h: 0.3, fontFace: MONO, fontSize: 9, color: "6E7D72",
   margin: 0, valign: "middle" });
 s.addNotes("This deck is an orientation map. It carries no independent authority: where it disagrees with the plan or the specification, those documents win.");
@@ -211,7 +211,7 @@ s.addNotes("Clock one is where we are now, at Step 2. Clocks two and three do no
 s = pres.addSlide(); s.background = { color: GROUND };
 eyebrow(s, M, 0.52, "The rule that explains everything else");
 title(s, "Code computes. The model explains.");
-lede(s, "Every number and every verdict comes from ordinary deterministic code. This single split is why the same verdicts come out of a commercial API and a locally hosted model, and why validation stays tractable.", { w: 11.4 });
+lede(s, "Every number and every verdict comes from ordinary deterministic code. This single split is why the verdicts are identical whether GLM v5.2 answers, returns nonsense, or is switched off entirely - which is what keeps validation tractable.", { w: 11.4 });
 
 card(s, M, 2.62, 5.75, 2.95, { fill: PAPER });
 chip(s, M + 0.3, 2.88, "DETERMINISTIC", { w: 1.8, h: 0.28, fs: 9 });
@@ -227,7 +227,7 @@ s.addText([
      color: MUTE, margin: 0, paraSpaceAfter: 6, valign: "top" });
 
 card(s, M + 6.1, 2.62, 5.75, 2.95, { fill: WASH, line: DEEP });
-chip(s, M + 6.4, 2.88, "LLM-ASSISTED", { w: 1.75, h: 0.28, fs: 9, fill: PAPER, dash: "dash" });
+chip(s, M + 6.4, 2.88, "GLM v5.2", { w: 1.75, h: 0.28, fs: 9, fill: PAPER, dash: "dash" });
 s.addText("The model does...", { x: M + 6.4, y: 3.32, w: 5.1, h: 0.32, fontFace: HEAD,
   fontSize: 17, bold: true, color: INK, margin: 0, valign: "middle" });
 s.addText([
@@ -238,7 +238,7 @@ s.addText([
 ], { x: M + 6.46, y: 3.74, w: 5.05, h: 1.72, fontFace: BODY, fontSize: 12,
      color: MUTE, margin: 0, paraSpaceAfter: 6, valign: "top" });
 
-s.addText("If the model is unavailable the run still completes. Every LLM task has a deterministic template fallback - the findings get plainer, never wrong.", {
+s.addText("One model, company-hosted, no external LLM service. If GLM is unavailable the run still completes, and that same deterministic mode is the reference GLM is tested against.", {
   x: M, y: 5.78, w: 11.85, h: 0.55, fontFace: BODY, fontSize: 12.5, italic: true,
   color: DEEP, margin: 0, valign: "middle" });
 footer(s, 5);
@@ -355,7 +355,7 @@ phases.forEach((ph, i) => {
   }
   px += w + pgap;
 });
-s.addText("Plain outline = deterministic code   \u00b7   Tinted + dashed = LLM-assisted   \u00b7   Mixed dash = hybrid", {
+s.addText("Plain outline = deterministic code   \u00b7   Tinted + dashed = GLM v5.2   \u00b7   Mixed dash = hybrid", {
   x: M, y: 5.05, w: 11.85, h: 0.3, fontFace: BODY, fontSize: 11.5, color: MUTE,
   margin: 0, valign: "middle" });
 s.addText("Order runs left to right. Nothing downstream can change a verdict computed upstream.", {
@@ -549,7 +549,7 @@ s.addText("Step 2 closed. Step 3 next.", {
 const status = [
   ["APPROVED 21 AUG", "Three review rounds, then a reviewer-lens pass that changed 27 rules. Rule pack frozen at 2.0.0 - changes now need change control."],
   ["BLOCKED ON", "Choosing the pilot study. Step 3 cannot start without it: it decides the golden dataset and the UAT study."],
-  ["WATCH AT STEP 3", "The 8 rules whose logic changed last have no test history, and 27 confidence rates are still estimates rather than measurements."],
+  ["ALSO OPEN", "GLM v5.2 capability is assumed, not verified. The 32k prompt budget and structured-output behaviour were never checked against this model."],
 ];
 status.forEach((st, i) => {
   const x = M + i * 4.03, y = 3.1;

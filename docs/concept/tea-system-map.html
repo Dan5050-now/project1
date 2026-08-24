@@ -175,9 +175,10 @@ a{color:var(--accent)}
     reconciles it against the query history, and hands suspected issues to a person to adjudicate.
     Read this before the plan or the specification — it exists to make those two documents navigable.</p>
     <div class="docline">
-      <span><b>Governs</b> TEA-PLAN-001 v1.0.0 · TEA-SPEC-001 v2.0.0</span>
+      <span><b>Governs</b> TEA-PLAN-001 v1.0.0 · TEA-SPEC-001 v2.1.0</span>
       <span><b>Catalog</b> 85 review points, 83 live</span>
       <span><b>Guidelines</b> RECIST 1.1 + iRECIST</span>
+      <span><b>Model</b> GLM v5.2, company-hosted</span>
     </div>
   </div>
 </header>
@@ -234,8 +235,8 @@ a{color:var(--accent)}
     <b>The one rule that explains the architecture.</b> Every number and every verdict is computed by
     ordinary code. The language model never does arithmetic, never creates or deletes a finding, and
     never decides a response category. It writes explanations, reads free text, and offers a judgement
-    where the guideline itself asks for one. That single split is why the same verdicts come out of a
-    commercial API and a locally hosted model, and why validation stays tractable.
+    where the guideline itself asks for one. That single split is why the verdicts are identical whether
+    the model answers, returns nonsense, or is switched off — which is what makes validation tractable.
   </div>
 </section>
 
@@ -430,11 +431,13 @@ a{color:var(--accent)}
     </div>
     <div class="legend">
       <span><i class="key" style="background:var(--surface); border-color:var(--accent)"></i> Deterministic — code only, identical across providers</span>
-      <span><i class="key" style="background:var(--surface); border-color:var(--accent); border-style:dashed"></i> LLM-assisted — language, never verdicts</span>
+      <span><i class="key" style="background:var(--surface); border-color:var(--accent); border-style:dashed"></i> GLM v5.2 — language, never verdicts</span>
       <span><i class="key" style="background:var(--wash)"></i> Track band</span>
     </div>
-    <figcaption>If the model is unavailable, the run still completes: every LLM task has a deterministic
-    template fallback, and confidence falls back to the rule’s own base rate. The findings get plainer, never wrong.</figcaption>
+    <figcaption>One model, company-hosted: GLM v5.2, with no external LLM service in the picture. If it is
+    unavailable the run still completes — every model task has a deterministic template fallback, and confidence
+    falls back to the rule’s own base rate. The findings get plainer, never wrong. That deterministic-only mode is
+    also the reference the model is tested against, which is what proves it cannot change a verdict.</figcaption>
   </figure>
 </section>
 
@@ -748,7 +751,7 @@ a{color:var(--accent)}
     <h2>Six things that decide whether this works</h2>
   </div>
   <ul class="plain spine">
-    <li><b>The deterministic split holds or it doesn’t.</b> It is what makes local-model hosting, reproducibility and validation possible at once. Erode it and all three go.</li>
+    <li><b>The deterministic split holds or it doesn’t.</b> It is what makes single-model hosting, reproducibility and validation possible at once. Erode it and all three go.</li>
     <li><b>Silence is a feature.</b> A reviewer handed 400 findings reviews none. Deduplication, query reconciliation and confidence ranking are load-bearing, not polish.</li>
     <li><b>Confidence must be calibrated, not asserted.</b> A confidence rate people learn to distrust is worse than none, because it invites unread query issuing. It gets measured against actual acceptance.</li>
     <li><b>Coverage has to be published.</b> The danger is a reviewer assuming the agent checked something it never checked. Every run states what was not evaluated, and why.</li>
@@ -759,8 +762,8 @@ a{color:var(--accent)}
 
 <footer>
   <span>TEA concept overview</span>
-  <span>Derived from TEA-PLAN-001 v1.0.0 and TEA-SPEC-001 v2.0.0</span>
-  <span>Rule pack 2.0.0 — 85 points, 83 live, FROZEN 21 Aug</span>
+  <span>Derived from TEA-PLAN-001 v1.0.0 and TEA-SPEC-001 v2.1.0</span>
+  <span>Rule pack 2.0.0 — 85 points, 83 live, FROZEN 21 Aug, unchanged by the v2.1.0 amendment</span>
 </footer>
 
 </div>

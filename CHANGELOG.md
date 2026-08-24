@@ -3,6 +3,47 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## [Plan 1.1.0 / Spec 2.1.0] — 2026-08-22 — single-model amendment
+
+Amended under change control. The agent now runs on the **company-hosted GLM v5.2** and
+nothing else; commercial and externally hosted LLM services are out of scope.
+
+### The rule pack is untouched
+- No rule references a provider, so the 2.0.0 freeze holds and **no rule change control is
+  triggered**. `rule-catalog.yaml` and `tools/rules.json` are byte-for-byte identical to the
+  approved 21 August versions — verified by an empty diff, not asserted.
+
+### Removed
+- Deployment mode A (cloud-assisted). Two modes remain: GLM v5.2 on-premise, and
+  deterministic-only.
+- The Anthropic and generic OpenAI-compatible adapters. Two remain: GLM v5.2, and null.
+- **OI-06 closed** — the privacy assessment that was gating mode A. Removing the external
+  model removed the exposure rather than mitigating it.
+
+### The part that needed care
+- Cross-provider conformance testing was the mechanism proving a model cannot change a
+  verdict. With one model that comparison proves nothing, so it is **replaced, not deleted**:
+  the same fixtures now run through GLM v5.2 and through the deterministic-only reference, and
+  any difference in a deterministic verdict fails the build. Same guarantee, still on every
+  commit. Deterministic-only is therefore the reference implementation, not a degraded mode.
+
+### Risk shifted rather than removed
+- **RSK-04** (data leaving the boundary) drops to negligible — structurally, there is no
+  external adapter to call.
+- **RSK-16 added**: with one model there is no second provider to fall back to. Mitigated by
+  deterministic-only keeping the system fully operational, the adapter interface being
+  retained, and the model version pinned per study and stamped into provenance so an in-place
+  upgrade is detected rather than silently changing narratives.
+- **RSK-09 rewritten**: the GLM v5.2 capability assumptions were made against a generic
+  gateway at OQ-03 and **were never verified against this model**. NFR-05 now states the 32k
+  prompt budget as a figure to confirm rather than a fact, and confirming it is a Step 5 task.
+
+### Also changed
+- OBJ-05, DP-01, FR-07, NFR-01, NFR-05, NFR-06, REG-07 amended; OQ-03 and OQ-10 answered;
+  metric "provider verdict identity" becomes "verdict identity" against deterministic-only;
+  guardrail G-06 (redaction) is no longer an egress control.
+- Concept overview and deck updated; no external-LLM reference survives in either.
+
 ## [2.0.0] — 2026-08-21 — APPROVED
 
 **Step 2 gate passed.** TEA-SPEC-001 is approved for implementation and the rule pack is

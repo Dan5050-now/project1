@@ -36,9 +36,9 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 
 | Document | Version | Status | Next |
 |---|---|---|---|
-| TEA-PLAN-001 Development Plan | 1.0.0 | **APPROVED** 2026-08-17 | — |
-| TEA-SPEC-001 Programming Specification | 2.0.0 | **APPROVED** 2026-08-21 | — |
-| Rule catalog | 2.0.0 | **FROZEN** 2026-08-21 | Changes need change control |
+| TEA-PLAN-001 Development Plan | 1.1.0 | **APPROVED**, amended 2026-08-22 | — |
+| TEA-SPEC-001 Programming Specification | 2.1.0 | **APPROVED**, amended 2026-08-22 | — |
+| Rule catalog | 2.0.0 | **FROZEN** 2026-08-21 | Unchanged by the v2.1.0 amendment |
 | Concept overview (HTML + PPTX) | — | Current | Regenerate when the plan or spec changes |
 
 ## Where to start
@@ -61,6 +61,21 @@ detail by evidence rather than by reading.
 
 **Step 3 is blocked on one decision: choosing the pilot study** (OI-03). It determines the
 golden dataset and the UAT study.
+
+## Language model
+
+The agent runs on the **company-hosted GLM v5.2** and nothing else. Commercial and externally
+hosted LLM services are out of scope, so no subject data leaves the company network. Two
+deployment modes exist: GLM v5.2 on-premise, and deterministic-only.
+
+Deterministic-only is not a degraded fallback — it is the **verdict reference**. Every commit
+runs the same fixtures through both and fails the build if a deterministic verdict differs.
+That is what still guarantees the model cannot change a verdict, now that there is no second
+provider to compare against.
+
+**Not yet verified:** GLM v5.2's structured-output behaviour and context limit. The 32k prompt
+budget was assumed at OQ-03 against a generic gateway and was never checked against this model.
+Confirming it is a Step 5 task in its own right (RSK-09).
 
 Steps 3–6 (prototype output, UI design, code generation, final application) are gated on
 approval of the specification.
