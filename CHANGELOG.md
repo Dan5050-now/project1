@@ -3,6 +3,30 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## [Spec 2.2.0] — 2026-08-22 — GLM verification checklist
+
+### Added
+- **GLM_Verification sheet (TEA-GLM-001)** — 20 items to confirm about the GLM v5.2 deployment
+  before Step 5, each stating what breaks if the answer differs from what was assumed, so the
+  list can be triaged rather than worked end to end. Fillable answer columns.
+- Grouped by consequence: one blocking, seven that materially affect the build, four that are
+  good to know but cannot affect a verdict, and eight needed for the validation package.
+
+### The blocking item
+- **B2** — `P-INTAKE-PROTOCOL` (AC-11) takes the protocol and imaging charter as input. An
+  oncology protocol runs 100–200 pages, very roughly 60k–150k tokens before the charter. If the
+  deployment's input context is anywhere near the assumed 32k, **this prompt cannot work as
+  specified** and AC-11 needs section-targeted retrieval or chunking. That is a design change
+  rather than a configuration value, and it was found by reading the prompt contract against the
+  budget assumption rather than by testing.
+
+### Also worth noting
+- **D1** (does the endpoint report an exact build, or only a family name) is GxP-relevant: the
+  run provenance stamp cannot honestly identify what produced a finding if the endpoint reports
+  only "glm".
+- **B4** (silent server-side truncation) would breach guardrail G-07, which requires truncation
+  to be explicit and recorded, with no local signal that it happened.
+
 ## [Plan 1.1.0 / Spec 2.1.0] — 2026-08-22 — single-model amendment
 
 Amended under change control. The agent now runs on the **company-hosted GLM v5.2** and

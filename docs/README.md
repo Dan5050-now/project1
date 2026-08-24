@@ -37,7 +37,7 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 | Document | Version | Status | Next |
 |---|---|---|---|
 | TEA-PLAN-001 Development Plan | 1.1.0 | **APPROVED**, amended 2026-08-22 | — |
-| TEA-SPEC-001 Programming Specification | 2.1.0 | **APPROVED**, amended 2026-08-22 | — |
+| TEA-SPEC-001 Programming Specification | 2.2.0 | **APPROVED**, amended 2026-08-22 | — |
 | Rule catalog | 2.0.0 | **FROZEN** 2026-08-21 | Unchanged by the v2.1.0 amendment |
 | Concept overview (HTML + PPTX) | — | Current | Regenerate when the plan or spec changes |
 
@@ -75,7 +75,14 @@ provider to compare against.
 
 **Not yet verified:** GLM v5.2's structured-output behaviour and context limit. The 32k prompt
 budget was assumed at OQ-03 against a generic gateway and was never checked against this model.
-Confirming it is a Step 5 task in its own right (RSK-09).
+The specification's **GLM_Verification** sheet (TEA-GLM-001) is the 20-item checklist to take to
+the platform team, ordered by what breaks if the answer differs from what was assumed.
+
+One item on it is blocking rather than informational: **B2**. `P-INTAKE-PROTOCOL` (AC-11) takes
+the protocol and imaging charter as input, and an oncology protocol runs 100–200 pages — very
+roughly 60k–150k tokens before the charter. If the deployment's input context is near 32k, that
+prompt cannot work as specified and AC-11 needs section-targeted retrieval or chunking. That is
+a design change, not a configuration value.
 
 Steps 3–6 (prototype output, UI design, code generation, final application) are gated on
 approval of the specification.
