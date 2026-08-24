@@ -20,7 +20,7 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.10"
+DOC_VERSION = "1.11"
 DOC_STATUS = ("Baseline v1.0 + changes C-N01 and C-N02. Gates N1-N3 closed; Step N4 in progress and "
               "Step N4a - the Python shell - BUILT AND TESTED, awaiting your run on the company laptop. "
               "Two company controls are measured rather than feared: an executable may run but may not "
@@ -228,7 +228,22 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.10", "2026-08-22", "Claude Code", "-",
+    [f"{MARK_NEW}1.11", "2026-08-22", "Claude Code", "-",
+     "GATE N4a IS CLOSED. IT RAN. The Python package arrived by e-mail, started on the "
+     "company PC, imported a source workbook and exported one - all of it reported by the "
+     "requester from the machine that carries the controls. Every assumption this line was "
+     "built on is now evidence rather than argument. R-N21, the control that stopped the "
+     "web application being given a file, is ANSWERED IN PRACTICE and not only in design: "
+     "the shell that never asks the browser for a file was not asked about by the control "
+     "that watches for one, on the very machine where the other application still cannot "
+     "import. R-N01 and R-N09 - application allow-listing, SmartScreen, anti-virus - fall "
+     "away for this route entirely, because there is no executable for any of them to "
+     "judge. A-N09 is confirmed in full. WHAT IS NOT YET PROVEN, and is not claimed: "
+     "saving and reopening a plan, the write claim, and the shared folder were not part of "
+     "this run. They are tested here - 80 checks and 42 - but tested is not used. Step N5 "
+     "carries them, and the honest state of the sharing model is 'built and verified, not "
+     "yet exercised by two people on one plan'."],
+    ["1.10", "2026-08-22", "Claude Code", "-",
      "DELIVERY IS SOLVED, AND R-N20 WAS WIDER THAN THE EVIDENCE. The Python package went "
      "through company e-mail without complaint, and the requester identified what had "
      "stopped the earlier attempt: the EXECUTABLE inside the zip, not the zip. So the "
@@ -1083,8 +1098,8 @@ wbs = [
     ["N4a", "N4a.4", "The window chrome the Electron menu bar used to provide, drawn in the page.", "src/shell/python/chrome.html, chrome.css", "Complete"],
     ["N4a", "N4a.5", "Build and package: one command, 107 KB of readable Python text.", "tools/build_python_app.py", "Complete - dist/PM_APP_python_v0.2.zip"],
     ["N4a", "N4a.6", "Prove it is the same application: 1,225 person-months compared against the independent Python reference on every run.", "tools/test_python_app.py", "Complete - worst difference 0.00e+00"],
-    ["N4a", "N4a.7", "Requester runs it on the company laptop and reports what happened.", "Your result", "WAITING ON YOU"],
-    ["N4a", "GN4a", "GATE N4a - the Python shell arrives, starts, and reads a workbook on the target machine.", "PM_APP Python v0.2", "Not started"],
+    ["N4a", "N4a.7", "Requester runs it on the company laptop and reports what happened.", "Your result, 2026-08-22", "COMPLETE - it arrived, it ran, it imported and it exported"],
+    ["N4a", "GN4a", "GATE N4a - the Python shell arrives, starts, and reads a workbook on the target machine.", "PM_APP Python v0.4", "CLOSED 2026-08-22"],
 
     ["N5", "N5.1", "Package as a plain Windows folder delivered in a zip; verify it launches with no installation and no administrator rights.", "PM_APP_v<ver>.zip", "Not started"],
     ["N5", "N5.2", "Verify no socket is opened, offline, for a full session (NR-SEC-01).", "Test evidence", "Not started"],
@@ -1200,8 +1215,8 @@ ws, r = sheet(wb, "10_Risks", "Risks and assumptions")
 
 r = section(ws, r, "Risks")
 risks = [
-    [f"{MARK_CHG}R-N01", "Corporate policy blocks the application from running at all - typically application allow-listing, or a rule against executables outside Program Files.", "Low", "HIGH",
-     "LARGELY SETTLED 2026-08-15. It was the largest risk in this plan and it is now largely evidence: an unsigned executable, extracted from a zip into C:\\Users\\del09\\..., started and ran. There is no application allow-list standing in the way on that machine. Likelihood drops from Medium to Low; the impact stays HIGH because what remains would still be fatal - a policy that tolerates a 257 KB probe may yet quarantine a 142 MB application carrying a browser engine (R-N09). Proven for one machine and one user; a policy applied to a group could differ."],
+    [f"{MARK_CHG}R-N01", "Corporate policy blocks the application from running at all - typically application allow-listing, or a rule against executables outside Program Files.", "Low", "Low",
+     "CLOSED for the route being taken, 2026-08-22: the Python shell ran on the company PC, and an allow-list has no executable to judge. It stays on this register at Low/Low because it would return in full the day anybody revives the Electron package. ORIGINAL FINDING, 2026-08-15: It was the largest risk in this plan and it is now largely evidence: an unsigned executable, extracted from a zip into C:\\Users\\del09\\..., started and ran. There is no application allow-list standing in the way on that machine. Likelihood drops from Medium to Low; the impact stays HIGH because what remains would still be fatal - a policy that tolerates a 257 KB probe may yet quarantine a 142 MB application carrying a browser engine (R-N09). Proven for one machine and one user; a policy applied to a group could differ."],
     [f"{MARK_NEW}R-N02", "The refactor to share the engine breaks the finished web application.", "Medium", "High",
      "Task N2.2 gates everything else on the 13 existing suites passing unmodified against the rebuilt HTML file. If they do not pass, the refactor is wrong and nothing proceeds. This is why N2.1 is the first task and carries no other change."],
     [f"{MARK_NEW}R-N03", "A workspace file is corrupted and a plan is lost - data that used to be safe in Excel because the application never wrote to it.", "Low", "HIGH",
@@ -1216,7 +1231,8 @@ risks = [
      "Reduced by the architecture - most maintenance lands in the shared core and serves both - and by N-06 freezing the web application's feature set. It is not eliminated. It is the price of the bilingual arrangement, and worth stating plainly."],
     [f"{MARK_NEW}R-N08", "Users are unsure which of the two applications to use, or work in both and diverge.", "Medium", "Medium",
      "A one-page note in the user guide: the desktop application for planning work you keep, the web application for a quick look on a machine where nothing may be installed. A workspace exports to Excel, which imports into either, so no work is trapped."],
-    [f"{MARK_NEW}R-N09", "Windows SmartScreen warns about the executable, or anti-virus quarantines it, because it is unsigned and unknown.", "HIGH", "Medium",
+    [f"{MARK_CHG}R-N09", "Windows SmartScreen warns about the executable, or anti-virus quarantines it, because it is unsigned and unknown.", "HIGH", "Low",
+     "MOOT for the route being taken, 2026-08-22 - there is no executable, so there is nothing for SmartScreen or a reputation service to judge, and the requester met neither. Impact drops to Low; the likelihood is left at HIGH because it describes what WOULD happen to an .exe, and that is still true of the Electron package. ORIGINAL FINDING: "
      "Likely rather than possible - an unsigned executable arriving in a zip carries the mark-of-the-web and is treated as untrusted. Usually a one-time 'More info - Run anyway', which the user guide will show with a screenshot. Being non-installed does not help here and may hurt: unregistered software has no reputation. If anti-virus quarantines it outright, only IT can allow it - Q-N02 covers this. A code-signing certificate would remove the warning, and remains an IT purchase rather than a coding task (Q-N03)."],
     [f"{MARK_CHG}R-N10", "The application fails in a deeply nested folder because Windows path limits are exceeded.", "Low", "Medium",
      "MEASURED 2026-08-15 rather than guessed. The requester's own folder is C:\\Users\\del09\\DL-ClaudeCW\\project management app develop\\ - 64 characters to the application root, which leaves the deepest file inside the package at 107 of the 260 Windows allows: 153 characters of headroom, and the path contains spaces without trouble. The risk is real for somebody who extracts into a much deeper tree, so the user guide still states a recommended location and N5.6 still tests a deliberately deep path."],
@@ -1241,8 +1257,8 @@ risks = [
      "the impact stays HIGH because it would still be fatal to that route. Route B's premise is "
      "now measured rather than reasoned. ORIGINAL FINDING, 2026-08-15: The probe ran happily once it was on the machine, but e-mail refused to carry a .exe at all on a general security check. Execution policy is satisfied; transport is not. Two things follow. First, no amount of work on the package fixes this - an Electron build is an .exe however it is zipped, and defeating a mail filter is not a solution anybody should want. Second, decision N-01 is genuinely reopened: the choice of shell is now governed by what can be delivered rather than by what is pleasant to build. See sheet 10a."],
     [f"{MARK_NEW}R-N22", "The Python shell listens on a socket, and a listening socket on a company laptop is an attack surface.", "Low", "HIGH", "CREATED by change C-N02, and the honest price of route B: a browser and a local program can only talk over one. It is answered rather than accepted. Loopback only, so nothing off the machine can reach it and Windows Firewall is never asked for anything (NR-SEC-04). A port the operating system picks at start, so nothing is predictable. A 32-byte key on every request, generated at start and never written to disk - another program cannot guess it, and another web page cannot read it because same-origin policy keeps this page's DOM to itself (NR-SEC-05). The Host header must be loopback, which is what stops DNS rebinding. No CORS header is ever sent and any cross-site request is refused. No URL is mapped onto a path on disk, so there is nothing to escape from (NR-SEC-06). Every one of those is checked by tools/test_python_app.py on each run - eleven checks, before the application is even looked at."],
-    [f"{MARK_NEW}R-N21", "Data cannot enter a browser page at all - the company blocks the file picker, so the web application cannot be given a file.", "HIGH", "HIGH",
-     "PROVEN 2026-08-18, by diagnostic rather than by report. The file dialog opens normally; on choosing a file a company security message appears and nothing is imported. Transferring and opening the HTML file is NOT restricted. That combination identifies it precisely: a technical control on the browser's file-input data path, watching the File API, not a policy about the document and not a restriction on the browser. Three things follow. (1) The finished web application cannot be fed data on that laptop by any of its three routes - picker, drag-and-drop, or a JSON file - because all three end in the same API. It remains correct, and it remains usable anywhere the control does not apply. (2) Route C on sheet 10a is dead, not partial: it proposed persistence through the browser's own file access, which is the intercepted interface. (3) It is NOT a barrier to route B, because a Python shell reads the file from disk itself and hands the bytes to the page - there is no upload for a control to intercept. No mitigation is proposed on the browser side, and none will be: the control is deliberate, and evading it is the behaviour it exists to catch."],
+    [f"{MARK_CHG}R-N21", "Data cannot enter a browser page at all - the company blocks the file picker, so the web application cannot be given a file.", "HIGH", "Low",
+     "ANSWERED 2026-08-22, on the machine that carries the control. The Python shell imported a source workbook on the company PC. The risk itself is unchanged and still HIGH - the control is there and the web application still cannot be given a file on that laptop - but its IMPACT falls from HIGH to Low, because the tool the requester will use does not go near the interface it watches. That is what the shell was built for, and it is now measured rather than reasoned. ORIGINAL FINDING, 2026-08-18: The file dialog opens normally; on choosing a file a company security message appears and nothing is imported. Transferring and opening the HTML file is NOT restricted. That combination identifies it precisely: a technical control on the browser's file-input data path, watching the File API, not a policy about the document and not a restriction on the browser. Three things follow. (1) The finished web application cannot be fed data on that laptop by any of its three routes - picker, drag-and-drop, or a JSON file - because all three end in the same API. It remains correct, and it remains usable anywhere the control does not apply. (2) Route C on sheet 10a is dead, not partial: it proposed persistence through the browser's own file access, which is the intercepted interface. (3) It is NOT a barrier to route B, because a Python shell reads the file from disk itself and hands the bytes to the page - there is no upload for a control to intercept. No mitigation is proposed on the browser side, and none will be: the control is deliberate, and evading it is the behaviour it exists to catch."],
     [f"{MARK_NEW}R-N18", "Company file protection encrypts a workbook or a workspace, and the application cannot read it.", "Medium", "Medium",
      "Raised from your Q-N04 answer, which is about decrypting a file before it can be imported. Where a document-security product encrypts files on a share, an ordinary application sees bytes it cannot parse. Two requirements follow: NR-IMP-06, so a protected file is reported as protected rather than as corrupt - the failure that would otherwise waste an afternoon - and NR-IMP-07, so the application never adds encryption of its own and never becomes the only thing that can open your data. Protection stays the company's, applied to the folder."],
     [f"{MARK_NEW}R-N19", "Two bad saves in a row leave nothing good to go back to.", "Low", "Medium",

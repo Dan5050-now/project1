@@ -30,7 +30,7 @@ and stays in service — the two are parallel products, not successor and predec
 | N2 | Programming specification | **v1.0 APPROVED** 2026-08-13 · Gate N2 closed |
 | N3 | Desktop UI design | **v1.0 component list APPROVED** 2026-08-13 · Gate N3 closed |
 | N4 | Build (Electron shell) | **In progress** — storage layer and shell built; the application launches |
-| N4a | Build (Python shell) | **Built, tested and DELIVERED** — arrived by e-mail 2026-08-22 · awaiting the run on the company laptop |
+| N4a | Build (Python shell) | **GATE N4a CLOSED** 2026-08-22 — it arrived, ran, imported and exported on the company PC |
 | N5 | Release | Not started |
 
 Both applications share one calculation engine, one data schema (version 6) and one
@@ -131,8 +131,12 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.10.xlsx` — **current.** Records that **delivery is
-  solved**: the Python package went through company e-mail without complaint, and the
+- `docs/PRAP_NewApp_Development_Plan_v1.11.xlsx` — **current. Gate N4a is closed:** the
+  Python package arrived by e-mail, ran on the company PC, and imported and exported a
+  workbook — reported from the machine that carries the controls. `R-N21`'s impact falls
+  to Low (the control is still there; the tool no longer goes near it), and `R-N01` /
+  `R-N09` fall away for this route because there is no executable to judge. Also records
+  that **delivery is solved**: the Python package went through company e-mail without complaint, and the
   refusal that started this line was caused by the **executable inside** the earlier zip,
   not by the zip. `R-N20` narrows from HIGH/HIGH to Low/HIGH — it still bars an Electron
   package, and no longer bars anything anybody is building. Also adds **change C-N02, the
