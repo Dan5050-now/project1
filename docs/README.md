@@ -76,6 +76,9 @@ approval of the specification.
 
 1. **Filenames carry no version.** The version lives inside the document and in the git
    tag (`plan-vX.Y.Z`, `spec-vX.Y.Z`, `rulepack-vX.Y.Z`), so `git diff` stays meaningful.
+   Note: this environment's git proxy refuses tag pushes — the tags exist locally but must
+   be pushed from a normal clone. The authoritative version is the one inside each document
+   (Cover sheet, or the `version:` key in `rule-catalog.yaml`), so nothing is lost meanwhile.
 2. **MAJOR** invalidates previously issued findings or breaks a data contract.
    **MINOR** adds review points or capability, backward compatible. **PATCH** is wording.
 3. **Every agent run stamps its inputs**: engine, rule pack, prompt and model versions,
