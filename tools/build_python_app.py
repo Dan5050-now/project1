@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "0.8"
+VERSION = "0.9"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -94,12 +94,16 @@ WHAT IS NEW IN 0.8
     buried in the program: change them, add your own, or empty the column and
     the whole behaviour stops. Config -> absorb_unstaffed_role_factor = 0 also
     turns it off outright.
-  * Two new checks read your assumptions against your projects, and say plainly
+  * A new check reads your assumptions against your projects and says plainly
     when the two do not meet: a project whose type/phase/work scope has NO
-    period weights at all (V-27), and an assignment whose role has NO role
-    factors at all (V-28). Either one used to be calculated silently at 1.00.
-    A third, for information only, names work nobody is counting: a role with a
+    period weights at all (V-27), which used to be calculated silently at 1.00.
+    A second, for information only, names work nobody is counting: a role with a
     factor that nobody holds and nothing covers for (V-29).
+  * 0.9 REMOVES a check that 0.8 added. V-28 refused an assignment whose role had
+    no role factor anywhere - and since an error refuses the edit that raised it,
+    it stopped you entering who is on a project until the assumptions had caught
+    up. Entering your plan should not wait on a document somebody else maintains.
+    Nothing else changed and no figure moves.
   * outsourcing_type is now outsourcing_scope_det - free text, for your own
     notes. Work scope is what the calculation reads. Your existing files still
     open: the old column name is recognised and carried across.

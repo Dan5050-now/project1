@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.29",
+  "version": "1.30",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -24,8 +24,8 @@
  },
  "schema_version": 8,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.31.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.5.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.32.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.6.xlsx",
   "ui_component_list": "docs/PRAP_UI_Component_List_v1.0.xlsx",
   "source_data_template": "templates/PRAP_SourceData_Template_v1.10.xlsx",
   "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.12.xlsx",
@@ -1165,12 +1165,10 @@
    "enforced_by_application": true
   },
   "V-28": {
-   "statement": "Every role given to somebody on an assignment has at least one row in RoleFactor for that project's (project_type, clinical_phase, work_scope_type) - again independent of the project's periods.",
-   "effect": "Error - V-03 checks the role against the type alone and V-23 against periods the project has, which leaves the same two gaps. The role would be calculated at factor 1.00 wherever it fell, and the project costed as though that role were free.",
-   "severity_reported_by_app": [
-    "error"
-   ],
-   "enforced_by_application": true
+   "statement": "RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all.",
+   "effect": "Retired - and deliberately not reinstated at a lower severity. What the rule SAID was true; what it did not account for was WHEN it said it. An error refuses the edit that raised it (REQ-IMP-09), and unlike V-23 this one did not need the project to have any periods - so it fired on a project still being built, which is exactly when assignments are being typed in. A user could not record who was on a project until the standing assumptions carried a factor for their role, which is backwards: the plan is the document being written, the assumptions are maintained separately. The gap is not denied - V-03 still refuses a role invalid for the project type, and V-23 still reports a role with no factor for a period the project spans, which is the same finding at the point where it can be acted on. The id is not reused.",
+   "severity_reported_by_app": [],
+   "enforced_by_application": false
   },
   "V-29": {
    "statement": "A role that carries a factor, that nobody holds on the project, and that nothing covers for.",

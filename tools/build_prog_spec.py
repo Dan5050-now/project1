@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.5"
+DOC_VERSION = "1.6"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.31.xlsx"
+PLAN = "PRAP_Development_Plan_v2.32.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,15 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.6", "2026-08-26", "Claude Code", "Dan",
+         "R-18: V-28 IS RETIRED. Sheet 04 records the retirement rather than dropping "
+         "the row. The rule was right about the data and wrong about the moment: an "
+         "error refuses the edit that raised it, and V-28 was the first assumptions "
+         "error that did not need the project to have periods, so it fired on a project "
+         "still being built and stopped a user entering their own assignments until the "
+         "standing assumptions caught up. V-03 and V-23 still cover the case at the "
+         "point where it can be acted on. V-27, REQ-CAL-16 and the absorption arithmetic "
+         "are unchanged; no figure moves. Written against plan v2.32.", "Issued"],
         ["1.5", "2026-08-26", "Claude Code", "Dan",
          "R-17, REQ-CAL-16 and three new rules. Sheet 05 gains the ABSORPTION rule - an "
          "unstaffed role's factor lands on the role named to cover for it, per month, "

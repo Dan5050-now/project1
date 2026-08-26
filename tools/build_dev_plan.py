@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.31"
+DOC_VERSION = "2.32"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -368,7 +368,25 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.31", "2026-08-26", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.32", "2026-08-26", "Claude Code", "Pending",
+     "R-18: V-28 IS RETIRED, one version after it was added, because of what it did "
+     "rather than what it said. An error refuses the edit that raised it (REQ-IMP-09) - "
+     "that is deliberate and stays - and V-28 was the first error about the ASSUMPTIONS "
+     "that could fire on a project with no periods. So it fired while a project was "
+     "still being built, which is exactly when its assignments are typed in: a user "
+     "could not record who was on the project until RoleFactor already carried a factor "
+     "for their role. That is backwards. The plan is the document being written; the "
+     "assumptions are a standing document maintained separately, often by somebody else, "
+     "and entering the plan must not wait on them. The gap V-28 filled is real and is "
+     "not being denied: V-03 still refuses a role that is not valid for the project "
+     "type, and V-23 still reports a role with no factor for a period the project spans "
+     "- the same finding, at the point where the user can act on it. V-27 is unchanged: "
+     "it is about the project's own type, phase and scope, which are on the row being "
+     "edited, and the delivered defaults cover every combination the value lists offer, "
+     "so it does not stand between a user and their own data. REQ-CAL-16 and the "
+     "absorption arithmetic are untouched - no figure moves.",
+     "Issued for review"],
+    ["2.31", "2026-08-26", "Claude Code", "Pending",
      "TWO REQUESTS, and the second changes figures. (1) CROSS-CHECKS BETWEEN THE "
      "ASSUMPTIONS AND THE DATA: V-27 reports a project whose type, phase and work scope "
      "have no PeriodWeightStandard rows at all, and V-28 a role given to somebody on an "
@@ -1451,7 +1469,7 @@ rules = [
     [f"{MARK_CHG}V-03", "Every Assignment.role_name appears in RoleFactor for that project's type.", "Error - row rejected. Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error."],
     [f"{MARK_NEW}V-24", "Every PersonPeriodWeight.assignment_id exists in Assignment, and (assignment_id, period_start) is unique.", "Error - an override on an assignment that does not exist is silently ignored, so the weight the user typed never applies and nothing says so."],
     [f"{MARK_NEW}V-27", "Every clinical trial's (project_type, clinical_phase, work_scope_type) has at least one row in PeriodWeightStandard - checked on the PROJECT, not on its periods.", "Error - V-19 is precise but only looks at periods a project actually has, so a project whose milestones are missing is never checked at all, and a combination that was never entered is reported once per period rather than once as the one thing that is wrong. This asks the blunter question first: is there any standard for this project at all. Without one, every period would be weighted 1.00."],
-    [f"{MARK_NEW}V-28", "Every role given to somebody on an assignment has at least one row in RoleFactor for that project's (project_type, clinical_phase, work_scope_type) - again independent of the project's periods.", "Error - V-03 checks the role against the type alone and V-23 against periods the project has, which leaves the same two gaps. The role would be calculated at factor 1.00 wherever it fell, and the project costed as though that role were free."],
+    [f"{MARK_CHG}V-28", "RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all.", "Retired - and deliberately not reinstated at a lower severity. What the rule SAID was true; what it did not account for was WHEN it said it. An error refuses the edit that raised it (REQ-IMP-09), and unlike V-23 this one did not need the project to have any periods - so it fired on a project still being built, which is exactly when assignments are being typed in. A user could not record who was on a project until the standing assumptions carried a factor for their role, which is backwards: the plan is the document being written, the assumptions are maintained separately. The gap is not denied - V-03 still refuses a role invalid for the project type, and V-23 still reports a role with no factor for a period the project spans, which is the same finding at the point where it can be acted on. The id is not reused."],
     [f"{MARK_NEW}V-29", "A role that carries a factor, that nobody holds on the project, and that nothing covers for.", "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct."],
     [f"{MARK_CHG}V-25", "RETIRED at schema 7 (R-16). It reported a project whose work_scope_type contradicted its outsourcing_type.", "Retired - the rule existed only because two columns sat on the same axis and one of them drove the weights. outsourcing_scope_det is free text now, so there is nothing left to contradict. A rule that can no longer fire is removed rather than left standing and unexplained; the id is not reused."],
     [f"{MARK_NEW}V-26", "No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'.", "Error - reported as itself rather than as a generic unknown value, because the remedy is a choice the file cannot make on the user's behalf. Only they know whether the trial ran in healthy volunteers or in patients, and guessing would put a wrong weight on real work."],

@@ -399,17 +399,19 @@ function validate(M, F){
         + `${M.UNDER.toFixed(2)}, so this person can never clear it however fully they are booked.`);
   }
 
-  /* ---- V-27 / V-28: the assumption block for this project simply is not there ----
-     V-19 and V-23 are precise: they name the period, and they only look at periods a
-     project actually has. That leaves a gap at both ends. A project whose milestones
-     are missing has NO periods, so neither rule looks at it at all - and a project
-     whose (type, phase, scope) combination was never entered in the assumptions is
-     reported once per period rather than once, as the one thing that is wrong.
+  /* ---- V-27: the assumption block for this project simply is not there ----
+     V-19 is precise: it names the period, and it only looks at periods a project
+     actually has. That leaves a gap at both ends. A project whose milestones are
+     missing has NO periods, so V-19 does not look at it at all - and a project whose
+     (type, phase, scope) combination was never entered in the assumptions is reported
+     once per period rather than once, as the one thing that is wrong.
 
-     These two ask the blunter question first, on the PROJECT rather than on its
-     periods: is there any standard for this project at all, and is there any factor
-     for the roles people are actually assigned to. They fire where V-19 and V-23
-     cannot, and where both can, they say the useful sentence. */
+     This asks the blunter question first, on the PROJECT rather than on its periods:
+     is there any standard for this project at all. It fires where V-19 cannot, and
+     where both can, it says the useful sentence.
+
+     V-28 stood here and asked the same question of the roles on the assignments. It is
+     RETIRED at v2.32 - see the note below. */
   for (const [pid, proj] of Object.entries(M.projects)){
     if (!CLINICAL_TYPES.has(proj.project_type)) continue;      // 'Others' take manual weights
     if (!proj.clinical_phase) continue;                        // V-19 has already said so
@@ -424,24 +426,22 @@ function validate(M, F){
         + `every scope.`);
   }
 
-  const roleSaid = new Set();
-  for (const a of M.assignments){
-    const proj = M.projects[a.project_id];
-    if (!proj || !a.role_name) continue;
-    const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
-    const periods = CLINICAL_TYPES.has(proj.project_type)
-      ? (M.lists.period_name_clinical || CLINICAL_PERIODS)
-      : (M.lists.period_name_others || OTHER_PERIODS);
-    if (periods.some(pn => stdFactor(M, proj, pn, a.role_name) !== undefined)) continue;
-    const line = `${proj.project_type} / ${ph || "-"} / `
-      + `${proj.work_scope_type || "any scope"} / ${a.role_name}`;
-    if (roleSaid.has(line)) continue;
-    roleSaid.add(line);
-    add("error","V-28","RoleFactor",a.__row,
-      `Assignment ${a.assignment_id} gives ${a.person_id} the role '${a.role_name}' on `
-      + `${a.project_id}, and RoleFactor has NO rows for ${line} — not for any period. That `
-      + `role would be calculated at factor 1.00 wherever it falls.`);
-  }
+  /* V-28 is RETIRED at v2.32, and deliberately not reimplemented at any severity.
+     It reported an assignment whose role had no RoleFactor row for the project's
+     (project_type, clinical_phase, work_scope_type) at all. Everything it said was
+     true. What it did not account for is WHEN it said it: an error refuses the edit
+     that raised it (REQ-IMP-09), and unlike V-23 this one did not need the project to
+     have any periods, so it fired on a project still being built - one whose milestones
+     had not been entered yet, which is exactly when somebody is typing assignments in.
+     The user then could not record who is on the project until the assumptions carried
+     a factor for their role, which is backwards: the plan is the thing being written,
+     and the assumptions are a standing document maintained separately.
+
+     The gap it filled is real and is not being denied - a role with no factor is
+     calculated at 1.00. V-03 still refuses a role that is not valid for the project
+     type, and V-23 still reports a role with no factor for a period the project spans,
+     which is the same finding at the point where it can be acted on. The id is not
+     reused. */
 
   /* V-29: a role that has a factor, that nobody holds, and that nothing covers for.
      The direct consequence of REQ-CAL-16, and the reason it is worth reporting: the

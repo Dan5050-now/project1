@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.31 records Step 4 progress, schema 8, the cross-data checks, the absorption of an unstaffed role's factor, the shared-role division, the delivered defaults and optional assignment dates |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.32 records Step 4 progress, schema 8, the cross-data check, the absorption of an unstaffed role's factor, the shared-role division, the delivered defaults and optional assignment dates |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -68,7 +68,7 @@ File API call at all** — Python reads the workbook and hands the bytes to the 
 `127.0.0.1`. `core/` and `ui/` are untouched, so there is still one engine.
 
 ```
-python tools/build_python_app.py --zip   # dist/PM_APP_python_v0.8.zip, 125 KB
+python tools/build_python_app.py --zip   # dist/PM_APP_python_v0.9.zip, 125 KB
 python tools/test_storage_py.py          # 80 checks — kills mid-save, an 8-process race
 python tools/test_python_app.py          # 42 checks — a live server, a real browser
 ```
@@ -218,12 +218,13 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.31.xlsx` — **current.** 73 requirements, 29 live
-  validation rules (V-25 retired), source schema version 8. Carries change **R-17 — an
+- `docs/PRAP_Development_Plan_v2.32.xlsx` — **current.** 73 requirements, 28 live
+  validation rules (V-25 and V-28 retired), source schema version 8. Carries change
+  **R-18 — V-28 retired** (below) and **R-17 — an
   empty post still costs the project** (`REQ-CAL-16`: a role that carries a factor and
   that nobody holds in a month has that factor added to whoever covers for it, named by
   `RoleFactor.absorbed_by`) and the cross-checks between the assumptions and the data
-  (`V-27`, `V-28` errors; `V-29` information). It also carries **R-13 — a shared role is a shared
+  (`V-27` error; `V-29` information). It also carries **R-13 — a shared role is a shared
   cost** (`REQ-CAL-14`: where several people hold the same role on one project in one
   month, the role factor is divided between them) and **R-14 — the delivered default
   assumptions** (`PeriodWeightStandard` and `RoleFactor` arrive filled in, and the
@@ -233,9 +234,9 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.5.xlsx` — **current specification.** Schema 8
+- `docs/PRAP_Programming_Specification_v1.6.xlsx` — **current specification.** Schema 8
   (the two-step lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
-  through, the three cross-data rules, the shared-role division with its worked
+  through, the cross-data rules, the shared-role division with its worked
   reasoning, and where the delivered defaults come from.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
@@ -987,15 +988,26 @@ Requires `openpyxl`.
   passed further along — `V-29` says so instead of the figure silently absorbing twice;
   and the absorbed factor is then divided among the absorbing role's holders like any
   other. `absorb_unstaffed_role_factor = 0` restores the previous arithmetic exactly.
-- **The assumptions are read against the plan** (v2.31, `V-27`/`V-28`/`V-29`). The two
-  standards sheets and the project rows are separate documents that must meet, and until
-  now the application only checked them period by period — so a project whose
-  type/phase/scope combination had **no** standards rows at all had no period to fail on,
-  and was calculated silently at 1.00. Two errors now ask the blunt question on the
-  project: `V-27` — this project's combination has no `PeriodWeightStandard` rows at all,
-  not for any period; `V-28` — this assignment's role has no `RoleFactor` rows at all.
-  A third, `V-29`, is information rather than an error: a role that carries a factor,
-  that nobody holds, and that nothing covers for — work the figures are counting nowhere.
+- **The assumptions are read against the plan** (v2.31, `V-27`/`V-29`). The two standards
+  sheets and the project rows are separate documents that must meet, and until now the
+  application only checked them period by period — so a project whose type/phase/scope
+  combination had **no** standards rows at all had no period to fail on, and was
+  calculated silently at 1.00. `V-27` now asks the blunt question on the project: this
+  project's combination has no `PeriodWeightStandard` rows at all, not for any period.
+  `V-29` is information rather than an error: a role that carries a factor, that nobody
+  holds, and that nothing covers for — work the figures are counting nowhere.
+- **`V-28` is retired one version after it was added** (R-18, v2.32). It asked the same
+  blunt question of the roles on the assignments — and it was right about the data and
+  wrong about the moment. **An error refuses the edit that raised it** (REQ-IMP-09), and
+  unlike `V-23` this rule did not need the project to have any periods, so it fired on a
+  project still being built — which is exactly when its assignments are typed in. A user
+  could not record who was on a project until `RoleFactor` already carried a factor for
+  their role. That is backwards: the plan is the document being written, the assumptions
+  are a standing document maintained separately, and entering one must not wait on the
+  other. The gap is not denied — `V-03` still refuses a role that is not valid for the
+  project type, and `V-23` still reports a role with no factor for a period the project
+  spans, which is the same finding at the point where it can be acted on. The id is not
+  reused, and `V-27`, `REQ-CAL-16` and every figure are unchanged.
 - **A shared role is a shared cost** (R-13, `REQ-CAL-14`). The role factor says what the
   *role* costs the project in a period, not what each person holding it costs — so where
   several people hold the same role on the same project in the same month, they divide
