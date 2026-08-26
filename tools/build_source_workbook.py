@@ -303,8 +303,8 @@ SHEETS = {
         ("person_name", "DERIVED - looked up from Person, do not type.", "calc"),
         ("project_id", "Foreign key to Project.", "key"),
         ("role_name", "Must exist in RoleFactor for this project's type.", ""),
-        ("assign_start_date", "Date the person joins the study.", ""),
-        ("assign_end_date", "Date the person leaves. Blank = runs to project end.", ""),
+        ("assign_start_date", "Date the person joins. BLANK = the project's own start date.", ""),
+        ("assign_end_date", "Date the person leaves. BLANK = the project's own end date.", ""),
         ("person_weight", "How much this person works on this project, e.g. 0.40.", ""),
         ("note_1", "Free text.", ""), ("note_2", "", ""), ("note_3", "", ""),
     ],
@@ -676,10 +676,18 @@ def dummy_data(prof):
             if person == LIGHT:                     # kept deliberately light
                 person = pool[cursor[role] % len(pool)]
                 cursor[role] += 1
-            a_start = pstart + rd(months=rng.randint(0, 2))
-            a_end = pend - rd(months=rng.randint(0, 2))
-            if a_end <= a_start:
-                a_end = pend
+            # REQ-CAL-15: both assignment dates are optional, and a blank one means
+            # the project's own. Most people really are on a project for the whole of
+            # it, so roughly a third of the fixture leaves them blank - which is what a
+            # real file looks like, and which keeps the inherited-window path under the
+            # four-way comparison in tools/test_app.py rather than in one unit test.
+            if len(A) % 3 == 0:
+                a_start = a_end = None
+            else:
+                a_start = pstart + rd(months=rng.randint(0, 2))
+                a_end = pend - rd(months=rng.randint(0, 2))
+                if a_end <= a_start:
+                    a_end = pend
             # the more projects run at once, the smaller each person's share of any one
             w = round(rng.uniform(*prof["weight"]), 2)
             if role in ("Lead data manager", "Project lead"):
@@ -1027,6 +1035,14 @@ def add_readme(wb, kind, facts=None):
         "   inspections dated AFTER the final DB lock open the last period; an earlier one stays a marker.",
         "",
         "   'Others' projects have no milestones. Their period dates and weights are both typed in.",
+        "",
+        "ASSIGNMENT DATES ARE OPTIONAL",
+        "   Leave assign_start_date and assign_end_date BLANK for somebody who is on the project for",
+        "   the whole of it - which is most people. A blank date means the project's own, so the two",
+        "   never fall out of step when the project's dates move.",
+        "",
+        "   Fill them in only for a PARTIAL involvement: somebody who joins late, leaves early, or",
+        "   covers one stretch of a longer study.",
         "",
         "ADDING A PERMITTED VALUE",
         "   Insert a row inside that list's block on the Lists sheet, so the block stays contiguous -",

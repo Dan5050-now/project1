@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.26",
+  "version": "1.27",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -24,8 +24,8 @@
  },
  "schema_version": 6,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.28.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.2.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.29.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.3.xlsx",
   "ui_component_list": "docs/PRAP_UI_Component_List_v1.0.xlsx",
   "source_data_template": "templates/PRAP_SourceData_Template_v1.8.xlsx",
   "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.10.xlsx",
@@ -571,13 +571,13 @@
      "name": "assign_start_date",
      "type": "date",
      "editable": true,
-     "note": "Date the person joins the study."
+     "note": "Date the person joins. BLANK = the project's own start date."
     },
     {
      "name": "assign_end_date",
      "type": "date",
      "editable": true,
-     "note": "Date the person leaves. Blank = runs to project end."
+     "note": "Date the person leaves. BLANK = the project's own end date."
     },
     {
      "name": "person_weight",

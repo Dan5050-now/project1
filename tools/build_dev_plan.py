@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.28"
+DOC_VERSION = "2.29"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -368,7 +368,21 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.28", "2026-08-22", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.29", "2026-08-25", "Claude Code", "Pending",
+     "R-15, REQ-CAL-15: BOTH ASSIGNMENT DATES ARE OPTIONAL, and a blank one means the "
+     "project's own. Most people are on a project for the whole of it, and requiring two "
+     "dates that simply repeat the project's asks somebody to copy the same pair onto "
+     "every row and then keep them in step when the project moves. The end date already "
+     "worked this way; the start did not, and a blank one was the worst of the three "
+     "possible behaviours - the assignment contributed NOTHING, the person looked "
+     "unassigned, and no finding said why. The window is now computed by one function "
+     "shared by the calculation and by the role-sharing pre-pass, so the months a person "
+     "is counted IN cannot differ from the months they are counted AMONG; an undated "
+     "person is a sharer like any other. Roughly a third of the dummy fixture now leaves "
+     "both dates blank, which is what a real file looks like and puts the inherited "
+     "window under the four-way comparison rather than in one unit test.",
+     "Issued for review"],
+    ["2.28", "2026-08-22", "Claude Code", "Pending",
      "TWO CHANGES, BOTH REQUESTED, AND THE FIRST CHANGES EVERY FIGURE A SHARED ROLE EVER "
      "PRODUCED. (1) R-13, REQ-CAL-14: where several people hold the same role on the same "
      "project in the same month, the role factor is DIVIDED BETWEEN THEM. The factor states "
@@ -1121,6 +1135,7 @@ reqs = [
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-CAL-15", "Calculation", "BOTH ASSIGNMENT DATES ARE OPTIONAL. A blank assign_start_date means the project's own start date, and a blank assign_end_date the project's own end date - so an assignment with neither runs for the whole project, which is what most assignments are. Filling them in is for a PARTIAL involvement. The end date already behaved this way; the start did not, and a blank one made the assignment contribute nothing at all with no finding to say why.", "Must", "R-15", "4"],
     [f"{MARK_NEW}REQ-CAL-14", "Calculation", "Where SEVERAL PEOPLE hold the same role on the same project in the same month, the role factor is DIVIDED BETWEEN THEM. The role factor states what the ROLE costs the project in that period, not what each person holding it costs, so a project staffed by two data managers must not cost twice a project staffed by one. The count is per month, so a sharer leaving restores the others' full share without any edit; it counts distinct PEOPLE, so one person recorded on two rows is one person; and each person's own person_weight then applies to their share. Kept as the setting split_shared_role_fte so a figure produced before this rule can still be reproduced.", "Must", "R-13", "4"],
     ["REQ-CAL-03", "Calculation", "Project monthly load is the sum of its assignments; person monthly load is the sum across all their projects.", "Must", "Requester", "4"],
     [f"{MARK_CHG}REQ-CAL-04", "Calculation", "A person-month whose total exceeds the over-allocation threshold (default 1.50 FTE) is flagged as over-allocated. The threshold is absolute, not scaled by capacity (S2-01).", "Must", "Q-08, S2-01", "4"],
@@ -1347,8 +1362,8 @@ asg = [
     ["person_name", "Derived", "No", "DERIVED - looked up from Person on import and refreshed from it. Locked in the template; a value typed here is discarded and the disagreement reported as V-13.", "REQ-PSN-01"],
     ["project_id", "Text", "Yes", "Foreign key to Project.", "REQ-PSN-02"],
     [f"{MARK_CHG}role_name", "Text", "Yes", "Foreign key to RoleFactor, matched on (project's type, role_name); the phase and period are supplied by the project and the month being calculated. Several rows = several roles on one project.", "REQ-PSN-03"],
-    ["assign_start_date", "Date", "Yes", "Date the person joins the study.", "REQ-PSN-04"],
-    ["assign_end_date", "Date", "Yes", "Date the person leaves the study. Blank = runs to project end.", "REQ-PSN-04"],
+    [f"{MARK_CHG}assign_start_date", "Date", "No", "Date the person joins the study. BLANK = the project's own start date (REQ-CAL-15). Optional since v2.29: leave both dates blank for somebody on the project throughout, and fill them in only for a partial involvement.", "REQ-PSN-04, REQ-CAL-15"],
+    [f"{MARK_CHG}assign_end_date", "Date", "No", "Date the person leaves the study. BLANK = the project's own end date. This one has always behaved that way; v2.29 makes the start match it.", "REQ-PSN-04, REQ-CAL-15"],
     [f"{MARK_CHG}person_weight", "Decimal", "Yes", "RENAMED from base_allocation. How much this person works on this project, e.g. 0.40. Q-01 folded the two former fields into this one.", "REQ-CAL-02"],
     ["note_1 .. note_3", "Text", "No", "Free extension columns.", "REQ-PSN-06"],
 ]

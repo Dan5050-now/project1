@@ -69,7 +69,11 @@ def main():
 
     home = pathlib.Path(tempfile.mkdtemp(prefix="pm-run-"))
     app_dir = home / "PM_APP"
-    shutil.copytree(PKG, app_dir)
+    # Copy the APPLICATION, not whatever a previous run left beside it. data/ is the
+    # user's folder; carrying one in means this test starts signed in as somebody a
+    # different test invented, and the identity checks below then pass or fail on
+    # leftovers rather than on the run in front of them.
+    shutil.copytree(PKG, app_dir, ignore=shutil.ignore_patterns("data"))
     print(f"running from {app_dir}")
 
     proc = subprocess.Popen([sys.executable, str(app_dir / "PM_APP.py"), "--no-browser"],

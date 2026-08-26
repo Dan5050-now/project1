@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.2"
+DOC_VERSION = "1.3"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.28.xlsx"
+PLAN = "PRAP_Development_Plan_v2.29.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,13 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.3", "2026-08-25", "Claude Code", "Dan",
+         "R-15, REQ-CAL-15: both assignment dates are optional and a blank one means the "
+         "project's own, so an assignment with neither runs for the whole project. Sheet "
+         "05 gains the window rule and says why it is one function rather than two - the "
+         "months a person is counted IN must not differ from the months they are counted "
+         "AMONG, or a shared role stops adding up to one. Written against plan v2.29.",
+         "Issued"],
         ["1.2", "2026-08-22", "Claude Code", "Dan",
          "TWO CHANGES. (1) R-13: the role factor is DIVIDED between the people holding "
          "that role on that project in that month. Sheet 05 carries the formula, the "
@@ -594,8 +601,25 @@ r = code(ws, r, [
     "                          config.split_shared_role_fte = 0 -> always 1, the old arithmetic",
     "  person_weight         : PersonPeriodWeight.weight_override if a window covers the",
     "                          first day of the month, else assignment.person_weight",
-    "  coverage              : calendar days of the month inside [assign_start, assign_end]",
+    "  coverage              : calendar days of the month inside the ASSIGNMENT WINDOW,",
     "                          divided by the days in that month",
+    "",
+    "  THE ASSIGNMENT WINDOW  [REQ-CAL-15]",
+    "      start = assignment.assign_start_date  or  project.start_date",
+    "      end   = assignment.assign_end_date    or  project.end_date",
+    "",
+    "  Both dates are OPTIONAL. Most people are on a project for the whole of it, and asking",
+    "  for two dates that repeat the project's means copying the same pair onto every row and",
+    "  keeping them in step when the project moves. Fill them in for a PARTIAL involvement.",
+    "",
+    "  The end date always behaved this way. The start did not, and a blank one made the",
+    "  assignment contribute NOTHING - the row on screen, the person apparently unassigned,",
+    "  and no finding to say why. That was a defect rather than a rule.",
+    "",
+    "  ONE FUNCTION, used by the calculation AND by the sharing pre-pass above. The months a",
+    "  person is counted IN must not differ from the months they are counted AMONG; two",
+    "  copies of this rule would eventually disagree, and the symptom would be a shared role",
+    "  that does not add up to one.",
     "",
     "  result is FTE.  hours = FTE x config.fte_hours_per_month",
     "",

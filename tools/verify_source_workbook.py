@@ -37,6 +37,13 @@ def scope_of(row):
     return str((row or {}).get("work_scope_type") or "")
 
 
+def assignment_window(proj, a):
+    """Both assignment dates are optional; a blank one means the project's own
+    (REQ-CAL-15). A blank START used to mean the row contributed nothing at all."""
+    return (d(a["assign_start_date"]) or d(proj["start_date"]),
+            d(a["assign_end_date"]) or d(proj["end_date"]))
+
+
 def lookup(table, key, scope, tail):
     """Schema 6's two-step: the project's own scope first, then the any-scope row.
 
@@ -276,8 +283,9 @@ def main(path):
         for a in ASG:
             if a["project_id"] not in P or a["person_id"] not in PSN:
                 continue
-            s = d(a["assign_start_date"])
-            e = d(a["assign_end_date"]) or d(P[a["project_id"]]["end_date"])
+            s, e = assignment_window(P[a["project_id"]], a)
+            if not s or not e:
+                continue
             for y, m in months_between(s, e):
                 if coverage(y, m, s, e) > 0:
                     sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
@@ -288,8 +296,9 @@ def main(path):
         if a["project_id"] not in P or a["person_id"] not in PSN:
             continue
         proj = P[a["project_id"]]
-        s = d(a["assign_start_date"])
-        e = d(a["assign_end_date"]) or d(proj["end_date"])
+        s, e = assignment_window(proj, a)
+        if not s or not e:
+            continue
         for y, m in months_between(s, e):
             cov = coverage(y, m, s, e)
             if cov <= 0:

@@ -421,11 +421,18 @@ function overridesPanel(sid){
   const sel = asg.find(a => a.assignment_id === aid) || null;
   const ppw = M.raw.PersonPeriodWeight.filter(w =>
     (aid && w.assignment_id === aid) || (w.__new && !w.assignment_id));
-  const span = sel
-    ? `${ymd(sel.assign_start_date) || "—"} ~ `
-      + `${ymd(sel.assign_end_date)
-           || (sel.project_id && ymd((M.projects[sel.project_id] || {}).end_date)) || "—"}`
-    : "";
+  // A blank assignment date means the PROJECT's date (REQ-CAL-15), so the window shown
+  // is the one actually used. Marked, because "2027-01-01 ~ 2029-06-30" typed into the
+  // row and the same pair inherited from the project are different facts, and somebody
+  // deciding whether to edit the row needs to know which they are looking at.
+  const span = sel ? (() => {
+    const pr = M.projects[sel.project_id] || {};
+    const s = sel.assign_start_date || pr.start_date;
+    const e = sel.assign_end_date || pr.end_date;
+    const whole = !sel.assign_start_date && !sel.assign_end_date;
+    return `${ymd(s) || "—"} ~ ${ymd(e) || "—"}`
+      + (whole ? " · the whole project" : "");
+  })() : "";
   return `<div class="panel">
       <div class="phead"><h2>Weight overrides — ${esc(pe.person_name)} (${esc(sid)})</h2>
         <span class="scope k">${ppw.length} window(s)</span></div>

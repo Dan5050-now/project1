@@ -4,6 +4,28 @@
 
    Pure: no DOM, no file access. Spec sheet 05, verified against the worked example. */
 
+/** The months an assignment covers.
+ *
+ *  BOTH DATES ARE OPTIONAL, and a blank one means the project's own (REQ-CAL-15).
+ *  Most people are on a project for the whole of it; only a partial involvement is
+ *  worth writing down, and asking for two dates that simply repeat the project's is
+ *  asking somebody to copy the same pair onto every row and to keep them in step
+ *  afterwards.
+ *
+ *  The end date already worked this way. The start did not: a blank one made the
+ *  assignment contribute NOTHING, silently, which is the worst of the three possible
+ *  behaviours - the row is on screen, the person looks unassigned, and no finding
+ *  says why.
+ *
+ *  One function, called by the sharing pre-pass and by the calculation itself, so the
+ *  months a person is counted IN cannot differ from the months they are counted
+ *  AMONG. Two copies of this would eventually disagree, and the symptom would be a
+ *  role share that does not add up to one. */
+function assignmentWindow(proj, a){
+  return [a.assign_start_date || proj.start_date,
+          a.assign_end_date   || proj.end_date];
+}
+
 function monthsBetween(a, b){
   const out = [];
   let y = a.getUTCFullYear(), m = a.getUTCMonth();
@@ -69,7 +91,7 @@ function calculate(M){
   if (M.SPLIT) for (const a of M.assignments){
     const proj = M.projects[a.project_id];
     if (!proj || !M.people[a.person_id] || a.__bad || a.__new) continue;
-    const s = a.assign_start_date, e = a.assign_end_date || proj.end_date;
+    const [s, e] = assignmentWindow(proj, a);
     if (!s || !e) continue;
     for (const [y, m] of monthsBetween(s, e)){
       if (coverage(y, m, s, e) <= 0) continue;
@@ -84,8 +106,10 @@ function calculate(M){
   for (const a of M.assignments){
     const proj = M.projects[a.project_id];
     if (!proj || !M.people[a.person_id] || a.__bad) continue;
-    const s = a.assign_start_date, e = a.assign_end_date || proj.end_date;
-    if (!s || !e || a.__new) continue;              // an incomplete row contributes nothing
+    const [s, e] = assignmentWindow(proj, a);
+    // Only a row still being typed, or a project with no dates of its own, contributes
+    // nothing now - a blank assignment date means the project's, not zero.
+    if (!s || !e || a.__new) continue;
     for (const [y, m] of monthsBetween(s, e)){
       const cov = coverage(y, m, s, e);
       if (cov <= 0) continue;

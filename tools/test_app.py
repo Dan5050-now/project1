@@ -66,8 +66,7 @@ def reference_person_months(path):
     sharers = defaultdict(set)
     for a in ASG:
         pr = P[a["project_id"]]
-        s = d(a["assign_start_date"])
-        e = d(a["assign_end_date"]) or d(pr["end_date"])
+        s, e = assignment_window(pr, a)
         for y, m in months_between(s, e):
             if coverage(y, m, s, e) > 0:
                 sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
@@ -75,8 +74,7 @@ def reference_person_months(path):
     out = defaultdict(float)
     for a in ASG:
         pr = P[a["project_id"]]
-        s = d(a["assign_start_date"])
-        e = d(a["assign_end_date"]) or d(pr["end_date"])
+        s, e = assignment_window(pr, a)
         ph = pr["clinical_phase"] if pr["project_type"] in CLINICAL_TYPES else None
         for y, m in months_between(s, e):
             cov = coverage(y, m, s, e)

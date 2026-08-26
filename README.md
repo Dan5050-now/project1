@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.28 records Step 4 progress, schema 6, the shared-role division and the delivered defaults |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.29 records Step 4 progress, schema 6, the shared-role division, the delivered defaults and optional assignment dates |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -218,7 +218,7 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.28.xlsx` — **current.** 71 requirements, 26 validation
+- `docs/PRAP_Development_Plan_v2.29.xlsx` — **current.** 72 requirements, 26 validation
   rules, source schema version 6. Carries change **R-13 — a shared role is a shared
   cost** (`REQ-CAL-14`: where several people hold the same role on one project in one
   month, the role factor is divided between them) and **R-14 — the delivered default
@@ -229,7 +229,7 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.2.xlsx` — **current specification.** Schema 6
+- `docs/PRAP_Programming_Specification_v1.3.xlsx` — **current specification.** Schema 6
   (the two-step lookup, the new keys, the two new rules), the shared-role division with
   its worked reasoning, and where the delivered defaults come from.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
@@ -952,6 +952,12 @@ Requires `openpyxl`.
   one derivation, and differ in their weights. A type is recognised as a trial by the
   **start** of its name, so subdividing one again is a value-list change, not a code
   change (R-12, schema 6).
+- **Assignment dates are optional** (R-15, `REQ-CAL-15`). A blank `assign_start_date`
+  means the project's own start; a blank `assign_end_date` its end. So an assignment
+  with neither runs for the **whole project** — which is what most assignments are —
+  and the two never fall out of step when the project's dates move. Fill them in only
+  for a partial involvement. The end date always behaved this way; the start did not,
+  and a blank one made the assignment contribute **nothing at all**, silently.
 - **A shared role is a shared cost** (R-13, `REQ-CAL-14`). The role factor says what the
   *role* costs the project in a period, not what each person holding it costs — so where
   several people hold the same role on the same project in the same month, they divide

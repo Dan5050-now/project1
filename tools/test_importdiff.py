@@ -212,7 +212,13 @@ with sync_playwright() as pw:
 
 # ------------------------------------------------- 4. the flow, in the shell
 print("\nthe Python shell — the whole flow, with the dialogs")
-proc = subprocess.Popen([sys.executable, str(PKG / "PM_APP.py"), "--no-browser"],
+# Run from a COPY. Starting the packaged folder in place leaves a data/ directory
+# inside dist/, which the next test to copy that folder then inherits - and a test that
+# inherits another test's state is a test that passes for the wrong reason.
+import shutil                                                        # noqa: E402
+RUN = TMP / "PM_APP"
+shutil.copytree(PKG, RUN, ignore=shutil.ignore_patterns("data"))
+proc = subprocess.Popen([sys.executable, str(RUN / "PM_APP.py"), "--no-browser"],
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 url = key = None
 for _ in range(200):

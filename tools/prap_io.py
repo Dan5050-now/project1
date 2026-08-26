@@ -730,6 +730,19 @@ def validate(M):
 
 
 # =============================================================== 4. calculation
+def assignment_window(proj, a):
+    """The months an assignment covers.
+
+    Both dates are optional and a blank one means the project's own (REQ-CAL-15):
+    most people are on a project for the whole of it, and only a partial involvement
+    is worth writing down. One function for the sharing pre-pass and the calculation
+    alike, so the months a person is counted IN cannot differ from the months they
+    are counted AMONG.
+    """
+    return (a.get("assign_start_date") or proj.get("start_date"),
+            a.get("assign_end_date") or proj.get("end_date"))
+
+
 def calculate(M):
     proj_month = defaultdict(float)
     pers_month = defaultdict(float)
@@ -764,8 +777,7 @@ def calculate(M):
             proj = M.projects.get(a.get("project_id"))
             if not proj or a.get("person_id") not in M.people:
                 continue
-            s = a.get("assign_start_date")
-            e = a.get("assign_end_date") or proj.get("end_date")
+            s, e = assignment_window(proj, a)
             if not s or not e:
                 continue
             for y, m in months_between(s, e):
@@ -777,8 +789,7 @@ def calculate(M):
         proj = M.projects.get(a.get("project_id"))
         if not proj or a.get("person_id") not in M.people:
             continue
-        s = a.get("assign_start_date")
-        e = a.get("assign_end_date") or proj.get("end_date")
+        s, e = assignment_window(proj, a)
         if not s or not e:
             continue
         for y, m in months_between(s, e):

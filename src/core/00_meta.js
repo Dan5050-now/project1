@@ -1,4 +1,4 @@
-const APP_VERSION = "1.26";
+const APP_VERSION = "1.27";
 const SCHEMA_EXPECTED = 6;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -7,9 +7,9 @@ const SCHEMA_EXPECTED = 6;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.28.xlsx",          ver:"2.28",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.29.xlsx",          ver:"2.29",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.28 records Step 4 progress, schema 6, and the shared-role division"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.2.xlsx", ver:"1.2",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.3.xlsx", ver:"1.3",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.1 adds schema 6, v1.2 the shared-role division — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
