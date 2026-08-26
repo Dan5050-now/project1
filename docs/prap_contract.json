@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.28",
+  "version": "1.29",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -22,14 +22,14 @@
    "both_end_the_same": "A plan started blank exports to the same .xlsx and the same .prap.json as any other, so nothing downstream needs to know which way it began."
   }
  },
- "schema_version": 7,
+ "schema_version": 8,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.30.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.4.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.31.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.5.xlsx",
   "ui_component_list": "docs/PRAP_UI_Component_List_v1.0.xlsx",
-  "source_data_template": "templates/PRAP_SourceData_Template_v1.9.xlsx",
-  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.11.xlsx",
-  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.3.xlsx",
+  "source_data_template": "templates/PRAP_SourceData_Template_v1.10.xlsx",
+  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.12.xlsx",
+  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.4.xlsx",
   "agent_guide": "docs/PRAP_AI_Agent_Guide.md"
  },
  "sheets": {
@@ -425,6 +425,12 @@
      "type": "decimal",
      "editable": true,
      "note": "YOU SUPPLY. Relative burden of this role in this period."
+    },
+    {
+     "name": "absorbed_by",
+     "type": "text",
+     "editable": true,
+     "note": "If NOBODY holds this role on a project, which role picks the work up. Blank = the work is simply not counted. See the README."
     },
     {
      "name": "role_note",
@@ -835,7 +841,7 @@
  },
  "config": {
   "schema_version": {
-   "default": 7,
+   "default": 8,
    "meaning": "Structure version of this workbook. The application warns on a mismatch."
   },
   "fte_hours_per_month": {
@@ -861,6 +867,10 @@
   "capacity_unit": {
    "default": "FTE",
    "meaning": "Display unit: 'FTE' or 'percent'."
+  },
+  "absorb_unstaffed_role_factor": {
+   "default": 1,
+   "meaning": "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by, because the work still has to be done by whoever is there. 0 = an unstaffed role simply costs nothing, which is how versions before this one behaved."
   },
   "split_shared_role_fte": {
    "default": 1,
@@ -1143,6 +1153,30 @@
    "effect": "Error - reported as itself rather than as a generic unknown value, because the remedy is a choice the file cannot make on the user's behalf. Only they know whether the trial ran in healthy volunteers or in patients, and guessing would put a wrong weight on real work.",
    "severity_reported_by_app": [
     "error"
+   ],
+   "enforced_by_application": true
+  },
+  "V-27": {
+   "statement": "Every clinical trial's (project_type, clinical_phase, work_scope_type) has at least one row in PeriodWeightStandard - checked on the PROJECT, not on its periods.",
+   "effect": "Error - V-19 is precise but only looks at periods a project actually has, so a project whose milestones are missing is never checked at all, and a combination that was never entered is reported once per period rather than once as the one thing that is wrong. This asks the blunter question first: is there any standard for this project at all. Without one, every period would be weighted 1.00.",
+   "severity_reported_by_app": [
+    "error"
+   ],
+   "enforced_by_application": true
+  },
+  "V-28": {
+   "statement": "Every role given to somebody on an assignment has at least one row in RoleFactor for that project's (project_type, clinical_phase, work_scope_type) - again independent of the project's periods.",
+   "effect": "Error - V-03 checks the role against the type alone and V-23 against periods the project has, which leaves the same two gaps. The role would be calculated at factor 1.00 wherever it fell, and the project costed as though that role were free.",
+   "severity_reported_by_app": [
+    "error"
+   ],
+   "enforced_by_application": true
+  },
+  "V-29": {
+   "statement": "A role that carries a factor, that nobody holds on the project, and that nothing covers for.",
+   "effect": "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct.",
+   "severity_reported_by_app": [
+    "information"
    ],
    "enforced_by_application": true
   }

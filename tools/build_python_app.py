@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "0.7"
+VERSION = "0.8"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,28 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 0.8
+
+  * An empty post no longer makes a project look cheap. If a role carries a
+    factor in your assumptions and nobody at all is holding it that month, its
+    factor now lands on whoever covers for it - because they are the one under
+    the extra pressure. Delivered set up so that a Clinical Data Associator is
+    covered by the Lead data manager, and 'Other staff' by the 'Project lead'.
+    Those two are ROWS in RoleFactor (the absorbed_by column), not something
+    buried in the program: change them, add your own, or empty the column and
+    the whole behaviour stops. Config -> absorb_unstaffed_role_factor = 0 also
+    turns it off outright.
+  * Two new checks read your assumptions against your projects, and say plainly
+    when the two do not meet: a project whose type/phase/work scope has NO
+    period weights at all (V-27), and an assignment whose role has NO role
+    factors at all (V-28). Either one used to be calculated silently at 1.00.
+    A third, for information only, names work nobody is counting: a role with a
+    factor that nobody holds and nothing covers for (V-29).
+  * outsourcing_type is now outsourcing_scope_det - free text, for your own
+    notes. Work scope is what the calculation reads. Your existing files still
+    open: the old column name is recognised and carried across.
+
 
 WHY THIS VERSION EXISTS
 

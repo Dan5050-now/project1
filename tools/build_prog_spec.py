@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.4"
+DOC_VERSION = "1.5"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.30.xlsx"
+PLAN = "PRAP_Development_Plan_v2.31.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -123,7 +123,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Governing document", f"{PLAN} - APPROVED BASELINE, Dan 2026-08-02"),
-    ("Schema version specified", "7"),
+    ("Schema version specified", "8"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -193,6 +193,13 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.5", "2026-08-26", "Claude Code", "Dan",
+         "R-17, REQ-CAL-16 and three new rules. Sheet 05 gains the ABSORPTION rule - an "
+         "unstaffed role's factor lands on the role named to cover for it, per month, "
+         "one hop - and says why the mapping is a column on RoleFactor rather than two "
+         "role names in the code. Sheet 04 gains V-27 and V-28, which ask on the PROJECT "
+         "what V-19 and V-23 ask on its periods, and V-29, which reports the case "
+         "absorption cannot fix. Schema 7 to 8. Written against plan v2.31.", "Issued"],
         ["1.4", "2026-08-25", "Claude Code", "Dan",
          "R-16, SCHEMA 7. outsourcing_type becomes outsourcing_scope_det and becomes FREE "
          "TEXT - a note for a person, never read by the calculation. V-25 is RETIRED: it "
@@ -467,7 +474,8 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "7", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "8", "Compared with the version this application expects (sheet 08)."],
+    ["absorb_unstaffed_role_factor", "Integer", "1", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (sheet 05). 0 = an unstaffed role costs nothing, the arithmetic of every version before this one."],
     ["split_shared_role_fte", "Integer", "1", "1 = the role factor is divided between the people sharing a role in a month (sheet 05). 0 = each carries the whole factor, the arithmetic of every version before this one. A switch, not a threshold - so the Config reader must distinguish a value of 0 from an absent value, which is the defect this setting exposed."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
     ["over_allocation_fte", "Decimal", "1.50", "Absolute, not scaled by capacity_fte (S2-01). See sheet 05."],
@@ -649,7 +657,24 @@ r = code(ws, r, [
     "",
     "  result is FTE.  hours = FTE x config.fte_hours_per_month",
     "",
-    "  WHY THE FACTOR IS DIVIDED  [REQ-CAL-14]",
+    "  WHEN NOBODY HOLDS A ROLE  [REQ-CAL-16]",
+    "  role_factor answers 'what does this ROLE cost the project'. If nobody is holding it,",
+    "  that cost does not disappear - the work is done by whoever is there. So the factor is",
+    "  added to the role named in RoleFactor.absorbed_by, and the project stops looking",
+    "  cheaper than it is simply because a post was never filled.",
+    "",
+    "      effective(role) = factor(role)",
+    "                      + SUM factor(x) for every x with absorbed_by = role",
+    "                                     that NOBODY holds in this month",
+    "",
+    "  PER MONTH, so cover ends by itself the month somebody arrives.",
+    "  ONE HOP: if the absorbing role is unstaffed too, the work is not passed further along.",
+    "  There is nobody to pass it to, and a chain would pile three absent roles onto whoever",
+    "  happened to be left. V-29 reports that case rather than inventing an answer.",
+    "  THE MAPPING IS DATA. Which role covers for which is a judgment about how a team works,",
+    "  and REQ-CAL-06 has said since the first plan that factors live in the workbook.",
+    "",
+  "  WHY THE FACTOR IS DIVIDED  [REQ-CAL-14]",
     "  role_factor answers 'what does this ROLE cost the project in this period', not 'what",
     "  does each person holding it cost'. Charge every holder the whole factor and a trial run",
     "  by two data managers costs twice a trial run by one - the same work, priced by how many",

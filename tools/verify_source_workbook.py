@@ -102,6 +102,12 @@ def main(path):
     RF_ROLES = defaultdict(set)                 # project_type -> {role_name}
     for k in RF:
         RF_ROLES[k[0]].add(k[4])
+    # Indexed by the ABSORBING role (REQ-CAL-16): which absent roles land on this one.
+    RF_ABSORB = defaultdict(list)
+    for r in rows(wb["RoleFactor"]):
+        if r.get("absorbed_by"):
+            RF_ABSORB[(r["project_type"], r["clinical_phase"], scope_of(r),
+                       r["period_name"], r["absorbed_by"])].append(r["role_name"])
     PWS = {(r["project_type"], r["clinical_phase"], scope_of(r), r["period_name"]):
            r["weight"] for r in rows(wb["PeriodWeightStandard"])}
     PSN = {r["person_id"]: r for r in rows(wb["Person"])}
@@ -279,17 +285,34 @@ def main(path):
     # not what each person holding it costs, so it is divided between them - counted
     # per month, by distinct people. Off when split_shared_role_fte is 0.
     split = str(CFG.get("split_shared_role_fte", 1)) not in ("0", "0.0", "False")
+    absorb = str(CFG.get("absorb_unstaffed_role_factor", 1)) not in ("0", "0.0", "False")
+    # Built ALWAYS: the count is the divisor, the presence decides absorption.
     sharers = defaultdict(set)
-    if split:
-        for a in ASG:
-            if a["project_id"] not in P or a["person_id"] not in PSN:
+    for a in ASG:
+        if a["project_id"] not in P or a["person_id"] not in PSN:
+            continue
+        s, e = assignment_window(P[a["project_id"]], a)
+        if not s or not e:
+            continue
+        for y, m in months_between(s, e):
+            if coverage(y, m, s, e) > 0:
+                sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
+
+    def effective_factor(proj, a, y, m):
+        """The role's factor plus the factor of any role that names it as cover and
+        that nobody holds this month (REQ-CAL-16). One hop, deliberately."""
+        rf = role_factor(proj, a, y, m)
+        if not absorb:
+            return rf
+        ph = proj["clinical_phase"] if proj["project_type"] in CLINICAL_TYPES else None
+        pn = period_of(a["project_id"], y, m)
+        for role in (lookup(RF_ABSORB, (proj["project_type"], ph), scope_of(proj),
+                            (pn, a["role_name"])) or []):
+            if sharers.get((a["project_id"], role, y, m)):
                 continue
-            s, e = assignment_window(P[a["project_id"]], a)
-            if not s or not e:
-                continue
-            for y, m in months_between(s, e):
-                if coverage(y, m, s, e) > 0:
-                    sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
+            v = lookup(RF, (proj["project_type"], ph), scope_of(proj), (pn, role))
+            rf += 0.0 if v is None else v
+        return rf
 
     load = defaultdict(float)          # (person, y, m) -> FTE
     horizon = set()
@@ -304,9 +327,10 @@ def main(path):
             cov = coverage(y, m, s, e)
             if cov <= 0:
                 continue
-            share = len(sharers.get((a["project_id"], a["role_name"], y, m), ())) or 1
+            share = (len(sharers.get((a["project_id"], a["role_name"], y, m), ())) or 1) \
+                if split else 1
             v = (period_weight(a["project_id"], y, m)
-                 * (role_factor(proj, a, y, m) / share)
+                 * (effective_factor(proj, a, y, m) / share)
                  * person_weight(a, y, m) * cov)
             load[(a["person_id"], y, m)] += v
             horizon.add((y, m))

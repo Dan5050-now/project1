@@ -23,8 +23,8 @@ APP = (ROOT / "app" / "PRAP.html").as_uri()
 # Both dummy sizes are checked. The small one is not a lighter version of the same
 # test - it has a different period mix, a different overlap profile and a single-person
 # role pool, so it exercises paths the large set happens not to reach.
-FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.11.xlsx",
-            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.3.xlsx"]
+FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.12.xlsx",
+            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.4.xlsx"]
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 sys.path.insert(0, str(ROOT / "tools"))
@@ -42,6 +42,12 @@ def reference_person_months(path):
     # scope - see lookup() in verify_source_workbook.py, which this reuses.
     RF = {(r["project_type"], r["clinical_phase"], scope_of(r), r["period_name"],
            r["role_name"]): r["role_factor"] for r in rows(wb["RoleFactor"])}
+    # REQ-CAL-16, worked out here independently: which absent roles land on this one.
+    ABSORB = defaultdict(list)
+    for r in rows(wb["RoleFactor"]):
+        if r.get("absorbed_by"):
+            ABSORB[(r["project_type"], r["clinical_phase"], scope_of(r),
+                    r["period_name"], r["absorbed_by"])].append(r["role_name"])
     PPW = defaultdict(list)
     for r in rows(wb["PersonPeriodWeight"]):
         PPW[r["assignment_id"]].append(r)
@@ -84,6 +90,13 @@ def reference_person_months(path):
             rf = lookup(RF, (pr["project_type"], ph), scope_of(pr),
                         (sg["period_name"] if sg else None, a["role_name"]))
             rf = 1.0 if rf is None else rf
+            pn = sg["period_name"] if sg else None
+            for absent in (lookup(ABSORB, (pr["project_type"], ph), scope_of(pr),
+                                  (pn, a["role_name"])) or []):
+                if sharers[(a["project_id"], absent, y, m)]:
+                    continue
+                extra = lookup(RF, (pr["project_type"], ph), scope_of(pr), (pn, absent))
+                rf += 0.0 if extra is None else extra
             share = len(sharers[(a["project_id"], a["role_name"], y, m)]) or 1
             out[(a["person_id"], y * 12 + m - 1)] += (
                 (sg["weight"] if sg else 1.0) * (rf / share) * weight(a, y, m) * cov)

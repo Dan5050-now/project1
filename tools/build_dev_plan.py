@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.30"
+DOC_VERSION = "2.31"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -368,7 +368,27 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.30", "2026-08-25", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.31", "2026-08-26", "Claude Code", "Pending",
+     "TWO REQUESTS, and the second changes figures. (1) CROSS-CHECKS BETWEEN THE "
+     "ASSUMPTIONS AND THE DATA: V-27 reports a project whose type, phase and work scope "
+     "have no PeriodWeightStandard rows at all, and V-28 a role given to somebody on an "
+     "assignment that has no RoleFactor rows at all. V-19 and V-23 already checked both, "
+     "precisely - but only for periods a project actually HAS, so a project whose "
+     "milestones are missing was never checked, and a combination nobody had entered was "
+     "reported once per period rather than once as the one thing wrong. These ask the "
+     "blunter question first, on the project. (2) R-17, REQ-CAL-16: WHERE NOBODY HOLDS A "
+     "ROLE, its factor is absorbed by the role named to cover for it. A trial with no "
+     "Clinical Data Associator still has the data to handle; it lands on the lead data "
+     "manager, and a project costed without it looks cheaper than it is. Counted per "
+     "month; one hop only; and WHICH ROLE COVERS FOR WHICH IS DATA - the new column "
+     "RoleFactor.absorbed_by - because REQ-CAL-06 has said since the first plan that "
+     "factors live in the workbook and never in the program. V-29 reports the case the "
+     "rule cannot fix: an unstaffed role that nothing covers for, where the "
+     "under-estimate remains and nothing else would mention it. Schema 7 to 8. A fifth "
+     "of the dummy's projects now run without one of those roles, so the rule is under "
+     "the four-way comparison rather than in one unit test.",
+     "Issued for review"],
+    ["2.30", "2026-08-25", "Claude Code", "Pending",
      "R-16, SCHEMA 7: outsourcing_type becomes outsourcing_scope_det, and becomes FREE "
      "TEXT. Schema 6 put work_scope_type in the weights and left outsourcing_type beside "
      "it as a second controlled vocabulary on the same axis - two fields to keep in step, "
@@ -1149,6 +1169,7 @@ reqs = [
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-CAL-16", "Calculation", "Where NOBODY holds a role on a project, its role factor is added to the factor of the role named in RoleFactor.absorbed_by - because the work still has to be done by whoever is there. A trial run without a Clinical Data Associator still has the data to handle, and it lands on the lead data manager, who is then under more pressure than the factor for their own role alone describes; costed without it, the project looks cheaper than it is. Counted PER MONTH, so cover ends by itself when somebody arrives. ONE HOP: if the absorbing role is itself unstaffed the work is not passed further along - V-29 reports that rather than piling three absent roles onto whoever is left. Which role covers for which is DATA, on RoleFactor.absorbed_by, never in the program (REQ-CAL-06). Kept as the setting absorb_unstaffed_role_factor.", "Must", "R-17", "4"],
     [f"{MARK_NEW}REQ-CAL-15", "Calculation", "BOTH ASSIGNMENT DATES ARE OPTIONAL. A blank assign_start_date means the project's own start date, and a blank assign_end_date the project's own end date - so an assignment with neither runs for the whole project, which is what most assignments are. Filling them in is for a PARTIAL involvement. The end date already behaved this way; the start did not, and a blank one made the assignment contribute nothing at all with no finding to say why.", "Must", "R-15", "4"],
     [f"{MARK_NEW}REQ-CAL-14", "Calculation", "Where SEVERAL PEOPLE hold the same role on the same project in the same month, the role factor is DIVIDED BETWEEN THEM. The role factor states what the ROLE costs the project in that period, not what each person holding it costs, so a project staffed by two data managers must not cost twice a project staffed by one. The count is per month, so a sharer leaving restores the others' full share without any edit; it counts distinct PEOPLE, so one person recorded on two rows is one person; and each person's own person_weight then applies to their share. Kept as the setting split_shared_role_fte so a figure produced before this rule can still be reproduced.", "Must", "R-13", "4"],
     ["REQ-CAL-03", "Calculation", "Project monthly load is the sum of its assignments; person monthly load is the sum across all their projects.", "Must", "Requester", "4"],
@@ -1334,6 +1355,7 @@ rf = [
     [f"{MARK_CHG}project_type", "List", "Yes", "'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Roles are keyed by type, so a factor can differ between the trial types.", "Q-03, R-05, R-12"],
     [f"{MARK_NEW}clinical_phase", "List", "Trials only", "The phase this factor applies to. EMPTY on 'Others' rows, which carry no phase.", "R-10"],
     [f"{MARK_NEW}work_scope_type", "List", "No", "The work scope this factor applies to. SCHEMA 6. EMPTY means EVERY scope, exactly as on PeriodWeightStandard - and it matters more here, because this is the larger sheet.", "R-12"],
+    [f"{MARK_NEW}absorbed_by", "Text", "No", "SCHEMA 8. If NOBODY holds this role on a project, which role picks the work up: this row's factor is added to that role's (REQ-CAL-16). Blank means the work is simply not counted, and V-29 says so. Delivered with 'Clinical Data Associator' covered by 'Lead data manager' and 'Other staff' by 'Project lead' - a starting point, and data rather than code because which role covers for which is a judgment about how a team works.", "R-17"],
     [f"{MARK_CHG}period_name", "Text", "Yes", "The period this factor applies to. One of the seven clinical periods, or one of the three 'Others' periods, matching the project_type.", "R-10, R-11"],
     ["role_name", "Text", "Yes", "Clinical Trial: 'Project oversight', 'Lead data manager', 'Clinical Data Associator', 'Clinical Database Programmer', 'Data Analyst'. Others: 'Project lead', 'Main staff', 'Other staff'.", "Q-03"],
     [f"{MARK_CHG}role_factor", "Decimal", "Yes", "Relative burden of THIS role in THIS period, the same for everyone holding the role. A role's share of the work is not flat across a project: the database programmer is heaviest while the database is built, the data associator while data arrives, the analyst at lock.", "Q-01, R-10"],
@@ -1400,7 +1422,8 @@ r = note(ws, r, "Changed at Q-01. The answer named exactly three factors, so a f
 
 r = section(ws, r, "Sheet: Config")
 cfg = [
-    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16).", "7", "REQ-VC-02"],
+    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16), 8 at v2.31 (R-17).", "8", "REQ-VC-02"],
+    [f"{MARK_NEW}absorb_unstaffed_role_factor", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (REQ-CAL-16). 0 = an unstaffed role simply costs nothing, which is how every version before v2.31 behaved. A setting for the same reason the last one is: it moves every figure on a project that is not fully staffed.", "1", "REQ-CAL-16"],
     [f"{MARK_NEW}split_shared_role_fte", "1 = where several people hold the same role on one project in a month, the role factor is divided between them (REQ-CAL-14). 0 = each carries the whole factor, which is how every version before v2.28 behaved. A setting rather than a constant because it changes every figure a shared role ever produced, and somebody comparing this month's report with last year's has to be able to see where the difference came from.", "1", "REQ-CAL-14"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],
     [f"{MARK_NEW}over_allocation_fte", "Person-month total above this is over-allocated.", "1.50", "REQ-CAL-04"],
@@ -1427,6 +1450,9 @@ rules = [
     ["V-02", "Every Assignment.person_id exists in Person.", "Error - row rejected."],
     [f"{MARK_CHG}V-03", "Every Assignment.role_name appears in RoleFactor for that project's type.", "Error - row rejected. Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error."],
     [f"{MARK_NEW}V-24", "Every PersonPeriodWeight.assignment_id exists in Assignment, and (assignment_id, period_start) is unique.", "Error - an override on an assignment that does not exist is silently ignored, so the weight the user typed never applies and nothing says so."],
+    [f"{MARK_NEW}V-27", "Every clinical trial's (project_type, clinical_phase, work_scope_type) has at least one row in PeriodWeightStandard - checked on the PROJECT, not on its periods.", "Error - V-19 is precise but only looks at periods a project actually has, so a project whose milestones are missing is never checked at all, and a combination that was never entered is reported once per period rather than once as the one thing that is wrong. This asks the blunter question first: is there any standard for this project at all. Without one, every period would be weighted 1.00."],
+    [f"{MARK_NEW}V-28", "Every role given to somebody on an assignment has at least one row in RoleFactor for that project's (project_type, clinical_phase, work_scope_type) - again independent of the project's periods.", "Error - V-03 checks the role against the type alone and V-23 against periods the project has, which leaves the same two gaps. The role would be calculated at factor 1.00 wherever it fell, and the project costed as though that role were free."],
+    [f"{MARK_NEW}V-29", "A role that carries a factor, that nobody holds on the project, and that nothing covers for.", "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct."],
     [f"{MARK_CHG}V-25", "RETIRED at schema 7 (R-16). It reported a project whose work_scope_type contradicted its outsourcing_type.", "Retired - the rule existed only because two columns sat on the same axis and one of them drove the weights. outsourcing_scope_det is free text now, so there is nothing left to contradict. A rule that can no longer fire is removed rather than left standing and unexplained; the id is not reused."],
     [f"{MARK_NEW}V-26", "No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'.", "Error - reported as itself rather than as a generic unknown value, because the remedy is a choice the file cannot make on the user's behalf. Only they know whether the trial ran in healthy volunteers or in patients, and guessing would put a wrong weight on real work."],
     [f"{MARK_NEW}V-23", "For every (project_type, clinical_phase, period_name, role_name) an assignment can actually reach, a RoleFactor row exists.", "Error - a factor missing for ONE period of a project silently drops that stretch to 1.00, which is a wrong number rather than an obvious gap. Checked against the periods each assignment spans, not against the whole cross-product."],

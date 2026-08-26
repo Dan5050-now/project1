@@ -86,9 +86,13 @@ function calculate(M){
      role are one person doing one job, and must not halve their own load. Anyone
      whose assignment touches the month counts as a sharer for that month; a
      part-month sharer already contributes less through their own coverage. */
+  /* Built ALWAYS, and read two ways. How many people hold a role in a month is the
+     divisor; WHETHER anybody holds it is what decides absorption (REQ-CAL-16). One
+     pass, so the two answers cannot come from different pictures of the same month. */
   const sharers = new Map();                       // project|role|month -> Set(person)
-  const shareKey = (a, k) => a.project_id + "\u0000" + a.role_name + "\u0000" + k;
-  if (M.SPLIT) for (const a of M.assignments){
+  const roleKey = (pid, role, k) => pid + "\u0000" + role + "\u0000" + k;
+  const shareKey = (a, k) => roleKey(a.project_id, a.role_name, k);
+  for (const a of M.assignments){
     const proj = M.projects[a.project_id];
     if (!proj || !M.people[a.person_id] || a.__bad || a.__new) continue;
     const [s, e] = assignmentWindow(proj, a);
@@ -100,7 +104,34 @@ function calculate(M){
       sharers.get(kk).add(a.person_id);
     }
   }
-  const shareCount = (a, k) => (sharers.get(shareKey(a, k)) || {size:1}).size || 1;
+  const shareCount = (a, k) =>
+    M.SPLIT ? ((sharers.get(shareKey(a, k)) || {size:1}).size || 1) : 1;
+  const staffed = (pid, role, k) => sharers.has(roleKey(pid, role, k));
+
+  /** The factor this role carries THIS MONTH: its own, plus the factor of any role
+   *  that names it as cover and that nobody is holding (REQ-CAL-16).
+   *
+   *  A trial run without a Clinical Data Associator still has the data to handle. It
+   *  lands on the lead data manager, who is then under more pressure than the factor
+   *  for their own role alone describes - and the project, costed without it, looks
+   *  cheaper than it is. That is the under-estimate this corrects.
+   *
+   *  Per month, like everything else here: a role staffed from March is absent in
+   *  February, and the cover ends when somebody arrives, with nobody editing anything.
+   *
+   *  ONE HOP, deliberately. If the absorbing role is itself unstaffed the work is not
+   *  passed further along - there is nobody to pass it to, and a chain would quietly
+   *  pile three absent roles onto whoever happened to be left. V-29 reports that case
+   *  rather than inventing an answer for it. */
+  function effectiveFactor(proj, periodName, roleName, k){
+    let rf = stdFactor(M, proj, periodName, roleName) ?? 1;
+    if (!M.ABSORB) return rf;
+    for (const absent of absorbedInto(M, proj, periodName, roleName)){
+      if (staffed(proj.project_id, absent, k)) continue;      // somebody is doing it
+      rf += stdFactor(M, proj, periodName, absent) ?? 0;
+    }
+    return rf;
+  }
 
   let lo = Infinity, hi = -Infinity;
   for (const a of M.assignments){
@@ -117,8 +148,8 @@ function calculate(M){
       const pw = seg ? (num(seg.weight) ?? 1) : 1;                       // no period -> 1.00, V-12
       // Schema 6: the project's own work scope first, then the any-scope row. One
       // function, shared with the validation, so the figure and the finding agree.
-      const rf = stdFactor(M, proj, seg ? seg.period_name : null, a.role_name) ?? 1;
       const k = monthKey(y, m);
+      const rf = effectiveFactor(proj, seg ? seg.period_name : null, a.role_name, k);
       const share = shareCount(a, k);       // how many people hold this role this month
       const v = pw * (rf / share) * personWeight(a, y, m) * cov;
       lo = Math.min(lo, k); hi = Math.max(hi, k);
@@ -139,6 +170,7 @@ function calculate(M){
     }
   }
   return {projMonth, persMonth, persProj, projPers, cell, who, sharers, shareCount,
+          staffed, effectiveFactor,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }
 

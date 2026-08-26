@@ -1,5 +1,5 @@
-const APP_VERSION = "1.28";
-const SCHEMA_EXPECTED = 7;
+const APP_VERSION = "1.29";
+const SCHEMA_EXPECTED = 8;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
    specification and outputs are version-controlled together and cross-referenced).
@@ -7,13 +7,13 @@ const SCHEMA_EXPECTED = 7;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.30.xlsx",          ver:"2.30",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.31.xlsx",          ver:"2.31",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.28 records Step 4 progress, schema 6, and the shared-role division"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.4.xlsx", ver:"1.4",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.5.xlsx", ver:"1.5",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.1 adds schema 6, v1.2 the shared-role division — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
-  {what:"Source data template",   file:"PRAP_SourceData_Template_v1.9.xlsx",        ver:"1.9",
+  {what:"Source data template",   file:"PRAP_SourceData_Template_v1.10.xlsx",       ver:"1.10",
    status:`Schema version ${SCHEMA_EXPECTED} — the layout this application reads`},
   {what:"AI agent reference",     file:"PRAP_AI_Agent_Guide_v1.0.xlsx",             ver:"1.0",
    status:"Instructions for another program or AI agent; docs/prap_contract.json is its machine-readable half"},

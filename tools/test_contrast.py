@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
-XLSX = str(ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.3.xlsx")
+XLSX = str(ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.4.xlsx")
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 def rgba(s):

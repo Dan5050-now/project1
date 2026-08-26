@@ -102,6 +102,18 @@ def std_factor(M, proj, period_name, role_name):
     k = (proj.get("project_type"), ph)
     v = M.rf.get((*k, scope_of(proj), period_name, role_name))
     return M.rf.get((*k, ANY_SCOPE, period_name, role_name)) if v is None else v
+
+
+def absorbed_into(M, proj, period_name, role_name):
+    """Which absent roles land on this one, if nobody holds them (REQ-CAL-16).
+    The same two-step as std_factor, so a mapping written once on the baseline row
+    covers every scope exactly as a factor written once does."""
+    ph = proj.get("clinical_phase") if proj.get("project_type") in CLINICAL_TYPES else None
+    k = (proj.get("project_type"), ph)
+    v = M.rf_absorb.get((*k, scope_of(proj), period_name, role_name))
+    if v is None:
+        v = M.rf_absorb.get((*k, ANY_SCOPE, period_name, role_name))
+    return v or []
 CLINICAL_PERIODS = ["Before-Start-up", "Start-up", "Conduct (interim)", "Close-out (interim)",
                     "Conduct (final)", "Close-out (final)", "After Close-out (final)"]
 OTHER_PERIODS = ["Planning", "Develop", "Close"]
@@ -422,6 +434,7 @@ class Model:
         # ever produced, and somebody comparing this month's report with last year's
         # needs to be able to turn it off and see where the difference came from.
         self.SPLIT = cfg("split_shared_role_fte", 1) != 0
+        self.ABSORB = cfg("absorb_unstaffed_role_factor", 1) != 0
 
         sv = _as_num(self.config.get("schema_version"))
         if sv is None:
@@ -467,10 +480,17 @@ class Model:
                      r.get("period_name")): _as_num(r.get("weight"))
                     for r in sheets["PeriodWeightStandard"]}
         self.rf, self.rf_roles = {}, defaultdict(set)
+        # Indexed by the ABSORBING role, because that is the question the calculation
+        # asks: standing on the lead data manager, which absent roles land on me?
+        self.rf_absorb = defaultdict(list)
         for r in sheets["RoleFactor"]:
             self.rf[(r.get("project_type"), r.get("clinical_phase"), scope_of(r),
                      r.get("period_name"), r.get("role_name"))] = _as_num(r.get("role_factor"))
             self.rf_roles[r.get("project_type")].add(r.get("role_name"))
+            if r.get("absorbed_by"):
+                self.rf_absorb[(r.get("project_type"), r.get("clinical_phase"),
+                                scope_of(r), r.get("period_name"),
+                                r["absorbed_by"])].append(r.get("role_name"))
 
         self.periods = defaultdict(list)
         for r in sheets["ProjectPeriod"]:
@@ -768,19 +788,34 @@ def calculate(M):
     # trial share it rather than being charged for two. Counted PER MONTH, because that
     # is the only count that conserves the total when one of them leaves mid-project,
     # and by distinct PEOPLE, so two rows for one person do not halve their own load.
+    # Built ALWAYS and read two ways: how many people hold a role in a month is the
+    # divisor, and WHETHER anybody holds it decides absorption (REQ-CAL-16).
     sharers = defaultdict(set)
-    if M.SPLIT:
-        for a in M.assignments:
-            proj = M.projects.get(a.get("project_id"))
-            if not proj or a.get("person_id") not in M.people:
+    for a in M.assignments:
+        proj = M.projects.get(a.get("project_id"))
+        if not proj or a.get("person_id") not in M.people:
+            continue
+        s, e = assignment_window(proj, a)
+        if not s or not e:
+            continue
+        for y, m in months_between(s, e):
+            if coverage(y, m, s, e) > 0:
+                sharers[(a["project_id"], a.get("role_name"),
+                         month_key(y, m - 1))].add(a["person_id"])
+
+    def effective_factor(proj, period_name, role_name, k):
+        """This role's factor plus the factor of any role that names it as cover and
+        that nobody is holding this month. One hop: if the absorbing role is itself
+        unstaffed the work is not passed further along - V-29 reports that instead."""
+        rf = std_factor(M, proj, period_name, role_name)
+        rf = 1.0 if rf is None else rf
+        if not M.ABSORB:
+            return rf
+        for absent in absorbed_into(M, proj, period_name, role_name):
+            if sharers.get((proj["project_id"], absent, k)):
                 continue
-            s, e = assignment_window(proj, a)
-            if not s or not e:
-                continue
-            for y, m in months_between(s, e):
-                if coverage(y, m, s, e) > 0:
-                    sharers[(a["project_id"], a.get("role_name"),
-                             month_key(y, m - 1))].add(a["person_id"])
+            rf += std_factor(M, proj, period_name, absent) or 0.0
+        return rf
 
     for a in M.assignments:
         proj = M.projects.get(a.get("project_id"))
@@ -796,11 +831,11 @@ def calculate(M):
             seg = period_at(a["project_id"], y, m)
             pw = (_as_num(seg.get("weight")) if seg else None)
             pw = 1.0 if pw is None else pw
-            rf = std_factor(M, proj, seg.get("period_name") if seg else None,
-                            a.get("role_name"))
-            rf = 1.0 if rf is None else rf
             k = month_key(y, m - 1)
-            share = len(sharers.get((a["project_id"], a.get("role_name"), k), ())) or 1
+            rf = effective_factor(proj, seg.get("period_name") if seg else None,
+                                  a.get("role_name"), k)
+            share = (len(sharers.get((a["project_id"], a.get("role_name"), k), ())) or 1) \
+                if M.SPLIT else 1
             v = pw * (rf / share) * person_weight(a, y, m) * cov
             lo = k if lo is None else min(lo, k)
             hi = k if hi is None else max(hi, k)

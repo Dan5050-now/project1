@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.30 records Step 4 progress, schema 7, the shared-role division, the delivered defaults and optional assignment dates |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.31 records Step 4 progress, schema 8, the cross-data checks, the absorption of an unstaffed role's factor, the shared-role division, the delivered defaults and optional assignment dates |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -34,7 +34,7 @@ and stays in service — the two are parallel products, not successor and predec
 | N4a | Build (Python shell) | **GATE N4a CLOSED** 2026-08-22 — it arrived, ran, imported and exported on the company PC |
 | N5 | Release | Not started |
 
-Both applications share one calculation engine, one data schema (version 7) and one
+Both applications share one calculation engine, one data schema (version 8) and one
 JSON interchange format, so they cannot disagree about a number. Nothing in that plan
 amends the web application's plan, specification, component list or code.
 
@@ -68,7 +68,7 @@ File API call at all** — Python reads the workbook and hands the bytes to the 
 `127.0.0.1`. `core/` and `ui/` are untouched, so there is still one engine.
 
 ```
-python tools/build_python_app.py --zip   # dist/PM_APP_python_v0.2.zip, 107 KB
+python tools/build_python_app.py --zip   # dist/PM_APP_python_v0.8.zip, 125 KB
 python tools/test_storage_py.py          # 80 checks — kills mid-save, an 8-process race
 python tools/test_python_app.py          # 42 checks — a live server, a real browser
 ```
@@ -218,8 +218,12 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.30.xlsx` — **current.** 72 requirements, 25 live
-  validation rules (V-25 retired), source schema version 7. Carries change **R-13 — a shared role is a shared
+- `docs/PRAP_Development_Plan_v2.31.xlsx` — **current.** 73 requirements, 29 live
+  validation rules (V-25 retired), source schema version 8. Carries change **R-17 — an
+  empty post still costs the project** (`REQ-CAL-16`: a role that carries a factor and
+  that nobody holds in a month has that factor added to whoever covers for it, named by
+  `RoleFactor.absorbed_by`) and the cross-checks between the assumptions and the data
+  (`V-27`, `V-28` errors; `V-29` information). It also carries **R-13 — a shared role is a shared
   cost** (`REQ-CAL-14`: where several people hold the same role on one project in one
   month, the role factor is divided between them) and **R-14 — the delivered default
   assumptions** (`PeriodWeightStandard` and `RoleFactor` arrive filled in, and the
@@ -229,9 +233,10 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.4.xlsx` — **current specification.** Schema 7
-  (the two-step lookup, the new keys, the two new rules), the shared-role division with
-  its worked reasoning, and where the delivered defaults come from.
+- `docs/PRAP_Programming_Specification_v1.5.xlsx` — **current specification.** Schema 8
+  (the two-step lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
+  through, the three cross-data rules, the shared-role division with its worked
+  reasoning, and where the delivered defaults come from.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
   superseding v1.3. It carries the nine changes made across the review rounds:
   R-05 (`project_type` splits into `NewDrug CT` and `Biosimilar CT`, schema version 3),
@@ -269,7 +274,7 @@ document through the manifest rather than by sorting filenames.
 
   | Check | Result |
   |---|---|
-  | Calculation vs `verify_source_workbook.py` | **exact match on all 1,225 person-months** (and all 433 of the 10×10 set) |
+  | Calculation vs `verify_source_workbook.py` | **exact match on all 1,225 person-months** (and all 440 of the 10×10 set) |
   | Findings vs the Python verifier | both report zero on the dummy |
   | Export → re-import | identical figures, zero findings |
   | Export read by `openpyxl` (an independent implementation) | passes the full verifier |
@@ -709,9 +714,11 @@ document through the manifest rather than by sorting filenames.
   covering all 70 requirements. Sheet 10 records the six open points from the v0.3
   review, the answers given, and what each one changed. None open.
 
-- `templates/PRAP_SourceData_Template_v1.9.xlsx` — blank workbook: 10 sheets, headers,
+- `templates/PRAP_SourceData_Template_v1.10.xlsx` — blank workbook: 10 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README. Every sheet
-  carries at least one free-text note column (schema version 6).
+  carries at least one free-text note column (schema version 8). `PeriodWeightStandard`
+  and `RoleFactor` arrive **filled in** with the same delivered defaults the application
+  starts from, so a blank plan and a fresh template agree from the first figure.
 
   **Derived columns are locked.** Three columns are computed rather than entered —
   `Project.total_period_months`, `Milestone.project_name`, `Assignment.person_name`. Their
@@ -721,15 +728,15 @@ document through the manifest rather than by sorting filenames.
   inserting, deleting and sorting rows all still work. Only adding or removing *columns*
   is blocked, because the column set is the schema. The application's export writes the
   same locks, so the guard rail survives a round trip.
-- `templates/PRAP_SourceData_Dummy_v1.11.xlsx` — the same structure populated with
+- `templates/PRAP_SourceData_Dummy_v1.12.xlsx` — the same structure populated with
   **16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12
-  `Others` projects and 20 people** (289 assignments, 372 milestones, 308 periods
-  across 73 months). At schema 6 it also carries **252 `PeriodWeightStandard` rows and
+  `Others` projects and 20 people** (277 assignments, 372 milestones, 308 periods
+  across 73 months). It carries **252 `PeriodWeightStandard` rows and
   849 `RoleFactor` rows** — a baseline set with `work_scope_type` empty, plus
   scope-specific rows for two of the three scopes, so the fallback is exercised by the
   fixture and not only by a unit test.
-- `templates/PRAP_SourceData_Dummy_10x10_v1.3.xlsx` — the same again at **10 projects
-  and 10 people** (8 clinical trials + 2 `Others`, 50 assignments, 60 milestones,
+- `templates/PRAP_SourceData_Dummy_10x10_v1.4.xlsx` — the same again at **10 projects
+  and 10 people** (8 clinical trials + 2 `Others`, 48 assignments, 60 milestones,
   50 periods across 50 months): small enough to read every row on screen and check the
   arithmetic by hand. It is not a lighter test — it carries both clinical types, all
   four phases, trials with and without an interim DB lock, inspections that open the
@@ -745,7 +752,7 @@ schema the other follows. The data is seeded: every sheet rebuilds byte-for-byte
 Validate any of them with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.3.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.4.xlsx
 ```
 
 And check the application against the reference implementation:
@@ -966,6 +973,29 @@ Requires `openpyxl`.
   and the two never fall out of step when the project's dates move. Fill them in only
   for a partial involvement. The end date always behaved this way; the start did not,
   and a blank one made the assignment contribute **nothing at all**, silently.
+- **An empty post still costs the project** (R-17, `REQ-CAL-16`, schema 8). `role_factor`
+  answers *what does this role cost the project this period* — so if nobody at all is
+  holding it, that cost has not gone away. It is being carried by whoever is left, who
+  is under more pressure than the factor for their own role alone describes. Costed the
+  old way, a trial run without a Clinical Data Associator looked **cheaper** than one
+  run with it, purely because a post was never filled. `RoleFactor.absorbed_by` names
+  who picks the work up; the delivered rows say a Clinical Data Associator is covered by
+  the **Lead data manager**, and `Other staff` by the **Project lead**. Those are
+  **rows, not code** (REQ-CAL-06): empty the column and nothing is absorbed. Counted
+  **per month**, so somebody arriving in July ends the cover in July with nobody editing
+  anything; **one hop only**, so an absent role whose absorber is also absent is not
+  passed further along — `V-29` says so instead of the figure silently absorbing twice;
+  and the absorbed factor is then divided among the absorbing role's holders like any
+  other. `absorb_unstaffed_role_factor = 0` restores the previous arithmetic exactly.
+- **The assumptions are read against the plan** (v2.31, `V-27`/`V-28`/`V-29`). The two
+  standards sheets and the project rows are separate documents that must meet, and until
+  now the application only checked them period by period — so a project whose
+  type/phase/scope combination had **no** standards rows at all had no period to fail on,
+  and was calculated silently at 1.00. Two errors now ask the blunt question on the
+  project: `V-27` — this project's combination has no `PeriodWeightStandard` rows at all,
+  not for any period; `V-28` — this assignment's role has no `RoleFactor` rows at all.
+  A third, `V-29`, is information rather than an error: a role that carries a factor,
+  that nobody holds, and that nothing covers for — work the figures are counting nowhere.
 - **A shared role is a shared cost** (R-13, `REQ-CAL-14`). The role factor says what the
   *role* costs the project in a period, not what each person holding it costs — so where
   several people hold the same role on the same project in the same month, they divide

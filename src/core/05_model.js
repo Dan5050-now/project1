@@ -40,6 +40,18 @@ function stdFactor(M, proj, periodName, roleName){
       ?? M.rf[[...k, ANY_SCOPE, periodName, roleName]];
 }
 
+/** Which absent roles land on this one, if nobody holds them (REQ-CAL-16).
+ *  The same two-step as stdFactor: the project's own scope first, then the any-scope
+ *  row - so a mapping written once on the baseline covers every scope, exactly as a
+ *  factor written once does. */
+function absorbedInto(M, proj, periodName, roleName){
+  const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
+  const k = [proj.project_type, ph];
+  return M.rfAbsorb[[...k, scopeOf(proj), periodName, roleName]]
+      ?? M.rfAbsorb[[...k, ANY_SCOPE, periodName, roleName]]
+      ?? [];
+}
+
 function buildModel(sheets){
   const F = [];
   for (const s of REQUIRED_SHEETS){
@@ -54,7 +66,7 @@ function buildModel(sheets){
 
   const M = {
     projects:{}, milestones:{}, periods:{}, people:{}, assignments:[],
-    ppw:{}, pws:{}, rf:{}, rfRoles:{}, lists:{}, config:{}, raw, findings:F,
+    ppw:{}, pws:{}, rf:{}, rfRoles:{}, rfAbsorb:{}, lists:{}, config:{}, raw, findings:F,
   };
   for (const r of raw.Lists) if (r.list_name) (M.lists[r.list_name] ||= []).push(r.value);
   for (const r of raw.Config) if (r.parameter) M.config[r.parameter] = r.value;
@@ -72,6 +84,11 @@ function buildModel(sheets){
      with last year's needs to be able to turn it off, see the old number, and know
      that is where the difference came from. */
   M.SPLIT = cfg("split_shared_role_fte", 1) !== 0;
+  /* Whether an unstaffed role's factor is absorbed by the role named to cover for it.
+     A setting for the same reason SPLIT is one: it moves every figure on a project
+     that is not fully staffed, and somebody comparing against last year's report has
+     to be able to turn it off and see where the difference came from. */
+  M.ABSORB = cfg("absorb_unstaffed_role_factor", 1) !== 0;
 
   const sv = num(M.config.schema_version);
   if (sv === null) F.push({sev:"warning", rule:"V-09", sheet:"Config", row:"",
@@ -114,6 +131,12 @@ function buildModel(sheets){
     M.rf[[r.project_type, r.clinical_phase, scopeOf(r), r.period_name, r.role_name]]
       = num(r.role_factor);
     (M.rfRoles[r.project_type] ||= new Set()).add(r.role_name);
+    /* Who covers for this role when nobody holds it (REQ-CAL-16). Indexed the other
+       way round - by the ABSORBING role - because that is the question the calculation
+       asks: standing on the lead data manager, which absent roles land on me? */
+    if (r.absorbed_by)
+      (M.rfAbsorb[[r.project_type, r.clinical_phase, scopeOf(r), r.period_name,
+                   r.absorbed_by]] ||= []).push(r.role_name);
   }
 
   // ---- periods: use what is in the file; derive where a trial has none -------
@@ -374,6 +397,84 @@ function validate(M, F){
       add("warning","V-22","Person",p.__row,
         `${sid}: capacity ${cap.toFixed(2)} FTE is below the under-allocation floor of `
         + `${M.UNDER.toFixed(2)}, so this person can never clear it however fully they are booked.`);
+  }
+
+  /* ---- V-27 / V-28: the assumption block for this project simply is not there ----
+     V-19 and V-23 are precise: they name the period, and they only look at periods a
+     project actually has. That leaves a gap at both ends. A project whose milestones
+     are missing has NO periods, so neither rule looks at it at all - and a project
+     whose (type, phase, scope) combination was never entered in the assumptions is
+     reported once per period rather than once, as the one thing that is wrong.
+
+     These two ask the blunter question first, on the PROJECT rather than on its
+     periods: is there any standard for this project at all, and is there any factor
+     for the roles people are actually assigned to. They fire where V-19 and V-23
+     cannot, and where both can, they say the useful sentence. */
+  for (const [pid, proj] of Object.entries(M.projects)){
+    if (!CLINICAL_TYPES.has(proj.project_type)) continue;      // 'Others' take manual weights
+    if (!proj.clinical_phase) continue;                        // V-19 has already said so
+    const any = (M.lists.period_name_clinical || CLINICAL_PERIODS)
+      .some(pn => stdWeight(M, proj, pn) !== undefined);
+    if (!any)
+      add("error","V-27","PeriodWeightStandard",proj.__row,
+        `Project ${pid} is ${proj.project_type} / ${proj.clinical_phase} / `
+        + `${proj.work_scope_type || "any scope"}, and PeriodWeightStandard has NO rows for `
+        + `that combination at all — not for any period. Every period of this project would `
+        + `be weighted 1.00. Add the rows, or add ones with work_scope_type empty to cover `
+        + `every scope.`);
+  }
+
+  const roleSaid = new Set();
+  for (const a of M.assignments){
+    const proj = M.projects[a.project_id];
+    if (!proj || !a.role_name) continue;
+    const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
+    const periods = CLINICAL_TYPES.has(proj.project_type)
+      ? (M.lists.period_name_clinical || CLINICAL_PERIODS)
+      : (M.lists.period_name_others || OTHER_PERIODS);
+    if (periods.some(pn => stdFactor(M, proj, pn, a.role_name) !== undefined)) continue;
+    const line = `${proj.project_type} / ${ph || "-"} / `
+      + `${proj.work_scope_type || "any scope"} / ${a.role_name}`;
+    if (roleSaid.has(line)) continue;
+    roleSaid.add(line);
+    add("error","V-28","RoleFactor",a.__row,
+      `Assignment ${a.assignment_id} gives ${a.person_id} the role '${a.role_name}' on `
+      + `${a.project_id}, and RoleFactor has NO rows for ${line} — not for any period. That `
+      + `role would be calculated at factor 1.00 wherever it falls.`);
+  }
+
+  /* V-29: a role that has a factor, that nobody holds, and that nothing covers for.
+     The direct consequence of REQ-CAL-16, and the reason it is worth reporting: the
+     absorption rule exists because an unstaffed role makes a project look cheaper than
+     it is. Where the role names somebody to cover, the figure is corrected. Where it
+     names nobody, the same under-estimate is still there and nothing else would say
+     so. Information rather than a warning: a project legitimately without a role is
+     ordinary, and this is a note about what the figures do not include. */
+  if (M.ABSORB) for (const [pid, proj] of Object.entries(M.projects)){
+    const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
+    const held = new Set(M.assignments.filter(a => a.project_id === pid)
+                                      .map(a => a.role_name));
+    if (!held.size) continue;                       // nobody at all: V-08 covers that
+    const periods = CLINICAL_TYPES.has(proj.project_type)
+      ? (M.lists.period_name_clinical || CLINICAL_PERIODS)
+      : (M.lists.period_name_others || OTHER_PERIODS);
+    const roles = M.rfRoles[proj.project_type] || new Set();
+    for (const role of roles){
+      if (held.has(role)) continue;
+      const pn = periods.find(x => stdFactor(M, proj, x, role) !== undefined);
+      if (pn === undefined) continue;               // no factor: nothing is being lost
+      const absorber = M.raw.RoleFactor.find(r =>
+        r.role_name === role && r.project_type === proj.project_type && r.absorbed_by);
+      if (absorber && held.has(absorber.absorbed_by)) continue;   // covered for
+      add("information","V-29","RoleFactor","",
+        `Project ${pid} has nobody in the role '${role}', which carries a factor for `
+        + `${proj.project_type} / ${ph || "-"} / ${proj.work_scope_type || "any scope"}. `
+        + (absorber
+            ? `RoleFactor says ${absorber.absorbed_by} would cover it, but nobody holds that `
+              + `role here either, so the work is not counted anywhere.`
+            : `Nothing on RoleFactor names a role to cover for it, so its share of the work `
+              + `is not counted. Set absorbed_by if somebody really picks it up.`));
+    }
   }
 
   // V-23: a role factor missing for a period an assignment actually spans

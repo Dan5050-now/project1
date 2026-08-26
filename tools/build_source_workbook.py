@@ -17,8 +17,8 @@ docProps/core.xml, so the container differs while the data does not.
 
 Two sizes are produced, from one generator driven by PROFILES:
 
-    Dummy_v1.11        50 clinical trials + 12 'Others', 20 people - the review set
-    Dummy_10x10_v1.3    8 clinical trials +  2 'Others', 10 people - small enough to
+    Dummy_v1.12        50 clinical trials + 12 'Others', 20 people - the review set
+    Dummy_10x10_v1.4    8 clinical trials +  2 'Others', 10 people - small enough to
                         read every row and check the arithmetic by hand
 
 Both are built to exercise the rules rather than merely fill cells: interim DB locks
@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 7
-TEMPLATE_VERSION = "1.9"
-DUMMY_VERSION = "1.11"
-DUMMY_SMALL_VERSION = "1.3"
+SCHEMA_VERSION = 8
+TEMPLATE_VERSION = "1.10"
+DUMMY_VERSION = "1.12"
+DUMMY_SMALL_VERSION = "1.4"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -150,6 +150,18 @@ DEFAULT_TYPE_FACTOR = {"NewDrug CT": 1.00, "Biosimilar CT (Healthy)": 0.85,
 DEFAULT_CT_ROLE_BASE = [("Project oversight", 0.80), ("Lead data manager", 1.20),
                         ("Clinical Data Associator", 1.00),
                         ("Clinical Database Programmer", 1.10), ("Data Analyst", 0.90)]
+# Who picks the work up when nobody holds a role on a project. DATA, not code: which
+# role covers for which is a judgment about how a team works, and REQ-CAL-06 has said
+# since the first plan that factors live in the workbook and never in the program.
+#
+# A small trial may run without a Clinical Data Associator - but the data still has to
+# be handled, and it lands on the lead data manager, who is then under more pressure
+# than the factor for their role alone describes. Same shape for an 'Others' project
+# with no 'Other staff': the project lead absorbs it.
+DEFAULT_ABSORBED_BY = {
+    "Clinical Data Associator": "Lead data manager",
+    "Other staff": "Project lead",
+}
 # Indexed by the seven clinical periods, in timeline order.
 DEFAULT_ROLE_SHAPE = {
     "Project oversight":            [0.90, 1.00, 1.00, 1.00, 1.00, 1.00, 0.80],
@@ -203,12 +215,13 @@ def default_role_factors():
                 for rn, base in DEFAULT_CT_ROLE_BASE:
                     f = (base * DEFAULT_ROLE_SHAPE[rn][i] * DEFAULT_PHASE_ROLE_MOD[ph]
                          * DEFAULT_TYPE_ROLE_MOD.get(ct, 1.00))
-                    out.append((ct, ph, None, pn, rn, round(f, 2), DEFAULT_NOTE))
+                    out.append((ct, ph, None, pn, rn, round(f, 2),
+                                DEFAULT_ABSORBED_BY.get(rn), DEFAULT_NOTE))
     for i, pn in enumerate(_listed("period_name_others")):
         for rn in _listed("role_others"):
             out.append(("Others", None, None, pn, rn,
                         round(DEFAULT_OT_BASE[rn] * DEFAULT_OT_SHAPE[rn][i], 2),
-                        DEFAULT_NOTE))
+                        DEFAULT_ABSORBED_BY.get(rn), DEFAULT_NOTE))
     return out
 
 
@@ -220,6 +233,7 @@ CONFIG = [
     ("under_allocation_min_months", 3, "Consecutive months below the threshold before a run is flagged."),
     ("default_horizon_months", 24, "Months shown when the dashboard opens."),
     ("capacity_unit", "FTE", "Display unit: 'FTE' or 'percent'."),
+    ("absorb_unstaffed_role_factor", 1, "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by, because the work still has to be done by whoever is there. 0 = an unstaffed role simply costs nothing, which is how versions before this one behaved."),
     ("split_shared_role_fte", 1, "1 = when several people hold the same role on one project in a month, the role factor is divided between them. 0 = each is charged the whole factor, which is how versions before this one behaved."),
 ]
 
@@ -283,6 +297,7 @@ SHEETS = {
         ("period_name", "The period this factor applies to.", "key"),
         ("role_name", "The role.", "key"),
         ("role_factor", "YOU SUPPLY. Relative burden of this role in this period.", "fill"),
+        ("absorbed_by", "If NOBODY holds this role on a project, which role picks the work up. Blank = the work is simply not counted. See the README.", ""),
         ("role_note", "Basis for the factor.", ""),
     ],
     "Person": [
@@ -674,6 +689,13 @@ def dummy_data(prof):
     for p in projects:
         pid, ptype, pstart, pend = p[0], p[2], p[15], p[16]
         roles = OT_ROLES if ptype == "Others" else CT_ROLES
+        # REQ-CAL-16: a fifth of the clinical trials run with NO Clinical Data
+        # Associator, and a fifth of the 'Others' projects with no 'Other staff'. Real
+        # projects are staffed like that, and it puts the absorption rule under the
+        # four-way comparison in tools/test_app.py rather than in one unit test.
+        if int(pid.split("-")[1]) % 5 == 0:
+            roles = [r for r in roles
+                     if r not in ("Clinical Data Associator", "Other staff")]
         for role in roles:
             pool = by_role.get(role) or by_role["Main staff"]
             person = pool[cursor[role] % len(pool)]
@@ -746,11 +768,11 @@ def dummy_data(prof):
         "Data Analyst": 0.85}}
     roles_tbl = list(default_role_factors())      # the baseline, empty scope
     for scope, mods in ROLE_SCOPE_MOD.items():
-        for ct, ph, _none, pn, rn, f, _note in default_role_factors():
+        for ct, ph, _none, pn, rn, f, _absorb, _note in default_role_factors():
             if ct == "Others":
                 continue                          # 'Others' carry no scope variants
             roles_tbl.append((ct, ph, scope, pn, rn, round(f * mods[rn], 2),
-                              f"Illustrative - {scope}"))
+                              DEFAULT_ABSORBED_BY.get(rn), f"Illustrative - {scope}"))
 
     # ---- periods --------------------------------------------------------
     periods = []

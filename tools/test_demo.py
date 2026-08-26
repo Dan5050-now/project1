@@ -25,7 +25,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEMO = (ROOT / "app" / "PM_APP_Prototype_v0.3.html").as_uri()
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.11.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.12.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 fails = []
@@ -62,7 +62,7 @@ with sync_playwright() as pw:
 
     counts = pg.evaluate("({p:S.model.raw.Project.length, n:S.model.raw.Person.length, "
                          "a:S.model.raw.Assignment.length})")
-    check(counts["p"] == 62 and counts["n"] == 20 and counts["a"] == 289,
+    check(counts["p"] == 62 and counts["n"] == 20 and counts["a"] == 277,
           "with enough in it to fill every chart",
           f"{counts['p']} projects, {counts['n']} people, {counts['a']} assignments")
 

@@ -6,8 +6,8 @@ This document is written for a language model or an agent, not for a person. It 
 
 |  |  |
 |---|---|
-| Application | `app/PRAP.html` v1.28 |
-| Source schema version | 7 |
+| Application | `app/PRAP.html` v1.29 |
+| Source schema version | 8 |
 | Contract version | 1.0 |
 | Guide version | 1.0 |
 | Generated | 2026-08-26 |
@@ -64,12 +64,12 @@ The repository keeps every issue of every document, so pick from `docs/PRAP_Mani
 
 | What | Path |
 |---|---|
-| Development plan | `docs/PRAP_Development_Plan_v2.30.xlsx` |
-| Programming specification | `docs/PRAP_Programming_Specification_v1.4.xlsx` |
+| Development plan | `docs/PRAP_Development_Plan_v2.31.xlsx` |
+| Programming specification | `docs/PRAP_Programming_Specification_v1.5.xlsx` |
 | UI component list | `docs/PRAP_UI_Component_List_v1.0.xlsx` |
-| Source data template | `templates/PRAP_SourceData_Template_v1.9.xlsx` |
-| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.11.xlsx` |
-| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.3.xlsx` |
+| Source data template | `templates/PRAP_SourceData_Template_v1.10.xlsx` |
+| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.12.xlsx` |
+| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.4.xlsx` |
 | This guide | `docs/PRAP_AI_Agent_Guide.md` |
 
 ## 2. The eight words you need
@@ -95,7 +95,7 @@ Ten sheets, all required, in this order. A missing sheet is fatal (V-00).
 | `Milestone` | child | `Project` | `project_id`, `milestone_name`, `milestone_date` | 6 |
 | `ProjectPeriod` | child | `Project` | `project_id`, `period_name` | 7 |
 | `PeriodWeightStandard` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name` | 6 |
-| `RoleFactor` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name`, `role_name` | 7 |
+| `RoleFactor` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name`, `role_name` | 8 |
 | `Person` | master | — | `person_id` | 12 |
 | `Assignment` | child | `Person` | `assignment_id` | 11 |
 | `PersonPeriodWeight` | child | `Assignment` | `assignment_id`, `period_start` | 5 |
@@ -187,6 +187,7 @@ Lists, Config                      vocabulary and settings
 | `period_name` | identifier | The period this factor applies to. |
 | `role_name` | identifier | The role. |
 | `role_factor` | decimal | YOU SUPPLY. Relative burden of this role in this period. |
+| `absorbed_by` | text | If NOBODY holds this role on a project, which role picks the work up. Blank = the work is simply not counted. See the README. |
 | `role_note` | text | Basis for the factor. |
 
 #### `Person`
@@ -370,13 +371,14 @@ over_allocation_fte and under_allocation_fte are ABSOLUTE FTE figures. They are 
 
 | Parameter | Default | Controls |
 |---|---|---|
-| `schema_version` | 7 | Structure version of this workbook. The application warns on a mismatch. |
+| `schema_version` | 8 | Structure version of this workbook. The application warns on a mismatch. |
 | `fte_hours_per_month` | 160 | Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month. |
 | `over_allocation_fte` | 1.5 | A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01). |
 | `under_allocation_fte` | 0.6 | A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01). |
 | `under_allocation_min_months` | 3 | Consecutive months below the threshold before a run is flagged. |
 | `default_horizon_months` | 24 | Months shown when the dashboard opens. |
 | `capacity_unit` | FTE | Display unit: 'FTE' or 'percent'. |
+| `absorb_unstaffed_role_factor` | 1 | 1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by, because the work still has to be done by whoever is there. 0 = an unstaffed role simply costs nothing, which is how versions before this one behaved. |
 | `split_shared_role_fte` | 1 | 1 = when several people hold the same role on one project in a month, the role factor is divided between them. 0 = each is charged the whole factor, which is how versions before this one behaved. |
 
 Read the actual values from the `Config` sheet of the workbook in front of you; the table above is what the delivered template ships with.
@@ -430,6 +432,9 @@ Severities: **fatal** nothing loads · **error** the figures would be wrong · *
 | **V-24** | error | Every PersonPeriodWeight.assignment_id exists in Assignment, and (assignment_id, period_start) is unique. |
 | **V-25** | — | RETIRED at schema 7 (R-16). It reported a project whose work_scope_type contradicted its outsourcing_type. |
 | **V-26** | error | No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'. |
+| **V-27** | error | Every clinical trial's (project_type, clinical_phase, work_scope_type) has at least one row in PeriodWeightStandard - checked on the PROJECT, not on its periods. |
+| **V-28** | error | Every role given to somebody on an assignment has at least one row in RoleFactor for that project's (project_type, clinical_phase, work_scope_type) - again independent of the project's periods. |
+| **V-29** | information | A role that carries a factor, that nobody holds on the project, and that nothing covers for. |
 
 **Aim for zero errors and zero warnings you cannot explain.** A file that loads with errors still shows numbers, and those numbers are wrong in ways the user will not see.
 
@@ -573,4 +578,4 @@ A plain-text form of the source workbook, so a program or an AI agent that canno
 
 ---
 
-Generated by `tools/build_ai_reference.py` on 2026-08-26 from `app/PRAP.html` v1.28, `PRAP_Development_Plan_v2.30.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.
+Generated by `tools/build_ai_reference.py` on 2026-08-26 from `app/PRAP.html` v1.29, `PRAP_Development_Plan_v2.31.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.

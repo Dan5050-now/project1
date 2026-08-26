@@ -16,11 +16,11 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.30.xlsx"
-SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.4.xlsx"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.9.xlsx"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.11.xlsx"
-DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.3.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.31.xlsx"
+SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.5.xlsx"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.10.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.12.xlsx"
+DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.4.xlsx"
 
 problems, notes = [], []
 

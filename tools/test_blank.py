@@ -299,10 +299,23 @@ with sync_playwright() as pw:
     # the role factor varies by period and has to be read rather than assumed. Read from
     # the RoleFactor ROWS, not through the application's own lookup, so this stays an
     # independent计算 of the same thing.
-    factors = pg.evaluate("""() => Object.fromEntries(S.model.raw.RoleFactor
+    # The whole RoleFactor block for this project, not just the one role: REQ-CAL-16
+    # means a role that nobody holds lands on whoever covers for it, and this plan has
+    # exactly one person on it. Worked out here rather than asked of the application.
+    rf_rows = pg.evaluate("""() => S.model.raw.RoleFactor
         .filter(r => r.project_type === 'NewDrug CT' && r.clinical_phase === 'Phase 2'
-                  && !r.work_scope_type && r.role_name === 'Lead data manager')
-        .map(r => [r.period_name, r.role_factor]))""")
+                  && !r.work_scope_type)
+        .map(r => ({p: r.period_name, role: r.role_name, f: r.role_factor,
+                    by: r.absorbed_by}))""")
+    HELD = {"Lead data manager"}          # the only role anybody holds on this plan
+    factors = {}
+    for row in rf_rows:
+        if row["role"] not in HELD:
+            continue
+        extra = sum(o["f"] for o in rf_rows
+                    if o["p"] == row["p"] and o["by"] == row["role"]
+                    and o["role"] not in HELD)
+        factors[row["p"]] = row["f"] + extra
     start, end = date(2027, 4, 10), date(2029, 3, 31)
     segs = [(n, date.fromisoformat(a), date.fromisoformat(b), w) for n, a, b, w in periods]
 
