@@ -22,13 +22,13 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.3"
+DOC_VERSION = "1.4"
 DOC_STATUS = ("v1.2 APPROVED 2026-08-13 and still governing. THIS ISSUE, v1.3, adds change C-N02 - the "
               "Python shell - and AWAITS APPROVAL. Nothing already approved is withdrawn by it: the "
               "Electron shell stays specified and stays the better application wherever it can be "
               "delivered.")
 DOC_DATE = "2026-08-13"
-PLAN = "PRAP_NewApp_Development_Plan_v1.11.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.12.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Specification_v{DOC_VERSION}.xlsx"
@@ -171,7 +171,16 @@ r = lines(ws, r, [
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
-          [["1.3", "2026-08-18", "Claude Code", "Awaiting approval",
+          [["1.4", "2026-08-22", "Claude Code", "Awaiting approval",
+            "THE DIFFERENCE REPORT IS BUILT - task N4.5, NR-IMP-02, the last unbuilt piece of "
+            "this specification. Sheet 09 gains an 'As BUILT' section recording the six "
+            "decisions inside it that could each have gone another way, and what proves each. "
+            "The engine is shared (src/core/06a_diff.js) and the screen is not: the web "
+            "application stays feature-frozen and still replaces on a second load, which is "
+            "what N-06 asked for and what it has no workspace to do otherwise. Also records "
+            "Gate N4a: the shell arrived by e-mail, ran on the company PC, imported and "
+            "exported - so R-N21's impact falls to Low."],
+           ["1.3", "2026-08-18", "Claude Code", "Awaiting approval",
             "A SECOND SHELL, under the same page. Change C-N02: the two company controls are now measured "
             "rather than feared - an executable may run but may not arrive (R-N20), and data may not enter "
             "a browser page through the file picker (R-N21). Neither is worked around. A Python shell "
@@ -684,6 +693,31 @@ r = lines(ws, r, [
     "The expansion is for LOOKING, not for choosing: the tick stays at sheet level (S-N03). Row-level counts",
     "that disagree with what you expected are the reason to open it - and the reason to say no.",
 ])
+r += 1
+
+r = section(ws, r, "As BUILT   [N4.5, 2026-08-22]")
+r = lines(ws, r, [
+    "Built and wired into the Python shell. The engine is shared; the screen is not.",
+    "",
+    "    src/core/06a_diff.js          pure - two sets of parsed rows in, a description out",
+    "    src/shell/python/importdiff.js  the three dialogs, and the wiring",
+    "",
+    "The engine is in core/ because it decides which rows are the same row - which is a data",
+    "question, testable without a browser, and the sort of thing that must not be written twice.",
+    "The SCREEN is in the Python shell alone: the web application is feature-frozen (N-06) and",
+    "has no workspace to merge into, so loading a second file there still replaces the first,",
+    "exactly as the reviewer signed it off.",
+])
+r += 1
+built = [
+    ["What identifies a row", "DIFF_KEY, the composite keys - not KEY_COL, which names one column per sheet and is a FOREIGN key on a child sheet. Every milestone of a project shares its project_id; comparing on that alone would call them all the same row.", "check_consistency holds DIFF_KEY to the keys in docs/prap_contract.json"],
+    ["What is not compared", "Derived columns. A stale total in a hand-edited workbook is not a difference, and must never become the truth (NR-IMP-08). It is left out of the report AND out of what gets written.", "tools/test_importdiff.py"],
+    ["What counts as the same value", "A date read from .xlsx and the same date written in a .prap.json; 1.2 and '1.20'. A report full of differences that are not differences is a report nobody finishes.", "tools/test_importdiff.py"],
+    ["What an accepted sheet does", "ADDS and CHANGES. Never deletes - S-N04, and the one behaviour here that could destroy work.", "tools/test_importdiff.py"],
+    ["What an imported row is", "A complete row, not a draft. newRow marks a row __new, which holds it out of validation and out of the calculation; an imported assignment left that way would be silently weightless.", "tools/test_importdiff.py"],
+    ["How much is shown", "Twelve rows per list, then a count. A dialog that scrolls for a thousand rows is one nobody reads and everybody approves.", "-"],
+]
+r = table(ws, r, ["Point", "How it is settled", "Proved by"], built, [30, 96, 34], wrap_cols=(2,))
 r += 1
 
 r = section(ws, r, "Export as the way to edit outside the application   [NR-IMP-08]")

@@ -127,7 +127,10 @@ _pyspec = importlib.util.spec_from_file_location(
 build_python_app = importlib.util.module_from_spec(_pyspec)
 _pyspec.loader.exec_module(build_python_app)
 PYTHON_PARTS = set(build_python_app.MODULES) | {
-    "shell/python/bridge.js", "shell/python/chrome.css", "shell/python/chrome.html"}
+    "shell/python/bridge.js", "shell/python/chrome.css", "shell/python/chrome.html",
+    # The difference report's SCREEN. Its engine is core/06a_diff.js and is in the web
+    # build too; this file is not, because the web application is feature-frozen.
+    "shell/python/importdiff.js"}
 
 reachable = set(build_app.PARTS) | BUILT_PAGES | PYTHON_PARTS
 orphans = sorted(

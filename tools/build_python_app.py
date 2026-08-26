@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "0.4"
+VERSION = "0.5"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -161,6 +161,10 @@ def page():
     chrome_css = (SRC / "shell" / "python" / "chrome.css").read_text(encoding="utf-8")
     chrome_html = (SRC / "shell" / "python" / "chrome.html").read_text(encoding="utf-8")
     bridge = (SRC / "shell" / "python" / "bridge.js").read_text(encoding="utf-8")
+    # The difference report is wired into THIS shell only. Its engine lives in
+    # core/06a_diff.js and is shared; the screen is not, because the web application
+    # is feature-frozen (N-06) and has no workspace to merge into.
+    diff = (SRC / "shell" / "python" / "importdiff.js").read_text(encoding="utf-8")
 
     parts = []
     for name in build_app.PARTS:
@@ -179,7 +183,8 @@ def page():
         if name == "shell/web/page.body.html":
             text = text.replace('<div class="wrap">', chrome_html + '\n<div class="wrap">', 1)
         if name == "shell/web/page.tail.html":
-            text = f"<script>\n{bridge}</script>\n" + text
+            text = (f"<script>\n{diff}</script>\n"
+                    f"<script>\n{bridge}</script>\n" + text)
         parts.append(text)
 
     html = "".join(parts).replace(

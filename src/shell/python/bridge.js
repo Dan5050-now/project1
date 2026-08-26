@@ -142,8 +142,10 @@
     await adoptBytes(got.name, b64ToBytes(got.bytes));
   }
 
-  /** The web application's loadFile(), with the File taken out of it. Same two
-   *  readers, same adopt(), same everything after this line. */
+  /** The web application's loadFile(), with the File taken out of it - and one thing
+   *  put in. Same two readers; then importSourceOver decides between adopting the file
+   *  and offering a difference report, because this shell has a PLAN open and the web
+   *  application never does (NR-IMP-02). */
   async function adoptBytes(name, bytes) {
     try {
       showBanner("", `Reading ${name}…`);
@@ -151,7 +153,9 @@
         ? readPrapJson(enc.decode(bytes))
         : await readWorkbook(bytes.buffer.slice(bytes.byteOffset,
                                                 bytes.byteOffset + bytes.byteLength));
-      adopt(sheets, name);
+      if (typeof window.importSourceOver === "function")
+        await window.importSourceOver(name, sheets);
+      else adopt(sheets, name);
     } catch (e) {
       showBanner("bad", `Could not read that file: ${e.message}`);
       console.error(e);

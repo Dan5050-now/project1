@@ -69,3 +69,30 @@
 /* D-N02: the menu replaces these. D-N09: the window follows the system.
    NR-IMP-09: and the picker is gone entirely - see bridge.js. */
 #loadBtn,#loadBtn2,#exportBtn,#exportJsonBtn,#themeBtn,#picker{display:none}
+
+/* ---- the import difference report -------------------------------------- */
+.pm-diff{border:1px solid var(--grid);border-radius:10px;margin-bottom:9px;
+  background:var(--bg)}
+.pm-diff>summary{display:flex;gap:10px;align-items:center;padding:9px 12px;
+  cursor:pointer;font-size:13px;list-style:none}
+.pm-diff>summary::-webkit-details-marker{display:none}
+.pm-diff>summary::after{content:"▸";color:var(--ink3);margin-left:auto;font-size:12px}
+.pm-diff[open]>summary::after{content:"▾"}
+.pm-diff>summary:hover{background:var(--fill)}
+.pm-diff .pm-sub{color:var(--ink3);font-size:12px}
+.pm-tick{display:flex;align-items:center;padding:2px 4px;cursor:pointer}
+.pm-tick input{width:15px;height:15px;cursor:pointer}
+.pm-diff-body{padding:2px 12px 10px 40px}
+.pm-diff-list h4{margin:8px 0 4px;font-size:12px;font-weight:600;color:var(--ink2)}
+.pm-diff-list h4 i{font-style:normal;color:var(--ink3);font-weight:400}
+.pm-diff-list ul{list-style:none;margin:0;padding:0}
+.pm-diff-list li{display:flex;gap:12px;padding:3px 8px;border-radius:6px;font-size:12px;
+  border-left:3px solid transparent}
+.pm-diff-list li:nth-child(odd){background:var(--fill)}
+.pm-diff-list li .n{min-width:220px;color:var(--ink)}
+.pm-diff-list li .d{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.pm-diff-list li.more{color:var(--ink3);font-style:italic}
+.pm-diff-list.add li{border-left-color:var(--good)}
+.pm-diff-list.chg li{border-left-color:var(--accent)}
+.pm-diff-list.keep li{border-left-color:var(--grid);color:var(--ink3)}

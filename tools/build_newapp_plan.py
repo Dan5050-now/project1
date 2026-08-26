@@ -20,7 +20,7 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.11"
+DOC_VERSION = "1.12"
 DOC_STATUS = ("Baseline v1.0 + changes C-N01 and C-N02. Gates N1-N3 closed; Step N4 in progress and "
               "Step N4a - the Python shell - BUILT AND TESTED, awaiting your run on the company laptop. "
               "Two company controls are measured rather than feared: an executable may run but may not "
@@ -228,7 +228,22 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.11", "2026-08-22", "Claude Code", "-",
+    [f"{MARK_NEW}1.12", "2026-08-25", "Claude Code", "-",
+     "THE DIFFERENCE REPORT IS BUILT - task N4.5, NR-IMP-02, and the last unbuilt piece "
+     "of the approved specification. Importing a revised workbook over a plan somebody "
+     "has been working in used to REPLACE it. Now it asks first, then shows what would "
+     "change - rows to add, rows to change with the columns and both values, and rows "
+     "the plan has that the file does not - and the user accepts or skips per sheet. "
+     "The whole thing lands as PENDING EDITS, so it is undone by Leave without change "
+     "and kept by Save, like every other change. The behaviour that mattered most is "
+     "the one S-N04 named: an accepted sheet ADDS and CHANGES but never DELETES, so a "
+     "row somebody typed by hand survives an import of a file that never heard of it. "
+     "The engine is shared (src/core/06a_diff.js, pure); the SCREEN is in the Python "
+     "shell alone, because the web application is feature-frozen at N-06 and has no "
+     "workspace to merge into. Specification v1.4 records the six decisions inside it "
+     "that could each have gone another way. Step N4 is now complete but for N4.4d and "
+     "N4.4e, which the Python shell largely covers already."],
+    ["1.11", "2026-08-22", "Claude Code", "-",
      "GATE N4a IS CLOSED. IT RAN. The Python package arrived by e-mail, started on the "
      "company PC, imported a source workbook and exported one - all of it reported by the "
      "requester from the machine that carries the controls. Every assumption this line was "
@@ -1086,7 +1101,7 @@ wbs = [
     ["N4", "N4.4c", "The write claim: create-if-absent, the heartbeat, expiry and takeover, and the re-check before every save.", "src/storage/desktop/claim.js", "Complete - one winner from eight racing processes"],
     ["N4", "N4.4d", "The four session states on screen: who holds the plan, the refusal that names them, the offer when it frees, and the staleness notice with its reload.", "ui/", "Not started"],
     ["N4", "N4.4e", "User identity: the launch prompt, remembering and confirming it, switching user, contact details, and the blocked message that carries them.", "shell/desktop/ + ui/", "Not started"],
-    ["N4", "N4.5", "Import into an occupied workspace: the difference view and the per-sheet decision.", "ui/", "Not started"],
+    ["N4", "N4.5", "Import into an occupied workspace: the difference view and the per-sheet decision.", "src/core/06a_diff.js + src/shell/python/importdiff.js", "Complete - 24 checks, including that a hand-typed row survives an import that never heard of it"],
     ["N4", "N4.6", "Parity suite: identical input through both applications, identical figures, findings and exports.", "tools/test_parity.py", "Not started"],
     ["N4", "N4.7", "Persistence suite: save, close, relaunch, verify; kill mid-write, verify; recover pending edits.", "tools/test_persist.py", "Not started"],
     ["N4", "N4.8", "Requester reviews against real data; refinements folded in.", "Updated code", "Not started"],

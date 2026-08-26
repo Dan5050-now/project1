@@ -30,6 +30,7 @@ and stays in service — the two are parallel products, not successor and predec
 | N2 | Programming specification | **v1.0 APPROVED** 2026-08-13 · Gate N2 closed |
 | N3 | Desktop UI design | **v1.0 component list APPROVED** 2026-08-13 · Gate N3 closed |
 | N4 | Build (Electron shell) | **In progress** — storage layer and shell built; the application launches |
+| N4.5 | Import difference report | **Complete** 2026-08-25 — ask first, then per-sheet accept; never deletes |
 | N4a | Build (Python shell) | **GATE N4a CLOSED** 2026-08-22 — it arrived, ran, imported and exported on the company PC |
 | N5 | Release | Not started |
 
@@ -131,7 +132,9 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.11.xlsx` — **current. Gate N4a is closed:** the
+- `docs/PRAP_NewApp_Development_Plan_v1.12.xlsx` — **current.** Records task **N4.5, the
+  import difference report** — the last unbuilt piece of the approved specification.
+  Also: **Gate N4a is closed:** the
   Python package arrived by e-mail, ran on the company PC, and imported and exported a
   workbook — reported from the machine that carries the controls. `R-N21`'s impact falls
   to Low (the control is still there; the tool no longer goes near it), and `R-N01` /

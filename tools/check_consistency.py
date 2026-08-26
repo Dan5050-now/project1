@@ -377,8 +377,8 @@ if MANIFEST.exists():
 # ---- 4h. the desktop plan vs the desktop specification --------------------
 # The second product line gets the same guarantee as the first: a requirement cannot be
 # dropped between the plan and the specification without this saying so.
-NAPP_PLAN = ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.11.xlsx"
-NAPP_SPEC = ROOT / "docs" / "PRAP_NewApp_Specification_v1.3.xlsx"
+NAPP_PLAN = ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.12.xlsx"
+NAPP_SPEC = ROOT / "docs" / "PRAP_NewApp_Specification_v1.4.xlsx"
 if NAPP_PLAN.exists() and NAPP_SPEC.exists():
     np_ = load_workbook(NAPP_PLAN, data_only=True)["03_Requirements"]
     ns_ = load_workbook(NAPP_SPEC, data_only=True)["11_Traceability"]
@@ -399,6 +399,33 @@ if NAPP_PLAN.exists() and NAPP_SPEC.exists():
         problems.append(f"desktop requirements traced to no sheet: {sorted(unhoused)}")
     if not (nr_plan - nr_spec) and not unhoused:
         notes.append(f"desktop line: {len(nr_plan)} requirements, all specified")
+
+# ---- 4f2. the import comparison uses the CONTRACT's keys ------------------
+# The difference report decides which rows are "the same row" by comparing key columns.
+# Get that key wrong and the report is wrong in the worst way: too narrow and every row
+# looks new, too wide and rows that are not the same row are merged. The contract
+# already publishes the composite key of every sheet, so the two must be the same list
+# rather than two lists that happen to agree today.
+m = re.search(r"const DIFF_KEY = \{(.*?)\n\};", APP.read_text(encoding="utf-8"), re.S)
+if not m:
+    problems.append("app/PRAP.html has no DIFF_KEY table - the import comparison has no keys")
+else:
+    diff_key = {}
+    for sheet, cols in re.findall(r"(\w+):\s*\[([^\]]*)\]", m.group(1), re.S):
+        diff_key[sheet] = [c.strip().strip('"') for c in cols.split(",") if c.strip()]
+    contract_path = ROOT / "docs" / "prap_contract.json"
+    if contract_path.exists():
+        contract = json.loads(contract_path.read_text(encoding="utf-8"))
+        for sheet, spec_ in (contract.get("sheets") or {}).items():
+            want = list(spec_.get("key") or [])
+            got = diff_key.get(sheet)
+            if got is None:
+                problems.append(f"the import comparison has no key for {sheet}")
+            elif got != want:
+                problems.append(f"the import comparison keys {sheet} on {got}, but the "
+                                f"contract says {want}")
+        notes.append(f"import comparison: {len(diff_key)} sheet keys, all matching "
+                     f"docs/prap_contract.json")
 
 # ---- 4g. app/PRAP.html vs the src/ tree it is now built from ---------------
 # Since N2.1 the single file is a build output, not a hand-written one. Editing it
