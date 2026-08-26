@@ -229,7 +229,8 @@ def main(path):
 
     # ---- list membership (V-11) ----
     for pid, proj in P.items():
-        for col, lname in [("project_type", "project_type"), ("outsourcing_type", "outsourcing_type"),
+        for col, lname in [("project_type", "project_type"),
+                           ("work_scope_type", "work_scope_type"),
                            ("status", "project_status")]:
             v = proj.get(col)
             if v and v not in LISTS[lname]:

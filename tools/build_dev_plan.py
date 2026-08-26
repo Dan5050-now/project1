@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.29"
+DOC_VERSION = "2.30"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -368,7 +368,21 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.29", "2026-08-25", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.30", "2026-08-25", "Claude Code", "Pending",
+     "R-16, SCHEMA 7: outsourcing_type becomes outsourcing_scope_det, and becomes FREE "
+     "TEXT. Schema 6 put work_scope_type in the weights and left outsourcing_type beside "
+     "it as a second controlled vocabulary on the same axis - two fields to keep in step, "
+     "one of which decided nothing. It is now a note in the requester's own words: what "
+     "is outsourced and to whom, the detail a category cannot carry. Three things follow. "
+     "V-25 is RETIRED, because it existed only to police the two against each other and "
+     "can no longer fire. The dashboard's scope filter moves to work_scope_type, since a "
+     "drop-down built from whatever sentences people have typed is not a filter - and the "
+     "field it used to offer is the one that no longer decides anything. And a workbook "
+     "still carrying outsourcing_type is READ rather than refused: the column is renamed "
+     "on the way in and the application says so once, because a rename is the one schema "
+     "change that otherwise loses a filled-in column in silence.",
+     "Issued for review"],
+    ["2.29", "2026-08-25", "Claude Code", "Pending",
      "R-15, REQ-CAL-15: BOTH ASSIGNMENT DATES ARE OPTIONAL, and a blank one means the "
      "project's own. Most people are on a project for the whole of it, and requiring two "
      "dates that simply repeat the project's asks somebody to copy the same pair onto "
@@ -1237,8 +1251,8 @@ proj = [
     [f"{MARK_CHG}project_type", "List", "Yes", "'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Everything but 'Others' is a clinical trial. SCHEMA 6 split the single 'Biosimilar CT' in two: a healthy-volunteer study and a patient study are not the same workload, and one value could not say which. A project type is recognised as a trial by the START of its name, so a further subdivision is a change to the value list rather than to the code.", "REQ-PRJ-01, R-12"],
     ["project_category", "Text", "Conditional", "Product name. Required for either clinical trial type.", "REQ-PRJ-02"],
     [f"{MARK_NEW}clinical_phase", "List", "Conditional", "'Phase 1' / 'Phase 2' / 'Phase 3' / 'Phase 4'. Required for either clinical trial type.", "REQ-PRJ-09"],
-    [f"{MARK_NEW}work_scope_type", "List", "Yes", "How much of the work is done in-house: 'fully in-housed' / 'fully outsourced' / 'Partially outsourced (in-house for EDC)', extensible on the Lists sheet. SCHEMA 6. Part of the key into PeriodWeightStandard and RoleFactor - a trial run entirely in-house costs this team more than the same trial handed to a CRO, and the weights are where that belongs.", "R-12"],
-    [f"{MARK_CHG}outsourcing_type", "List", "Yes", "'Full outsourcing' / 'Partial outsourcing' / 'Full In-house'. Three values, fixed at Q-14. DESCRIPTIVE ONLY since schema 6 - work_scope_type is what the weights are keyed on. The two are checked against each other (V-25) but not merged: merging them would rewrite a column in every existing file.", "REQ-PRJ-04, R-12"],
+    [f"{MARK_CHG}work_scope_type", "List", "Yes", "How much of the work is done in-house: 'fully in-housed' / 'fully outsourced' / 'Partially outsourced (in-house for EDC)', extensible on the Lists sheet. SCHEMA 6. Part of the key into PeriodWeightStandard and RoleFactor - a trial run entirely in-house costs this team more than the same trial handed to a CRO, and the weights are where that belongs. Since schema 7 it is the ONLY scope field the calculation reads, and the one the dashboard's scope filter offers.", "R-12, R-16"],
+    [f"{MARK_CHG}outsourcing_scope_det", "Text", "No", "FREE TEXT: what is outsourced and to whom, in your own words - the detail a category cannot carry. Read by people, never by the calculation. SCHEMA 7 renamed it from outsourcing_type and changed it from a value list to free text: with work_scope_type driving the weights, a second controlled vocabulary on the same axis was a field to keep in step for no benefit, and V-25 existed only to police the two against each other. A workbook still carrying outsourcing_type is read - the values move across and the application says so once.", "REQ-PRJ-04, R-16"],
     [f"{MARK_NEW}EDC_setup", "List", "Conditional", "Who sets up the EDC system. 'by CRO' / 'by SB'. Required for either clinical trial type.", "REQ-PRJ-10"],
     [f"{MARK_NEW}DataReviewSystem_setup", "List", "Conditional", "Who sets up the data review system. 'by CRO' / 'by SB'.", "REQ-PRJ-10"],
     [f"{MARK_NEW}RBQM_setup", "List", "Conditional", "Who sets up the RBQM system. 'by CRO' / 'by SB'.", "REQ-PRJ-10"],
@@ -1386,7 +1400,7 @@ r = note(ws, r, "Changed at Q-01. The answer named exactly three factors, so a f
 
 r = section(ws, r, "Sheet: Config")
 cfg = [
-    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12).", "6", "REQ-VC-02"],
+    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16).", "7", "REQ-VC-02"],
     [f"{MARK_NEW}split_shared_role_fte", "1 = where several people hold the same role on one project in a month, the role factor is divided between them (REQ-CAL-14). 0 = each carries the whole factor, which is how every version before v2.28 behaved. A setting rather than a constant because it changes every figure a shared role ever produced, and somebody comparing this month's report with last year's has to be able to see where the difference came from.", "1", "REQ-CAL-14"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],
     [f"{MARK_NEW}over_allocation_fte", "Person-month total above this is over-allocated.", "1.50", "REQ-CAL-04"],
@@ -1413,7 +1427,7 @@ rules = [
     ["V-02", "Every Assignment.person_id exists in Person.", "Error - row rejected."],
     [f"{MARK_CHG}V-03", "Every Assignment.role_name appears in RoleFactor for that project's type.", "Error - row rejected. Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error."],
     [f"{MARK_NEW}V-24", "Every PersonPeriodWeight.assignment_id exists in Assignment, and (assignment_id, period_start) is unique.", "Error - an override on an assignment that does not exist is silently ignored, so the weight the user typed never applies and nothing says so."],
-    [f"{MARK_NEW}V-25", "A project's work_scope_type does not contradict its outsourcing_type. The two unambiguous ends are checked: 'Full outsourcing' against 'fully outsourced', and 'Full In-house' against 'fully in-housed'.", "Warning - two columns on the same axis and only one of them drives the weights. A project marked 'Full In-house' and 'fully outsourced' is a slip, and the calculation would follow the field nobody was looking at. 'Partial outsourcing' is compatible with more than one scope and is not checked: a warning nobody can act on is a warning everybody learns to ignore."],
+    [f"{MARK_CHG}V-25", "RETIRED at schema 7 (R-16). It reported a project whose work_scope_type contradicted its outsourcing_type.", "Retired - the rule existed only because two columns sat on the same axis and one of them drove the weights. outsourcing_scope_det is free text now, so there is nothing left to contradict. A rule that can no longer fire is removed rather than left standing and unexplained; the id is not reused."],
     [f"{MARK_NEW}V-26", "No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'.", "Error - reported as itself rather than as a generic unknown value, because the remedy is a choice the file cannot make on the user's behalf. Only they know whether the trial ran in healthy volunteers or in patients, and guessing would put a wrong weight on real work."],
     [f"{MARK_NEW}V-23", "For every (project_type, clinical_phase, period_name, role_name) an assignment can actually reach, a RoleFactor row exists.", "Error - a factor missing for ONE period of a project silently drops that stretch to 1.00, which is a wrong number rather than an obvious gap. Checked against the periods each assignment spans, not against the whole cross-product."],
     ["V-04", "project_category is present for either clinical trial type.", "Warning - shown as blank in the dashboard."],

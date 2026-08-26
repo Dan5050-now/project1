@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.29 records Step 4 progress, schema 6, the shared-role division, the delivered defaults and optional assignment dates |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.30 records Step 4 progress, schema 7, the shared-role division, the delivered defaults and optional assignment dates |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -34,7 +34,7 @@ and stays in service — the two are parallel products, not successor and predec
 | N4a | Build (Python shell) | **GATE N4a CLOSED** 2026-08-22 — it arrived, ran, imported and exported on the company PC |
 | N5 | Release | Not started |
 
-Both applications share one calculation engine, one data schema (version 6) and one
+Both applications share one calculation engine, one data schema (version 7) and one
 JSON interchange format, so they cannot disagree about a number. Nothing in that plan
 amends the web application's plan, specification, component list or code.
 
@@ -218,8 +218,8 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.29.xlsx` — **current.** 72 requirements, 26 validation
-  rules, source schema version 6. Carries change **R-13 — a shared role is a shared
+- `docs/PRAP_Development_Plan_v2.30.xlsx` — **current.** 72 requirements, 25 live
+  validation rules (V-25 retired), source schema version 7. Carries change **R-13 — a shared role is a shared
   cost** (`REQ-CAL-14`: where several people hold the same role on one project in one
   month, the role factor is divided between them) and **R-14 — the delivered default
   assumptions** (`PeriodWeightStandard` and `RoleFactor` arrive filled in, and the
@@ -229,7 +229,7 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.3.xlsx` — **current specification.** Schema 6
+- `docs/PRAP_Programming_Specification_v1.4.xlsx` — **current specification.** Schema 7
   (the two-step lookup, the new keys, the two new rules), the shared-role division with
   its worked reasoning, and where the delivered defaults come from.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
@@ -709,7 +709,7 @@ document through the manifest rather than by sorting filenames.
   covering all 70 requirements. Sheet 10 records the six open points from the v0.3
   review, the answers given, and what each one changed. None open.
 
-- `templates/PRAP_SourceData_Template_v1.8.xlsx` — blank workbook: 10 sheets, headers,
+- `templates/PRAP_SourceData_Template_v1.9.xlsx` — blank workbook: 10 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README. Every sheet
   carries at least one free-text note column (schema version 6).
 
@@ -721,14 +721,14 @@ document through the manifest rather than by sorting filenames.
   inserting, deleting and sorting rows all still work. Only adding or removing *columns*
   is blocked, because the column set is the schema. The application's export writes the
   same locks, so the guard rail survives a round trip.
-- `templates/PRAP_SourceData_Dummy_v1.10.xlsx` — the same structure populated with
+- `templates/PRAP_SourceData_Dummy_v1.11.xlsx` — the same structure populated with
   **16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12
   `Others` projects and 20 people** (289 assignments, 372 milestones, 308 periods
   across 73 months). At schema 6 it also carries **252 `PeriodWeightStandard` rows and
   849 `RoleFactor` rows** — a baseline set with `work_scope_type` empty, plus
   scope-specific rows for two of the three scopes, so the fallback is exercised by the
   fixture and not only by a unit test.
-- `templates/PRAP_SourceData_Dummy_10x10_v1.2.xlsx` — the same again at **10 projects
+- `templates/PRAP_SourceData_Dummy_10x10_v1.3.xlsx` — the same again at **10 projects
   and 10 people** (8 clinical trials + 2 `Others`, 50 assignments, 60 milestones,
   50 periods across 50 months): small enough to read every row on screen and check the
   arithmetic by hand. It is not a lighter test — it carries both clinical types, all
@@ -745,7 +745,7 @@ schema the other follows. The data is seeded: every sheet rebuilds byte-for-byte
 Validate any of them with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.2.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.3.xlsx
 ```
 
 And check the application against the reference implementation:
@@ -952,6 +952,14 @@ Requires `openpyxl`.
   one derivation, and differ in their weights. A type is recognised as a trial by the
   **start** of its name, so subdividing one again is a value-list change, not a code
   change (R-12, schema 6).
+- **Only `work_scope_type` decides anything** (R-16, schema 7). The old `outsourcing_type`
+  is renamed **`outsourcing_scope_det`** and is now **free text** — what is outsourced and
+  to whom, in your own words, read by people and never by the calculation. Two controlled
+  vocabularies on the same axis meant two fields to keep in step, one of which decided
+  nothing. `V-25`, which existed only to police them against each other, is **retired**;
+  the dashboard's scope filter moves to `work_scope_type`. A workbook still carrying
+  `outsourcing_type` is **read, not refused** — the column is renamed on the way in and
+  the application says so once.
 - **Assignment dates are optional** (R-15, `REQ-CAL-15`). A blank `assign_start_date`
   means the project's own start; a blank `assign_end_date` its end. So an assignment
   with neither runs for the **whole project** — which is what most assignments are —

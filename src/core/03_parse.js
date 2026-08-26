@@ -45,7 +45,7 @@ const REQUIRED_SHEETS = Object.keys(SHEET_COLS);
    instead of silently ignored. tools/check_consistency.py holds it to the template. */
 const SHEET_HEADERS = {
   Project:["project_id","project_name","project_type","project_category","clinical_phase",
-    "work_scope_type","outsourcing_type","EDC_setup","DataReviewSystem_setup","RBQM_setup","DM_conduct",
+    "work_scope_type","outsourcing_scope_det","EDC_setup","DataReviewSystem_setup","RBQM_setup","DM_conduct",
     "EDC_system","DataReviewSystem","RBQM_system","planned_member_count","start_date",
     "end_date","total_period_months","status","note_1","note_2","note_3","note_4","note_5"],
   Milestone:["project_id","project_name","milestone_name","milestone_date","milestone_seq","note_1"],
@@ -77,6 +77,18 @@ const CLINICAL_TYPES = {
    and identical to the message for a typo. */
 const RETIRED_TYPES = {
   "Biosimilar CT": "Biosimilar CT (Healthy) or Biosimilar CT (Patient)",
+};
+
+/* Columns that were RENAMED, and what they are now.
+   A rename is the one schema change that can lose data in silence: the old column is
+   read, assigned to a key nothing looks at, and the new column comes back empty. The
+   file still opens, every rule still passes, and the value is simply gone.
+
+   So the header is translated on the way in and the reader is told once. This is not
+   leniency about the schema - the workbook is still expected to be the current one -
+   it is refusing to be the reason somebody loses a column they filled in last week. */
+const RENAMED_COLS = {
+  Project: {outsourcing_type: "outsourcing_scope_det"},   // schema 6 -> 7
 };
 const CLINICAL_PERIODS = ["Before-Start-up","Start-up","Conduct (interim)","Close-out (interim)",
                           "Conduct (final)","Close-out (final)","After Close-out (final)"];
@@ -116,7 +128,7 @@ const COLUMN_HELP = {
   project_category:"Product name. Required for either clinical trial type (V-04).",
   clinical_phase:"Phase 1 to 4. With the project type and the work scope it selects the standard period weights and role factors.",
   work_scope_type:"How much of the work is done in-house. Part of the key into PeriodWeightStandard and RoleFactor: a standards row with this column EMPTY applies to every scope, so only the scopes that really differ need their own row.",
-  outsourcing_type:"Full outsourcing, Partial outsourcing, or Full In-house. Descriptive only — work_scope_type is what the weights are keyed on (V-25).",
+  outsourcing_scope_det:"FREE TEXT. What is outsourced and to whom, in your own words — the detail work_scope_type cannot carry. Read by people, never by the calculation.",
   EDC_setup:"Who sets up EDC — by CRO or by SB.",
   DataReviewSystem_setup:"Who sets up the data review system.",
   RBQM_setup:"Who sets up RBQM.",
@@ -234,7 +246,16 @@ const REFS = {
 /** Rows -> objects keyed by header, with per-column coercion. Findings collected. */
 function toObjects(sheet, rows, F){
   if (!rows || !rows.length){ return []; }
-  const hdr = (rows[0] || []).map(h => txt(h));
+  const renamed = RENAMED_COLS[sheet] || {};
+  const hdr = (rows[0] || []).map(h => {
+    const name = txt(h);
+    if (!renamed[name]) return name;
+    F.push({sev:"information", rule:"V-09", sheet, row:1,
+      msg:`${sheet}.${name} was renamed to ${renamed[name]}. Its values have been read `
+        + `into the new column; save or export to write the workbook out in the current `
+        + `layout.`});
+    return renamed[name];
+  });
   const spec = SHEET_COLS[sheet];
   const out = [];
   for (let r = 1; r < rows.length; r++){

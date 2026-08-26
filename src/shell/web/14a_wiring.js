@@ -104,7 +104,7 @@ function fillFilters(){
   };
   set("fType", [...new Set(Object.values(M.projects).map(p => p.project_type))].filter(Boolean));
   set("fPhase", [...new Set(Object.values(M.projects).map(p => p.clinical_phase))].filter(Boolean));
-  set("fOut", [...new Set(Object.values(M.projects).map(p => p.outsourcing_type))].filter(Boolean));
+  set("fOut", [...new Set(Object.values(M.projects).map(p => p.work_scope_type))].filter(Boolean));
   set("fProj", Object.keys(M.projects).sort());
   set("fPers", Object.keys(M.people).sort());
   set("fRole", [...new Set(M.assignments.map(a => a.role_name))].filter(Boolean).sort());

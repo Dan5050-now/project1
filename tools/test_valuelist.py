@@ -27,7 +27,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.10.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.11.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 LOC = "#t-proj .data-t[data-sheet='Project']"
 

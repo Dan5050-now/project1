@@ -75,11 +75,10 @@ CLINICAL_TYPES = _ClinicalTypes()
 # identical to the message for a typo.
 RETIRED_TYPES = {"Biosimilar CT": "Biosimilar CT (Healthy) or Biosimilar CT (Patient)"}
 
-# V-25's table. Only the two unambiguous ends are worth checking: 'Partial outsourcing'
-# is compatible with more than one scope, and a warning nobody can act on is a warning
-# everybody learns to ignore.
-SCOPE_AGREES = {"Full outsourcing": "fully outsourced",
-                "Full In-house": "fully in-housed"}
+# Columns the schema RENAMED, and what they are now. A rename is the one schema change
+# that loses data in silence - the old column is read into a key nothing looks at, the
+# new one comes back empty, and every rule still passes.
+RENAMED_COLS = {"Project": {"outsourcing_type": "outsourcing_scope_det"}}   # schema 6 -> 7
 
 ANY_SCOPE = ""
 
@@ -202,7 +201,8 @@ def read_xlsx(path):
     sheets = {}
     for s in SHEET_ORDER:
         ws = wb[s]
-        hdr = [c.value for c in ws[1]]
+        renamed = RENAMED_COLS.get(s, {})
+        hdr = [renamed.get(c.value, c.value) for c in ws[1]]
         rows = []
         for raw in ws.iter_rows(min_row=2, values_only=True):
             if all(v is None or v == "" for v in raw):
@@ -228,6 +228,12 @@ def read_json(path):
     sheets = {}
     for s in SHEET_ORDER:
         rows = src[s] or []
+        renamed = RENAMED_COLS.get(s, {})
+        for r in rows:
+            for was, now in renamed.items():
+                if was in r:
+                    r.setdefault(now, r[was])
+                    del r[was]
         for i, r in enumerate(rows, start=1):
             # A column name that is not in the schema is refused rather than ignored: a
             # typo silently dropped is a value the user believes they supplied.
@@ -531,7 +537,7 @@ def validate(M):
                 if p.get(c) is None:
                     M.add("warning", "V-10", "Project", p["__row"],
                           f"Project {pid} has no {c} recorded.")
-        for col, lst in (("project_type", "project_type"), ("outsourcing_type", "outsourcing_type"),
+        for col, lst in (("project_type", "project_type"),
                          ("work_scope_type", "work_scope_type"),
                          ("status", "project_status"), ("clinical_phase", "clinical_phase")):
             v = p.get(col)
@@ -545,15 +551,6 @@ def validate(M):
             M.add("error", "V-26", "Project", p["__row"],
                   f"Project {pid}: project_type '{p['project_type']}' was split in schema 6. "
                   f"Change it to {RETIRED_TYPES[p['project_type']]}.")
-        # V-25: outsourcing_type and work_scope_type sit on the same axis and only one
-        # of them drives the weights. They need not agree in detail; they must not
-        # contradict.
-        want = SCOPE_AGREES.get(p.get("outsourcing_type"))
-        if want and p.get("work_scope_type") and p["work_scope_type"] != want:
-            M.add("warning", "V-25", "Project", p["__row"],
-                  f"Project {pid}: outsourcing_type says '{p['outsourcing_type']}' but "
-                  f"work_scope_type says '{p['work_scope_type']}'. The weights follow "
-                  f"work_scope_type.")
 
     for pid, mm in M.milestones.items():
         for nm, dates in mm.items():

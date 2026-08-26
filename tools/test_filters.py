@@ -33,7 +33,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.2.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.3.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 P = "#t-proj .data-t[data-sheet='Project']"
 
@@ -114,35 +114,38 @@ with sync_playwright() as pw:
         print("\nFAILURES: the filter does not exist in this build")
         browser.close()
         sys.exit(1)
+    # Schema 7: the scope filter follows work_scope_type. outsourcing_type has become
+    # outsourcing_scope_det - free text - and a drop-down built from whatever sentences
+    # people have typed is not a filter.
     opts = pg.eval_on_selector_all("#fOut .msp input", "es => es.map(e => e.value)")
     real = pg.evaluate("[...new Set(Object.values(S.model.projects)"
-                       ".map(p => p.outsourcing_type))].filter(Boolean)")
+                       ".map(p => p.work_scope_type))].filter(Boolean)")
     check(sorted(opts) == sorted(real) and pg.inner_text("#fOut summary").strip() == "All",
-          "Outsourcing joins the filter bar, offering exactly the values in the file",
+          "Work scope joins the filter bar, offering exactly the values in the file",
           ", ".join(opts))
 
     all_projects = pg.evaluate("activeProjects().length")
-    pick(pg, "fOut", "Full In-house")
+    pick(pg, "fOut", "fully in-housed")
     narrowed = pg.evaluate("() => ({n: activeProjects().length, "
                            "all: activeProjects().every(p => "
-                           "S.model.projects[p].outsourcing_type === 'Full In-house')})")
+                           "S.model.projects[p].work_scope_type === 'fully in-housed')})")
     check(narrowed["n"] and narrowed["n"] < all_projects and narrowed["all"]
-          and pg.inner_text("#fOut summary").strip() == "Full In-house",
-          "choosing one narrows the page to projects of that type, and it says which",
+          and pg.inner_text("#fOut summary").strip() == "fully in-housed",
+          "choosing one narrows the page to projects of that scope, and it says which",
           f"{all_projects} projects -> {narrowed['n']}")
 
     # ---- 1b. several values at once ------------------------------------------
-    pick(pg, "fOut", "Full outsourcing")
+    pick(pg, "fOut", "fully outsourced")
     two = pg.evaluate("""() => ({n: activeProjects().length, chosen: [...S.f.out],
         all: activeProjects().every(p => S.f.out.has(
-             S.model.projects[p].outsourcing_type))})""")
+             S.model.projects[p].work_scope_type))})""")
     check(two["n"] > narrowed["n"] and two["all"] and len(two["chosen"]) == 2
           and pg.inner_text("#fOut summary").strip() == "2 selected",
           "a second value WIDENS the same filter — the two are an OR, not an AND",
           f"{narrowed['n']} -> {two['n']} projects; summary reads "
           f"{pg.inner_text('#fOut summary').strip()!r}")
 
-    unpick(pg, "fOut", "Full outsourcing")
+    unpick(pg, "fOut", "fully outsourced")
 
     # ---- 2. the horizon follows ----------------------------------------------
     check(list(horizon(pg)) == span(pg),
@@ -157,8 +160,8 @@ with sync_playwright() as pw:
     # ---- 3. the guards --------------------------------------------------------
     before = horizon(pg)
     unpick(pg, "fType", "NewDrug CT")
-    # Schema 6 split the biosimilar type; the fixture keeps type and scope in step, so
-    # a biosimilar trial is never 'Full In-house' and this pair still matches nothing.
+    # The fixture keeps type and scope in step, so a biosimilar trial is never
+    # 'fully in-housed' and this pair still matches nothing.
     pick(pg, "fType", "Biosimilar CT (Healthy)")
     check(pg.evaluate("activeProjects().length") == 0 and horizon(pg) == before,
           "a combination that matches nothing leaves the window where it was",

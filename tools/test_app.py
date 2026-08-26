@@ -23,8 +23,8 @@ APP = (ROOT / "app" / "PRAP.html").as_uri()
 # Both dummy sizes are checked. The small one is not a lighter version of the same
 # test - it has a different period mix, a different overlap profile and a single-person
 # role pool, so it exercises paths the large set happens not to reach.
-FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.10.xlsx",
-            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.2.xlsx"]
+FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.11.xlsx",
+            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.3.xlsx"]
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 sys.path.insert(0, str(ROOT / "tools"))

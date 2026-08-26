@@ -6,8 +6,8 @@ This document is written for a language model or an agent, not for a person. It 
 
 |  |  |
 |---|---|
-| Application | `app/PRAP.html` v1.27 |
-| Source schema version | 6 |
+| Application | `app/PRAP.html` v1.28 |
+| Source schema version | 7 |
 | Contract version | 1.0 |
 | Guide version | 1.0 |
 | Generated | 2026-08-26 |
@@ -64,12 +64,12 @@ The repository keeps every issue of every document, so pick from `docs/PRAP_Mani
 
 | What | Path |
 |---|---|
-| Development plan | `docs/PRAP_Development_Plan_v2.29.xlsx` |
-| Programming specification | `docs/PRAP_Programming_Specification_v1.3.xlsx` |
+| Development plan | `docs/PRAP_Development_Plan_v2.30.xlsx` |
+| Programming specification | `docs/PRAP_Programming_Specification_v1.4.xlsx` |
 | UI component list | `docs/PRAP_UI_Component_List_v1.0.xlsx` |
-| Source data template | `templates/PRAP_SourceData_Template_v1.8.xlsx` |
-| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.10.xlsx` |
-| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.2.xlsx` |
+| Source data template | `templates/PRAP_SourceData_Template_v1.9.xlsx` |
+| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.11.xlsx` |
+| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.3.xlsx` |
 | This guide | `docs/PRAP_AI_Agent_Guide.md` |
 
 ## 2. The eight words you need
@@ -124,7 +124,7 @@ Lists, Config                      vocabulary and settings
 | `project_category` | text | Product name. Required for either clinical trial type. |
 | `clinical_phase` | text · list `clinical_phase` | Required for any clinical trial type - with the type and the work scope it selects the period weights. |
 | `work_scope_type` | text · list `work_scope_type` | How much of the work is done in-house. With the type and phase it selects the standard weights and role factors. |
-| `outsourcing_type` | text · list `outsourcing_type` | Full / Partial outsourcing, or Full In-house. Descriptive - work_scope_type is what the weights are keyed on. |
+| `outsourcing_scope_det` | text | FREE TEXT. What is outsourced and to whom, in your own words - the detail behind work_scope_type. Read by people, never by the calculation. |
 | `EDC_setup` | text · list `setup_party` | Who sets up EDC. Clinical trial types only. |
 | `DataReviewSystem_setup` | text · list `setup_party` | Who sets up the data review system. |
 | `RBQM_setup` | text · list `setup_party` | Who sets up RBQM. |
@@ -288,7 +288,6 @@ These live on the `Lists` sheet of the workbook you are given — read them from
 | `project_type` | `NewDrug CT`, `Biosimilar CT (Healthy)`, `Biosimilar CT (Patient)`, `Others` |
 | `clinical_phase` | `Phase 1`, `Phase 2`, `Phase 3`, `Phase 4` |
 | `work_scope_type` | `fully in-housed`, `fully outsourced`, `Partially outsourced (in-house for EDC)` |
-| `outsourcing_type` | `Full outsourcing`, `Partial outsourcing`, `Full In-house` |
 | `setup_party` | `by CRO`, `by SB` |
 | `EDC_system` | `Veeva EDC`, `Rave`, `eSOURCE` |
 | `DataReviewSystem` | `Veeva DQS`, `Medidata CDS`, `No system (manual)` |
@@ -371,7 +370,7 @@ over_allocation_fte and under_allocation_fte are ABSOLUTE FTE figures. They are 
 
 | Parameter | Default | Controls |
 |---|---|---|
-| `schema_version` | 6 | Structure version of this workbook. The application warns on a mismatch. |
+| `schema_version` | 7 | Structure version of this workbook. The application warns on a mismatch. |
 | `fte_hours_per_month` | 160 | Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month. |
 | `over_allocation_fte` | 1.5 | A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01). |
 | `under_allocation_fte` | 0.6 | A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01). |
@@ -413,7 +412,7 @@ Severities: **fatal** nothing loads · **error** the figures would be wrong · *
 | **V-06** | error | Periods within one project, and override windows within one assignment, do not overlap. |
 | **V-07** | warning | Assignment dates fall inside the project's own start and end dates. |
 | **V-08** | error | project_id, person_id and assignment_id are unique in their sheet. |
-| **V-09** | warning | schema_version in Config matches the version the application expects. |
+| **V-09** | warning/information | schema_version in Config matches the version the application expects. |
 | **V-10** | warning | Clinical-trial projects carry clinical_phase and the four *_setup values. |
 | **V-11** | warning | Every list-typed value appears in the Lists sheet for its list. |
 | **V-12** | error/warning | A project's periods leave no gap and no overlap across its timeline. The full set need not be present - a period may be legitimately omitted (REQ-CAL-12). |
@@ -429,7 +428,7 @@ Severities: **fatal** nothing loads · **error** the figures would be wrong · *
 | **V-22** | warning | No person carries a capacity_fte below the under-allocation floor. |
 | **V-23** | error | For every (project_type, clinical_phase, period_name, role_name) an assignment can actually reach, a RoleFactor row exists. |
 | **V-24** | error | Every PersonPeriodWeight.assignment_id exists in Assignment, and (assignment_id, period_start) is unique. |
-| **V-25** | warning | A project's work_scope_type does not contradict its outsourcing_type. The two unambiguous ends are checked: 'Full outsourcing' against 'fully outsourced', and 'Full In-house' against 'fully in-housed'. |
+| **V-25** | — | RETIRED at schema 7 (R-16). It reported a project whose work_scope_type contradicted its outsourcing_type. |
 | **V-26** | error | No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'. |
 
 **Aim for zero errors and zero warnings you cannot explain.** A file that loads with errors still shows numbers, and those numbers are wrong in ways the user will not see.
@@ -574,4 +573,4 @@ A plain-text form of the source workbook, so a program or an AI agent that canno
 
 ---
 
-Generated by `tools/build_ai_reference.py` on 2026-08-26 from `app/PRAP.html` v1.27, `PRAP_Development_Plan_v2.29.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.
+Generated by `tools/build_ai_reference.py` on 2026-08-26 from `app/PRAP.html` v1.28, `PRAP_Development_Plan_v2.30.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.

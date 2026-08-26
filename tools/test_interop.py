@@ -35,8 +35,8 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
-FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.10.xlsx",
-            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.2.xlsx"]
+FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.11.xlsx",
+            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.3.xlsx"]
 
 sys.path.insert(0, str(ROOT / "tools"))
 import prap_io                                                       # noqa: E402
@@ -205,12 +205,19 @@ def contract_checks():
     check(not bad, "prap_io's headers are the contract's columns",
           f"{len(prap_io.HEADERS)} sheets" + (f"; differ on {bad}" if bad else ""))
 
-    # A rule the plan documents but nothing enforces is a promise to an agent that
-    # the application does not keep.
+    # A rule the plan documents but nothing enforces is a promise to an agent that the
+    # application does not keep - unless the plan says the rule is RETIRED. A retired id
+    # stays in the register deliberately: one that simply vanished would leave an agent
+    # that had seen it with no way to learn what became of it.
+    retired = [r for r, v in contract["validation_rules"].items()
+               if not v["enforced_by_application"]
+               and "RETIRED" in (v.get("statement") or "").upper()]
     unenforced = [r for r, v in contract["validation_rules"].items()
-                  if not v["enforced_by_application"]]
-    check(not unenforced, "every documented validation rule is enforced somewhere",
+                  if not v["enforced_by_application"] and r not in retired]
+    check(not unenforced,
+          "every documented validation rule is enforced somewhere, or says it is retired",
           f"{len(contract['validation_rules'])} rules"
+          + (f", {len(retired)} retired ({', '.join(retired)})" if retired else "")
           + (f"; not enforced: {', '.join(unenforced)}" if unenforced else ""))
 
     manifest = json.loads((ROOT / "docs" / "PRAP_Manifest.json").read_text())

@@ -40,13 +40,6 @@ function stdFactor(M, proj, periodName, roleName){
       ?? M.rf[[...k, ANY_SCOPE, periodName, roleName]];
 }
 
-/* V-25's table. outsourcing_type predates work_scope_type and says something close to
-   the same thing; only the two unambiguous ends are worth checking, because 'Partial
-   outsourcing' is compatible with more than one scope and a warning nobody can act on
-   is a warning everybody learns to ignore. */
-const SCOPE_AGREES = {"Full outsourcing":"fully outsourced",
-                      "Full In-house":"fully in-housed"};
-
 function buildModel(sheets){
   const F = [];
   for (const s of REQUIRED_SHEETS){
@@ -185,7 +178,7 @@ function validate(M, F){
         `Project ${pid} is a clinical trial with no clinical_phase, so its periods cannot be weighted.`);
     if (isCT) for (const c of ["EDC_setup","DataReviewSystem_setup","RBQM_setup"])
       if (p[c] === null) add("warning","V-10","Project",p.__row,`Project ${pid} has no ${c} recorded.`);
-    for (const [col,list] of [["project_type","project_type"],["outsourcing_type","outsourcing_type"],
+    for (const [col,list] of [["project_type","project_type"],
                               ["work_scope_type","work_scope_type"],
                               ["status","project_status"],["clinical_phase","clinical_phase"]]){
       const v = p[col];
@@ -202,16 +195,12 @@ function validate(M, F){
         `Project ${pid}: project_type '${p.project_type}' was split in schema 6. Change it to `
         + `${RETIRED_TYPES[p.project_type]} — and change the matching rows on `
         + `PeriodWeightStandard and RoleFactor too.`);
-    /* V-25: two columns on the same axis, and only one of them is used. outsourcing_type
-       predates work_scope_type and stays for the sake of files that carry it, so the one
-       thing worth checking is that they do not say opposite things - a project marked
-       'Full In-house' and 'fully outsourced' is a slip, and the weights would quietly
-       follow the field nobody was looking at. */
-    const want = SCOPE_AGREES[p.outsourcing_type];
-    if (want && p.work_scope_type && p.work_scope_type !== want)
-      add("warning","V-25","Project",p.__row,
-        `Project ${pid}: outsourcing_type says '${p.outsourcing_type}' but work_scope_type says `
-        + `'${p.work_scope_type}'. The weights follow work_scope_type; check which is right.`);
+    /* V-25 was here, and is RETIRED at schema 7. It reported a project whose
+       outsourcing_type contradicted its work_scope_type - a check that existed only
+       because two columns sat on the same axis and just one of them drove the weights.
+       outsourcing_scope_det is free text now: there is nothing left to contradict, and
+       a rule that can no longer fire is a rule to remove rather than to leave standing
+       and unexplained. */
   }
 
   // V-11 / V-20 / V-21 on milestones

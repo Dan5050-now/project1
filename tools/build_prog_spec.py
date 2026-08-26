@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.3"
+DOC_VERSION = "1.4"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.29.xlsx"
+PLAN = "PRAP_Development_Plan_v2.30.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -123,7 +123,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Governing document", f"{PLAN} - APPROVED BASELINE, Dan 2026-08-02"),
-    ("Schema version specified", "6"),
+    ("Schema version specified", "7"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -193,6 +193,16 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.4", "2026-08-25", "Claude Code", "Dan",
+         "R-16, SCHEMA 7. outsourcing_type becomes outsourcing_scope_det and becomes FREE "
+         "TEXT - a note for a person, never read by the calculation. V-25 is RETIRED: it "
+         "existed only to police two controlled vocabularies on the same axis, and there "
+         "is now only one. Sheet 04 records the retirement rather than dropping the row, "
+         "because a rule id that vanishes leaves a reader wondering whether they have an "
+         "old document. Sheet 03 gains the RENAMED-COLUMN rule: a workbook carrying the "
+         "old name is read, its values moved across, and the reader told once - a rename "
+         "is the one schema change that otherwise loses a filled-in column in silence. "
+         "Written against plan v2.30.", "Issued"],
         ["1.3", "2026-08-25", "Claude Code", "Dan",
          "R-15, REQ-CAL-15: both assignment dates are optional and a blank one means the "
          "project's own, so an assignment with neither runs for the whole project. Sheet "
@@ -414,6 +424,22 @@ r = note(ws, r, "A note column that is absent is not an error - it is optional o
                 "fail because someone deleted a column they were not using.")
 r += 1
 
+r = section(ws, r, "Renamed columns   [R-16]")
+r = lines(ws, r, [
+    "A rename is the one schema change that can lose data in SILENCE. The old column is",
+    "read, assigned to a key nothing looks at, and the new column comes back empty: the file",
+    "still opens, every rule still passes, and the value is simply gone.",
+    "",
+    "So both readers translate the header on the way in, and the reader is told once:",
+    "",
+    "    schema 6 -> 7    Project.outsourcing_type  ->  Project.outsourcing_scope_det",
+    "",
+    "This is not leniency about the schema - the workbook is still expected to be the current",
+    "one, and V-09 still reports the version mismatch. It is refusing to be the reason",
+    "somebody loses a column they filled in last week.",
+])
+r += 1
+
 r = section(ws, r, "The delivered default assumptions   [R-14]")
 r = lines(ws, r, [
     "PeriodWeightStandard and RoleFactor are DELIVERED FILLED IN - 84 and 429 rows. They used",
@@ -441,7 +467,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "6", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "7", "Compared with the version this application expects (sheet 08)."],
     ["split_shared_role_fte", "Integer", "1", "1 = the role factor is divided between the people sharing a role in a month (sheet 05). 0 = each carries the whole factor, the arithmetic of every version before this one. A switch, not a threshold - so the Config reader must distinguish a value of 0 from an absent value, which is the defect this setting exposed."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
     ["over_allocation_fte", "Decimal", "1.50", "Absolute, not scaled by capacity_fte (S2-01). See sheet 05."],

@@ -17,8 +17,8 @@ docProps/core.xml, so the container differs while the data does not.
 
 Two sizes are produced, from one generator driven by PROFILES:
 
-    Dummy_v1.10        50 clinical trials + 12 'Others', 20 people - the review set
-    Dummy_10x10_v1.2    8 clinical trials +  2 'Others', 10 people - small enough to
+    Dummy_v1.11        50 clinical trials + 12 'Others', 20 people - the review set
+    Dummy_10x10_v1.3    8 clinical trials +  2 'Others', 10 people - small enough to
                         read every row and check the arithmetic by hand
 
 Both are built to exercise the rules rather than merely fill cells: interim DB locks
@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 6
-TEMPLATE_VERSION = "1.8"
-DUMMY_VERSION = "1.10"
-DUMMY_SMALL_VERSION = "1.2"
+SCHEMA_VERSION = 7
+TEMPLATE_VERSION = "1.9"
+DUMMY_VERSION = "1.11"
+DUMMY_SMALL_VERSION = "1.3"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -77,7 +77,6 @@ LISTS = [
     # the list from the file, so a category of your own needs no code change.
     ("work_scope_type", ["fully in-housed", "fully outsourced",
                          "Partially outsourced (in-house for EDC)"]),
-    ("outsourcing_type", ["Full outsourcing", "Partial outsourcing", "Full In-house"]),
     ("setup_party", ["by CRO", "by SB"]),
     ("EDC_system", ["Veeva EDC", "Rave", "eSOURCE"]),
     ("DataReviewSystem", ["Veeva DQS", "Medidata CDS", "No system (manual)"]),
@@ -236,7 +235,7 @@ SHEETS = {
         ("project_category", "Product name. Required for either clinical trial type.", ""),
         ("clinical_phase", "Required for any clinical trial type - with the type and the work scope it selects the period weights.", ""),
         ("work_scope_type", "How much of the work is done in-house. With the type and phase it selects the standard weights and role factors.", ""),
-        ("outsourcing_type", "Full / Partial outsourcing, or Full In-house. Descriptive - work_scope_type is what the weights are keyed on.", ""),
+        ("outsourcing_scope_det", "FREE TEXT. What is outsourced and to whom, in your own words - the detail behind work_scope_type. Read by people, never by the calculation.", ""),
         ("EDC_setup", "Who sets up EDC. Clinical trial types only.", ""),
         ("DataReviewSystem_setup", "Who sets up the data review system.", ""),
         ("RBQM_setup", "Who sets up RBQM.", ""),
@@ -339,8 +338,7 @@ DATE_COLS = {
 # Dropdown bindings: sheet -> {column: list_name}
 DROPDOWNS = {
     "Project": {"project_type": "project_type", "clinical_phase": "clinical_phase",
-                "work_scope_type": "work_scope_type",
-                "outsourcing_type": "outsourcing_type", "EDC_setup": "setup_party",
+                "work_scope_type": "work_scope_type", "EDC_setup": "setup_party",
                 "DataReviewSystem_setup": "setup_party", "RBQM_setup": "setup_party",
                 "DM_conduct": "setup_party", "EDC_system": "EDC_system",
                 "DataReviewSystem": "DataReviewSystem", "RBQM_system": "RBQM_system",
@@ -571,13 +569,20 @@ def dummy_data(prof):
     PHASES = ["Phase 1", "Phase 2", "Phase 3", "Phase 4"]
     CLINICAL_PERIODS = [v for k, v in LISTS if k == "period_name_clinical"][0]
     OTHER_PERIODS = [v for k, v in LISTS if k == "period_name_others"][0]
-    OUTSOURCING = ["Full outsourcing", "Partial outsourcing", "Full In-house"]
-    # Schema 6. Kept in step with OUTSOURCING at the same index so the fixture never
-    # trips V-25, which reports a project whose two scope fields contradict each other.
+    # Schema 7: work_scope_type is the calculation's field, and the old outsourcing_type
+    # has become outsourcing_scope_det - free text, for a person to read. The fixture
+    # writes a sentence rather than a code, because a free-text field filled with three
+    # repeating values would be a value list wearing a disguise, and nobody would
+    # discover it was free text until they tried to type something else.
     WORK_SCOPE = [v for k, v in LISTS if k == "work_scope_type"][0]
-    SCOPE_FOR = {"Full outsourcing": "fully outsourced",
-                 "Partial outsourcing": "Partially outsourced (in-house for EDC)",
-                 "Full In-house": "fully in-housed"}
+    SCOPE_DET = {
+        "fully outsourced":
+            "Everything with the CRO: EDC build, data review and reporting.",
+        "Partially outsourced (in-house for EDC)":
+            "EDC built and maintained in-house; data review and listings with the CRO.",
+        "fully in-housed":
+            "All data management in-house. No CRO on this study.",
+    }
     PARTY = ["by CRO", "by SB"]
     EDC = ["Veeva EDC", "Rave", "eSOURCE"]
     DRS = ["Veeva DQS", "Medidata CDS", "No system (manual)"]
@@ -613,9 +618,9 @@ def dummy_data(prof):
             # 'Full In-house') and a pair that cannot (either biosimilar with it), so
             # "a combination that matches nothing" is a real case rather than a hope.
             pid, f"{product[:3].upper()}-{100 + n} {phase}", CT_TYPES[n % 3], product, phase,
-            SCOPE_FOR[OUTSOURCING[2 - n % 3]],
-            OUTSOURCING[2 - n % 3], PARTY[n % 2], PARTY[(n + 1) % 2], PARTY[n % 2],
-            PARTY[(n + 1) % 2],
+            WORK_SCOPE[n % 3],
+            SCOPE_DET[WORK_SCOPE[n % 3]],
+            PARTY[n % 2], PARTY[(n + 1) % 2], PARTY[n % 2], PARTY[(n + 1) % 2],
             EDC[n % 3], DRS[n % 3], RBQM[n % 3],
             rng.randint(3, 8), start, end,
             ["Planned", "Active", "Active", "Active", "On hold", "Completed"][n % 6],
@@ -644,7 +649,7 @@ def dummy_data(prof):
         months = rng.choice([6, 9, 12, 18])
         projects.append((
             pid, f"{OT_NAMES[n - N_CT - 1]}",
-            "Others", "", "", SCOPE_FOR[OUTSOURCING[n % 3]], OUTSOURCING[n % 3],
+            "Others", "", "", WORK_SCOPE[n % 3], SCOPE_DET[WORK_SCOPE[n % 3]],
             "", "", "", "", "", "", "",
             rng.randint(2, 5), start, start + rd(months=months) - timedelta(days=1),
             ["Planned", "Active", "Active", "Completed"][n % 4],
@@ -1036,6 +1041,19 @@ def add_readme(wb, kind, facts=None):
         "",
         "   'Others' projects have no milestones. Their period dates and weights are both typed in.",
         "",
+        "WORK SCOPE, AND THE NOTE BESIDE IT",
+        "   work_scope_type is the field the CALCULATION reads: with the project type and the phase",
+        "   it selects the standard weights and the role factors. It is a value list, so it has to be",
+        "   one of a known set.",
+        "",
+        "   outsourcing_scope_det beside it is FREE TEXT and is read by people only. Write what is",
+        "   actually outsourced and to whom - the detail the category cannot carry. Nothing you write",
+        "   there changes a single figure.",
+        "",
+        "   It replaces outsourcing_type, which was a value list and is gone at schema 7. A workbook",
+        "   still carrying that column is read: its values are moved across, and the application says",
+        "   so once.",
+        "",
         "ASSIGNMENT DATES ARE OPTIONAL",
         "   Leave assign_start_date and assign_end_date BLANK for somebody who is on the project for",
         "   the whole of it - which is most people. A blank date means the project's own, so the two",
@@ -1177,7 +1195,7 @@ def build(kind):
         examples = {
             "Project": ["PRJ-001", "ONV-101 First-in-human", "NewDrug CT", "Onvelaris", "Phase 1",
                         "Partially outsourced (in-house for EDC)",
-                        "Partial outsourcing", "by SB", "by SB", "by CRO", "by SB", "Veeva EDC",
+                        "EDC in-house; review with the CRO", "by SB", "by SB", "by CRO", "by SB", "Veeva EDC",
                         "Veeva DQS", "CluePoints", 5, date(2025, 10, 1), date(2027, 6, 30), None,
                         "Active", "example row - delete before use", None, None, None, None],
             "Milestone": ["PRJ-001", None, "CTA submission", date(2026, 1, 15), 2, "example row - delete before use"],

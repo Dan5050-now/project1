@@ -20,7 +20,10 @@ function activeProjects(){
   for (const [pid, p] of Object.entries(M.projects)){
     if (!anyOf(S.f.type, p.project_type)) continue;
     if (!anyOf(S.f.phase, p.clinical_phase)) continue;
-    if (!anyOf(S.f.out, p.outsourcing_type)) continue;
+    // Schema 7: the scope filter follows work_scope_type, the field the calculation
+    // reads. outsourcing_scope_det replaced outsourcing_type and is free text - a
+    // drop-down built from whatever sentences people have typed is not a filter.
+    if (!anyOf(S.f.out, p.work_scope_type)) continue;
     if (!anyOf(S.f.proj, pid)) continue;
     if (S.f.pers.size && !M.assignments.some(a => a.project_id === pid && S.f.pers.has(a.person_id)))
       continue;
