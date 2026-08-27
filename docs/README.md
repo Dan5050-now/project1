@@ -36,8 +36,8 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 
 | Document | Version | Status | Next |
 |---|---|---|---|
-| TEA-PLAN-001 Development Plan | 1.1.0 | **APPROVED**, amended 2026-08-22 | — |
-| TEA-SPEC-001 Programming Specification | 2.2.0 | **APPROVED**, amended 2026-08-22 | — |
+| TEA-PLAN-001 Development Plan | 1.2.0 | **APPROVED**, amended 2026-08-22 | — |
+| TEA-SPEC-001 Programming Specification | 2.3.0 | **APPROVED**, amended 2026-08-22 | — |
 | Rule catalog | 2.0.0 | **FROZEN** 2026-08-21 | Unchanged by the v2.1.0 amendment |
 | Concept overview (HTML + PPTX) | — | Current | Regenerate when the plan or spec changes |
 
@@ -59,8 +59,15 @@ rather than marked individually. Step 3 is what makes that basis workable — th
 dataset tests all 83 live rules against a signed-off expected finding list, confirming the
 detail by evidence rather than by reading.
 
-**Step 3 is blocked on one decision: choosing the pilot study** (OI-03). It determines the
-golden dataset and the UAT study.
+**Step 3 is blocked on OI-05**, not OI-03: the de-identified Veeva export and structured CRF
+specification. That was an entry criterion for Step 2 and was never delivered — Step 2 closed on
+the strength of the rule review alone. Step 3 needs it more, because the synthetic dataset has to
+be shaped like an actual CRF, and TE-BL-011 and TE-FU-001 are CONDITIONAL on whether the sum is
+site-entered.
+
+**OI-03 (pilot study) has been restated**: its weight is on Step 6 UAT. The Step 3 dataset is
+curated and synthetic, so it can — and should — seed both RECIST 1.1 and iRECIST cases whichever
+study is eventually picked.
 
 ## Language model
 
@@ -78,11 +85,15 @@ budget was assumed at OQ-03 against a generic gateway and was never checked agai
 The specification's **GLM_Verification** sheet (TEA-GLM-001) is the 20-item checklist to take to
 the platform team, ordered by what breaks if the answer differs from what was assumed.
 
-One item on it is blocking rather than informational: **B2**. `P-INTAKE-PROTOCOL` (AC-11) takes
-the protocol and imaging charter as input, and an oncology protocol runs 100–200 pages — very
-roughly 60k–150k tokens before the charter. If the deployment's input context is near 32k, that
-prompt cannot work as specified and AC-11 needs section-targeted retrieval or chunking. That is
-a design change, not a configuration value.
+**B2 is deferred** — it cannot be tested at this stage, so it is carried as a checkpoint with a
+mitigation already accepted: condense the protocol to a bounded extract before AC-11 sees it,
+prepared separately or by hand. The specification lists **what must survive that condensation**
+(P1–P18, with the protocol section that normally carries each), because condensing to a list is
+checkable and condensing to a summary is not.
+
+That mitigation introduces one risk, handled by **FR-21**: a missing parameter is silent where a
+truncation error is loud. AC-11 must now record whether each parameter was *found* — with its
+location — or *defaulted because it was not found*, and show the two differently at intake.
 
 Steps 3–6 (prototype output, UI design, code generation, final application) are gated on
 approval of the specification.

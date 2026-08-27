@@ -3,6 +3,31 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## [Plan 1.2.0 / Spec 2.3.0] — 2026-08-22 — protocol extract mitigation
+
+### B2 deferred, and mitigated
+- The protocol-volume question cannot be tested at this stage. Carried as a checkpoint rather
+  than left open, with the mitigation accepted: condense the protocol to a bounded extract
+  before AC-11 sees it. Nothing on the GLM checklist now blocks Step 3.
+
+### The risk the mitigation introduces, and FR-21
+- A truncation error is loud; a **missing parameter is silent**. AC-11 would propose the
+  guideline default, the user would confirm a plausible-looking checkpoint, and the study would
+  run on a threshold the protocol never specified.
+- **FR-21 added**: AC-11 must record for every parameter whether it was found in the source,
+  with its location, or defaulted because it was not found, and show the two differently at the
+  intake screen.
+- The specification lists **P1–P18** — what must survive the condensation, with the section that
+  normally carries each. P15–P17 are expected to be absent, being the interpretation decisions.
+
+### Open items restated
+- **OI-05 escalated to blocking.** Entry criterion for Step 2, never delivered; Step 2 closed on
+  the rule review alone. Step 3 needs it more — the synthetic dataset must be shaped like an
+  actual CRF, and TE-BL-011 / TE-FU-001 are CONDITIONAL on whether the sum is site-entered.
+- **OI-03 restated as Before Step 6.** The Step 3 dataset is synthetic and can seed both
+  RECIST 1.1 and iRECIST cases regardless of the pilot choice — and should, since the 10 iRECIST
+  rules are least likely to be exercised by a RECIST 1.1 study and most likely to be wrong.
+
 ## [Spec 2.2.0] — 2026-08-22 — GLM verification checklist
 
 ### Added
