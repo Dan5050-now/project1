@@ -157,7 +157,7 @@ with sync_playwright() as pw:
           f"blocking rules present: {sorted(set(st['blocking'])) or 'none'}")
 
     # Save must go through - the row is incomplete in its assumptions, not invalid - but
-    # since R-21 it ASKS first, naming what will be left unresolved. Refusing and asking
+    # since R-25 it ASKS first, naming what will be left unresolved. Refusing and asking
     # are different answers, and this is the asking one.
     pg.click("#saveBtn")
     pg.wait_for_timeout(900)
