@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.1"
+VERSION = "1.2"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,24 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.2
+
+  * A SETTING CAN NO LONGER BE DELETED BY MISTAKE. The Configuration table has
+    lost its 'Delete' and '+ row' buttons. The nine settings are read by name, so
+    a new row would be read by nothing - and a deleted one used to hand its figure
+    silently to a built-in default. On a test plan with the under-allocation floor
+    set to 0.80 and the shared-role division turned off, deleting those two rows
+    moved the total by 10 FTE-months and said nothing at all. What you change here
+    is a VALUE, and every value cell is still as editable as any other.
+  * And if a workbook arrives WITHOUT one - hand-edited, or made by an older
+    version - the report now says so, and names the default being used instead of
+    it (V-30). Information only; nothing is refused.
+  * The note on capacity_unit was wrong. It named 'percent', which this program has
+    never understood. FTE is a WEIGHT: 1.00 is one person working a full month, so
+    ordinary values run about 0.1 to 1.0; 'hours' is that same weight multiplied by
+    fte_hours_per_month. Template v1.11 carries the corrected note.
+
 
 WHAT IS NEW IN 1.1
 

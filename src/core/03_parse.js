@@ -197,6 +197,11 @@ const HELP = {
     + "Give them dates that run one after another with no gap: a month in no period is "
     + "calculated at weight 1.00 (V-12), and the project's own window is the span its "
     + "periods cover (REQ-CAL-17).",
+  fixedrows:"<b>A fixed set of rows</b><br>Configuration settings are read BY NAME, so this "
+    + "table's rows cannot be added to or removed - a new row would be read by nothing, and a "
+    + "missing one hands that figure to the program's own built-in default without saying so "
+    + "(V-30 reports it if a file arrives without one). What you change here is a VALUE: click "
+    + "the value cell and type, like any other cell.",
   del:"<b>Delete this row</b><br>Refused if anything still references it, naming what does (V-17). "
     + "A delete is never cascaded. Provisional like any other change — 'Leave without change' puts it back.",
 };

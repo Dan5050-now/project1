@@ -25,7 +25,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEMO = (ROOT / "app" / "PM_APP_Prototype_v0.3.html").as_uri()
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.12.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.13.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 fails = []

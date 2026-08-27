@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.8"
+DOC_VERSION = "1.9"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.34.xlsx"
+PLAN = "PRAP_Development_Plan_v2.35.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,17 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.9", "2026-08-27", "Claude Code", "Dan",
+         "R-26: the parse contract's row for capacity_unit named 'percent', which the "
+         "application has never implemented - anything that is not 'hours' displays as "
+         "FTE. The row now names the two real values and says what the unit means: FTE "
+         "is a WEIGHT, 1.00 being one person for a full month, so ordinary values run "
+         "about 0.1 to 1.0. R-27: sheet 04 gains V-30, and sheet 06 records that the "
+         "Configuration table offers neither 'Delete' nor '+ row' - its nine settings are "
+         "read BY NAME, so a new row is read by nothing and a deleted one hands its figure "
+         "to a built-in default without saying so. What a user changes there is a VALUE, "
+         "and the value cell stays as editable as any other. Written against plan v2.35.",
+         "Issued"],
         ["1.8", "2026-08-27", "Claude Code", "Dan",
          "R-21 to R-25, all in the application rather than the arithmetic - no figure "
          "moves. Sheet 04 gains the RULE CLASS: must / conditional / incomplete, what "
@@ -509,7 +520,7 @@ cfg = [
     ["under_allocation_fte", "Decimal", "0.60", "Absolute, not scaled by capacity_fte. Moved from 0.80 at S2-05. See sheet 05."],
     ["under_allocation_min_months", "Integer", "3", "Consecutive months before a run is flagged."],
     ["default_horizon_months", "Integer", "24", "Months shown on opening."],
-    ["capacity_unit", "List", "FTE", "'FTE' or 'percent'."],
+    ["capacity_unit", "List", "FTE", "'FTE' or 'hours'. FTE is a WEIGHT - 1.00 is one person for a full month, so ordinary values run about 0.1 to 1.0; 'hours' multiplies it by fte_hours_per_month. Anything else displays as FTE. 'percent' was named in the contract until v1.9 and was never implemented."],
 ]
 r = table(ws, r, ["parameter", "Type", "Default", "Use"], cfg, [30, 12, 12, 86], wrap_cols=(4,))
 r = note(ws, r, "schema_version stepped from 3 to 4 at R-10 (RoleFactor gained two columns), from 4 to 5 at "

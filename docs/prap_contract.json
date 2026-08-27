@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.32",
+  "version": "1.33",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -24,12 +24,12 @@
  },
  "schema_version": 8,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.34.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.8.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.35.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.9.xlsx",
   "ui_component_list": "docs/PRAP_UI_Component_List_v1.0.xlsx",
-  "source_data_template": "templates/PRAP_SourceData_Template_v1.10.xlsx",
-  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.12.xlsx",
-  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.4.xlsx",
+  "source_data_template": "templates/PRAP_SourceData_Template_v1.11.xlsx",
+  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.13.xlsx",
+  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.5.xlsx",
   "agent_guide": "docs/PRAP_AI_Agent_Guide.md"
  },
  "sheets": {
@@ -866,7 +866,7 @@
   },
   "capacity_unit": {
    "default": "FTE",
-   "meaning": "Display unit: 'FTE' or 'percent'."
+   "meaning": "Display unit for the figures on screen. 'FTE' shows a WEIGHT: 1.00 is one person working a full month on the project and 0.50 is half of one, so ordinary values run about 0.1 to 1.0. 'hours' shows that same weight multiplied by fte_hours_per_month. Display only - it changes nothing that is stored, and no figure the calculation produces."
   },
   "absorb_unstaffed_role_factor": {
    "default": 1,
@@ -1173,6 +1173,14 @@
   "V-29": {
    "statement": "A role that carries a factor, that nobody holds on the project, and that nothing covers for.",
    "effect": "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct.",
+   "severity_reported_by_app": [
+    "information"
+   ],
+   "enforced_by_application": true
+  },
+  "V-30": {
+   "statement": "Config has no row for a setting the application reads, so its built-in default is in force. Reported for every such setting, naming the value being used.",
+   "effect": "Information - the file is not malformed and the application is doing the only sensible thing with it, so this is a note rather than a fault. It exists because the absence is otherwise INVISIBLE: every setting is read through a fallback, and the delivered values equal the defaults, so on a stock file nothing moves. A plan whose under-allocation floor had been set to 0.80, or whose shared-role division had been turned off to compare with last year, would revert the moment its row went missing - every dependent figure changing, and nothing on screen saying why. Since v2.35 the row cannot be DELETED in the application (the Config table offers neither '+ row' nor 'Delete', because each setting is read by name), so this now reports a hand-edited workbook or one from a version that predates the setting.",
    "severity_reported_by_app": [
     "information"
    ],

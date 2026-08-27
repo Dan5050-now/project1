@@ -19,6 +19,11 @@
   5. MUST vs CONDITIONAL vs INCOMPLETE. Severity says how wrong something is; the class
      says what the application may do about it. Must refuses. Conditional asks at Save
      and the user may force it. Incomplete reports and says nothing else.
+  6. A CONFIGURATION SETTING CANNOT BE DELETED, only changed. Nothing referenced a Config
+     row, so nothing refused a deletion and nothing reported one - and every setting is
+     read through a fallback, so a plan whose floor had been moved to 0.80 reverted to
+     0.60 with every dependent figure changing and nothing saying why. V-30 covers the
+     workbook that arrives without one.
 
     python tools/test_ui.py
 """
@@ -31,7 +36,7 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
-BIG = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.12.xlsx"
+BIG = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.13.xlsx"
 
 fails = []
 
@@ -307,6 +312,52 @@ with sync_playwright() as pw:
           "nothing for a warning, which never refused anything",
           f"{labels}")
     pg.evaluate("document.getElementById('report').close()")
+
+    # ---- 6. the Configuration table is a fixed set of rows -------------------
+    print("\n6. a setting cannot be deleted, only changed")
+    pg.click("text=General assumptions")
+    pg.wait_for_timeout(1300)
+    cfg = pg.evaluate("""() => {
+        const t = document.querySelector("table.data-t[data-sheet='Config']");
+        const other = [...document.querySelectorAll("table.data-t[data-sheet]")]
+          .filter(x => x.offsetParent && x.dataset.sheet !== 'Config');
+        return {rows: t.querySelectorAll('tbody tr').length,
+                del: t.querySelectorAll('[data-del]').length,
+                ins: t.querySelectorAll('[data-ins]').length,
+                editable: t.querySelectorAll(
+                  "td[data-col='value'][contenteditable='true']").length};}""")
+    check(cfg["rows"] == 9 and cfg["del"] == 0 and cfg["ins"] == 0,
+          "NEITHER 'Delete' NOR '+ row' IS OFFERED — the nine settings are read by name, "
+          "so there is nothing to add and nothing that should be removed",
+          f"{cfg['rows']} rows, {cfg['del']} delete, {cfg['ins']} insert")
+    check(cfg["editable"] == cfg["rows"],
+          "but every VALUE is still editable, which is what a user actually changes",
+          f"{cfg['editable']} of {cfg['rows']} value cells")
+
+    other = pg.evaluate("""() => { S.tab = 't-proj'; showTab('t-proj');
+        const t = document.querySelector("table.data-t[data-sheet='Project']");
+        return {del: t.querySelectorAll('[data-del]').length,
+                ins: t.querySelectorAll('[data-ins]').length};}""")
+    check(other["del"] > 0 and other["ins"] > 0,
+          "and every other table keeps both controls — this is Config, not a new rule "
+          "about tables in general",
+          f"Project: {other['del']} delete, {other['ins']} insert")
+
+    v30 = pg.evaluate("""() => {
+        const raw = S.model.raw.Config;
+        const keep = raw.map(r => ({...r}));
+        for (const p of ['under_allocation_fte', 'split_shared_role_fte'])
+          raw.splice(raw.findIndex(r => r.parameter === p), 1);
+        const m = rebuild();
+        const f = m.findings.filter(x => x.rule === 'V-30');
+        S.model.raw.Config = keep; rebuild(true);
+        return {n: f.length, sev: f[0] && f[0].sev, msg: (f[0] && f[0].msg) || ''};}""")
+    check(v30["n"] == 1 and v30["sev"] == "information"
+          and "under_allocation_fte = 0.6" in v30["msg"]
+          and "split_shared_role_fte = 1" in v30["msg"],
+          "V-30 REPORTS A SETTING THAT IS MISSING ANYWAY — from an older file or a "
+          "hand-edited one — and names the default now in force",
+          v30["msg"][:150] or "(nothing reported)")
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()

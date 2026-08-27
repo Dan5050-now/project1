@@ -331,6 +331,28 @@ function suggestionsFor(sheet, col, row){
 /** One editable table.
  *  `derived` maps a display-only column to a lookup - shown for context, never typed
  *  into, because the master row is the truth and V-13 exists to say so. */
+/* Sheets whose ROW SET is fixed by the schema, not by the user.
+ *
+ *  Config is the only one today. Its nine settings are read BY NAME - a tenth row nobody
+ *  reads does nothing, and a missing row silently hands the figure to a built-in default.
+ *  So there is nothing to add and nothing that should be removed: what a user changes
+ *  here is a VALUE, and the value cell is as editable as any other.
+ *
+ *  Deleting one of them was the sharp edge. It could not be refused - nothing references
+ *  a Config row, so V-17 had no hold on it - and it raised nothing, so a plan whose
+ *  under-allocation floor had been moved to 0.80 would revert to 0.60 with every
+ *  dependent figure changing and nothing on screen saying why. Removing the control is a
+ *  better answer than confirming it: there was never a good reason to press it.
+ *
+ *  '+ row' goes with it, and for the same reason rather than for symmetry - offering a
+ *  way to create a row that can then never be removed would be a worse trap than the one
+ *  being closed. V-30 covers the case where a row is missing anyway, from an older file
+ *  or a hand-edited one. */
+const FIXED_ROWS = new Set(["Config"]);
+const FIXED_ROWS_WHY = "These settings are a fixed set — change a value, and it applies "
+  + "everywhere. Rows cannot be added or removed: each one is read by name, so a new row "
+  + "would do nothing and a missing one would hand the figure to a built-in default.";
+
 function dataTable(sheet, rows, cols, selKey, selVal, derived, lock){
   derived = derived || {};
   const head = `<th class="ins" data-tip="${att(HELP.rowactions)}">Row</th>`
@@ -369,16 +391,22 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock){
         + `data-row="${r.__row}" data-col="${att(c)}" data-tip="${att(tip)}">${esc(disp)}</td>`;
     }).join("");
     return `<tr${sel} data-id="${att(r[selKey] ?? "")}">`
-      + `<td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="${r.__row}"`
-      + ` data-tip="${att(HELP.insert)}">+ row</button>`
-      + `<button class="btn tiny danger" data-del="${att(sheet)}" data-row="${r.__row}"`
-      + ` data-tip="${att(HELP.del)}">Delete</button></td>${tds}</tr>`;
+      + (FIXED_ROWS.has(sheet)
+          ? `<td class="ins muted" data-tip="${att(HELP.fixedrows)}">&#8212;</td>`
+          : `<td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="${r.__row}"`
+            + ` data-tip="${att(HELP.insert)}">+ row</button>`
+            + `<button class="btn tiny danger" data-del="${att(sheet)}" data-row="${r.__row}"`
+            + ` data-tip="${att(HELP.del)}">Delete</button></td>`)
+      + `${tds}</tr>`;
   }).join("");
   // A locked table has a reason instead of a + row: a child row whose parent does not
   // exist yet has nothing to attach to, and would be dropped when the file is read back.
   // Saying so where the button would have been beats offering a button that creates a
   // row nobody can rescue.
-  const empty = rows.length ? "" : lock
+  const empty = rows.length ? "" : FIXED_ROWS.has(sheet)
+    ? `<tr><td class="ins muted">&#8212;</td>`
+      + `<td class="muted" colspan="${cols.length}">${esc(FIXED_ROWS_WHY)}</td></tr>`
+    : lock
     ? `<tr><td class="ins muted">—</td>`
       + `<td class="muted" colspan="${cols.length}">${esc(lock)}</td></tr>`
     : `<tr><td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="0" `

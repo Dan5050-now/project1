@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.34 records Step 4 progress, schema 8, the must/conditional/incomplete rule classes, the periods-are-the-project window, the absorption of an unstaffed role's factor and the delivered defaults |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.35 records Step 4 progress, schema 8, the fixed Config row set, the must/conditional/incomplete rule classes, the periods-are-the-project window and the absorption of an unstaffed role's factor |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -68,7 +68,7 @@ File API call at all** — Python reads the workbook and hands the bytes to the 
 `127.0.0.1`. `core/` and `ui/` are untouched, so there is still one engine.
 
 ```
-python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.1.zip, 138 KB
+python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.2.zip, 140 KB
 python tools/test_storage_py.py          # 80 checks — kills mid-save, an 8-process race
 python tools/test_python_app.py          # 42 checks — a live server, a real browser
 ```
@@ -218,8 +218,9 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.34.xlsx` — **current.** 77 requirements, 28 live
+- `docs/PRAP_Development_Plan_v2.35.xlsx` — **current.** 77 requirements, 29 live
   validation rules (V-25 and V-28 retired), source schema version 8. Carries changes
+  **R-26 / R-27 — the `capacity_unit` note and the fixed Config row set** (below),
   **R-21 to R-25 — the five review points** (the calendar, the period generator, the
   drawn scrollbars, the sticky band and the rule classes), **R-20 — the periods are the
   project** (`REQ-CAL-17`), **R-19 — the role/factor check reports without refusing**,
@@ -237,7 +238,7 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.8.xlsx` — **current specification.** Schema 8
+- `docs/PRAP_Programming_Specification_v1.9.xlsx` — **current specification.** Schema 8
   (the two-step lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
   through, the cross-data rules, the shared-role division with its worked
   reasoning, and where the delivered defaults come from.
@@ -718,7 +719,7 @@ document through the manifest rather than by sorting filenames.
   covering all 70 requirements. Sheet 10 records the six open points from the v0.3
   review, the answers given, and what each one changed. None open.
 
-- `templates/PRAP_SourceData_Template_v1.10.xlsx` — blank workbook: 10 sheets, headers,
+- `templates/PRAP_SourceData_Template_v1.11.xlsx` — blank workbook: 10 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README. Every sheet
   carries at least one free-text note column (schema version 8). `PeriodWeightStandard`
   and `RoleFactor` arrive **filled in** with the same delivered defaults the application
@@ -732,14 +733,14 @@ document through the manifest rather than by sorting filenames.
   inserting, deleting and sorting rows all still work. Only adding or removing *columns*
   is blocked, because the column set is the schema. The application's export writes the
   same locks, so the guard rail survives a round trip.
-- `templates/PRAP_SourceData_Dummy_v1.12.xlsx` — the same structure populated with
+- `templates/PRAP_SourceData_Dummy_v1.13.xlsx` — the same structure populated with
   **16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12
   `Others` projects and 20 people** (277 assignments, 372 milestones, 308 periods
   across 73 months). It carries **252 `PeriodWeightStandard` rows and
   849 `RoleFactor` rows** — a baseline set with `work_scope_type` empty, plus
   scope-specific rows for two of the three scopes, so the fallback is exercised by the
   fixture and not only by a unit test.
-- `templates/PRAP_SourceData_Dummy_10x10_v1.4.xlsx` — the same again at **10 projects
+- `templates/PRAP_SourceData_Dummy_10x10_v1.5.xlsx` — the same again at **10 projects
   and 10 people** (8 clinical trials + 2 `Others`, 48 assignments, 60 milestones,
   50 periods across 50 months): small enough to read every row on screen and check the
   arithmetic by hand. It is not a lighter test — it carries both clinical types, all
@@ -756,7 +757,7 @@ schema the other follows. The data is seeded: every sheet rebuilds byte-for-byte
 Validate any of them with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.4.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.5.xlsx
 ```
 
 And check the application against the reference implementation:
@@ -999,6 +1000,27 @@ Requires `openpyxl`.
   project's combination has no `PeriodWeightStandard` rows at all, not for any period.
   `V-29` is information rather than an error: a role that carries a factor, that nobody
   holds, and that nothing covers for — work the figures are counting nowhere.
+- **A configuration setting cannot be deleted, only changed** (R-27). Nothing references
+  a `Config` row, so `V-17` had no hold on a deletion and nothing refused it — and
+  nothing reported one either, because every setting is read through a fallback to a
+  built-in default. Measured on the 10×10 dummy with a house floor of 0.80 and the
+  shared-role division turned off, deleting those two rows moved the total from **356.64
+  to 346.59 FTE-months** and said nothing at all. The table now offers neither **Delete**
+  nor **+ row**: the nine settings are read *by name*, so a new row is read by nothing
+  and a missing one hands its figure to the program rather than the plan. What a user
+  changes there is a **value**, and every value cell stays as editable as any other.
+  `V-30` covers what the control is no longer responsible for — a workbook that arrives
+  without a setting, hand-edited or from a version predating it, is told which default is
+  in force. Information severity: the file is not malformed.
+- **`capacity_unit` says what the unit is** (R-26). The note read *"'FTE' or 'percent'"*
+  and `percent` has never been implemented — anything that is not `hours` displays as
+  FTE, so a user following the note would type a value, see nothing change, and have no
+  way of telling whether they or the setting was at fault. It now says FTE is a
+  **weight** — 1.00 is one person working a full month, so ordinary values run about
+  **0.1 to 1.0** — that `hours` is that weight times `fte_hours_per_month`, and that the
+  setting is display only. Corrected in the one place it is written and carried into the
+  template, both dummies, the blank start's seed, the plan, the specification and the
+  contract.
 - **Severity says how wrong; the class says what the application may do** (R-25,
   `REQ-IMP-13`). Three values, because there are three genuinely different situations:
   **must** — something is wrong with the row in front of you, and it is refused, on the

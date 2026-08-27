@@ -436,6 +436,34 @@ class Model:
         self.SPLIT = cfg("split_shared_role_fte", 1) != 0
         self.ABSORB = cfg("absorb_unstaffed_role_factor", 1) != 0
 
+        # V-30: a setting the file does not carry at all. Every one of these is read
+        # through cfg(), which falls back to the figure below - so a missing row breaks
+        # nothing, and that is the danger: the value in force becomes the program's
+        # rather than the plan's, and the plan no longer records what it was.
+        defaults = [("over_allocation_fte", 1.50, "the over-allocation threshold"),
+                    ("under_allocation_fte", 0.60, "the under-allocation floor"),
+                    ("under_allocation_min_months", 3,
+                     "months below the floor before a run is reported"),
+                    ("fte_hours_per_month", 160, "hours equal to 1.00 FTE"),
+                    ("default_horizon_months", 24, "months shown when the dashboard opens"),
+                    ("capacity_unit", "FTE", "the display unit"),
+                    ("split_shared_role_fte", 1,
+                     "whether a shared role's factor is divided (REQ-CAL-14)"),
+                    ("absorb_unstaffed_role_factor", 1,
+                     "whether an unstaffed role's factor is absorbed (REQ-CAL-16)")]
+        absent = [d for d in defaults
+                  if self.config.get(d[0]) is None or self.config.get(d[0]) == ""]
+        if absent:
+            self.add("information", "V-30", "Config", "",
+                     "Config has no row for "
+                     + ", ".join(k for k, _, _ in absent)
+                     + ". The application is using its built-in default"
+                     + ("" if len(absent) == 1 else "s") + ": "
+                     + "; ".join(f"{k} = {v} ({what})" for k, v, what in absent)
+                     + ". Nothing is wrong with the file - but the value in force is the "
+                       "program's, not the plan's, and the plan no longer records what it "
+                       "was. Add the row back to state it explicitly.")
+
         sv = _as_num(self.config.get("schema_version"))
         if sv is None:
             self.add("warning", "V-09", "Config", "", "No schema_version in Config.")

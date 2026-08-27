@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.34"
+DOC_VERSION = "2.35"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -368,7 +368,34 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.34", "2026-08-27", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.35", "2026-08-27", "Claude Code", "Pending",
+     "R-26: THE NOTE ON capacity_unit WAS WRONG, and wrong in the way that matters - it "
+     "named a value the application has never understood. It read \"Display unit: 'FTE' "
+     "or 'percent'\"; the two values actually implemented are 'FTE' and 'hours', and "
+     "anything else, 'percent' included, silently displays as FTE. So a user following "
+     "the note would type a value, see nothing change, and have no way of telling "
+     "whether they had misunderstood the setting or the setting was broken. The note now "
+     "says what the unit IS: FTE is a WEIGHT, 1.00 being one person working a full month "
+     "on the project, so ordinary values run about 0.1 to 1.0 - and 'hours' is that same "
+     "weight multiplied by fte_hours_per_month. It also says the setting is display "
+     "only. Corrected in the one place it is written and carried from there into the "
+     "template, both dummy sets, the blank start's seed, this plan, the specification "
+     "and the machine-readable contract. Template v1.11, dummies v1.13 and v1.5. No code "
+     "and no figure changes. R-27, THE SAME REVIEW: the Configuration table no longer "
+     "offers 'Delete' - or '+ row'. Nothing references a Config row, so V-17 had no hold "
+     "on a deletion and nothing refused it; nothing reported it either, because every "
+     "setting is read through a fallback to a built-in default. Measured on the 10x10 "
+     "dummy with a house floor of 0.80 and the shared-role division turned off, deleting "
+     "those two rows moved the total from 356.64 to 346.59 FTE-months and said nothing "
+     "at all. Removing the control is a better answer than confirming it: there was never "
+     "a good reason to press it, since the nine settings are read BY NAME and what a user "
+     "changes is a VALUE, which stays as editable as any other cell. '+ row' goes with it "
+     "because a row that can be created but never removed is a worse trap than the one "
+     "being closed. New rule V-30 covers the case the control is no longer responsible "
+     "for: a workbook that arrives without a setting, hand-edited or from a version that "
+     "predates it, is told which default is in force.",
+     "Issued for review"],
+    ["2.34", "2026-08-27", "Claude Code", "Pending",
      "FIVE REVIEW POINTS, all about the application rather than the arithmetic - no "
      "figure moves. (1) R-21, REQ-IMP-12: A DATE COLUMN OFFERS A CALENDAR and stays "
      "typeable. Picking is what you want when the question is 'is the 14th a Tuesday'; "
@@ -1513,7 +1540,7 @@ cfg = [
     [f"{MARK_CHG}under_allocation_fte", "Person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity.", "0.60", "REQ-CAL-07"],
     [f"{MARK_NEW}under_allocation_min_months", "Consecutive months below the threshold before flagging.", "3", "REQ-CAL-07"],
     [f"{MARK_CHG}default_horizon_months", "Months shown on opening.", "24", "REQ-CAL-01"],
-    [f"{MARK_CHG}capacity_unit", "Display unit: 'FTE' or 'percent'.", "FTE", "REQ-CAL-08"],
+    [f"{MARK_CHG}capacity_unit", "Display unit for the figures on screen. 'FTE' shows a WEIGHT: 1.00 is one person working a full month on the project and 0.50 is half of one, so ordinary values run about 0.1 to 1.0. 'hours' shows that same weight multiplied by fte_hours_per_month. Display only - it changes nothing that is stored, and no figure the calculation produces. The value 'percent' was named here until v2.35 and was never implemented: anything other than 'hours' displays as FTE.", "FTE", "REQ-CAL-08"],
 ]
 r = table(ws, r, ["parameter", "Meaning", "Default value", "REQ-ID"],
           cfg, [30, 74, 16, 14], wrap_cols=(2,), mark_col=1)
@@ -1536,6 +1563,7 @@ rules = [
     [f"{MARK_NEW}V-27", "Every clinical trial's (project_type, clinical_phase, work_scope_type) has at least one row in PeriodWeightStandard - checked on the PROJECT, not on its periods.", "Error - V-19 is precise but only looks at periods a project actually has, so a project whose milestones are missing is never checked at all, and a combination that was never entered is reported once per period rather than once as the one thing that is wrong. This asks the blunter question first: is there any standard for this project at all. Without one, every period would be weighted 1.00."],
     [f"{MARK_CHG}V-28", "RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all.", "Retired - and deliberately not reinstated at a lower severity. What the rule SAID was true; what it did not account for was WHEN it said it. An error refuses the edit that raised it (REQ-IMP-09), and unlike V-23 this one did not need the project to have any periods - so it fired on a project still being built, which is exactly when assignments are being typed in. A user could not record who was on a project until the standing assumptions carried a factor for their role, which is backwards: the plan is the document being written, the assumptions are maintained separately. The gap is not denied - V-03 still refuses a role invalid for the project type, and V-23 still reports a role with no factor for a period the project spans, which is the same finding at the point where it can be acted on. The id is not reused."],
     [f"{MARK_NEW}V-29", "A role that carries a factor, that nobody holds on the project, and that nothing covers for.", "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct."],
+    [f"{MARK_NEW}V-30", "Config has no row for a setting the application reads, so its built-in default is in force. Reported for every such setting, naming the value being used.", "Information - the file is not malformed and the application is doing the only sensible thing with it, so this is a note rather than a fault. It exists because the absence is otherwise INVISIBLE: every setting is read through a fallback, and the delivered values equal the defaults, so on a stock file nothing moves. A plan whose under-allocation floor had been set to 0.80, or whose shared-role division had been turned off to compare with last year, would revert the moment its row went missing - every dependent figure changing, and nothing on screen saying why. Since v2.35 the row cannot be DELETED in the application (the Config table offers neither '+ row' nor 'Delete', because each setting is read by name), so this now reports a hand-edited workbook or one from a version that predates the setting."],
     [f"{MARK_CHG}V-25", "RETIRED at schema 7 (R-16). It reported a project whose work_scope_type contradicted its outsourcing_type.", "Retired - the rule existed only because two columns sat on the same axis and one of them drove the weights. outsourcing_scope_det is free text now, so there is nothing left to contradict. A rule that can no longer fire is removed rather than left standing and unexplained; the id is not reused."],
     [f"{MARK_NEW}V-26", "No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'.", "Error - reported as itself rather than as a generic unknown value, because the remedy is a choice the file cannot make on the user's behalf. Only they know whether the trial ran in healthy volunteers or in patients, and guessing would put a wrong weight on real work."],
     [f"{MARK_CHG}V-23", "Every (project_type, clinical_phase, work_scope_type, period_name, role_name) that a PERSON-MONTH ACTUALLY LOOKED UP has a RoleFactor row. Raised BY the calculation (R-19), grouped on that whole composition, and counted in person-months affected.", "Error, CLASS CONDITIONAL (R-25) - a factor missing for one period silently drops that stretch to 1.00, which is a wrong number rather than an obvious gap. Two things changed at R-19. It is keyed on the composition the lookup uses, and reported only where a figure was actually produced - asked off the sheets it walked every period of every project an assignment belonged to, so it demanded rows for periods nobody was ever booked into. And because it exists only after the arithmetic, it CANNOT REFUSE AN EDIT: it says the figures are short of an assumption, not that the row is wrong."],

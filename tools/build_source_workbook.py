@@ -40,9 +40,9 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 SCHEMA_VERSION = 8
-TEMPLATE_VERSION = "1.10"
-DUMMY_VERSION = "1.12"
-DUMMY_SMALL_VERSION = "1.4"
+TEMPLATE_VERSION = "1.11"
+DUMMY_VERSION = "1.13"
+DUMMY_SMALL_VERSION = "1.5"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -232,7 +232,7 @@ CONFIG = [
     ("under_allocation_fte", 0.60, "A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01)."),
     ("under_allocation_min_months", 3, "Consecutive months below the threshold before a run is flagged."),
     ("default_horizon_months", 24, "Months shown when the dashboard opens."),
-    ("capacity_unit", "FTE", "Display unit: 'FTE' or 'percent'."),
+    ("capacity_unit", "FTE", "Display unit for the figures on screen. 'FTE' shows a WEIGHT: 1.00 is one person working a full month on the project and 0.50 is half of one, so ordinary values run about 0.1 to 1.0. 'hours' shows that same weight multiplied by fte_hours_per_month. Display only - it changes nothing that is stored, and no figure the calculation produces."),
     ("absorb_unstaffed_role_factor", 1, "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by, because the work still has to be done by whoever is there. 0 = an unstaffed role simply costs nothing, which is how versions before this one behaved."),
     ("split_shared_role_fte", 1, "1 = when several people hold the same role on one project in a month, the role factor is divided between them. 0 = each is charged the whole factor, which is how versions before this one behaved."),
 ]

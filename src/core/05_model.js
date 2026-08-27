@@ -121,6 +121,40 @@ function buildModel(sheets){
   M.HOURS = cfg("fte_hours_per_month", 160);
   M.HORIZON = cfg("default_horizon_months", 24);
   M.UNIT = M.config.capacity_unit || "FTE";
+
+  /* V-30: a setting that is not in the file at all.
+     Every one of these is read through cfg(), which falls back to the figure below, so
+     a missing row breaks nothing - and that is precisely the danger. The delivered
+     values happen to EQUAL these defaults, so on a stock file nothing moves and the
+     absence is invisible; but a plan whose under-allocation floor had been set to 0.80,
+     or whose shared-role division had been turned off to compare with last year, would
+     quietly revert the moment its row went missing, with every figure that depends on
+     it moving and nothing on screen saying why. The row can go missing by being deleted,
+     by being trimmed out of a hand-edited workbook, or by arriving from an older file
+     that predates the setting.
+     Information rather than a warning: a file without the row is not malformed, and the
+     application is doing the only sensible thing with it. What was missing was any
+     record of WHICH figure is in force and where it came from. */
+  const DEFAULTS = [
+    ["over_allocation_fte", 1.50, "the over-allocation threshold"],
+    ["under_allocation_fte", 0.60, "the under-allocation floor"],
+    ["under_allocation_min_months", 3, "months below the floor before a run is reported"],
+    ["fte_hours_per_month", 160, "hours equal to 1.00 FTE"],
+    ["default_horizon_months", 24, "months shown when the dashboard opens"],
+    ["capacity_unit", "FTE", "the display unit"],
+    ["split_shared_role_fte", 1, "whether a shared role's factor is divided (REQ-CAL-14)"],
+    ["absorb_unstaffed_role_factor", 1, "whether an unstaffed role's factor is absorbed (REQ-CAL-16)"],
+  ];
+  const absent = DEFAULTS.filter(([k]) =>
+    M.config[k] === undefined || M.config[k] === null || M.config[k] === "");
+  if (absent.length)
+    F.push({sev:"information", rule:"V-30", sheet:"Config", row:"",
+      msg:`Config has no row for ${absent.map(([k]) => k).join(", ")}. `
+        + `The application is using its built-in default${absent.length === 1 ? "" : "s"}: `
+        + absent.map(([k, d, what]) => `${k} = ${d} (${what})`).join("; ")
+        + `. Nothing is wrong with the file — but the value in force is the program's, `
+        + `not the plan's, and the plan no longer records what it was. Add the row back `
+        + `to state it explicitly.`});
   /* Whether the role factor is divided between the people sharing a role. On by
      default, and a setting rather than a constant for one reason: it changes every
      figure a shared role ever produced, and somebody comparing this month's report
