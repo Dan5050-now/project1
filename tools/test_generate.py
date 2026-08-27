@@ -210,7 +210,11 @@ with sync_playwright() as pw:
           "and Leave without change undoes it like any other edit",
           f"{len(periods(pg, pid))} period row(s) after discarding")
 
-    # ---- 3. what it refuses --------------------------------------------------
+    # ---- 3. where the rule does not reach ------------------------------------
+    # A control that refuses every time it is pressed teaches the reader the feature is
+    # broken. So the derivation is not OFFERED where it can never run: an 'Others'
+    # project gets the generator that does fit it, and a trial that is not ready yet
+    # gets the button with the reason in its place - because that answer will change.
     other = dict(PROJECT, project_name="Rollout", project_type="Others")
     del other["clinical_phase"]
     add_row(pg, P, other)
@@ -218,12 +222,22 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(1700)
     pg.locator(f"{P} tbody tr[data-id='PRJ-002'] td[data-col='project_name']").first.click()
     pg.wait_for_timeout(900)
-    pg.click("[data-act='autoper']")
+    check(pg.locator("[data-act='autoper']").count() == 0
+          and pg.locator("[data-act='blankper']").count() == 1,
+          "an 'Others' project is not offered a derivation it can never run — it is "
+          "offered Standard periods instead",
+          f"autoper={pg.locator('[data-act=autoper]').count()}, "
+          f"blankper={pg.locator('[data-act=blankper]').count()}")
+
+    pg.click("[data-act='blankper']")
     pg.wait_for_timeout(1300)
-    banner = pg.inner_text("#banner")
-    check("Others" in banner and "clinical trial" in banner,
-          "an 'Others' project is refused, and told why the rule does not reach it",
-          banner.strip()[:100])
+    got = periods(pg, "PRJ-002")
+    check([n for _, n, _, _, _ in got] == ["Planning", "Develop", "Close"]
+          and all(s in (None, "") for _, _, s, _, _ in got),
+          "and Standard periods lays those three out with the dates blank, at weight 1.00",
+          f"{[(n, w) for _, n, _, _, w in got]}")
+    pg.evaluate("discardEdits()")
+    pg.wait_for_timeout(900)
 
     # A clinical trial whose milestones are listed but not yet dated: the rule needs
     # CTA submission and a DB lock, and neither has a date.
@@ -235,12 +249,13 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(900)
     pg.click("[data-act='blankms']")
     pg.wait_for_timeout(1300)
-    pg.click("[data-act='autoper']")
-    pg.wait_for_timeout(1300)
-    banner = pg.inner_text("#banner")
-    check("V-16" in banner and "CTA submission" in banner and "DB lock" in banner,
-          "and a trial whose milestones carry no dates yet names what is missing",
-          banner.strip()[:110])
+    btn = pg.locator("[data-act='autoper']")
+    tip = btn.get_attribute("data-tip") or ""
+    check(btn.count() == 1 and btn.is_disabled()
+          and "CTA submission" in tip and "DB lock" in tip,
+          "and a trial whose milestones carry no dates yet keeps the button, disabled, "
+          "naming what is missing — that answer changes as soon as two dates are typed",
+          f"disabled={btn.is_disabled()}; “{tip[:90]}…”")
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()

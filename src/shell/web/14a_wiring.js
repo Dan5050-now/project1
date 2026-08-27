@@ -58,11 +58,84 @@ function cueScrollers(){
       wrap.className = "cue";
       box.parentNode.insertBefore(wrap, box);
       wrap.appendChild(box);
+      wrap.appendChild(makeBar(box, "h"));
+      wrap.appendChild(makeBar(box, "v"));
       box.addEventListener("scroll", () => paintCue(box), {passive:true});
     }
     paintCue(box);
   }
 }
+
+/* ---------------------------------------------------------------- scroll bars
+   Drawn by the application, not by the browser.
+
+   Every one of these regions is deliberately bounded on both axes, and a bounded
+   region is only honest if the reader can SEE that there is more and reach it. The
+   browser was asked to do that twice and did not: `scrollbar-width:thin` produced an
+   overlay bar that occupies no layout space and fades out when idle, and dropping it
+   so that ::-webkit-scrollbar would apply did not help either - on a build that uses
+   overlay scrollbars the rule is ignored outright, and the bar measures zero however
+   it is styled. Measured here: a plain div with overflow:scroll and an explicit
+   ::-webkit-scrollbar height of 14px still reports offsetHeight - clientHeight === 0.
+
+   So the region keeps its native scrolling - wheel, trackpad, keyboard, shift-wheel -
+   the native bar is hidden, and this draws one that is always there while there is
+   anywhere to go. One appearance on every machine, and nothing to detect.
+
+   The bar is a child of the .cue wrapper rather than of the scrolling box, so it does
+   not scroll away with the content it describes. */
+function makeBar(box, axis){
+  const bar = document.createElement("div");
+  bar.className = "sbar " + axis;
+  const thumb = document.createElement("div");
+  thumb.className = "thumb";
+  bar.appendChild(thumb);
+  const horiz = axis === "h";
+  const pos = e => horiz ? e.clientX : e.clientY;
+  const span = () => horiz ? [box.scrollWidth, box.clientWidth] : [box.scrollHeight, box.clientHeight];
+  const at = () => horiz ? box.scrollLeft : box.scrollTop;
+  const to = v => { if (horiz) box.scrollLeft = v; else box.scrollTop = v; };
+
+  let from = null, was = 0;
+  const move = e => {
+    if (from === null) return;
+    const [sw, cw] = span();
+    const track = (horiz ? bar.clientWidth : bar.clientHeight) - 4;
+    const room = Math.max(1, track - thumbSize(sw, cw, track));
+    to(was + (pos(e) - from) * (sw - cw) / room);
+    e.preventDefault();
+  };
+  const up = () => {
+    from = null;
+    bar.classList.remove("dragging");
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+  };
+  thumb.addEventListener("pointerdown", e => {
+    from = pos(e); was = at();
+    bar.classList.add("dragging");
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    e.preventDefault(); e.stopPropagation();
+  });
+  // Clicking the track pages, the way a scrollbar has always done - and it is the
+  // half of a scrollbar people reach for when the thumb is small.
+  bar.addEventListener("pointerdown", e => {
+    if (e.target === thumb) return;
+    const r = bar.getBoundingClientRect();
+    const [, cw] = span();
+    const ahead = (horiz ? e.clientX - r.left : e.clientY - r.top)
+                > (horiz ? thumb.offsetLeft + thumb.offsetWidth / 2
+                         : thumb.offsetTop + thumb.offsetHeight / 2);
+    to(at() + (ahead ? cw : -cw));
+    e.preventDefault();
+  });
+  return bar;
+}
+function thumbSize(full, view, track){
+  return Math.max(28, Math.round(track * view / Math.max(1, full)));
+}
+
 function paintCue(box){
   const w = box.parentElement;
   if (!w || !w.classList.contains("cue")) return;
@@ -71,6 +144,28 @@ function paintCue(box){
   w.classList.toggle("r", x - box.scrollLeft > 1);
   w.classList.toggle("u", box.scrollTop > 1);
   w.classList.toggle("d", y - box.scrollTop > 1);
+
+  // A region that is hidden, or not laid out yet, measures zero on both axes - which
+  // is not the same statement as "everything fits", so no bar is drawn either way.
+  const live = box.clientWidth > 0 && box.clientHeight > 0;
+  const hOn = live && x > 1, vOn = live && y > 1;
+  w.classList.toggle("hbar", hOn);
+  w.classList.toggle("vbar", vOn);
+  for (const bar of w.children){
+    if (!bar.classList || !bar.classList.contains("sbar")) continue;
+    const horiz = bar.classList.contains("h");
+    bar.classList.toggle("on", horiz ? hOn : vOn);
+    if (!(horiz ? hOn : vOn)) continue;
+    const full = horiz ? box.scrollWidth : box.scrollHeight;
+    const view = horiz ? box.clientWidth : box.clientHeight;
+    const track = (horiz ? bar.clientWidth : bar.clientHeight) - 4;
+    const size = thumbSize(full, view, track);
+    const room = Math.max(1, track - size);
+    const off = 2 + room * (horiz ? box.scrollLeft : box.scrollTop) / Math.max(1, full - view);
+    const t = bar.firstChild;
+    if (horiz){ t.style.width = size + "px"; t.style.left = off + "px"; }
+    else      { t.style.height = size + "px"; t.style.top  = off + "px"; }
+  }
 }
 
 function renderKeepingTab(){
@@ -81,9 +176,13 @@ function showTab(id){
   for (const b of document.querySelectorAll("nav button"))
     b.setAttribute("aria-selected", String(b.dataset.tab === id));
   for (const s of document.querySelectorAll("section.tab")) s.hidden = (s.id !== id);
-  // A hidden pane measures zero, so its cues were computed against nothing. Redo them
-  // now that this one is on screen.
-  for (const box of document.querySelectorAll(`#${id} .scrollx`)) paintCue(box);
+  /* cueScrollers, not paintCue: a hidden pane measures zero, so its bars were sized
+     against nothing and have to be redone now it is on screen - and a render that did
+     not go through keepScroll leaves fresh .scrollx elements with no wrapper at all, so
+     there would be no bar to redo. Wrapping is idempotent and skips what is already
+     wrapped, which makes this the cheap way to be certain rather than a second path
+     that has to be kept in step with the first. */
+  cueScrollers();
 }
 
 const FILTER_KEY = {fType:"type", fPhase:"phase", fOut:"out", fProj:"proj",
@@ -206,7 +305,7 @@ function adopt(sheets, name, opts){
   }
   S.model = M; S.calc = calculate(M);
   S.fileName = name; S.loadedAt = new Date(); S.blank = !!opts.blank;
-  S.pending = []; S.saved = 0; S.snapshot = null;
+  S.pending = []; S.saved = 0; S.snapshot = null; S.baseFindings = M.findings.slice();
   S.editedCells.clear(); S.expanded.clear();
   S.selProj = null; S.selPers = null; S.selAsg = null;
   defaultHorizon();

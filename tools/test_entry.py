@@ -156,13 +156,22 @@ with sync_playwright() as pw:
           "neither half of the role/factor check can refuse an edit",
           f"blocking rules present: {sorted(set(st['blocking'])) or 'none'}")
 
-    # Save must go through: the row is incomplete in its assumptions, not invalid.
+    # Save must go through - the row is incomplete in its assumptions, not invalid - but
+    # since R-21 it ASKS first, naming what will be left unresolved. Refusing and asking
+    # are different answers, and this is the asking one.
     pg.click("#saveBtn")
+    pg.wait_for_timeout(900)
+    asked = pg.evaluate("document.getElementById('confirm').open")
+    listed = pg.locator("#cfBody tbody tr").count()
+    check(asked and listed >= 1,
+          "and SAVE ASKS rather than refusing — naming what will be left unresolved",
+          f"dialog open={asked}, {listed} item(s) listed")
+    pg.click("#cfYes")
     pg.wait_for_timeout(900)
     saved = pg.inner_text("#banner")
     st = read(pg)
     check(st["role"] == NEW_ROLE and "Saved" in saved,
-          "and SAVE keeps it, rather than refusing the whole batch",
+          "and 'Save anyway' keeps it, rather than refusing the whole batch",
           saved.strip()[:80])
 
     # ---- 2. V-23 is keyed on the composition, and counts what was calculated --------

@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.0"
+VERSION = "1.1"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,30 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.1
+
+  * DATES HAVE A CALENDAR. Click any date cell and a month opens beside it -
+    click a day and it is entered. You can still just type: the cell never stops
+    accepting keys, and what you type moves the calendar to that month.
+  * SCROLLBARS YOU CAN SEE AND DRAG. Wide tables and charts had more to the right
+    and nothing on screen said so, because the browser drew a bar that fades out
+    and takes up no space. The application now draws its own. The wheel and the
+    keyboard work exactly as before.
+  * THE BAR AT THE TOP NO LONGER SHOWS THE PAGE THROUGH IT. Scrolling used to
+    leave the rows underneath faintly visible behind the tabs, with a hairline
+    between the two bars. It is one solid strip now.
+  * ERRORS COME IN THREE KINDS, and the report says which is which:
+      must fix       something is wrong with the row itself. Refused, as before.
+      may keep       the row is fine, but something it depends on is missing, so
+                     the figures that need it are short an assumption. SAVE ASKS,
+                     lists exactly what will be left unresolved, and you decide.
+      still to come  the row is not finished yet. Reported, nothing asked.
+  * The period generator now offers what fits the project: 'Auto derivation' for
+    a trial, 'Standard periods' for an 'Others' project - which lays out Planning
+    / Develop / Close with the dates blank. A trial that is not ready yet keeps
+    the derivation button, greyed, saying which two milestones it needs.
+
 
 WHAT IS NEW IN 1.0
 

@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.33 records Step 4 progress, schema 8, the periods-are-the-project window, the role/factor check that reports without refusing, the absorption of an unstaffed role's factor, the shared-role division and the delivered defaults |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.34 records Step 4 progress, schema 8, the must/conditional/incomplete rule classes, the periods-are-the-project window, the absorption of an unstaffed role's factor and the delivered defaults |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -68,7 +68,7 @@ File API call at all** — Python reads the workbook and hands the bytes to the 
 `127.0.0.1`. `core/` and `ui/` are untouched, so there is still one engine.
 
 ```
-python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.0.zip, 129 KB
+python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.1.zip, 138 KB
 python tools/test_storage_py.py          # 80 checks — kills mid-save, an 8-process race
 python tools/test_python_app.py          # 42 checks — a live server, a real browser
 ```
@@ -218,10 +218,12 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.33.xlsx` — **current.** 74 requirements, 28 live
+- `docs/PRAP_Development_Plan_v2.34.xlsx` — **current.** 77 requirements, 28 live
   validation rules (V-25 and V-28 retired), source schema version 8. Carries changes
-  **R-20 — the periods are the project** (`REQ-CAL-17`), **R-19 — the role/factor check
-  reports without refusing**, **R-18 — V-28 retired** (all below) and **R-17 — an
+  **R-21 to R-25 — the five review points** (the calendar, the period generator, the
+  drawn scrollbars, the sticky band and the rule classes), **R-20 — the periods are the
+  project** (`REQ-CAL-17`), **R-19 — the role/factor check reports without refusing**,
+  **R-18 — V-28 retired** (all below) and **R-17 — an
   empty post still costs the project** (`REQ-CAL-16`: a role that carries a factor and
   that nobody holds in a month has that factor added to whoever covers for it, named by
   `RoleFactor.absorbed_by`) and the cross-checks between the assumptions and the data
@@ -235,7 +237,7 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.7.xlsx` — **current specification.** Schema 8
+- `docs/PRAP_Programming_Specification_v1.8.xlsx` — **current specification.** Schema 8
   (the two-step lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
   through, the cross-data rules, the shared-role division with its worked
   reasoning, and where the delivered defaults come from.
@@ -997,6 +999,47 @@ Requires `openpyxl`.
   project's combination has no `PeriodWeightStandard` rows at all, not for any period.
   `V-29` is information rather than an error: a role that carries a factor, that nobody
   holds, and that nothing covers for — work the figures are counting nowhere.
+- **Severity says how wrong; the class says what the application may do** (R-25,
+  `REQ-IMP-13`). Three values, because there are three genuinely different situations:
+  **must** — something is wrong with the row in front of you, and it is refused, on the
+  cell edit and at Save. **conditional** — the row is sound but something it depends on
+  is missing, so the figures that need it are short an assumption; never refused, and at
+  Save the application **names every one this batch leaves unresolved and asks you to
+  confirm**. **incomplete** — the row is still being built and the finding will answer
+  itself; reported, never questioned, because a dialog every time you save a project you
+  are half way through typing would train you to click through it without reading. The
+  register is in the core, so the browser, the desktop shell and `prap_io` cannot
+  disagree, and every error carries its class wherever findings are listed.
+- **A date column offers a calendar, and stays typeable** (R-21, `REQ-IMP-12`). Picking
+  is what you want when the question is *is the 14th a Tuesday*; typing is what you want
+  on the twentieth row of a set you already know. So the panel is laid **beside** the
+  cell, never in front of it: the caret does not move, every key still reaches the cell,
+  and what you type steers the grid. Picking a day commits through the ordinary edit
+  path, so it is validated exactly like a typed one. Deliberately **not**
+  `<input type="date">`, which would mean one editing model for text cells and another
+  for dates — a different keyboard contract, a browser-dependent display format, and no
+  way to leave a date deliberately blank the way every other cell does.
+- **The application draws its own scrollbars** (R-23, `REQ-DSH-13`). A region capped on
+  both axes is only honest if the reader can see there is more and reach it, and the
+  browser's bar does not do that where overlay scrollbars are in use: it takes no layout
+  space and fades when idle, so a table with eleven columns off to the right looks
+  exactly like one with none. Measured — a plain div with an explicit 14px
+  `::-webkit-scrollbar` still reports `offsetHeight === clientHeight`. The drawn bar is
+  there whenever there is anywhere to go, can be dragged, and pages when its track is
+  clicked; wheel, shift-wheel, trackpad and keyboard are untouched.
+- **One sticky band, and opaque** (R-24). The edit bar and the tabs were independently
+  sticky, so the second had to know the height of the first — pinned at `top:60px`
+  against a bar measuring 58.75px that wraps to two rows on a narrow window — leaving a
+  hairline the page showed through and an outright overlap when it wrapped. They are one
+  container now, and solid: at 92% opacity the rows underneath ghosted through the text.
+- **A generator is only offered where it can run** (R-22). Auto derivation on an
+  `Others` project could only ever answer no — the rule hangs on CTA submission and the
+  DB locks, which an internal project does not have and never will — and a control that
+  refuses every time it is pressed teaches the reader the feature is broken. `Others`
+  now gets **Standard periods**, which lays out Planning / Develop / Close with the dates
+  blank; a trial that is not ready keeps the derivation, disabled, naming the two
+  milestones it needs, because that answer changes. The derivation itself was checked
+  across all 62 dummy projects: correct for all 50 trials.
 - **The periods are the project** (R-20, `REQ-CAL-17`). A project's window — what a
   blank assignment date means, and what the utilisation chart is drawn over — is the
   span of its `ProjectPeriod` rows: earliest `period_start` to latest `period_end`.

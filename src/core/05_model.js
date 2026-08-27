@@ -52,6 +52,49 @@ function absorbedInto(M, proj, periodName, roleName){
       ?? [];
 }
 
+/* ------------------------------------------------ what an error is allowed to do
+   Severity says how wrong something is. This says what the application may do about
+   it, and they are not the same question. Three answers, because there are three
+   genuinely different situations and collapsing any two of them costs something.
+
+   MUST         something is wrong with the ROW IN FRONT OF YOU, and it cannot be kept
+                as it stands: an assignment pointing at a project that does not exist,
+                a window that ends before it starts, an identifier used twice. Saving it
+                would put a record in the file that the file's own rules say cannot be
+                there. These REFUSE.
+
+   CONDITIONAL  the row is complete and correct; something it DEPENDS ON is not there.
+                A role with no factor in RoleFactor - a standing document, maintained
+                separately from the plan and often by somebody else. The figures that
+                need it are wrong, which is why these are still errors at full severity,
+                but the row is a true statement about the plan and refusing it puts the
+                two documents in the wrong order. These ASK: Save names them and the
+                user decides, and going ahead is a choice taken knowingly.
+
+   INCOMPLETE   the row is still being BUILT. A clinical trial has no periods until its
+                milestones are entered, and its milestones cannot be entered until it is
+                saved, because the milestone table hangs off a selected project. These
+                report, and say nothing else: asking would put a dialog in front of
+                somebody every time they save a project they are half way through
+                typing, and the answer would be yes every time. The banner already
+                carries them as "still to come", which is what they are.
+
+   Here in the core rather than in the screen that acts on it, because the desktop shell
+   and the reference implementations must classify a finding the same way the browser
+   does - and because the register in the plan is where a reader looks to find out which
+   of their errors will stop them. */
+const RULE_CLASS = {"V-03":"conditional", "V-23":"conditional",
+                    "V-12":"incomplete",  "V-16":"incomplete"};
+function ruleClass(rule){ return RULE_CLASS[rule] || "must"; }
+const isErr = f => f.sev === "error" || f.sev === "fatal";
+/** True when this finding refuses. Fatal is always must: the workbook could not be
+ *  read, so there is nothing to weigh up. */
+function refuses(f){ return isErr(f) && ruleClass(f.rule) === "must"; }
+/** An error the user may keep, having been asked. */
+function conditional(f){ return isErr(f) && ruleClass(f.rule) === "conditional"; }
+/** An error about a row that is not finished yet. Reported, never questioned. */
+function incomplete(f){ return isErr(f) && ruleClass(f.rule) === "incomplete"; }
+
 function buildModel(sheets){
   const F = [];
   for (const s of REQUIRED_SHEETS){
@@ -346,7 +389,7 @@ function validate(M, F){
        carry this role for this project's TYPE, at all. Worth keeping as well as V-23,
        because it catches a mistyped role name at once, where V-23 only speaks if the
        assignment actually reaches a period and draws FTE.
-       It reports; it does not refuse (R-19). See NEVER_REFUSES in 12_editing.js. */
+       It reports; it does not refuse (R-19) - see CONDITIONAL_RULES above. */
     const roles = M.rfRoles[proj.project_type];
     if (!roles || !roles.has(a.role_name))
       add("error","V-03","Assignment",a.__row,

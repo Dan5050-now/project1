@@ -133,6 +133,7 @@ document.addEventListener("click", e => {
     e.stopPropagation();
     if (act.dataset.act === "blankms") blankMilestones(act.dataset.pid);
     if (act.dataset.act === "autoper") autoPeriods(act.dataset.pid);
+    if (act.dataset.act === "blankper") blankPeriods(act.dataset.pid);
     return;
   }
   const ins = e.target.closest("[data-ins]");
@@ -203,7 +204,7 @@ document.addEventListener("click", e => {
 // showing for that cell.
 document.addEventListener("click", e => {
   const td = e.target.closest('td[contenteditable="true"]');
-  if (td) SUGG.open(td);
+  if (td){ SUGG.open(td); CAL.open(td); }
 });
 document.addEventListener("focusin", e => {
   const td = e.target.closest('td[contenteditable="true"]');
@@ -213,11 +214,17 @@ document.addEventListener("focusin", e => {
   // to the half-typed text instead of the value the cell started with.
   if (!SUGG.owns(td)) td.dataset.orig = td.textContent;
   SUGG.open(td);
+  CAL.open(td);
 });
 document.addEventListener("focusout", e => {
   const td = e.target.closest('td[contenteditable="true"]');
   if (!td) return;
-  setTimeout(() => { if (!SUGG.holding) SUGG.close(); }, 120);
+  /* Close on a delay, and only if the panel is still THIS cell's. Clicking straight
+     from one cell to the next opens the panel for the new one before this timer fires,
+     and an unconditional close would then shut the panel that had just been opened -
+     which looked exactly like "it only works every other click". */
+  setTimeout(() => { if (!SUGG.holding && SUGG.owns(td)) SUGG.close(); }, 120);
+  setTimeout(() => { if (!CAL.holding && CAL.owns(td)) CAL.close(); }, 120);
   const now = td.textContent;
   if (now === td.dataset.orig) return;
   applyEdit(td.dataset.sheet, +td.dataset.row, td.dataset.col, now, td);
@@ -226,8 +233,9 @@ document.addEventListener("keydown", e => {
   const td = e.target.closest('td[contenteditable="true"]');
   if (!td) return;
   if (SUGG.key(e)) return;                       // the list takes the key first
-  if (e.key === "Enter"){ e.preventDefault(); SUGG.close(); td.blur(); }
-  if (e.key === "Escape"){ td.textContent = td.dataset.orig ?? ""; SUGG.close(); td.blur(); }
+  if (CAL.key(e)) return;
+  if (e.key === "Enter"){ e.preventDefault(); SUGG.close(); CAL.close(); td.blur(); }
+  if (e.key === "Escape"){ td.textContent = td.dataset.orig ?? ""; SUGG.close(); CAL.close(); td.blur(); }
 });
 // A pop-up over the cell you are typing into is in the way, so it goes.
 document.addEventListener("input", e => {
@@ -382,6 +390,143 @@ const SUGG = (() => {
      through the list, and closing on it makes a list taller than the box impossible to
      reach the bottom of. So: ignore the box's own scrolling, and elsewhere re-anchor
      rather than close, closing only once the cell itself has gone off screen. */
+  addEventListener("scroll", e => {
+    if (!cell || box.hidden) return;
+    const t = e.target;
+    if (t === box || (t && t.nodeType === 1 && box.contains(t))) return;
+    const r = cell.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) api.close();
+    else place();
+  }, true);
+  return api;
+})();
+
+/* ---- the calendar ----------------------------------------------------------
+   A date column offers a month grid, and stays fully typeable while it is open.
+
+   Both halves matter. Picking is what you want for a date you are reading off a plan
+   in front of you, where "is the 14th a Tuesday" is the actual question; typing is what
+   you want for the twentieth row of a set you already know, where a grid is four clicks
+   to say something you could have said in eight keystrokes. So this is an OFFER laid
+   beside the cell, never a gate in front of it: the caret stays in the cell, every key
+   still reaches it, and what you type steers the grid rather than the other way round.
+
+   Deliberately not <input type="date">. It would bring a native picker for nothing, and
+   take the cell's own behaviour with it - one editing model for text cells and another
+   for date cells, a different keyboard contract, a browser-dependent display format, and
+   no way to leave a date deliberately blank the way the rest of the table does. */
+const CAL = (() => {
+  const box = el("cal");
+  const DOW = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  const MON = ["January","February","March","April","May","June",
+               "July","August","September","October","November","December"];
+  let cell = null, shown = null;                 // shown: the month on display
+  const api = {holding:false};
+
+  const isDate = td => (SHEET_COLS[td.dataset.sheet] || {date:[]}).date.includes(td.dataset.col);
+  const readCell = () => {
+    const d = parseDate((cell.textContent || "").trim());
+    return d instanceof Date ? d : null;
+  };
+  const firstOf = d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+
+  function place(){
+    const r = cell.getBoundingClientRect();
+    box.style.left = Math.max(8, Math.min(r.left, innerWidth - box.offsetWidth - 8)) + "px";
+    box.style.top = (r.bottom + box.offsetHeight > innerHeight - 8
+      ? Math.max(8, r.top - box.offsetHeight - 4) : r.bottom + 4) + "px";
+  }
+
+  function render(){
+    const picked = readCell();
+    // What is being typed steers the grid: type 2029 and the calendar is already there.
+    if (picked) shown = firstOf(picked);
+    const y = shown.getUTCFullYear(), m = shown.getUTCMonth();
+    const lead = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7;    // weeks start Monday
+    const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    const todayKey = ymd(new Date());
+    const cells = [];
+    for (let i = 0; i < lead; i++) cells.push('<div class="d off"></div>');
+    for (let n = 1; n <= days; n++){
+      const k = ymd(new Date(Date.UTC(y, m, n)));
+      const cls = "d" + (picked && k === ymd(picked) ? " on" : "")
+                      + (k === todayKey ? " today" : "");
+      cells.push(`<button type="button" class="${cls}" data-d="${k}">${n}</button>`);
+    }
+    box.innerHTML =
+      `<div class="calhead">`
+      + `<button type="button" class="cnav" data-step="-12" title="Previous year">&#171;</button>`
+      + `<button type="button" class="cnav" data-step="-1" title="Previous month">&#8249;</button>`
+      + `<span class="cmon">${MON[m]} ${y}</span>`
+      + `<button type="button" class="cnav" data-step="1" title="Next month">&#8250;</button>`
+      + `<button type="button" class="cnav" data-step="12" title="Next year">&#187;</button>`
+      + `</div>`
+      + `<div class="calgrid">${DOW.map(d => `<div class="dow">${d}</div>`).join("")}`
+      + cells.join("") + `</div>`
+      + `<div class="calfoot">`
+      + `<button type="button" class="btn tiny" data-d="${att(todayKey)}">Today</button>`
+      + `<button type="button" class="btn tiny" data-d="">Clear</button>`
+      + `<span class="hint">or type it: YYYY-MM-DD</span></div>`;
+    box.hidden = false;
+    place();
+  }
+
+  api.open = td => {
+    if (!isDate(td)){ if (cell !== td) api.close(); return; }
+    if (cell === td && !box.hidden) return;
+    cell = td;
+    shown = firstOf(readCell() || new Date());
+    render();
+  };
+  api.close = () => { box.hidden = true; cell = null; api.holding = false; };
+  api.owns = td => cell === td && !box.hidden;
+  api.key = e => {
+    if (!cell || box.hidden) return false;
+    if (e.key === "Escape"){ e.preventDefault(); api.close(); return true; }
+    // PageUp/PageDown step the month without disturbing the caret. The arrow keys are
+    // left to the text, because the caret is in the cell and moving it is what they mean
+    // there - a grid that stole them would break typing to make picking prettier.
+    if (e.key === "PageUp" || e.key === "PageDown"){
+      e.preventDefault();
+      step(e.key === "PageDown" ? 1 : -1);
+      return true;
+    }
+    return false;
+  };
+  function step(n){
+    const at = readCell();
+    if (at) shown = firstOf(at);
+    shown = new Date(Date.UTC(shown.getUTCFullYear(), shown.getUTCMonth() + n, 1));
+    // Re-rendered from `shown` alone: with a date in the cell, render() would snap the
+    // grid straight back to it and the arrows would appear not to work.
+    const keep = cell.textContent;
+    cell.textContent = "";
+    render();
+    cell.textContent = keep;
+  }
+  function choose(v){
+    const td = cell;
+    api.close();
+    td.textContent = v;
+    td.blur();                                   // blur commits through the normal path
+  }
+  box.addEventListener("mousedown", e => {
+    api.holding = true;                          // hold focus while the panel is used
+    const nav = e.target.closest(".cnav");
+    if (nav){ e.preventDefault(); step(+nav.dataset.step); api.holding = false;
+              if (cell) cell.focus({preventScroll:true}); return; }
+    const d = e.target.closest("[data-d]");
+    if (d){ e.preventDefault(); choose(d.dataset.d); api.holding = false; }
+  });
+  addEventListener("mouseup", () => {
+    if (!api.holding) return;
+    api.holding = false;
+    if (cell && !box.hidden) cell.focus({preventScroll:true});
+  });
+  document.addEventListener("input", e => {
+    const td = e.target.closest('td[contenteditable="true"]');
+    if (td && td === cell) render();
+  });
   addEventListener("scroll", e => {
     if (!cell || box.hidden) return;
     const t = e.target;

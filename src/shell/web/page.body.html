@@ -45,6 +45,11 @@
   </div>
 </div>
 
+<!-- One sticky band, not two bars that each guess where the other ends. The edit bar
+     and the tabs travel together, so there is no seam between them for the page to show
+     through and nothing depends on the edit bar being exactly 60px tall - it wraps on a
+     narrow window and its guide text changes length as you work. -->
+<div id="stickybar">
 <div id="editbar" hidden>
   <span class="guide" id="guide"></span>
   <span id="editstate"></span>
@@ -61,6 +66,7 @@
   <button role="tab" aria-selected="false" data-tab="t-pers">Source data (person)</button>
   <button role="tab" aria-selected="false" data-tab="t-gen">General assumptions</button>
 </nav>
+</div>
 
 <div id="empty">
   <p class="lead">Two ways in. Either works, and you can move between them — a plan
@@ -101,11 +107,24 @@
 
 <div id="tip" class="tip" hidden></div>
 <div id="sugg" class="sugg" hidden role="listbox"></div>
+<!-- The calendar for date columns. Anchored to its cell like the value list, and
+     like it an OFFER rather than a gate: the cell stays typeable throughout. -->
+<div id="cal" class="cal" hidden role="dialog" aria-label="Choose a date"></div>
 
 <dialog id="report">
   <div class="dlg-h"><strong>Validation findings</strong>
     <button class="btn" style="margin-left:auto" id="repClose">Close</button></div>
   <div class="dlg-b" id="repBody"></div>
+</dialog>
+
+<!-- Save with conditional errors standing. Not a warning dressed as a question: the
+     figures really are short of something, the rows really are worth keeping, and which
+     of the two matters more today is not the application's call to make. -->
+<dialog id="confirm">
+  <div class="dlg-h"><strong>Save with these unresolved?</strong>
+    <button class="btn" style="margin-left:auto" id="cfNo">Go back</button>
+    <button class="btn primary" id="cfYes">Save anyway</button></div>
+  <div class="dlg-b" id="cfBody"></div>
 </dialog>
 
 <dialog id="changes">

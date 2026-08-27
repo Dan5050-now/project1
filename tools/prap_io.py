@@ -543,6 +543,28 @@ def recompute_derived(M):
                                         + p["end_date"].month - p["start_date"].month + 1)
 
 
+# --------------------------------------------- what an error is allowed to do
+# Severity says how wrong something is; the CLASS says what an application may do about
+# it. The register lives in the development plan and the same three answers are used by
+# the browser (RULE_CLASS in core/05_model.js), so a program written against this file
+# can tell a user which of their errors will stop them.
+#
+#   must         wrong with the row itself - refused
+#   conditional  the row is sound, something it depends on is missing - the application
+#                asks, and the user may keep it
+#   incomplete   the row is still being built - reported, never questioned
+RULE_CLASS = {"V-03": "conditional", "V-23": "conditional",
+              "V-12": "incomplete", "V-16": "incomplete"}
+
+
+def rule_class(rule):
+    return RULE_CLASS.get(rule, "must")
+
+
+def refuses(f):
+    return f["sev"] in ("error", "fatal") and rule_class(f["rule"]) == "must"
+
+
 def validate(M):
     for pid, p in M.projects.items():
         is_ct = p.get("project_type") in CLINICAL_TYPES
@@ -968,11 +990,22 @@ def cmd_validate(args):
             counts[f["sev"]] += 1
         for f in F:
             row = f"row {f['row']}" if f["row"] else ""
-            print(f"  {f['sev']:<11} {f['rule']}  {f['sheet']:<20} {row:<9} {f['msg']}")
+            # The class beside the severity, because "will this stop me" is the question
+            # a reader brings to this list. Only errors carry one - a warning never
+            # refused anything, so labelling it would suggest a choice that never existed.
+            cls = f"[{rule_class(f['rule'])}]" if f["sev"] in ("error", "fatal") else ""
+            print(f"  {f['sev']:<11} {cls:<14}{f['rule']}  {f['sheet']:<20} "
+                  f"{row:<9} {f['msg']}")
         print()
         by_sev = ", ".join(f"{counts[s]} {s}"
                            for s in ("fatal", "error", "warning", "information") if counts[s])
         print(f"{len(F)} finding(s): {by_sev}" if F else "0 findings — the file is clean.")
+        must = sum(1 for f in F if refuses(f))
+        if must:
+            print(f"{must} of them are [must]: the application refuses those rows until "
+                  f"they are corrected. The rest it reports, and asks about at Save.")
+    # A non-zero exit means "this file has something wrong with it", which is what a
+    # script wants to branch on - so it still counts every error, not only the must ones.
     return 1 if any(f["sev"] in ("fatal", "error") for f in F) else 0
 
 

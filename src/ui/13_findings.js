@@ -16,17 +16,34 @@ function showBanner(kind, text, findings){
   if (b) b.onclick = () => { renderReport(findings); el("report").showModal(); };
 }
 
+const CLS_LABEL = {must:"must fix", conditional:"may keep", incomplete:"still to come"};
+
 function renderReport(findings){
   const order = {fatal:0, error:1, warning:2, information:3};
   const rows = findings.slice().sort((a,b) =>
     (order[a.sev]-order[b.sev]) || String(a.sheet).localeCompare(String(b.sheet)) ||
     (a.row||0)-(b.row||0));
+  /* SEVERITY says how wrong it is; CLASS says what the application will do about it,
+     and the second is what a reader actually wants from this table - "will this stop me
+     saving, or not". Only errors carry one: a warning or a note never refused anything,
+     so labelling them would suggest a choice that was never there. */
+  const cls = f => (f.sev === "error" || f.sev === "fatal") ? ruleClass(f.rule) : "";
   el("repBody").innerHTML = rows.length
-    ? `<table class="data-t"><thead><tr><th>severity</th><th>rule</th><th>sheet</th><th>row</th>
-        <th>finding</th></tr></thead><tbody>${rows.map(f =>
-        `<tr><td><span class="sev ${f.sev}">${f.sev}</span></td><td>${esc(f.rule)}</td>`
+    ? `<table class="data-t"><thead><tr><th>severity</th><th>refuses?</th><th>rule</th>
+        <th>sheet</th><th>row</th><th>finding</th></tr></thead><tbody>${rows.map(f =>
+        `<tr><td><span class="sev ${f.sev}">${f.sev}</span></td>`
+        + `<td>${cls(f) ? `<span class="cls ${cls(f)}">${CLS_LABEL[cls(f)]}</span>`
+              : ""}</td>`
+        + `<td>${esc(f.rule)}</td>`
         + `<td>${esc(f.sheet)}</td><td>${f.row || ""}</td>`
         + `<td style="white-space:normal">${esc(f.msg)}</td></tr>`).join("")}</tbody></table>`
+      + `<p class="cap"><strong>must fix</strong> — something is wrong with the row
+         itself, and it is refused until you correct it. <strong>may keep</strong> — the
+         row is sound but something it depends on is missing, so the figures that need it
+         are short an assumption; Save asks before keeping these, and going ahead is your
+         decision. <strong>still to come</strong> — the row is not finished yet and this
+         will answer itself as you carry on entering; nothing is refused and nothing is
+         asked.</p>`
     : `<p class="cap">Nothing to report — the workbook passed every rule.</p>`;
 }
 
@@ -130,6 +147,38 @@ function blankMilestones(pid){
   showBanner("", `Added ${add.length} standard milestone${add.length===1?"":"s"} to ${pid}, `
     + `with the dates blank. Fill in the dates that apply and delete the rows that do not — `
     + `a milestone with no date is ignored by the calculation either way.`);
+}
+
+/** The standard period names for a project the derivation does not reach, laid out with
+ *  their dates blank - the same idea as 'Blank list' on the milestones.
+ *
+ *  An 'Others' project has no milestone rule to hang a derivation on, so its periods are
+ *  entered by hand. That does not mean starting from an empty table: the three names are
+ *  standing vocabulary on the Lists sheet, and typing them out again on every project is
+ *  transcription, not judgement. What the user actually has to decide is the dates. */
+function blankPeriods(pid){
+  const M = S.model, pr = M.projects[pid];
+  const names = M.lists.period_name_others || OTHER_PERIODS;
+  const have = new Set(M.raw.ProjectPeriod.filter(r => r.project_id === pid)
+    .map(r => r.period_name));
+  const add = names.filter(n => !have.has(n));
+  if (!add.length){
+    showBanner("", `Every standard period is already listed for ${pid}. Nothing added.`);
+    return;
+  }
+  beginEditSession();
+  let seq = nextSeq("ProjectPeriod", "period_seq", "project_id", pid);
+  for (const n of add){
+    const r = newRow("ProjectPeriod", {project_id:pid, period_name:n, period_seq:seq++,
+                                       weight:1.00});
+    S.pending.push({at:new Date(), sheet:"ProjectPeriod", row:r.__row, col:"(new row)",
+                    from:null, to:n});
+  }
+  renderKeepingTab();
+  showBanner("", `Added ${add.length} standard period${add.length===1?"":"s"} to ${pid} at `
+    + `weight 1.00, with the dates blank. Fill in the dates — they must run one after `
+    + `another with no gap, because a month in no period is calculated at weight 1.00 `
+    + `(V-12), and the project's own window is the span they cover (REQ-CAL-17).`);
 }
 
 /** This project's periods, built from its milestones by the rule in the plan. */

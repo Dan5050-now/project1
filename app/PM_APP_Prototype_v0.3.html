@@ -196,6 +196,9 @@ td.ins,th.ins{white-space:nowrap}
  border-radius:var(--r-md);background:var(--surface);font-size:13px;
  box-shadow:var(--shadow);border-left:3px solid var(--good)}
 .banner.bad{background:var(--overbg);border-left-color:var(--crit)}
+/* Saved, but with something knowingly left unresolved - neither a clean save nor
+   a failure, and it should not read as either. */
+.banner.warn{background:var(--underbg);border-left-color:var(--warn)}
 .banner .lk{margin-left:auto;color:var(--accent);cursor:pointer;text-decoration:none;
  font-weight:530}
 .banner .lk:hover{text-decoration:underline}
@@ -259,11 +262,22 @@ td.ins,th.ins{white-space:nowrap}
    Translucent and blurred rather than opaque, so the content scrolling under
    them stays readable as context. This is the one place the resemblance is
    literal, and it is also the place it is most useful. */
-#editbar{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:8px 16px;
+/* ONE sticky band carrying both bars. Two independently sticky bars needed the second
+   to know the height of the first - it was pinned at top:60px against an edit bar that
+   measures 58.75px and wraps to two rows on a narrow window - so between them ran a
+   hairline the page showed through, and on a wrapped bar they overlapped outright.
+   Sticking the CONTAINER removes the question: the bars are laid out normally inside it
+   and travel as one.
+
+   And the band is OPAQUE. Translucency plus a backdrop blur reads beautifully over a
+   chart and reads as a fault over a table: at 92% the rows underneath still ghost
+   through the text, which is what "the header is overlapped with the page" describes.
+   The blur is kept only for the page BEHIND the band's rounded corners. */
+#stickybar{position:sticky;top:0;z-index:20;background:var(--page);
+ padding-bottom:8px;margin-bottom:-8px}
+#editbar{display:flex;flex-wrap:wrap;gap:8px 16px;
  align-items:center;margin:14px 0 0;padding:10px 16px;border-radius:var(--r-md);
- background:color-mix(in srgb,var(--surface) 92%,transparent);
- -webkit-backdrop-filter:saturate(180%) blur(24px);
- backdrop-filter:saturate(180%) blur(24px);
+ background:var(--surface);
  box-shadow:var(--shadow);font-size:12.5px;color:var(--ink2)}
 #editbar.dirty{background:color-mix(in srgb,var(--underbg) 95%,transparent);color:var(--ink)}
 #editbar .guide{max-width:min(760px,58%)}
@@ -273,15 +287,10 @@ td.ins,th.ins{white-space:nowrap}
 #editbar .btn{white-space:nowrap}
 
 /* --- tabs: a segmented control ------------------------------------------- */
-/* A full-width bar, not a floating pill: content scrolls UNDER it, and a pill only as
-   wide as its labels would let the page slide past beside them. Translucent and blurred
-   like an Apple toolbar, but at an opacity that keeps the labels readable over a chart -
-   blur alone is not enough when what is underneath is high-contrast. */
+/* A full-width bar, not a floating pill: content scrolls UNDER the band, and a pill only
+   as wide as its labels would let the page slide past beside them. */
 nav{display:flex;gap:2px;margin:18px 0 0;flex-wrap:wrap;
- position:sticky;top:60px;z-index:19;padding:5px 4px;border-radius:var(--r-md);
- background:color-mix(in srgb,var(--page) 92%,transparent);
- -webkit-backdrop-filter:saturate(180%) blur(24px);
- backdrop-filter:saturate(180%) blur(24px)}
+ padding:5px 4px;border-radius:var(--r-md);background:var(--fill)}
 nav button{border:0;background:none;color:var(--ink2);padding:6px 16px;font-size:13px;
  cursor:pointer;font-family:inherit;border-radius:var(--r-sm);font-weight:520;
  letter-spacing:-.006em;white-space:nowrap}
@@ -310,21 +319,36 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var
    still leaves the next one visible on a laptop screen. */
 .scrollx{overflow:auto;max-height:min(560px,66vh);-webkit-overflow-scrolling:touch;
  border-radius:var(--r-sm)}
-/* And every scroll region says so. `scrollbar-width:thin` looked neat and cost the whole
-   point of bounding the panels: the browser drew an OVERLAY bar that occupies no layout
-   space and fades out when idle, so a table with eleven columns off to the right looked
-   exactly like a table with none - measured, offsetWidth === clientWidth. The bar is now
-   a real 12px, always present while there is anywhere to scroll to, which is the only
-   thing on screen that says "there is more this way". Chromium ignores ::-webkit-scrollbar
-   unless scrollbar-width is auto, so it is left unset here and scrollbar-color carries
-   Firefox instead. */
-.scrollx{scrollbar-color:var(--base) transparent}
-.scrollx::-webkit-scrollbar{width:12px;height:12px}
-.scrollx::-webkit-scrollbar-track{background:var(--fill);border-radius:8px}
-.scrollx::-webkit-scrollbar-thumb{background:var(--base);border-radius:8px;
- border:3px solid transparent;background-clip:padding-box}
-.scrollx::-webkit-scrollbar-thumb:hover{background:var(--ink2)}
-.scrollx::-webkit-scrollbar-corner{background:transparent}
+/* The browser's own bar is HIDDEN, and the application draws its own - see makeBar() in
+   the wiring. Twice the browser was asked for a bar that says "there is more this way"
+   and twice it declined: `scrollbar-width:thin` gave an overlay bar occupying no layout
+   space that fades out when idle, and removing it so ::-webkit-scrollbar would apply
+   changed nothing on a build that uses overlay scrollbars - measured, a plain div with
+   an explicit 14px ::-webkit-scrollbar still reports offsetHeight === clientHeight.
+   A region deliberately bounded on both axes is only honest if the reader can see there
+   is more and reach it, so that is drawn rather than asked for. Native scrolling itself
+   is untouched: wheel, shift-wheel, trackpad and keyboard all still work. */
+.scrollx{scrollbar-width:none}
+.scrollx::-webkit-scrollbar{width:0;height:0}
+
+/* The drawn bars. Children of the .cue wrapper, not of the scrolling box, so they stay
+   put while what they describe moves under them. 11px of track with a 3px inset thumb -
+   big enough to grab with a mouse, quiet enough to sit over a table. */
+.sbar{position:absolute;z-index:4;opacity:0;pointer-events:none;
+ background:var(--fill);border-radius:8px;transition:opacity var(--dur) var(--ease)}
+.sbar.on{opacity:1;pointer-events:auto}
+.sbar.h{left:2px;right:2px;bottom:2px;height:11px}
+.sbar.v{top:2px;bottom:2px;right:2px;width:11px}
+.cue.hbar.vbar .sbar.h{right:15px}
+.cue.hbar.vbar .sbar.v{bottom:15px}
+.sbar .thumb{position:absolute;background:var(--base);border-radius:8px;
+ transition:background var(--dur) var(--ease)}
+.sbar.h .thumb{top:2px;bottom:2px}
+.sbar.v .thumb{left:2px;right:2px}
+.sbar:hover .thumb,.sbar.dragging .thumb{background:var(--ink2)}
+/* Room at the edges so the last row and the last column are never under a bar. */
+.cue.hbar>.scrollx{padding-bottom:15px}
+.cue.vbar>.scrollx{padding-right:15px}
 
 /* And a cue that does not depend on the browser drawing a bar at all. Overlay scrollbars
    - the default on macOS, and on some Chromium builds - stay hidden until you are already
@@ -494,6 +518,32 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 /* Type-ahead. Anchored to the cell, filtered as you type, arrow keys and Enter to
    choose. It exists because the valid vocabulary lives in the workbook, and nobody
    should have to remember it or open the Lists sheet to check. */
+/* --- the calendar on a date cell ----------------------------------------- */
+/* Sized so a month never reflows: seven columns of a fixed width, and the header row
+   the same width whatever the month is called. It sits beside the cell, not over it -
+   the caret stays where it was and typing goes on working. */
+.cal{position:fixed;z-index:60;background:var(--raised);border:1px solid var(--hairline);
+ border-radius:var(--r-md);box-shadow:var(--shadow-lift);padding:8px;font-size:12.5px;
+ user-select:none}
+.calhead{display:flex;align-items:center;gap:2px;padding:0 2px 6px}
+.calhead .cmon{flex:1;text-align:center;font-weight:620;color:var(--ink);
+ letter-spacing:-.01em}
+.cnav{border:0;background:none;color:var(--ink2);cursor:pointer;font-family:inherit;
+ font-size:14px;line-height:1;padding:3px 6px;border-radius:var(--r-sm)}
+.cnav:hover{background:var(--fill);color:var(--ink)}
+.calgrid{display:grid;grid-template-columns:repeat(7,30px);gap:2px}
+.calgrid .dow{text-align:center;font-size:10.5px;color:var(--muted);padding:2px 0 4px;
+ font-weight:600}
+.calgrid .d{height:26px;border:0;border-radius:var(--r-sm);background:none;cursor:pointer;
+ font-family:inherit;font-size:12.5px;color:var(--ink);padding:0}
+.calgrid .d.off{cursor:default}
+.calgrid button.d:hover{background:var(--fill)}
+.calgrid .d.today{box-shadow:inset 0 0 0 1px var(--base)}
+.calgrid .d.on{background:var(--accent);color:#fff;font-weight:620}
+.calfoot{display:flex;align-items:center;gap:6px;padding-top:8px;margin-top:6px;
+ border-top:1px solid var(--hairline)}
+.calfoot .hint{margin-left:auto;color:var(--muted);font-size:11px}
+
 .sugg{position:fixed;z-index:60;min-width:200px;max-width:340px;max-height:240px;
  overflow:auto;background:color-mix(in srgb,var(--raised) 94%,transparent);
  -webkit-backdrop-filter:saturate(180%) blur(20px);
@@ -584,6 +634,15 @@ dialog.big .dlg-b{max-height:84vh}
 .sev.fatal,.sev.error{background:var(--overbg);color:var(--crit)}
 .sev.warning{background:var(--underbg);color:var(--underink)}
 .sev.information{background:var(--fill);color:var(--ink2)}
+/* An error the user may keep, having been told: amber rather than red, because
+   red says 'this cannot stand' and this one can. */
+.sev.cond{background:var(--underbg);color:var(--underink)}
+/* The class beside the severity in the findings report. */
+.cls{font-size:10px;font-weight:600;border-radius:var(--r-xs);padding:2px 7px;
+ white-space:nowrap;background:var(--fill);color:var(--ink2)}
+.cls.must{background:var(--overbg);color:var(--crit)}
+.cls.conditional{background:var(--underbg);color:var(--underink)}
+.cls.incomplete{background:var(--fill);color:var(--ink2)}
 
 /* ===================== PM_APP prototype chrome ==========================
    Added by tools/build_newapp_demo.py. Everything below is prototype dressing
@@ -769,6 +828,11 @@ dialog.big .dlg-b{max-height:84vh}
   </div>
 </div>
 
+<!-- One sticky band, not two bars that each guess where the other ends. The edit bar
+     and the tabs travel together, so there is no seam between them for the page to show
+     through and nothing depends on the edit bar being exactly 60px tall - it wraps on a
+     narrow window and its guide text changes length as you work. -->
+<div id="stickybar">
 <div id="editbar" hidden>
   <span class="guide" id="guide"></span>
   <span id="editstate"></span>
@@ -785,6 +849,7 @@ dialog.big .dlg-b{max-height:84vh}
   <button role="tab" aria-selected="false" data-tab="t-pers">Source data (person)</button>
   <button role="tab" aria-selected="false" data-tab="t-gen">General assumptions</button>
 </nav>
+</div>
 
 <div id="empty">
   <p class="lead">Two ways in. Either works, and you can move between them — a plan
@@ -825,11 +890,24 @@ dialog.big .dlg-b{max-height:84vh}
 
 <div id="tip" class="tip" hidden></div>
 <div id="sugg" class="sugg" hidden role="listbox"></div>
+<!-- The calendar for date columns. Anchored to its cell like the value list, and
+     like it an OFFER rather than a gate: the cell stays typeable throughout. -->
+<div id="cal" class="cal" hidden role="dialog" aria-label="Choose a date"></div>
 
 <dialog id="report">
   <div class="dlg-h"><strong>Validation findings</strong>
     <button class="btn" style="margin-left:auto" id="repClose">Close</button></div>
   <div class="dlg-b" id="repBody"></div>
+</dialog>
+
+<!-- Save with conditional errors standing. Not a warning dressed as a question: the
+     figures really are short of something, the rows really are worth keeping, and which
+     of the two matters more today is not the application's call to make. -->
+<dialog id="confirm">
+  <div class="dlg-h"><strong>Save with these unresolved?</strong>
+    <button class="btn" style="margin-left:auto" id="cfNo">Go back</button>
+    <button class="btn primary" id="cfYes">Save anyway</button></div>
+  <div class="dlg-b" id="cfBody"></div>
 </dialog>
 
 <dialog id="changes">
@@ -841,7 +919,7 @@ dialog.big .dlg-b{max-height:84vh}
 
 <script>
 "use strict";
-const APP_VERSION = "1.31";
+const APP_VERSION = "1.32";
 const SCHEMA_EXPECTED = 8;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -850,10 +928,10 @@ const SCHEMA_EXPECTED = 8;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.33.xlsx",          ver:"2.33",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.33 records Step 4 progress, schema 8, the absorption rule and the periods-are-the-project window"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.7.xlsx", ver:"1.7",
-   status:"v1.0 APPROVED by Dan, 2026-08-02; v1.5 adds schema 8 and the absorption rule, v1.7 makes the role/factor check report without refusing — this document governs the code"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.34.xlsx",          ver:"2.34",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.34 records Step 4 progress, schema 8, the periods-are-the-project window and the must/conditional rule classes"},
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.8.xlsx", ver:"1.8",
+   status:"v1.0 APPROVED by Dan, 2026-08-02; v1.5 adds schema 8 and the absorption rule, v1.8 adds the rule classes and the calendar — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
   {what:"Source data template",   file:"PRAP_SourceData_Template_v1.10.xlsx",       ver:"1.10",
@@ -2073,6 +2151,18 @@ const HELP = {
     + "Each period takes the standard weight for this project's type and phase. They are "
     + "ORDINARY ROWS afterwards - edit any of them, and Save when you are happy. Needs CTA "
     + "submission and a DB lock (V-16), and applies to clinical trials only.",
+  autopernot:"<b>Auto derivation</b> — not yet.<br>The rule builds a trial's periods from "
+    + "its milestones, so it needs two of them before it can say anything: a "
+    + "<b>CTA submission</b> date and at least one <b>DB lock</b> (V-16). Enter those in "
+    + "the Milestones table beside this one and the button comes to life. 'Blank list' "
+    + "there lays out the standard names so only the dates have to be typed.",
+  blankper:"<b>Standard periods</b><br>Lays out this project's period names — Planning, "
+    + "Develop, Close — with their dates blank and weight 1.00, so only the dates have to "
+    + "be typed. There is no derivation for an 'Others' project: the rule for a trial "
+    + "hangs on CTA submission and the DB locks, which an internal project does not have. "
+    + "Give them dates that run one after another with no gap: a month in no period is "
+    + "calculated at weight 1.00 (V-12), and the project's own window is the span its "
+    + "periods cover (REQ-CAL-17).",
   del:"<b>Delete this row</b><br>Refused if anything still references it, naming what does (V-17). "
     + "A delete is never cascaded. Provisional like any other change — 'Leave without change' puts it back.",
 };
@@ -2285,6 +2375,49 @@ function absorbedInto(M, proj, periodName, roleName){
       ?? M.rfAbsorb[[...k, ANY_SCOPE, periodName, roleName]]
       ?? [];
 }
+
+/* ------------------------------------------------ what an error is allowed to do
+   Severity says how wrong something is. This says what the application may do about
+   it, and they are not the same question. Three answers, because there are three
+   genuinely different situations and collapsing any two of them costs something.
+
+   MUST         something is wrong with the ROW IN FRONT OF YOU, and it cannot be kept
+                as it stands: an assignment pointing at a project that does not exist,
+                a window that ends before it starts, an identifier used twice. Saving it
+                would put a record in the file that the file's own rules say cannot be
+                there. These REFUSE.
+
+   CONDITIONAL  the row is complete and correct; something it DEPENDS ON is not there.
+                A role with no factor in RoleFactor - a standing document, maintained
+                separately from the plan and often by somebody else. The figures that
+                need it are wrong, which is why these are still errors at full severity,
+                but the row is a true statement about the plan and refusing it puts the
+                two documents in the wrong order. These ASK: Save names them and the
+                user decides, and going ahead is a choice taken knowingly.
+
+   INCOMPLETE   the row is still being BUILT. A clinical trial has no periods until its
+                milestones are entered, and its milestones cannot be entered until it is
+                saved, because the milestone table hangs off a selected project. These
+                report, and say nothing else: asking would put a dialog in front of
+                somebody every time they save a project they are half way through
+                typing, and the answer would be yes every time. The banner already
+                carries them as "still to come", which is what they are.
+
+   Here in the core rather than in the screen that acts on it, because the desktop shell
+   and the reference implementations must classify a finding the same way the browser
+   does - and because the register in the plan is where a reader looks to find out which
+   of their errors will stop them. */
+const RULE_CLASS = {"V-03":"conditional", "V-23":"conditional",
+                    "V-12":"incomplete",  "V-16":"incomplete"};
+function ruleClass(rule){ return RULE_CLASS[rule] || "must"; }
+const isErr = f => f.sev === "error" || f.sev === "fatal";
+/** True when this finding refuses. Fatal is always must: the workbook could not be
+ *  read, so there is nothing to weigh up. */
+function refuses(f){ return isErr(f) && ruleClass(f.rule) === "must"; }
+/** An error the user may keep, having been asked. */
+function conditional(f){ return isErr(f) && ruleClass(f.rule) === "conditional"; }
+/** An error about a row that is not finished yet. Reported, never questioned. */
+function incomplete(f){ return isErr(f) && ruleClass(f.rule) === "incomplete"; }
 
 function buildModel(sheets){
   const F = [];
@@ -2580,7 +2713,7 @@ function validate(M, F){
        carry this role for this project's TYPE, at all. Worth keeping as well as V-23,
        because it catches a mistyped role name at once, where V-23 only speaks if the
        assignment actually reaches a period and draws FTE.
-       It reports; it does not refuse (R-19). See NEVER_REFUSES in 12_editing.js. */
+       It reports; it does not refuse (R-19) - see CONDITIONAL_RULES above. */
     const roles = M.rfRoles[proj.project_type];
     if (!roles || !roles.has(a.role_name))
       add("error","V-03","Assignment",a.__row,
@@ -3181,6 +3314,11 @@ const S = {
      pers:new Set(), role:new Set(), dept:new Set()},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
   pending:[], saved:0, snapshot:null, editedCells:new Set(), headers:{},
+  // The findings as of the last point the user said 'keep this' - a load, or a
+  // save. What a batch of edits LEAVES unresolved is measured against this, not
+  // against the live model, which already carries the consequences of every
+  // keystroke since.
+  baseFindings:[],
   genView:{pws:"matrix", rf:"matrix", lists:"matrix"},
 };
 
@@ -4397,6 +4535,33 @@ function renderProjTab(){
     <div id="projDetail">${projDetail(pid)}</div>`;
 }
 
+/** The generator this project can actually use.
+ *
+ *  Offering 'Auto derivation' on an 'Others' project was offering something that could
+ *  only ever answer no: the rule hangs on CTA submission and the DB locks, and an
+ *  internal project has neither - it never will, because that is what makes it an
+ *  'Others' project rather than a trial. A control that refuses every time it is pressed
+ *  teaches the reader that the feature is broken, which is the opposite of what the
+ *  refusal was trying to say.
+ *
+ *  So each type is offered the generator that fits it, and a trial whose milestones are
+ *  not in yet is offered the derivation with the reason it cannot run yet in its place -
+ *  because there the answer really will change, as soon as two dates are typed. */
+function periodGenButton(pr, pid){
+  if (!CLINICAL_TYPES.has(pr.project_type))
+    return `<button class="btn tiny" data-act="blankper" data-pid="${att(pid)}"
+      data-tip="${att(HELP.blankper)}">Standard periods</button>`;
+  const ms = {};
+  for (const m of S.model.raw.Milestone)
+    if (m.project_id === pid && m.milestone_name && m.milestone_date instanceof Date)
+      (ms[m.milestone_name] ||= []).push(m.milestone_date);
+  const can = !!derivePeriods(pr, ms);
+  return `<button class="btn tiny" data-act="autoper" data-pid="${att(pid)}"
+    ${can ? "" : "disabled"} data-tip="${att(can ? HELP.autoper : HELP.autopernot)}"
+    >Auto derivation</button>`
+    + (can ? "" : `<span class="scope k">needs a CTA submission date and a DB lock</span>`);
+}
+
 function projDetail(pid){
   const M = S.model, pr = M.projects[pid];
   /* Clicking a row that has not been saved yet makes its identifier the selection, and
@@ -4447,8 +4612,7 @@ function projDetail(pid){
         ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_seq","note_1"])}</div>
       <div class="panel">
         <div class="phead"><h2>Periods — ${esc(pr.project_name)}</h2>
-          <button class="btn tiny" data-act="autoper" data-pid="${att(pid)}"
-            data-tip="${att(HELP.autoper)}">Auto derivation</button>
+          ${periodGenButton(pr, pid)}
           <span class="scope k">${per.length} row(s)${derived ? " &#183; derived" : ""}</span></div>
         <p class="cap">${derived ? "Derived from the milestones above." : "As entered in the workbook."}
           Names are unique within a project, so <code>project_id + period_name</code> identifies a row.</p>
@@ -4867,30 +5031,26 @@ function beginEditSession(){
  *  that grace ends: a draft that now has content is promoted to an ordinary row and
  *  checked like one, and if that turns up an error the save is refused rather than
  *  quietly keeping a bad record. */
-/* Errors that are reported but never refuse an edit.
-   They all say the same kind of thing: "something which is NOT on this row is missing
-   yet". A clinical trial saved before its milestones exist raises V-12 and V-16 by
-   definition - and its milestones cannot be entered until it is saved, because the
-   milestone table hangs off a SELECTED project. Refusing the save there is a deadlock:
-   the row cannot be kept until its children exist, and its children cannot be created
-   until it is kept. The specification already draws this line for drafts - a row still
-   being built is INCOMPLETE, not invalid - so these stay in the findings report and are
-   named in the banner; they simply do not refuse the save.
+/* Which errors refuse, and which ask.
 
-   V-03 and V-23 are here for the same reason from the other direction. What is missing
-   is not on the row either: it is a row on RoleFactor, a standing assumption maintained
-   separately from the plan, often by somebody else. Refusing the assignment until the
-   assumptions catch up puts the two documents in the wrong order - which is exactly
-   what happened with V-28, and why that one was retired outright (R-18). Both keep
-   their severity, because a role calculated at 1.00 really is a wrong figure rather
-   than an approximate one; what they lose is the power to stop somebody recording who
-   is on their project. They are the coarse and the precise half of one question, and
-   neither half is a reason to refuse a row (R-19).
+   The classification itself is in the core - CONDITIONAL_RULES, refuses() and
+   conditional() in 05_model.js - so that the screen and the reference implementations
+   cannot disagree about what a rule is. This is only what the editor DOES with it:
 
-   Every other error still refuses, because every other error is something wrong with
-   the row in front of you. */
-const NEVER_REFUSES = new Set(["V-03","V-12","V-16","V-23"]);
-const blocking = f => (f.sev === "error" || f.sev === "fatal") && !NEVER_REFUSES.has(f.rule);
+     MUST         refuses the edit, and refuses the save. Something is wrong with the
+                  row in front of you and keeping it would put a record in the file
+                  that the file's own rules say cannot be there.
+     CONDITIONAL  never refuses an edit - a prompt on every keystroke would be
+                  unusable - and at SAVE it asks, once, naming what will be left
+                  unresolved. Going ahead is then the user's decision, taken knowingly.
+     INCOMPLETE   never refuses and never asks. The row is still being built and the
+                  finding will answer itself as the user carries on; the banner names
+                  it as "still to come".
+
+   A cell edit and a save are deliberately different moments. While you are typing, the
+   row is half-written and telling you it is incomplete is noise. Save is when you say
+   you meant it, and that is where the question belongs. */
+const blocking = refuses;
 
 /* What Save recalculates from the rows beneath a project.
  *
@@ -4965,10 +5125,12 @@ function deriveFromChildren(){
   return {changed, undo};
 }
 
+const fkey = f => f.rule + "\u0000" + f.msg;
+
 function saveEdits(){
   if (!S.pending.length) return;
   // Before the check, so that what is validated is what will be kept; put back with the
-  // drafts if the save is refused.
+  // drafts if the save is refused or the user goes back.
   const derived = deriveFromChildren();
   const drafts = [];
   for (const s of REQUIRED_SHEETS)
@@ -4976,41 +5138,97 @@ function saveEdits(){
     // neutral weight already in it, so "blank" would never be true again and a row the
     // user has not touched would be promoted and then reported for what it is missing.
     for (const r of S.model.raw[s]) if (r.__new && !isSkeleton(s, r)) drafts.push(r);
-  let pending = [];
-  if (drafts.length){
-    for (const r of drafts) delete r.__new;
-    const probe = rebuild();
-    const errs = probe.findings.filter(blocking);
-    const was = (S.model.findings || []).filter(blocking);
-    if (errs.length > was.length){
-      for (const r of drafts) r.__new = true;
-      for (const [row, col, was_] of derived.undo) row[col] = was_;    // and the derivation
-      showBanner("bad", `Save refused — the new row${drafts.length===1?"" :"s"} would break a rule: `
-        + `${errs[errs.length-1].msg} Correct it, or delete the row, then save.`);
-      return;
-    }
-    pending = probe.findings.filter(f => NEVER_REFUSES.has(f.rule)
-      && !(S.model.findings || []).some(g => g.rule === f.rule && g.msg === f.msg));
-    rebuild(true);
-    renderKeepingTab();
-  } else if (derived.changed.length){
-    rebuild(true);
-    renderKeepingTab();
+  for (const r of drafts) delete r.__new;
+  const probe = rebuild();
+  const undo = () => {
+    for (const r of drafts) r.__new = true;
+    for (const [row, col, was] of derived.undo) row[col] = was;
+  };
+
+  const errs = probe.findings.filter(blocking);
+  const was = (S.model.findings || []).filter(blocking);
+  if (errs.length > was.length){
+    undo();
+    showBanner("bad", `Save refused — this would break a rule that must hold: `
+      + `${errs[errs.length-1].msg} Correct it, or leave the change, then save.`);
+    return;
   }
+
+  /* What this batch of edits LEAVES unresolved, measured against the last save rather
+     than against the model as it stands. A cell edit is applied to the model straight
+     away - the numbers on screen must never disagree with the data on screen - so by
+     the time Save is pressed a conditional error the user has just caused is already
+     in S.model.findings, and comparing against that would find nothing new and ask
+     nothing. The baseline has to be the last point the user said "yes, keep this". */
+  const base = new Set((S.baseFindings || []).map(fkey));
+  // V-23 is raised BY the calculation, so a probe that has only been validated does not
+  // carry it - and a save that leaves a role uncosted would then be confirmed without
+  // that being one of the things named. Run it here and nowhere else: this is the one
+  // moment the full picture is worth the work, where the per-keystroke path would pay
+  // for it on every character typed.
+  calculate(probe);
+  const fresh = probe.findings.filter(f => conditional(f) && !base.has(fkey(f)));
+  const soon = probe.findings.filter(f => incomplete(f) && !base.has(fkey(f)));
+  if (fresh.length){ askConfirm(fresh, () => commitSave(derived, fresh, soon), undo); return; }
+  commitSave(derived, [], soon);
+}
+
+/** The save itself, once it is going ahead. Separated from the decision so that the
+ *  confirmation can call it later without repeating any of the checks. */
+function commitSave(derived, accepted, soon){
+  rebuild(true);
+  renderKeepingTab();
   S.saved += S.pending.length;
   S.pending = [];
   S.snapshot = null;
+  S.baseFindings = (S.model.findings || []).slice();
   renderDirty();
-  showBanner("", `Saved ${S.saved} change${S.saved===1?"":"s"} to the working data. `
+  showBanner(accepted.length ? "warn" : "",
+    `Saved ${S.saved} change${S.saved===1?"":"s"} to the working data. `
     + (derived.changed.length
         ? `Recalculated from the rows beneath: ${derived.changed.slice(0, 6).join(", ")}`
           + `${derived.changed.length > 6 ? ` and ${derived.changed.length - 6} more` : ""}. `
         : "")
-    + (pending.length
-        ? `Still to come: ${pending[0].msg} `
+    + (accepted.length
+        ? `Kept with ${accepted.length} thing${accepted.length===1?"":"s"} unresolved, `
+          + `at your confirmation — ${accepted[0].msg} `
+        : "")
+    + ((soon && soon.length)
+        ? `Still to come: ${soon[0].msg} `
         : "")
     + `They will be written to the file when you press Export. The file on disk is `
     + `still untouched until then.`);
+}
+
+/** Ask before saving over a conditional error, naming every one of them.
+ *
+ *  A confirm() would fit on one line and would be the wrong shape: these messages are
+ *  long, there can be several, and the whole point is that the user reads what they are
+ *  accepting. Going back is the default action - it is what Escape and the backdrop do -
+ *  because the safe answer should be the easy one. */
+function askConfirm(items, go, back){
+  const dlg = el("confirm");
+  el("cfBody").innerHTML =
+    `<p class="cap">These are <strong>conditional</strong>: the rows themselves are
+      sound and will be kept exactly as you typed them, but something they depend on is
+      not there yet, so the figures that need it are calculated as though the missing
+      piece were neutral. Saving does not make them go away — they stay in the findings
+      report until the missing piece arrives.</p>`
+    + `<table class="data-t"><thead><tr><th>rule</th><th>sheet</th><th>what is missing</th>`
+    + `</tr></thead><tbody>${items.map(f =>
+        `<tr><td><span class="sev cond">${esc(f.rule)}</span></td><td>${esc(f.sheet)}</td>`
+        + `<td style="white-space:normal">${esc(f.msg)}</td></tr>`).join("")}</tbody></table>`;
+  let done = false;
+  const finish = ok => {
+    if (done) return;
+    done = true;
+    dlg.close();
+    if (ok) go(); else { back(); rebuild(true); renderKeepingTab(); }
+  };
+  el("cfYes").onclick = () => finish(true);
+  el("cfNo").onclick = () => finish(false);
+  dlg.onclose = () => finish(false);            // Escape, and the backdrop
+  dlg.showModal();
 }
 function discardEdits(){
   if (!S.pending.length) return;
@@ -5302,17 +5520,34 @@ function showBanner(kind, text, findings){
   if (b) b.onclick = () => { renderReport(findings); el("report").showModal(); };
 }
 
+const CLS_LABEL = {must:"must fix", conditional:"may keep", incomplete:"still to come"};
+
 function renderReport(findings){
   const order = {fatal:0, error:1, warning:2, information:3};
   const rows = findings.slice().sort((a,b) =>
     (order[a.sev]-order[b.sev]) || String(a.sheet).localeCompare(String(b.sheet)) ||
     (a.row||0)-(b.row||0));
+  /* SEVERITY says how wrong it is; CLASS says what the application will do about it,
+     and the second is what a reader actually wants from this table - "will this stop me
+     saving, or not". Only errors carry one: a warning or a note never refused anything,
+     so labelling them would suggest a choice that was never there. */
+  const cls = f => (f.sev === "error" || f.sev === "fatal") ? ruleClass(f.rule) : "";
   el("repBody").innerHTML = rows.length
-    ? `<table class="data-t"><thead><tr><th>severity</th><th>rule</th><th>sheet</th><th>row</th>
-        <th>finding</th></tr></thead><tbody>${rows.map(f =>
-        `<tr><td><span class="sev ${f.sev}">${f.sev}</span></td><td>${esc(f.rule)}</td>`
+    ? `<table class="data-t"><thead><tr><th>severity</th><th>refuses?</th><th>rule</th>
+        <th>sheet</th><th>row</th><th>finding</th></tr></thead><tbody>${rows.map(f =>
+        `<tr><td><span class="sev ${f.sev}">${f.sev}</span></td>`
+        + `<td>${cls(f) ? `<span class="cls ${cls(f)}">${CLS_LABEL[cls(f)]}</span>`
+              : ""}</td>`
+        + `<td>${esc(f.rule)}</td>`
         + `<td>${esc(f.sheet)}</td><td>${f.row || ""}</td>`
         + `<td style="white-space:normal">${esc(f.msg)}</td></tr>`).join("")}</tbody></table>`
+      + `<p class="cap"><strong>must fix</strong> — something is wrong with the row
+         itself, and it is refused until you correct it. <strong>may keep</strong> — the
+         row is sound but something it depends on is missing, so the figures that need it
+         are short an assumption; Save asks before keeping these, and going ahead is your
+         decision. <strong>still to come</strong> — the row is not finished yet and this
+         will answer itself as you carry on entering; nothing is refused and nothing is
+         asked.</p>`
     : `<p class="cap">Nothing to report — the workbook passed every rule.</p>`;
 }
 
@@ -5416,6 +5651,38 @@ function blankMilestones(pid){
   showBanner("", `Added ${add.length} standard milestone${add.length===1?"":"s"} to ${pid}, `
     + `with the dates blank. Fill in the dates that apply and delete the rows that do not — `
     + `a milestone with no date is ignored by the calculation either way.`);
+}
+
+/** The standard period names for a project the derivation does not reach, laid out with
+ *  their dates blank - the same idea as 'Blank list' on the milestones.
+ *
+ *  An 'Others' project has no milestone rule to hang a derivation on, so its periods are
+ *  entered by hand. That does not mean starting from an empty table: the three names are
+ *  standing vocabulary on the Lists sheet, and typing them out again on every project is
+ *  transcription, not judgement. What the user actually has to decide is the dates. */
+function blankPeriods(pid){
+  const M = S.model, pr = M.projects[pid];
+  const names = M.lists.period_name_others || OTHER_PERIODS;
+  const have = new Set(M.raw.ProjectPeriod.filter(r => r.project_id === pid)
+    .map(r => r.period_name));
+  const add = names.filter(n => !have.has(n));
+  if (!add.length){
+    showBanner("", `Every standard period is already listed for ${pid}. Nothing added.`);
+    return;
+  }
+  beginEditSession();
+  let seq = nextSeq("ProjectPeriod", "period_seq", "project_id", pid);
+  for (const n of add){
+    const r = newRow("ProjectPeriod", {project_id:pid, period_name:n, period_seq:seq++,
+                                       weight:1.00});
+    S.pending.push({at:new Date(), sheet:"ProjectPeriod", row:r.__row, col:"(new row)",
+                    from:null, to:n});
+  }
+  renderKeepingTab();
+  showBanner("", `Added ${add.length} standard period${add.length===1?"":"s"} to ${pid} at `
+    + `weight 1.00, with the dates blank. Fill in the dates — they must run one after `
+    + `another with no gap, because a month in no period is calculated at weight 1.00 `
+    + `(V-12), and the project's own window is the span they cover (REQ-CAL-17).`);
 }
 
 /** This project's periods, built from its milestones by the rule in the plan. */
@@ -5540,11 +5807,84 @@ function cueScrollers(){
       wrap.className = "cue";
       box.parentNode.insertBefore(wrap, box);
       wrap.appendChild(box);
+      wrap.appendChild(makeBar(box, "h"));
+      wrap.appendChild(makeBar(box, "v"));
       box.addEventListener("scroll", () => paintCue(box), {passive:true});
     }
     paintCue(box);
   }
 }
+
+/* ---------------------------------------------------------------- scroll bars
+   Drawn by the application, not by the browser.
+
+   Every one of these regions is deliberately bounded on both axes, and a bounded
+   region is only honest if the reader can SEE that there is more and reach it. The
+   browser was asked to do that twice and did not: `scrollbar-width:thin` produced an
+   overlay bar that occupies no layout space and fades out when idle, and dropping it
+   so that ::-webkit-scrollbar would apply did not help either - on a build that uses
+   overlay scrollbars the rule is ignored outright, and the bar measures zero however
+   it is styled. Measured here: a plain div with overflow:scroll and an explicit
+   ::-webkit-scrollbar height of 14px still reports offsetHeight - clientHeight === 0.
+
+   So the region keeps its native scrolling - wheel, trackpad, keyboard, shift-wheel -
+   the native bar is hidden, and this draws one that is always there while there is
+   anywhere to go. One appearance on every machine, and nothing to detect.
+
+   The bar is a child of the .cue wrapper rather than of the scrolling box, so it does
+   not scroll away with the content it describes. */
+function makeBar(box, axis){
+  const bar = document.createElement("div");
+  bar.className = "sbar " + axis;
+  const thumb = document.createElement("div");
+  thumb.className = "thumb";
+  bar.appendChild(thumb);
+  const horiz = axis === "h";
+  const pos = e => horiz ? e.clientX : e.clientY;
+  const span = () => horiz ? [box.scrollWidth, box.clientWidth] : [box.scrollHeight, box.clientHeight];
+  const at = () => horiz ? box.scrollLeft : box.scrollTop;
+  const to = v => { if (horiz) box.scrollLeft = v; else box.scrollTop = v; };
+
+  let from = null, was = 0;
+  const move = e => {
+    if (from === null) return;
+    const [sw, cw] = span();
+    const track = (horiz ? bar.clientWidth : bar.clientHeight) - 4;
+    const room = Math.max(1, track - thumbSize(sw, cw, track));
+    to(was + (pos(e) - from) * (sw - cw) / room);
+    e.preventDefault();
+  };
+  const up = () => {
+    from = null;
+    bar.classList.remove("dragging");
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+  };
+  thumb.addEventListener("pointerdown", e => {
+    from = pos(e); was = at();
+    bar.classList.add("dragging");
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    e.preventDefault(); e.stopPropagation();
+  });
+  // Clicking the track pages, the way a scrollbar has always done - and it is the
+  // half of a scrollbar people reach for when the thumb is small.
+  bar.addEventListener("pointerdown", e => {
+    if (e.target === thumb) return;
+    const r = bar.getBoundingClientRect();
+    const [, cw] = span();
+    const ahead = (horiz ? e.clientX - r.left : e.clientY - r.top)
+                > (horiz ? thumb.offsetLeft + thumb.offsetWidth / 2
+                         : thumb.offsetTop + thumb.offsetHeight / 2);
+    to(at() + (ahead ? cw : -cw));
+    e.preventDefault();
+  });
+  return bar;
+}
+function thumbSize(full, view, track){
+  return Math.max(28, Math.round(track * view / Math.max(1, full)));
+}
+
 function paintCue(box){
   const w = box.parentElement;
   if (!w || !w.classList.contains("cue")) return;
@@ -5553,6 +5893,28 @@ function paintCue(box){
   w.classList.toggle("r", x - box.scrollLeft > 1);
   w.classList.toggle("u", box.scrollTop > 1);
   w.classList.toggle("d", y - box.scrollTop > 1);
+
+  // A region that is hidden, or not laid out yet, measures zero on both axes - which
+  // is not the same statement as "everything fits", so no bar is drawn either way.
+  const live = box.clientWidth > 0 && box.clientHeight > 0;
+  const hOn = live && x > 1, vOn = live && y > 1;
+  w.classList.toggle("hbar", hOn);
+  w.classList.toggle("vbar", vOn);
+  for (const bar of w.children){
+    if (!bar.classList || !bar.classList.contains("sbar")) continue;
+    const horiz = bar.classList.contains("h");
+    bar.classList.toggle("on", horiz ? hOn : vOn);
+    if (!(horiz ? hOn : vOn)) continue;
+    const full = horiz ? box.scrollWidth : box.scrollHeight;
+    const view = horiz ? box.clientWidth : box.clientHeight;
+    const track = (horiz ? bar.clientWidth : bar.clientHeight) - 4;
+    const size = thumbSize(full, view, track);
+    const room = Math.max(1, track - size);
+    const off = 2 + room * (horiz ? box.scrollLeft : box.scrollTop) / Math.max(1, full - view);
+    const t = bar.firstChild;
+    if (horiz){ t.style.width = size + "px"; t.style.left = off + "px"; }
+    else      { t.style.height = size + "px"; t.style.top  = off + "px"; }
+  }
 }
 
 function renderKeepingTab(){
@@ -5563,9 +5925,13 @@ function showTab(id){
   for (const b of document.querySelectorAll("nav button"))
     b.setAttribute("aria-selected", String(b.dataset.tab === id));
   for (const s of document.querySelectorAll("section.tab")) s.hidden = (s.id !== id);
-  // A hidden pane measures zero, so its cues were computed against nothing. Redo them
-  // now that this one is on screen.
-  for (const box of document.querySelectorAll(`#${id} .scrollx`)) paintCue(box);
+  /* cueScrollers, not paintCue: a hidden pane measures zero, so its bars were sized
+     against nothing and have to be redone now it is on screen - and a render that did
+     not go through keepScroll leaves fresh .scrollx elements with no wrapper at all, so
+     there would be no bar to redo. Wrapping is idempotent and skips what is already
+     wrapped, which makes this the cheap way to be certain rather than a second path
+     that has to be kept in step with the first. */
+  cueScrollers();
 }
 
 const FILTER_KEY = {fType:"type", fPhase:"phase", fOut:"out", fProj:"proj",
@@ -5688,7 +6054,7 @@ function adopt(sheets, name, opts){
   }
   S.model = M; S.calc = calculate(M);
   S.fileName = name; S.loadedAt = new Date(); S.blank = !!opts.blank;
-  S.pending = []; S.saved = 0; S.snapshot = null;
+  S.pending = []; S.saved = 0; S.snapshot = null; S.baseFindings = M.findings.slice();
   S.editedCells.clear(); S.expanded.clear();
   S.selProj = null; S.selPers = null; S.selAsg = null;
   defaultHorizon();
@@ -5857,6 +6223,7 @@ document.addEventListener("click", e => {
     e.stopPropagation();
     if (act.dataset.act === "blankms") blankMilestones(act.dataset.pid);
     if (act.dataset.act === "autoper") autoPeriods(act.dataset.pid);
+    if (act.dataset.act === "blankper") blankPeriods(act.dataset.pid);
     return;
   }
   const ins = e.target.closest("[data-ins]");
@@ -5927,7 +6294,7 @@ document.addEventListener("click", e => {
 // showing for that cell.
 document.addEventListener("click", e => {
   const td = e.target.closest('td[contenteditable="true"]');
-  if (td) SUGG.open(td);
+  if (td){ SUGG.open(td); CAL.open(td); }
 });
 document.addEventListener("focusin", e => {
   const td = e.target.closest('td[contenteditable="true"]');
@@ -5937,11 +6304,17 @@ document.addEventListener("focusin", e => {
   // to the half-typed text instead of the value the cell started with.
   if (!SUGG.owns(td)) td.dataset.orig = td.textContent;
   SUGG.open(td);
+  CAL.open(td);
 });
 document.addEventListener("focusout", e => {
   const td = e.target.closest('td[contenteditable="true"]');
   if (!td) return;
-  setTimeout(() => { if (!SUGG.holding) SUGG.close(); }, 120);
+  /* Close on a delay, and only if the panel is still THIS cell's. Clicking straight
+     from one cell to the next opens the panel for the new one before this timer fires,
+     and an unconditional close would then shut the panel that had just been opened -
+     which looked exactly like "it only works every other click". */
+  setTimeout(() => { if (!SUGG.holding && SUGG.owns(td)) SUGG.close(); }, 120);
+  setTimeout(() => { if (!CAL.holding && CAL.owns(td)) CAL.close(); }, 120);
   const now = td.textContent;
   if (now === td.dataset.orig) return;
   applyEdit(td.dataset.sheet, +td.dataset.row, td.dataset.col, now, td);
@@ -5950,8 +6323,9 @@ document.addEventListener("keydown", e => {
   const td = e.target.closest('td[contenteditable="true"]');
   if (!td) return;
   if (SUGG.key(e)) return;                       // the list takes the key first
-  if (e.key === "Enter"){ e.preventDefault(); SUGG.close(); td.blur(); }
-  if (e.key === "Escape"){ td.textContent = td.dataset.orig ?? ""; SUGG.close(); td.blur(); }
+  if (CAL.key(e)) return;
+  if (e.key === "Enter"){ e.preventDefault(); SUGG.close(); CAL.close(); td.blur(); }
+  if (e.key === "Escape"){ td.textContent = td.dataset.orig ?? ""; SUGG.close(); CAL.close(); td.blur(); }
 });
 // A pop-up over the cell you are typing into is in the way, so it goes.
 document.addEventListener("input", e => {
@@ -6106,6 +6480,143 @@ const SUGG = (() => {
      through the list, and closing on it makes a list taller than the box impossible to
      reach the bottom of. So: ignore the box's own scrolling, and elsewhere re-anchor
      rather than close, closing only once the cell itself has gone off screen. */
+  addEventListener("scroll", e => {
+    if (!cell || box.hidden) return;
+    const t = e.target;
+    if (t === box || (t && t.nodeType === 1 && box.contains(t))) return;
+    const r = cell.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) api.close();
+    else place();
+  }, true);
+  return api;
+})();
+
+/* ---- the calendar ----------------------------------------------------------
+   A date column offers a month grid, and stays fully typeable while it is open.
+
+   Both halves matter. Picking is what you want for a date you are reading off a plan
+   in front of you, where "is the 14th a Tuesday" is the actual question; typing is what
+   you want for the twentieth row of a set you already know, where a grid is four clicks
+   to say something you could have said in eight keystrokes. So this is an OFFER laid
+   beside the cell, never a gate in front of it: the caret stays in the cell, every key
+   still reaches it, and what you type steers the grid rather than the other way round.
+
+   Deliberately not <input type="date">. It would bring a native picker for nothing, and
+   take the cell's own behaviour with it - one editing model for text cells and another
+   for date cells, a different keyboard contract, a browser-dependent display format, and
+   no way to leave a date deliberately blank the way the rest of the table does. */
+const CAL = (() => {
+  const box = el("cal");
+  const DOW = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  const MON = ["January","February","March","April","May","June",
+               "July","August","September","October","November","December"];
+  let cell = null, shown = null;                 // shown: the month on display
+  const api = {holding:false};
+
+  const isDate = td => (SHEET_COLS[td.dataset.sheet] || {date:[]}).date.includes(td.dataset.col);
+  const readCell = () => {
+    const d = parseDate((cell.textContent || "").trim());
+    return d instanceof Date ? d : null;
+  };
+  const firstOf = d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+
+  function place(){
+    const r = cell.getBoundingClientRect();
+    box.style.left = Math.max(8, Math.min(r.left, innerWidth - box.offsetWidth - 8)) + "px";
+    box.style.top = (r.bottom + box.offsetHeight > innerHeight - 8
+      ? Math.max(8, r.top - box.offsetHeight - 4) : r.bottom + 4) + "px";
+  }
+
+  function render(){
+    const picked = readCell();
+    // What is being typed steers the grid: type 2029 and the calendar is already there.
+    if (picked) shown = firstOf(picked);
+    const y = shown.getUTCFullYear(), m = shown.getUTCMonth();
+    const lead = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7;    // weeks start Monday
+    const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    const todayKey = ymd(new Date());
+    const cells = [];
+    for (let i = 0; i < lead; i++) cells.push('<div class="d off"></div>');
+    for (let n = 1; n <= days; n++){
+      const k = ymd(new Date(Date.UTC(y, m, n)));
+      const cls = "d" + (picked && k === ymd(picked) ? " on" : "")
+                      + (k === todayKey ? " today" : "");
+      cells.push(`<button type="button" class="${cls}" data-d="${k}">${n}</button>`);
+    }
+    box.innerHTML =
+      `<div class="calhead">`
+      + `<button type="button" class="cnav" data-step="-12" title="Previous year">&#171;</button>`
+      + `<button type="button" class="cnav" data-step="-1" title="Previous month">&#8249;</button>`
+      + `<span class="cmon">${MON[m]} ${y}</span>`
+      + `<button type="button" class="cnav" data-step="1" title="Next month">&#8250;</button>`
+      + `<button type="button" class="cnav" data-step="12" title="Next year">&#187;</button>`
+      + `</div>`
+      + `<div class="calgrid">${DOW.map(d => `<div class="dow">${d}</div>`).join("")}`
+      + cells.join("") + `</div>`
+      + `<div class="calfoot">`
+      + `<button type="button" class="btn tiny" data-d="${att(todayKey)}">Today</button>`
+      + `<button type="button" class="btn tiny" data-d="">Clear</button>`
+      + `<span class="hint">or type it: YYYY-MM-DD</span></div>`;
+    box.hidden = false;
+    place();
+  }
+
+  api.open = td => {
+    if (!isDate(td)){ if (cell !== td) api.close(); return; }
+    if (cell === td && !box.hidden) return;
+    cell = td;
+    shown = firstOf(readCell() || new Date());
+    render();
+  };
+  api.close = () => { box.hidden = true; cell = null; api.holding = false; };
+  api.owns = td => cell === td && !box.hidden;
+  api.key = e => {
+    if (!cell || box.hidden) return false;
+    if (e.key === "Escape"){ e.preventDefault(); api.close(); return true; }
+    // PageUp/PageDown step the month without disturbing the caret. The arrow keys are
+    // left to the text, because the caret is in the cell and moving it is what they mean
+    // there - a grid that stole them would break typing to make picking prettier.
+    if (e.key === "PageUp" || e.key === "PageDown"){
+      e.preventDefault();
+      step(e.key === "PageDown" ? 1 : -1);
+      return true;
+    }
+    return false;
+  };
+  function step(n){
+    const at = readCell();
+    if (at) shown = firstOf(at);
+    shown = new Date(Date.UTC(shown.getUTCFullYear(), shown.getUTCMonth() + n, 1));
+    // Re-rendered from `shown` alone: with a date in the cell, render() would snap the
+    // grid straight back to it and the arrows would appear not to work.
+    const keep = cell.textContent;
+    cell.textContent = "";
+    render();
+    cell.textContent = keep;
+  }
+  function choose(v){
+    const td = cell;
+    api.close();
+    td.textContent = v;
+    td.blur();                                   // blur commits through the normal path
+  }
+  box.addEventListener("mousedown", e => {
+    api.holding = true;                          // hold focus while the panel is used
+    const nav = e.target.closest(".cnav");
+    if (nav){ e.preventDefault(); step(+nav.dataset.step); api.holding = false;
+              if (cell) cell.focus({preventScroll:true}); return; }
+    const d = e.target.closest("[data-d]");
+    if (d){ e.preventDefault(); choose(d.dataset.d); api.holding = false; }
+  });
+  addEventListener("mouseup", () => {
+    if (!api.holding) return;
+    api.holding = false;
+    if (cell && !box.hidden) cell.focus({preventScroll:true});
+  });
+  document.addEventListener("input", e => {
+    const td = e.target.closest('td[contenteditable="true"]');
+    if (td && td === cell) render();
+  });
   addEventListener("scroll", e => {
     if (!cell || box.hidden) return;
     const t = e.target;

@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.7"
+DOC_VERSION = "1.8"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.33.xlsx"
+PLAN = "PRAP_Development_Plan_v2.34.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,14 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.8", "2026-08-27", "Claude Code", "Dan",
+         "R-21 to R-25, all in the application rather than the arithmetic - no figure "
+         "moves. Sheet 04 gains the RULE CLASS: must / conditional / incomplete, what "
+         "each one does at a cell edit and at Save, and the class of every rule that is "
+         "not must. Sheet 06 gains the calendar on a date column (an offer beside the "
+         "cell, never a gate in front of it), the drawn scrollbars and why the browser's "
+         "own could not be used, the single opaque sticky band, and the rule that a "
+         "generator is only offered where it can run. Written against plan v2.34.", "Issued"],
         ["1.7", "2026-08-27", "Claude Code", "Dan",
          "R-19 and R-20. Sheet 04: V-03 and V-23 are marked REPORTED, NEVER REFUSING - "
          "the retirement of V-28 at v1.6 fixed one third of the problem, because all "

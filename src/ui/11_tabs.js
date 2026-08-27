@@ -153,6 +153,33 @@ function renderProjTab(){
     <div id="projDetail">${projDetail(pid)}</div>`;
 }
 
+/** The generator this project can actually use.
+ *
+ *  Offering 'Auto derivation' on an 'Others' project was offering something that could
+ *  only ever answer no: the rule hangs on CTA submission and the DB locks, and an
+ *  internal project has neither - it never will, because that is what makes it an
+ *  'Others' project rather than a trial. A control that refuses every time it is pressed
+ *  teaches the reader that the feature is broken, which is the opposite of what the
+ *  refusal was trying to say.
+ *
+ *  So each type is offered the generator that fits it, and a trial whose milestones are
+ *  not in yet is offered the derivation with the reason it cannot run yet in its place -
+ *  because there the answer really will change, as soon as two dates are typed. */
+function periodGenButton(pr, pid){
+  if (!CLINICAL_TYPES.has(pr.project_type))
+    return `<button class="btn tiny" data-act="blankper" data-pid="${att(pid)}"
+      data-tip="${att(HELP.blankper)}">Standard periods</button>`;
+  const ms = {};
+  for (const m of S.model.raw.Milestone)
+    if (m.project_id === pid && m.milestone_name && m.milestone_date instanceof Date)
+      (ms[m.milestone_name] ||= []).push(m.milestone_date);
+  const can = !!derivePeriods(pr, ms);
+  return `<button class="btn tiny" data-act="autoper" data-pid="${att(pid)}"
+    ${can ? "" : "disabled"} data-tip="${att(can ? HELP.autoper : HELP.autopernot)}"
+    >Auto derivation</button>`
+    + (can ? "" : `<span class="scope k">needs a CTA submission date and a DB lock</span>`);
+}
+
 function projDetail(pid){
   const M = S.model, pr = M.projects[pid];
   /* Clicking a row that has not been saved yet makes its identifier the selection, and
@@ -203,8 +230,7 @@ function projDetail(pid){
         ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_seq","note_1"])}</div>
       <div class="panel">
         <div class="phead"><h2>Periods — ${esc(pr.project_name)}</h2>
-          <button class="btn tiny" data-act="autoper" data-pid="${att(pid)}"
-            data-tip="${att(HELP.autoper)}">Auto derivation</button>
+          ${periodGenButton(pr, pid)}
           <span class="scope k">${per.length} row(s)${derived ? " &#183; derived" : ""}</span></div>
         <p class="cap">${derived ? "Derived from the milestones above." : "As entered in the workbook."}
           Names are unique within a project, so <code>project_id + period_name</code> identifies a row.</p>

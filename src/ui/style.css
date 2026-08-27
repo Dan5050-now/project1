@@ -179,6 +179,9 @@ td.ins,th.ins{white-space:nowrap}
  border-radius:var(--r-md);background:var(--surface);font-size:13px;
  box-shadow:var(--shadow);border-left:3px solid var(--good)}
 .banner.bad{background:var(--overbg);border-left-color:var(--crit)}
+/* Saved, but with something knowingly left unresolved - neither a clean save nor
+   a failure, and it should not read as either. */
+.banner.warn{background:var(--underbg);border-left-color:var(--warn)}
 .banner .lk{margin-left:auto;color:var(--accent);cursor:pointer;text-decoration:none;
  font-weight:530}
 .banner .lk:hover{text-decoration:underline}
@@ -242,11 +245,22 @@ td.ins,th.ins{white-space:nowrap}
    Translucent and blurred rather than opaque, so the content scrolling under
    them stays readable as context. This is the one place the resemblance is
    literal, and it is also the place it is most useful. */
-#editbar{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:8px 16px;
+/* ONE sticky band carrying both bars. Two independently sticky bars needed the second
+   to know the height of the first - it was pinned at top:60px against an edit bar that
+   measures 58.75px and wraps to two rows on a narrow window - so between them ran a
+   hairline the page showed through, and on a wrapped bar they overlapped outright.
+   Sticking the CONTAINER removes the question: the bars are laid out normally inside it
+   and travel as one.
+
+   And the band is OPAQUE. Translucency plus a backdrop blur reads beautifully over a
+   chart and reads as a fault over a table: at 92% the rows underneath still ghost
+   through the text, which is what "the header is overlapped with the page" describes.
+   The blur is kept only for the page BEHIND the band's rounded corners. */
+#stickybar{position:sticky;top:0;z-index:20;background:var(--page);
+ padding-bottom:8px;margin-bottom:-8px}
+#editbar{display:flex;flex-wrap:wrap;gap:8px 16px;
  align-items:center;margin:14px 0 0;padding:10px 16px;border-radius:var(--r-md);
- background:color-mix(in srgb,var(--surface) 92%,transparent);
- -webkit-backdrop-filter:saturate(180%) blur(24px);
- backdrop-filter:saturate(180%) blur(24px);
+ background:var(--surface);
  box-shadow:var(--shadow);font-size:12.5px;color:var(--ink2)}
 #editbar.dirty{background:color-mix(in srgb,var(--underbg) 95%,transparent);color:var(--ink)}
 #editbar .guide{max-width:min(760px,58%)}
@@ -256,15 +270,10 @@ td.ins,th.ins{white-space:nowrap}
 #editbar .btn{white-space:nowrap}
 
 /* --- tabs: a segmented control ------------------------------------------- */
-/* A full-width bar, not a floating pill: content scrolls UNDER it, and a pill only as
-   wide as its labels would let the page slide past beside them. Translucent and blurred
-   like an Apple toolbar, but at an opacity that keeps the labels readable over a chart -
-   blur alone is not enough when what is underneath is high-contrast. */
+/* A full-width bar, not a floating pill: content scrolls UNDER the band, and a pill only
+   as wide as its labels would let the page slide past beside them. */
 nav{display:flex;gap:2px;margin:18px 0 0;flex-wrap:wrap;
- position:sticky;top:60px;z-index:19;padding:5px 4px;border-radius:var(--r-md);
- background:color-mix(in srgb,var(--page) 92%,transparent);
- -webkit-backdrop-filter:saturate(180%) blur(24px);
- backdrop-filter:saturate(180%) blur(24px)}
+ padding:5px 4px;border-radius:var(--r-md);background:var(--fill)}
 nav button{border:0;background:none;color:var(--ink2);padding:6px 16px;font-size:13px;
  cursor:pointer;font-family:inherit;border-radius:var(--r-sm);font-weight:520;
  letter-spacing:-.006em;white-space:nowrap}
@@ -293,21 +302,36 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var
    still leaves the next one visible on a laptop screen. */
 .scrollx{overflow:auto;max-height:min(560px,66vh);-webkit-overflow-scrolling:touch;
  border-radius:var(--r-sm)}
-/* And every scroll region says so. `scrollbar-width:thin` looked neat and cost the whole
-   point of bounding the panels: the browser drew an OVERLAY bar that occupies no layout
-   space and fades out when idle, so a table with eleven columns off to the right looked
-   exactly like a table with none - measured, offsetWidth === clientWidth. The bar is now
-   a real 12px, always present while there is anywhere to scroll to, which is the only
-   thing on screen that says "there is more this way". Chromium ignores ::-webkit-scrollbar
-   unless scrollbar-width is auto, so it is left unset here and scrollbar-color carries
-   Firefox instead. */
-.scrollx{scrollbar-color:var(--base) transparent}
-.scrollx::-webkit-scrollbar{width:12px;height:12px}
-.scrollx::-webkit-scrollbar-track{background:var(--fill);border-radius:8px}
-.scrollx::-webkit-scrollbar-thumb{background:var(--base);border-radius:8px;
- border:3px solid transparent;background-clip:padding-box}
-.scrollx::-webkit-scrollbar-thumb:hover{background:var(--ink2)}
-.scrollx::-webkit-scrollbar-corner{background:transparent}
+/* The browser's own bar is HIDDEN, and the application draws its own - see makeBar() in
+   the wiring. Twice the browser was asked for a bar that says "there is more this way"
+   and twice it declined: `scrollbar-width:thin` gave an overlay bar occupying no layout
+   space that fades out when idle, and removing it so ::-webkit-scrollbar would apply
+   changed nothing on a build that uses overlay scrollbars - measured, a plain div with
+   an explicit 14px ::-webkit-scrollbar still reports offsetHeight === clientHeight.
+   A region deliberately bounded on both axes is only honest if the reader can see there
+   is more and reach it, so that is drawn rather than asked for. Native scrolling itself
+   is untouched: wheel, shift-wheel, trackpad and keyboard all still work. */
+.scrollx{scrollbar-width:none}
+.scrollx::-webkit-scrollbar{width:0;height:0}
+
+/* The drawn bars. Children of the .cue wrapper, not of the scrolling box, so they stay
+   put while what they describe moves under them. 11px of track with a 3px inset thumb -
+   big enough to grab with a mouse, quiet enough to sit over a table. */
+.sbar{position:absolute;z-index:4;opacity:0;pointer-events:none;
+ background:var(--fill);border-radius:8px;transition:opacity var(--dur) var(--ease)}
+.sbar.on{opacity:1;pointer-events:auto}
+.sbar.h{left:2px;right:2px;bottom:2px;height:11px}
+.sbar.v{top:2px;bottom:2px;right:2px;width:11px}
+.cue.hbar.vbar .sbar.h{right:15px}
+.cue.hbar.vbar .sbar.v{bottom:15px}
+.sbar .thumb{position:absolute;background:var(--base);border-radius:8px;
+ transition:background var(--dur) var(--ease)}
+.sbar.h .thumb{top:2px;bottom:2px}
+.sbar.v .thumb{left:2px;right:2px}
+.sbar:hover .thumb,.sbar.dragging .thumb{background:var(--ink2)}
+/* Room at the edges so the last row and the last column are never under a bar. */
+.cue.hbar>.scrollx{padding-bottom:15px}
+.cue.vbar>.scrollx{padding-right:15px}
 
 /* And a cue that does not depend on the browser drawing a bar at all. Overlay scrollbars
    - the default on macOS, and on some Chromium builds - stay hidden until you are already
@@ -477,6 +501,32 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 /* Type-ahead. Anchored to the cell, filtered as you type, arrow keys and Enter to
    choose. It exists because the valid vocabulary lives in the workbook, and nobody
    should have to remember it or open the Lists sheet to check. */
+/* --- the calendar on a date cell ----------------------------------------- */
+/* Sized so a month never reflows: seven columns of a fixed width, and the header row
+   the same width whatever the month is called. It sits beside the cell, not over it -
+   the caret stays where it was and typing goes on working. */
+.cal{position:fixed;z-index:60;background:var(--raised);border:1px solid var(--hairline);
+ border-radius:var(--r-md);box-shadow:var(--shadow-lift);padding:8px;font-size:12.5px;
+ user-select:none}
+.calhead{display:flex;align-items:center;gap:2px;padding:0 2px 6px}
+.calhead .cmon{flex:1;text-align:center;font-weight:620;color:var(--ink);
+ letter-spacing:-.01em}
+.cnav{border:0;background:none;color:var(--ink2);cursor:pointer;font-family:inherit;
+ font-size:14px;line-height:1;padding:3px 6px;border-radius:var(--r-sm)}
+.cnav:hover{background:var(--fill);color:var(--ink)}
+.calgrid{display:grid;grid-template-columns:repeat(7,30px);gap:2px}
+.calgrid .dow{text-align:center;font-size:10.5px;color:var(--muted);padding:2px 0 4px;
+ font-weight:600}
+.calgrid .d{height:26px;border:0;border-radius:var(--r-sm);background:none;cursor:pointer;
+ font-family:inherit;font-size:12.5px;color:var(--ink);padding:0}
+.calgrid .d.off{cursor:default}
+.calgrid button.d:hover{background:var(--fill)}
+.calgrid .d.today{box-shadow:inset 0 0 0 1px var(--base)}
+.calgrid .d.on{background:var(--accent);color:#fff;font-weight:620}
+.calfoot{display:flex;align-items:center;gap:6px;padding-top:8px;margin-top:6px;
+ border-top:1px solid var(--hairline)}
+.calfoot .hint{margin-left:auto;color:var(--muted);font-size:11px}
+
 .sugg{position:fixed;z-index:60;min-width:200px;max-width:340px;max-height:240px;
  overflow:auto;background:color-mix(in srgb,var(--raised) 94%,transparent);
  -webkit-backdrop-filter:saturate(180%) blur(20px);
@@ -567,3 +617,12 @@ dialog.big .dlg-b{max-height:84vh}
 .sev.fatal,.sev.error{background:var(--overbg);color:var(--crit)}
 .sev.warning{background:var(--underbg);color:var(--underink)}
 .sev.information{background:var(--fill);color:var(--ink2)}
+/* An error the user may keep, having been told: amber rather than red, because
+   red says 'this cannot stand' and this one can. */
+.sev.cond{background:var(--underbg);color:var(--underink)}
+/* The class beside the severity in the findings report. */
+.cls{font-size:10px;font-weight:600;border-radius:var(--r-xs);padding:2px 7px;
+ white-space:nowrap;background:var(--fill);color:var(--ink2)}
+.cls.must{background:var(--overbg);color:var(--crit)}
+.cls.conditional{background:var(--underbg);color:var(--underink)}
+.cls.incomplete{background:var(--fill);color:var(--ink2)}

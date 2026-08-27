@@ -185,6 +185,18 @@ const HELP = {
     + "Each period takes the standard weight for this project's type and phase. They are "
     + "ORDINARY ROWS afterwards - edit any of them, and Save when you are happy. Needs CTA "
     + "submission and a DB lock (V-16), and applies to clinical trials only.",
+  autopernot:"<b>Auto derivation</b> — not yet.<br>The rule builds a trial's periods from "
+    + "its milestones, so it needs two of them before it can say anything: a "
+    + "<b>CTA submission</b> date and at least one <b>DB lock</b> (V-16). Enter those in "
+    + "the Milestones table beside this one and the button comes to life. 'Blank list' "
+    + "there lays out the standard names so only the dates have to be typed.",
+  blankper:"<b>Standard periods</b><br>Lays out this project's period names — Planning, "
+    + "Develop, Close — with their dates blank and weight 1.00, so only the dates have to "
+    + "be typed. There is no derivation for an 'Others' project: the rule for a trial "
+    + "hangs on CTA submission and the DB locks, which an internal project does not have. "
+    + "Give them dates that run one after another with no gap: a month in no period is "
+    + "calculated at weight 1.00 (V-12), and the project's own window is the span its "
+    + "periods cover (REQ-CAL-17).",
   del:"<b>Delete this row</b><br>Refused if anything still references it, naming what does (V-17). "
     + "A delete is never cascaded. Provisional like any other change — 'Leave without change' puts it back.",
 };

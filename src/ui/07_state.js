@@ -9,6 +9,11 @@ const S = {
      pers:new Set(), role:new Set(), dept:new Set()},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
   pending:[], saved:0, snapshot:null, editedCells:new Set(), headers:{},
+  // The findings as of the last point the user said 'keep this' - a load, or a
+  // save. What a batch of edits LEAVES unresolved is measured against this, not
+  // against the live model, which already carries the consequences of every
+  // keystroke since.
+  baseFindings:[],
   genView:{pws:"matrix", rf:"matrix", lists:"matrix"},
 };
 

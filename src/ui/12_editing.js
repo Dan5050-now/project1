@@ -17,30 +17,26 @@ function beginEditSession(){
  *  that grace ends: a draft that now has content is promoted to an ordinary row and
  *  checked like one, and if that turns up an error the save is refused rather than
  *  quietly keeping a bad record. */
-/* Errors that are reported but never refuse an edit.
-   They all say the same kind of thing: "something which is NOT on this row is missing
-   yet". A clinical trial saved before its milestones exist raises V-12 and V-16 by
-   definition - and its milestones cannot be entered until it is saved, because the
-   milestone table hangs off a SELECTED project. Refusing the save there is a deadlock:
-   the row cannot be kept until its children exist, and its children cannot be created
-   until it is kept. The specification already draws this line for drafts - a row still
-   being built is INCOMPLETE, not invalid - so these stay in the findings report and are
-   named in the banner; they simply do not refuse the save.
+/* Which errors refuse, and which ask.
 
-   V-03 and V-23 are here for the same reason from the other direction. What is missing
-   is not on the row either: it is a row on RoleFactor, a standing assumption maintained
-   separately from the plan, often by somebody else. Refusing the assignment until the
-   assumptions catch up puts the two documents in the wrong order - which is exactly
-   what happened with V-28, and why that one was retired outright (R-18). Both keep
-   their severity, because a role calculated at 1.00 really is a wrong figure rather
-   than an approximate one; what they lose is the power to stop somebody recording who
-   is on their project. They are the coarse and the precise half of one question, and
-   neither half is a reason to refuse a row (R-19).
+   The classification itself is in the core - CONDITIONAL_RULES, refuses() and
+   conditional() in 05_model.js - so that the screen and the reference implementations
+   cannot disagree about what a rule is. This is only what the editor DOES with it:
 
-   Every other error still refuses, because every other error is something wrong with
-   the row in front of you. */
-const NEVER_REFUSES = new Set(["V-03","V-12","V-16","V-23"]);
-const blocking = f => (f.sev === "error" || f.sev === "fatal") && !NEVER_REFUSES.has(f.rule);
+     MUST         refuses the edit, and refuses the save. Something is wrong with the
+                  row in front of you and keeping it would put a record in the file
+                  that the file's own rules say cannot be there.
+     CONDITIONAL  never refuses an edit - a prompt on every keystroke would be
+                  unusable - and at SAVE it asks, once, naming what will be left
+                  unresolved. Going ahead is then the user's decision, taken knowingly.
+     INCOMPLETE   never refuses and never asks. The row is still being built and the
+                  finding will answer itself as the user carries on; the banner names
+                  it as "still to come".
+
+   A cell edit and a save are deliberately different moments. While you are typing, the
+   row is half-written and telling you it is incomplete is noise. Save is when you say
+   you meant it, and that is where the question belongs. */
+const blocking = refuses;
 
 /* What Save recalculates from the rows beneath a project.
  *
@@ -115,10 +111,12 @@ function deriveFromChildren(){
   return {changed, undo};
 }
 
+const fkey = f => f.rule + "\u0000" + f.msg;
+
 function saveEdits(){
   if (!S.pending.length) return;
   // Before the check, so that what is validated is what will be kept; put back with the
-  // drafts if the save is refused.
+  // drafts if the save is refused or the user goes back.
   const derived = deriveFromChildren();
   const drafts = [];
   for (const s of REQUIRED_SHEETS)
@@ -126,41 +124,97 @@ function saveEdits(){
     // neutral weight already in it, so "blank" would never be true again and a row the
     // user has not touched would be promoted and then reported for what it is missing.
     for (const r of S.model.raw[s]) if (r.__new && !isSkeleton(s, r)) drafts.push(r);
-  let pending = [];
-  if (drafts.length){
-    for (const r of drafts) delete r.__new;
-    const probe = rebuild();
-    const errs = probe.findings.filter(blocking);
-    const was = (S.model.findings || []).filter(blocking);
-    if (errs.length > was.length){
-      for (const r of drafts) r.__new = true;
-      for (const [row, col, was_] of derived.undo) row[col] = was_;    // and the derivation
-      showBanner("bad", `Save refused — the new row${drafts.length===1?"" :"s"} would break a rule: `
-        + `${errs[errs.length-1].msg} Correct it, or delete the row, then save.`);
-      return;
-    }
-    pending = probe.findings.filter(f => NEVER_REFUSES.has(f.rule)
-      && !(S.model.findings || []).some(g => g.rule === f.rule && g.msg === f.msg));
-    rebuild(true);
-    renderKeepingTab();
-  } else if (derived.changed.length){
-    rebuild(true);
-    renderKeepingTab();
+  for (const r of drafts) delete r.__new;
+  const probe = rebuild();
+  const undo = () => {
+    for (const r of drafts) r.__new = true;
+    for (const [row, col, was] of derived.undo) row[col] = was;
+  };
+
+  const errs = probe.findings.filter(blocking);
+  const was = (S.model.findings || []).filter(blocking);
+  if (errs.length > was.length){
+    undo();
+    showBanner("bad", `Save refused — this would break a rule that must hold: `
+      + `${errs[errs.length-1].msg} Correct it, or leave the change, then save.`);
+    return;
   }
+
+  /* What this batch of edits LEAVES unresolved, measured against the last save rather
+     than against the model as it stands. A cell edit is applied to the model straight
+     away - the numbers on screen must never disagree with the data on screen - so by
+     the time Save is pressed a conditional error the user has just caused is already
+     in S.model.findings, and comparing against that would find nothing new and ask
+     nothing. The baseline has to be the last point the user said "yes, keep this". */
+  const base = new Set((S.baseFindings || []).map(fkey));
+  // V-23 is raised BY the calculation, so a probe that has only been validated does not
+  // carry it - and a save that leaves a role uncosted would then be confirmed without
+  // that being one of the things named. Run it here and nowhere else: this is the one
+  // moment the full picture is worth the work, where the per-keystroke path would pay
+  // for it on every character typed.
+  calculate(probe);
+  const fresh = probe.findings.filter(f => conditional(f) && !base.has(fkey(f)));
+  const soon = probe.findings.filter(f => incomplete(f) && !base.has(fkey(f)));
+  if (fresh.length){ askConfirm(fresh, () => commitSave(derived, fresh, soon), undo); return; }
+  commitSave(derived, [], soon);
+}
+
+/** The save itself, once it is going ahead. Separated from the decision so that the
+ *  confirmation can call it later without repeating any of the checks. */
+function commitSave(derived, accepted, soon){
+  rebuild(true);
+  renderKeepingTab();
   S.saved += S.pending.length;
   S.pending = [];
   S.snapshot = null;
+  S.baseFindings = (S.model.findings || []).slice();
   renderDirty();
-  showBanner("", `Saved ${S.saved} change${S.saved===1?"":"s"} to the working data. `
+  showBanner(accepted.length ? "warn" : "",
+    `Saved ${S.saved} change${S.saved===1?"":"s"} to the working data. `
     + (derived.changed.length
         ? `Recalculated from the rows beneath: ${derived.changed.slice(0, 6).join(", ")}`
           + `${derived.changed.length > 6 ? ` and ${derived.changed.length - 6} more` : ""}. `
         : "")
-    + (pending.length
-        ? `Still to come: ${pending[0].msg} `
+    + (accepted.length
+        ? `Kept with ${accepted.length} thing${accepted.length===1?"":"s"} unresolved, `
+          + `at your confirmation — ${accepted[0].msg} `
+        : "")
+    + ((soon && soon.length)
+        ? `Still to come: ${soon[0].msg} `
         : "")
     + `They will be written to the file when you press Export. The file on disk is `
     + `still untouched until then.`);
+}
+
+/** Ask before saving over a conditional error, naming every one of them.
+ *
+ *  A confirm() would fit on one line and would be the wrong shape: these messages are
+ *  long, there can be several, and the whole point is that the user reads what they are
+ *  accepting. Going back is the default action - it is what Escape and the backdrop do -
+ *  because the safe answer should be the easy one. */
+function askConfirm(items, go, back){
+  const dlg = el("confirm");
+  el("cfBody").innerHTML =
+    `<p class="cap">These are <strong>conditional</strong>: the rows themselves are
+      sound and will be kept exactly as you typed them, but something they depend on is
+      not there yet, so the figures that need it are calculated as though the missing
+      piece were neutral. Saving does not make them go away — they stay in the findings
+      report until the missing piece arrives.</p>`
+    + `<table class="data-t"><thead><tr><th>rule</th><th>sheet</th><th>what is missing</th>`
+    + `</tr></thead><tbody>${items.map(f =>
+        `<tr><td><span class="sev cond">${esc(f.rule)}</span></td><td>${esc(f.sheet)}</td>`
+        + `<td style="white-space:normal">${esc(f.msg)}</td></tr>`).join("")}</tbody></table>`;
+  let done = false;
+  const finish = ok => {
+    if (done) return;
+    done = true;
+    dlg.close();
+    if (ok) go(); else { back(); rebuild(true); renderKeepingTab(); }
+  };
+  el("cfYes").onclick = () => finish(true);
+  el("cfNo").onclick = () => finish(false);
+  dlg.onclose = () => finish(false);            // Escape, and the backdrop
+  dlg.showModal();
 }
 function discardEdits(){
   if (!S.pending.length) return;
