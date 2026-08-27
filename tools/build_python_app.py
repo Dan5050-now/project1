@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "0.9"
+VERSION = "1.0"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,27 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.0
+
+  * A MISSING ASSUMPTION NO LONGER STOPS YOU TYPING. If you give somebody a role
+    that RoleFactor has no figure for yet, the row is kept. You are told - the
+    figures for that role really are wrong, and the report says so at full
+    severity - but the application does not refuse to record who is on your
+    project because a document somebody else maintains has not caught up. Only
+    things wrong with the row in front of you still refuse: an assignment
+    pointing at a project that does not exist, one that ends before it starts.
+  * And the message is now worth reading. It names the exact combination the
+    calculation looked up - project type / phase / work scope / period / role -
+    and how many person-months came out at factor 1.00 because of it. It used to
+    ask for rows covering periods nobody was ever booked into.
+  * A PROJECT IS AS LONG AS ITS PERIODS SAY IT IS. The utilisation graph used to
+    stretch a project over the span of its milestones. Several milestones mark
+    moments inside the run rather than its edges, so the project appeared to draw
+    resource in months its own plan did not cover - at full weight, because a
+    month in no period is weighted 1.00. Those flat shoulders at each end of the
+    graph are gone. Milestones still lay the periods out; the periods are the run.
+
 
 WHAT IS NEW IN 0.8
 

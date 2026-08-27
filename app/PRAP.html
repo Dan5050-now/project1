@@ -703,7 +703,7 @@ dialog.big .dlg-b{max-height:84vh}
 
 <script>
 "use strict";
-const APP_VERSION = "1.30";
+const APP_VERSION = "1.31";
 const SCHEMA_EXPECTED = 8;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -712,10 +712,10 @@ const SCHEMA_EXPECTED = 8;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.32.xlsx",          ver:"2.32",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.32 records Step 4 progress, schema 8, the absorption rule and the retirement of V-28"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.6.xlsx", ver:"1.6",
-   status:"v1.0 APPROVED by Dan, 2026-08-02; v1.5 adds schema 8 and the absorption rule, v1.6 retires V-28 — this document governs the code"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.33.xlsx",          ver:"2.33",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.33 records Step 4 progress, schema 8, the absorption rule and the periods-are-the-project window"},
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.7.xlsx", ver:"1.7",
+   status:"v1.0 APPROVED by Dan, 2026-08-02; v1.5 adds schema 8 and the absorption rule, v1.7 makes the role/factor check report without refusing — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
   {what:"Source data template",   file:"PRAP_SourceData_Template_v1.10.xlsx",       ver:"1.10",
@@ -2438,11 +2438,18 @@ function validate(M, F){
     if (!M.people[a.person_id])
       add("error","V-02","Assignment",a.__row,
         `Assignment ${a.assignment_id} refers to person ${a.person_id}, which does not exist.`);
+    /* V-03 is the coarse half of the same question V-23 asks precisely: does RoleFactor
+       carry this role for this project's TYPE, at all. Worth keeping as well as V-23,
+       because it catches a mistyped role name at once, where V-23 only speaks if the
+       assignment actually reaches a period and draws FTE.
+       It reports; it does not refuse (R-19). See NEVER_REFUSES in 12_editing.js. */
     const roles = M.rfRoles[proj.project_type];
     if (!roles || !roles.has(a.role_name))
       add("error","V-03","Assignment",a.__row,
-        `Assignment ${a.assignment_id}: role '${a.role_name}' is not valid for a project of type `
-        + `'${proj.project_type}'. Valid roles for this type: ${roles ? [...roles].join(", ") : "none defined"}.`);
+        `Assignment ${a.assignment_id}: role '${a.role_name}' has no RoleFactor row for a project `
+        + `of type '${proj.project_type}', so it would be calculated at factor 1.00. Roles defined `
+        + `for this type: ${roles ? [...roles].join(", ") : "none"}. The row is kept either way — `
+        + `add the assumption when you have it.`);
     if (a.assign_end_date && a.assign_start_date && a.assign_end_date < a.assign_start_date)
       add("error","V-05","Assignment",a.__row,`Assignment ${a.assignment_id}: end before start.`);
     if (proj.end_date && a.assign_end_date && a.assign_end_date > proj.end_date)
@@ -2573,24 +2580,22 @@ function validate(M, F){
     }
   }
 
-  // V-23: a role factor missing for a period an assignment actually spans
-  const need = new Map();
-  for (const a of M.assignments){
-    const proj = M.projects[a.project_id];
-    if (!proj || !M.people[a.person_id]) continue;
-    for (const s of (M.periods[a.project_id] || []))
-      need.set([proj.project_type, proj.clinical_phase, scopeOf(proj), s.period_name,
-                a.role_name].join(""), [proj, s.period_name, a.role_name]);
-  }
-  for (const [, [proj, pn, role]] of need){
-    if (stdFactor(M, proj, pn, role) !== undefined) continue;
-    const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
-    add("error","V-23","RoleFactor","",
-      `No role factor for ${proj.project_type} / ${ph || "-"} / `
-      + `${proj.work_scope_type || "any scope"} / ${pn} / ${role} — assignments covering that `
-      + `period would be calculated at factor 1.00. Add a row for that scope, or one with `
-      + `work_scope_type empty to cover every scope.`);
-  }
+  /* V-23 is not here any more. It is raised by calculate() - see reportGaps() in
+     06_calculate.js - and that is a deliberate move rather than a tidy-up.
+
+     Where it sat, it walked every period of every project an assignment belonged to
+     and asked whether a factor existed. Two things were wrong with that. It counted
+     combinations no figure ever needed, because an assignment does not necessarily
+     reach every period of its project - so a row could be demanded for a period
+     nobody was ever booked into. And it ran BEFORE the arithmetic, which made it a
+     statement about the DATA: an error about the data refuses the edit that raised it
+     (REQ-IMP-09), so a role whose factor had not been entered yet could not be given
+     to anybody.
+
+     Raised from the calculation it is the same finding at the same severity, keyed on
+     the same composition - project type, clinical phase, work scope, period name,
+     role - but only for the lookups a person-month actually made, and it can no
+     longer stand between a user and their own rows. */
 }
 
 /* ============================================================ 6. calculation
@@ -2616,9 +2621,35 @@ function validate(M, F){
  *  months a person is counted IN cannot differ from the months they are counted
  *  AMONG. Two copies of this would eventually disagree, and the symptom would be a
  *  role share that does not add up to one. */
-function assignmentWindow(proj, a){
-  return [a.assign_start_date || proj.start_date,
-          a.assign_end_date   || proj.end_date];
+function assignmentWindow(M, proj, a){
+  const [ps, pe] = projectWindow(M, proj);
+  return [a.assign_start_date || ps,
+          a.assign_end_date   || pe];
+}
+
+/** How long the project runs, for the purpose of working out a number.
+ *
+ *  THE PERIODS ARE THE PROJECT (REQ-CAL-17). Milestones are reference dates - the
+ *  derivation reads them to lay the periods out, and several of them are markers that
+ *  sit INSIDE the run rather than bounding it. The periods are the run itself: one
+ *  after another, and the only thing any weight in this calculation is attached to.
+ *
+ *  Taking the window from the milestones instead put the two out of step wherever a
+ *  milestone fell outside the periods it produced. Those months belonged to no period,
+ *  so periodAt returned nothing and they were costed at weight 1.00 - the project
+ *  drawing resource in months its own plan does not cover, and the utilisation chart
+ *  growing a flat shoulder at each end that no period justified.
+ *
+ *  A project with NO periods keeps its own typed dates, because there is nothing to
+ *  take a window from and refusing to calculate it at all would be worse: that is a
+ *  plan somebody is part way through entering, and V-12 already says so. */
+function projectWindow(M, proj){
+  let lo = null, hi = null;
+  for (const s of ((M && M.periods && M.periods[proj.project_id]) || [])){
+    if (s.period_start instanceof Date && (lo === null || s.period_start < lo)) lo = s.period_start;
+    if (s.period_end   instanceof Date && (hi === null || s.period_end   > hi)) hi = s.period_end;
+  }
+  return [lo || proj.start_date, hi || proj.end_date];
 }
 
 function monthsBetween(a, b){
@@ -2690,7 +2721,7 @@ function calculate(M){
   for (const a of M.assignments){
     const proj = M.projects[a.project_id];
     if (!proj || !M.people[a.person_id] || a.__bad || a.__new) continue;
-    const [s, e] = assignmentWindow(proj, a);
+    const [s, e] = assignmentWindow(M, proj, a);
     if (!s || !e) continue;
     for (const [y, m] of monthsBetween(s, e)){
       if (coverage(y, m, s, e) <= 0) continue;
@@ -2728,11 +2759,33 @@ function calculate(M){
     return rf;
   }
 
+  /* ---------------------------------------------------- V-23, from the arithmetic
+     A missing role factor is not a fact about the RoleFactor sheet; it is something
+     that happened to a number. So it is recorded here, as it happens, by the exact
+     composition the lookup used - project type, clinical phase, work scope, period
+     name, role - and only where the lookup actually fed a person-month.
+
+     Asked the other way round, as it used to be, the answer was wrong twice over: it
+     walked every period of the project rather than the months an assignment reaches,
+     so it reported combinations no figure ever needed; and it ran before the
+     calculation, which made it an error about the DATA and therefore something that
+     could refuse an edit. It is neither. It is the calculation reporting what it had
+     to guess at. */
+  const gaps = new Map();
+  const noteGap = (proj, pn, role, pid) => {
+    const key = [proj.project_type, proj.clinical_phase || "", scopeOf(proj) || "",
+                 pn, role].join(" ");
+    let g = gaps.get(key);
+    if (!g) gaps.set(key, g = {proj, periodName:pn, role, projects:new Set(), months:0});
+    g.projects.add(pid);
+    g.months++;
+  };
+
   let lo = Infinity, hi = -Infinity;
   for (const a of M.assignments){
     const proj = M.projects[a.project_id];
     if (!proj || !M.people[a.person_id] || a.__bad) continue;
-    const [s, e] = assignmentWindow(proj, a);
+    const [s, e] = assignmentWindow(M, proj, a);
     // Only a row still being typed, or a project with no dates of its own, contributes
     // nothing now - a blank assignment date means the project's, not zero.
     if (!s || !e || a.__new) continue;
@@ -2744,6 +2797,10 @@ function calculate(M){
       // Schema 6: the project's own work scope first, then the any-scope row. One
       // function, shared with the validation, so the figure and the finding agree.
       const k = monthKey(y, m);
+      // A month in no period at all is V-12's finding, not this one - there is no period
+      // name to be missing a factor FOR, and saying both would be saying it twice.
+      if (seg && stdFactor(M, proj, seg.period_name, a.role_name) === undefined)
+        noteGap(proj, seg.period_name, a.role_name, a.project_id);
       const rf = effectiveFactor(proj, seg ? seg.period_name : null, a.role_name, k);
       const share = shareCount(a, k);       // how many people hold this role this month
       const v = pw * (rf / share) * personWeight(a, y, m) * cov;
@@ -2764,9 +2821,39 @@ function calculate(M){
       who.get(wk).push([a.person_id, a.role_name]);
     }
   }
+  reportGaps(M, gaps);
   return {projMonth, persMonth, persProj, projPers, cell, who, sharers, shareCount,
-          staffed, effectiveFactor,
+          staffed, effectiveFactor, gaps,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
+}
+
+/** V-23, written onto the model once the calculation knows what it needed.
+ *
+ *  Rewritten so the SAME model can be calculated twice without the finding appearing
+ *  twice: the previous set is dropped first. Every other finding is produced once, by
+ *  buildModel; this one is produced by whoever calls calculate, and that is not always
+ *  exactly once.
+ *
+ *  Still an ERROR, because the figures really are wrong - a role calculated at 1.00 is
+ *  not an approximation of the right answer, it is a different answer. What changed is
+ *  only where it comes from, and therefore what it can do: a finding that exists only
+ *  after the arithmetic cannot refuse the edit that led to it. */
+function reportGaps(M, gaps){
+  if (!M || !Array.isArray(M.findings)) return;
+  for (let i = M.findings.length - 1; i >= 0; i--)
+    if (M.findings[i].rule === "V-23") M.findings.splice(i, 1);
+  for (const g of [...gaps.values()].sort((a, b) => a.months - b.months)){
+    const ph = CLINICAL_TYPES.has(g.proj.project_type) ? g.proj.clinical_phase : null;
+    const pl = [...g.projects];
+    M.findings.push({sev:"error", rule:"V-23", sheet:"RoleFactor", row:"",
+      msg:`No role factor for ${g.proj.project_type} / ${ph || "-"} / `
+        + `${g.proj.work_scope_type || "any scope"} / ${g.periodName} / ${g.role} — `
+        + `${g.months} person-month(s) on ${pl.length} project(s) `
+        + `(${pl.slice(0, 3).join(", ")}${pl.length > 3 ? ", …" : ""}) were calculated at `
+        + `factor 1.00 instead. Add a row for that scope, or one with work_scope_type `
+        + `empty to cover every scope. Your data is kept either way — this says the `
+        + `figures are short of an assumption, not that the rows are wrong.`});
+  }
 }
 
 /* ============================================================ 6a. import difference
@@ -4642,17 +4729,30 @@ function beginEditSession(){
  *  that grace ends: a draft that now has content is promoted to an ordinary row and
  *  checked like one, and if that turns up an error the save is refused rather than
  *  quietly keeping a bad record. */
-/* Errors that say "something which is NOT on this row is missing yet".
-   A clinical trial saved before its milestones exist raises both of these by definition
-   - and its milestones cannot be entered until it is saved, because the milestone table
-   hangs off a SELECTED project. Refusing the save there is a deadlock: the row cannot be
-   kept until its children exist, and its children cannot be created until it is kept.
-   The specification already draws this line for drafts - a row still being built is
-   INCOMPLETE, not invalid - so these stay in the findings report and are named in the
-   banner; they simply do not refuse the save. Every other error still does, because
-   every other error is something wrong with the row in front of you. */
-const INCOMPLETE_RULES = new Set(["V-12","V-16"]);
-const blocking = f => (f.sev === "error" || f.sev === "fatal") && !INCOMPLETE_RULES.has(f.rule);
+/* Errors that are reported but never refuse an edit.
+   They all say the same kind of thing: "something which is NOT on this row is missing
+   yet". A clinical trial saved before its milestones exist raises V-12 and V-16 by
+   definition - and its milestones cannot be entered until it is saved, because the
+   milestone table hangs off a SELECTED project. Refusing the save there is a deadlock:
+   the row cannot be kept until its children exist, and its children cannot be created
+   until it is kept. The specification already draws this line for drafts - a row still
+   being built is INCOMPLETE, not invalid - so these stay in the findings report and are
+   named in the banner; they simply do not refuse the save.
+
+   V-03 and V-23 are here for the same reason from the other direction. What is missing
+   is not on the row either: it is a row on RoleFactor, a standing assumption maintained
+   separately from the plan, often by somebody else. Refusing the assignment until the
+   assumptions catch up puts the two documents in the wrong order - which is exactly
+   what happened with V-28, and why that one was retired outright (R-18). Both keep
+   their severity, because a role calculated at 1.00 really is a wrong figure rather
+   than an approximate one; what they lose is the power to stop somebody recording who
+   is on their project. They are the coarse and the precise half of one question, and
+   neither half is a reason to refuse a row (R-19).
+
+   Every other error still refuses, because every other error is something wrong with
+   the row in front of you. */
+const NEVER_REFUSES = new Set(["V-03","V-12","V-16","V-23"]);
+const blocking = f => (f.sev === "error" || f.sev === "fatal") && !NEVER_REFUSES.has(f.rule);
 
 /* What Save recalculates from the rows beneath a project.
  *
@@ -4666,9 +4766,22 @@ const blocking = f => (f.sev === "error" || f.sev === "fatal") && !INCOMPLETE_RU
  *  milestone quite legitimately. At Save it is a consequence of an edit the user just
  *  made, and the banner names every value it changed.
  *
+ *  THE WINDOW COMES FROM THE PERIODS wherever the project has any of its own
+ *  (REQ-CAL-17). Milestones are reference dates: they are what the period derivation
+ *  reads, and they carry markers - an inspection, a first-patient-in - that sit inside
+ *  the run rather than bounding it. The periods ARE the run, one after another, and they
+ *  are what every weight in the calculation is attached to. Deriving the window from the
+ *  milestones put the two out of step in a way that showed: a milestone before the first
+ *  period, or after the last, stretched the project over months that belonged to no
+ *  period at all, and those months were then costed at weight 1.00 - so the utilisation
+ *  chart grew a flat shoulder at each end that no period ever justified.
+ *
+ *  Where a project has no periods OF ITS OWN the milestones still stand in, because then
+ *  they are the only independent statement of when it runs.
+ *
  *  Two guards, both about not destroying information:
- *    - a project with NO milestone dates keeps the window that was typed, because there
- *      is nothing to derive it from;
+ *    - a project with neither periods nor milestone dates keeps the window that was
+ *      typed, because there is nothing to derive it from;
  *    - a project with NO assignments keeps the team size that was typed, because "nobody
  *      is assigned yet" is not the same statement as "this needs nobody".
  */
@@ -4682,11 +4795,25 @@ function deriveFromChildren(){
   for (const p of M.raw.Project){
     const pid = p.project_id;
     if (!pid) continue;
-    const dates = M.raw.Milestone
+    /* The periods the user actually TYPED, and only if there are any. A trial with none
+       has its periods derived - and the derivation opens Before-Start-up at the project's
+       own start_date, so taking the window from those would be reading back the very
+       dates being checked, and a wrong window could never correct itself. There the
+       milestones are the only independent statement of when the project runs, so they
+       still stand in. Typed periods beat them wherever both exist, which is the whole
+       point of REQ-CAL-17. */
+    const typed = M.raw.ProjectPeriod.filter(r => r.project_id === pid);
+    const mdates = M.raw.Milestone
       .filter(m => m.project_id === pid && m.milestone_date instanceof Date)
-      .map(m => m.milestone_date.getTime());
-    if (dates.length){
-      const lo = new Date(Math.min(...dates)), hi = new Date(Math.max(...dates));
+      .map(m => +m.milestone_date);
+    const starts = typed.length
+      ? typed.filter(r => r.period_start instanceof Date).map(r => +r.period_start)
+      : mdates;
+    const ends = typed.length
+      ? typed.filter(r => r.period_end instanceof Date).map(r => +r.period_end)
+      : mdates;
+    if (starts.length && ends.length){
+      const lo = new Date(Math.min(...starts)), hi = new Date(Math.max(...ends));
       if (!(p.start_date instanceof Date) || +p.start_date !== +lo)
         set(p, "start_date", lo, `${pid} start ${ymd(lo)}`);
       if (!(p.end_date instanceof Date) || +p.end_date !== +hi)
@@ -4724,7 +4851,7 @@ function saveEdits(){
         + `${errs[errs.length-1].msg} Correct it, or delete the row, then save.`);
       return;
     }
-    pending = probe.findings.filter(f => INCOMPLETE_RULES.has(f.rule)
+    pending = probe.findings.filter(f => NEVER_REFUSES.has(f.rule)
       && !(S.model.findings || []).some(g => g.rule === f.rule && g.msg === f.msg));
     rebuild(true);
     renderKeepingTab();
@@ -4845,8 +4972,8 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
   // Re-validate the whole model with the same rules as an import (REQ-IMP-09). An edit
   // that introduces an ERROR is rejected outright rather than left to surface later.
   const probe = rebuild();
-  const newErrors = probe.findings.filter(f => f.sev === "error" || f.sev === "fatal");
-  const oldErrors = (S.model.findings || []).filter(f => f.sev === "error" || f.sev === "fatal");
+  const newErrors = probe.findings.filter(blocking);
+  const oldErrors = (S.model.findings || []).filter(blocking);
   if (newErrors.length > oldErrors.length){
     target[col] = before;
     rebuild(true);

@@ -43,8 +43,11 @@ PROJECT = {"project_id": "PRJ-001", "project_name": "Trial One", "project_type":
            "outsourcing_type": "Partial outsourcing", "EDC_setup": "by SB",
            "DataReviewSystem_setup": "by CRO", "RBQM_setup": "by SB",
            "EDC_system": "Rave", "planned_member_count": "3",
-           # Deliberately wider than the milestones: Save pulls the window in to the
-           # span they describe, which is 2027-01-15 .. 2029-03-31, i.e. 27 months.
+           # Deliberately wider than the milestones. This trial has no periods of its
+           # own, so under REQ-CAL-17 the milestones still stand in - they are the only
+           # independent statement of when it runs - and Save pulls the window in to the
+           # span they describe: 2027-01-15 .. 2029-03-31, i.e. 27 months. A project WITH
+           # typed periods takes its window from those instead.
            "start_date": "2027-01-01", "end_date": "2029-06-30", "status": "Planned"}
 MILESTONES = [{"milestone_name": "Protocol (v1)", "milestone_date": "2027-01-15",
                "milestone_seq": "1"},
@@ -56,9 +59,9 @@ MILESTONES = [{"milestone_name": "Protocol (v1)", "milestone_date": "2027-01-15"
                "milestone_seq": "4"}]
 PERSON = {"person_id": "PSN-001", "person_name": "Alex R.", "department": "Data Management",
           "primary_role": "Lead data manager", "capacity_fte": "1.00"}
-# The assignment ends with the project. Since Save derives the project window from the
-# milestones, a project now ends at its LAST MILESTONE - so an assignment running past
-# that is over-running the project and is reported as V-07, correctly.
+# The assignment ends with the project: Save pulls the window in to the milestones, so a
+# project with no periods of its own ends at its LAST MILESTONE, and an assignment running
+# past that is over-running the project and is reported as V-07, correctly.
 ASSIGNMENT = {"project_name": "Trial One", "role_name": "Lead data manager",
               "assign_start_date": "2027-04-10", "assign_end_date": "2029-03-31",
               "person_weight": "0.40"}
@@ -234,8 +237,8 @@ with sync_playwright() as pw:
                       " months: p.total_period_months} : null;}")
     check(got and got["name"] == "Trial One" and got["type"] == "NewDrug CT"
           and got["months"] == 27,
-          "the project and its milestones save together, and the window is derived from "
-          "them: 2027-01-15 .. 2029-03-31, 27 months",
+          "the project and its milestones save together, and with no periods of its own "
+          "the window comes from them: 2027-01-15 .. 2029-03-31, 27 months",
           f"{got}  ·  {banner.strip()[:60]}")
 
     per = pg.evaluate("() => (S.model.periods['PRJ-001'] || []).map(s => "

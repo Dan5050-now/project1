@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.6"
+DOC_VERSION = "1.7"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.32.xlsx"
+PLAN = "PRAP_Development_Plan_v2.33.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,16 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.7", "2026-08-27", "Claude Code", "Dan",
+         "R-19 and R-20. Sheet 04: V-03 and V-23 are marked REPORTED, NEVER REFUSING - "
+         "the retirement of V-28 at v1.6 fixed one third of the problem, because all "
+         "three rules asked the same question and all three refused the row. V-23 also "
+         "moves out of the validation pass and into the CALCULATION: keyed on the whole "
+         "composition the lookup uses and counted in the person-months actually "
+         "calculated at 1.00, which is both the right grouping and the reason it can no "
+         "longer refuse anything. Sheet 05 gains REQ-CAL-17: a project's window is the "
+         "span of its PERIODS, not of its milestones, so no month outside the plan draws "
+         "resource at weight 1.00. Written against plan v2.33.", "Issued"],
         ["1.6", "2026-08-26", "Claude Code", "Dan",
          "R-18: V-28 IS RETIRED. Sheet 04 records the retirement rather than dropping "
          "the row. The rule was right about the data and wrong about the moment: an "

@@ -17,17 +17,30 @@ function beginEditSession(){
  *  that grace ends: a draft that now has content is promoted to an ordinary row and
  *  checked like one, and if that turns up an error the save is refused rather than
  *  quietly keeping a bad record. */
-/* Errors that say "something which is NOT on this row is missing yet".
-   A clinical trial saved before its milestones exist raises both of these by definition
-   - and its milestones cannot be entered until it is saved, because the milestone table
-   hangs off a SELECTED project. Refusing the save there is a deadlock: the row cannot be
-   kept until its children exist, and its children cannot be created until it is kept.
-   The specification already draws this line for drafts - a row still being built is
-   INCOMPLETE, not invalid - so these stay in the findings report and are named in the
-   banner; they simply do not refuse the save. Every other error still does, because
-   every other error is something wrong with the row in front of you. */
-const INCOMPLETE_RULES = new Set(["V-12","V-16"]);
-const blocking = f => (f.sev === "error" || f.sev === "fatal") && !INCOMPLETE_RULES.has(f.rule);
+/* Errors that are reported but never refuse an edit.
+   They all say the same kind of thing: "something which is NOT on this row is missing
+   yet". A clinical trial saved before its milestones exist raises V-12 and V-16 by
+   definition - and its milestones cannot be entered until it is saved, because the
+   milestone table hangs off a SELECTED project. Refusing the save there is a deadlock:
+   the row cannot be kept until its children exist, and its children cannot be created
+   until it is kept. The specification already draws this line for drafts - a row still
+   being built is INCOMPLETE, not invalid - so these stay in the findings report and are
+   named in the banner; they simply do not refuse the save.
+
+   V-03 and V-23 are here for the same reason from the other direction. What is missing
+   is not on the row either: it is a row on RoleFactor, a standing assumption maintained
+   separately from the plan, often by somebody else. Refusing the assignment until the
+   assumptions catch up puts the two documents in the wrong order - which is exactly
+   what happened with V-28, and why that one was retired outright (R-18). Both keep
+   their severity, because a role calculated at 1.00 really is a wrong figure rather
+   than an approximate one; what they lose is the power to stop somebody recording who
+   is on their project. They are the coarse and the precise half of one question, and
+   neither half is a reason to refuse a row (R-19).
+
+   Every other error still refuses, because every other error is something wrong with
+   the row in front of you. */
+const NEVER_REFUSES = new Set(["V-03","V-12","V-16","V-23"]);
+const blocking = f => (f.sev === "error" || f.sev === "fatal") && !NEVER_REFUSES.has(f.rule);
 
 /* What Save recalculates from the rows beneath a project.
  *
@@ -41,9 +54,22 @@ const blocking = f => (f.sev === "error" || f.sev === "fatal") && !INCOMPLETE_RU
  *  milestone quite legitimately. At Save it is a consequence of an edit the user just
  *  made, and the banner names every value it changed.
  *
+ *  THE WINDOW COMES FROM THE PERIODS wherever the project has any of its own
+ *  (REQ-CAL-17). Milestones are reference dates: they are what the period derivation
+ *  reads, and they carry markers - an inspection, a first-patient-in - that sit inside
+ *  the run rather than bounding it. The periods ARE the run, one after another, and they
+ *  are what every weight in the calculation is attached to. Deriving the window from the
+ *  milestones put the two out of step in a way that showed: a milestone before the first
+ *  period, or after the last, stretched the project over months that belonged to no
+ *  period at all, and those months were then costed at weight 1.00 - so the utilisation
+ *  chart grew a flat shoulder at each end that no period ever justified.
+ *
+ *  Where a project has no periods OF ITS OWN the milestones still stand in, because then
+ *  they are the only independent statement of when it runs.
+ *
  *  Two guards, both about not destroying information:
- *    - a project with NO milestone dates keeps the window that was typed, because there
- *      is nothing to derive it from;
+ *    - a project with neither periods nor milestone dates keeps the window that was
+ *      typed, because there is nothing to derive it from;
  *    - a project with NO assignments keeps the team size that was typed, because "nobody
  *      is assigned yet" is not the same statement as "this needs nobody".
  */
@@ -57,11 +83,25 @@ function deriveFromChildren(){
   for (const p of M.raw.Project){
     const pid = p.project_id;
     if (!pid) continue;
-    const dates = M.raw.Milestone
+    /* The periods the user actually TYPED, and only if there are any. A trial with none
+       has its periods derived - and the derivation opens Before-Start-up at the project's
+       own start_date, so taking the window from those would be reading back the very
+       dates being checked, and a wrong window could never correct itself. There the
+       milestones are the only independent statement of when the project runs, so they
+       still stand in. Typed periods beat them wherever both exist, which is the whole
+       point of REQ-CAL-17. */
+    const typed = M.raw.ProjectPeriod.filter(r => r.project_id === pid);
+    const mdates = M.raw.Milestone
       .filter(m => m.project_id === pid && m.milestone_date instanceof Date)
-      .map(m => m.milestone_date.getTime());
-    if (dates.length){
-      const lo = new Date(Math.min(...dates)), hi = new Date(Math.max(...dates));
+      .map(m => +m.milestone_date);
+    const starts = typed.length
+      ? typed.filter(r => r.period_start instanceof Date).map(r => +r.period_start)
+      : mdates;
+    const ends = typed.length
+      ? typed.filter(r => r.period_end instanceof Date).map(r => +r.period_end)
+      : mdates;
+    if (starts.length && ends.length){
+      const lo = new Date(Math.min(...starts)), hi = new Date(Math.max(...ends));
       if (!(p.start_date instanceof Date) || +p.start_date !== +lo)
         set(p, "start_date", lo, `${pid} start ${ymd(lo)}`);
       if (!(p.end_date instanceof Date) || +p.end_date !== +hi)
@@ -99,7 +139,7 @@ function saveEdits(){
         + `${errs[errs.length-1].msg} Correct it, or delete the row, then save.`);
       return;
     }
-    pending = probe.findings.filter(f => INCOMPLETE_RULES.has(f.rule)
+    pending = probe.findings.filter(f => NEVER_REFUSES.has(f.rule)
       && !(S.model.findings || []).some(g => g.rule === f.rule && g.msg === f.msg));
     rebuild(true);
     renderKeepingTab();
@@ -220,8 +260,8 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
   // Re-validate the whole model with the same rules as an import (REQ-IMP-09). An edit
   // that introduces an ERROR is rejected outright rather than left to surface later.
   const probe = rebuild();
-  const newErrors = probe.findings.filter(f => f.sev === "error" || f.sev === "fatal");
-  const oldErrors = (S.model.findings || []).filter(f => f.sev === "error" || f.sev === "fatal");
+  const newErrors = probe.findings.filter(blocking);
+  const oldErrors = (S.model.findings || []).filter(blocking);
   if (newErrors.length > oldErrors.length){
     target[col] = before;
     rebuild(true);

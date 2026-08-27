@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.32 records Step 4 progress, schema 8, the cross-data check, the absorption of an unstaffed role's factor, the shared-role division, the delivered defaults and optional assignment dates |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.33 records Step 4 progress, schema 8, the periods-are-the-project window, the role/factor check that reports without refusing, the absorption of an unstaffed role's factor, the shared-role division and the delivered defaults |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -68,7 +68,7 @@ File API call at all** — Python reads the workbook and hands the bytes to the 
 `127.0.0.1`. `core/` and `ui/` are untouched, so there is still one engine.
 
 ```
-python tools/build_python_app.py --zip   # dist/PM_APP_python_v0.9.zip, 125 KB
+python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.0.zip, 129 KB
 python tools/test_storage_py.py          # 80 checks — kills mid-save, an 8-process race
 python tools/test_python_app.py          # 42 checks — a live server, a real browser
 ```
@@ -218,9 +218,10 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.32.xlsx` — **current.** 73 requirements, 28 live
-  validation rules (V-25 and V-28 retired), source schema version 8. Carries change
-  **R-18 — V-28 retired** (below) and **R-17 — an
+- `docs/PRAP_Development_Plan_v2.33.xlsx` — **current.** 74 requirements, 28 live
+  validation rules (V-25 and V-28 retired), source schema version 8. Carries changes
+  **R-20 — the periods are the project** (`REQ-CAL-17`), **R-19 — the role/factor check
+  reports without refusing**, **R-18 — V-28 retired** (all below) and **R-17 — an
   empty post still costs the project** (`REQ-CAL-16`: a role that carries a factor and
   that nobody holds in a month has that factor added to whoever covers for it, named by
   `RoleFactor.absorbed_by`) and the cross-checks between the assumptions and the data
@@ -234,7 +235,7 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.6.xlsx` — **current specification.** Schema 8
+- `docs/PRAP_Programming_Specification_v1.7.xlsx` — **current specification.** Schema 8
   (the two-step lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
   through, the cross-data rules, the shared-role division with its worked
   reasoning, and where the delivered defaults come from.
@@ -275,7 +276,7 @@ document through the manifest rather than by sorting filenames.
 
   | Check | Result |
   |---|---|
-  | Calculation vs `verify_source_workbook.py` | **exact match on all 1,225 person-months** (and all 440 of the 10×10 set) |
+  | Calculation vs `verify_source_workbook.py` | **exact match on all 1,227 person-months** (and all 441 of the 10×10 set) |
   | Findings vs the Python verifier | both report zero on the dummy |
   | Export → re-import | identical figures, zero findings |
   | Export read by `openpyxl` (an independent implementation) | passes the full verifier |
@@ -996,6 +997,30 @@ Requires `openpyxl`.
   project's combination has no `PeriodWeightStandard` rows at all, not for any period.
   `V-29` is information rather than an error: a role that carries a factor, that nobody
   holds, and that nothing covers for — work the figures are counting nowhere.
+- **The periods are the project** (R-20, `REQ-CAL-17`). A project's window — what a
+  blank assignment date means, and what the utilisation chart is drawn over — is the
+  span of its `ProjectPeriod` rows: earliest `period_start` to latest `period_end`.
+  Milestones are **reference dates**: the derivation reads them to lay the periods out,
+  and several of them mark moments *inside* the run rather than its edges. Taking the
+  window from them stretched a project across months that belonged to no period at all
+  — and a month in no period is weighted **1.00** — so the project drew resource its own
+  plan did not cover and the chart grew a flat shoulder at each end. A project with no
+  periods keeps its own typed dates; `V-12` already says why. Save writes the same window
+  back, reading the periods the user **typed** and falling back to the milestone span
+  where there are none: a *derived* period opens at the project's own `start_date`, so
+  reading the saved window back off it would mean a wrong window could never correct
+  itself.
+- **A missing assumption is not a bad row** (R-19, `V-03`/`V-23`). `RoleFactor` is a
+  standing document, maintained separately from any one plan and often by somebody else.
+  If a role has no factor yet the figures for that role are wrong, and saying so is
+  right — but refusing to record *who is on the project* until that document catches up
+  is not. Both rules keep their severity and **neither can refuse an edit**; only things
+  wrong with the row in front of you still do. `V-23` is also now raised **by the
+  calculation**: keyed on the whole composition the lookup used — project type ·
+  clinical phase · work scope · period · role — and counted in the person-months that
+  were actually calculated at 1.00. Asked the old way, off the sheets, it walked every
+  period of every project an assignment belonged to and demanded rows for periods nobody
+  was ever booked into.
 - **`V-28` is retired one version after it was added** (R-18, v2.32). It asked the same
   blunt question of the roles on the assignments — and it was right about the data and
   wrong about the moment. **An error refuses the edit that raised it** (REQ-IMP-09), and

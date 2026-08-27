@@ -517,6 +517,10 @@ class Model:
         self.assignments = []
         validate(self)
         recompute_derived(self)
+        # V-23 is a consequence of the arithmetic, so the model is not fully described
+        # until the arithmetic has run. Cheap, and it keeps `prap_io validate` telling
+        # an agent exactly what the application will show.
+        calculate(self)
 
     def add(self, sev, rule, sheet, row, msg):
         self.findings.append({"sev": sev, "rule": rule, "sheet": sheet,
@@ -682,11 +686,15 @@ def validate(M):
             M.add("error", "V-02", "Assignment", a["__row"],
                   f"Assignment {aid} refers to person {a.get('person_id')}, which does "
                   f"not exist.")
+        # The coarse half of the question V-23 asks precisely: does RoleFactor carry this
+        # role for this project's TYPE at all. Reported, never a reason to refuse a row
+        # in the application (R-19).
         roles = M.rf_roles.get(proj.get("project_type"))
         if not roles or a.get("role_name") not in roles:
             M.add("error", "V-03", "Assignment", a["__row"],
-                  f"Assignment {aid}: role '{a.get('role_name')}' is not valid for a "
-                  f"project of type '{proj.get('project_type')}'.")
+                  f"Assignment {aid}: role '{a.get('role_name')}' has no RoleFactor row "
+                  f"for a project of type '{proj.get('project_type')}', so it would be "
+                  f"calculated at factor 1.00.")
         if (a.get("assign_end_date") and a.get("assign_start_date")
                 and a["assign_end_date"] < a["assign_start_date"]):
             M.add("error", "V-05", "Assignment", a["__row"], f"Assignment {aid}: end before start.")
@@ -729,25 +737,36 @@ def validate(M):
                   f"{sid}: capacity {cap:.2f} FTE is below the under-allocation floor of "
                   f"{M.UNDER:.2f}.")
 
-    need = {}
-    for a in M.assignments:
-        proj = M.projects.get(a.get("project_id"))
-        if not proj or a.get("person_id") not in M.people:
-            continue
-        ph = proj.get("clinical_phase") if proj.get("project_type") in CLINICAL_TYPES else None
-        for s in M.periods.get(a.get("project_id"), []):
-            k = (proj.get("project_type"), ph, scope_of(proj), s.get("period_name"),
-                 a.get("role_name"))
-            need[k] = (proj, s.get("period_name"), a.get("role_name"))
-    for k, (proj, pn, role) in need.items():
-        if std_factor(M, proj, pn, role) is None:
-            M.add("error", "V-23", "RoleFactor", "",
-                  f"No role factor for {k[0]} / {k[1] or '-'} / "
-                  f"{proj.get('work_scope_type') or 'any scope'} / {pn} / {role}.")
+    # V-23 is NOT raised here. It is raised by calculate() - see report_gaps - keyed on
+    # the composition the lookup actually used and only for the person-months that
+    # actually made it, so it reports what the arithmetic had to guess at rather than
+    # what the sheets might one day need. It is also therefore a finding that cannot
+    # refuse an edit in the application, which is the point (R-19).
 
 
 # =============================================================== 4. calculation
-def assignment_window(proj, a):
+def project_window(M, proj):
+    """How long the project runs, for the purpose of working out a number.
+
+    THE PERIODS ARE THE PROJECT (REQ-CAL-17). Milestones are reference dates: the
+    derivation reads them to lay the periods out, and several of them are markers
+    that sit INSIDE the run rather than bounding it. The periods are the run itself,
+    and the only thing any weight in this calculation is attached to.
+
+    A project with no periods keeps its own typed dates - there is nothing to take a
+    window from, and V-12 already says so.
+    """
+    lo = hi = None
+    for s in (M.periods.get(proj.get("project_id")) or []):
+        ps, pe = s.get("period_start"), s.get("period_end")
+        if ps is not None and (lo is None or ps < lo):
+            lo = ps
+        if pe is not None and (hi is None or pe > hi):
+            hi = pe
+    return (lo or proj.get("start_date"), hi or proj.get("end_date"))
+
+
+def assignment_window(M, proj, a):
     """The months an assignment covers.
 
     Both dates are optional and a blank one means the project's own (REQ-CAL-15):
@@ -756,8 +775,9 @@ def assignment_window(proj, a):
     alike, so the months a person is counted IN cannot differ from the months they
     are counted AMONG.
     """
-    return (a.get("assign_start_date") or proj.get("start_date"),
-            a.get("assign_end_date") or proj.get("end_date"))
+    ps, pe = project_window(M, proj)
+    return (a.get("assign_start_date") or ps,
+            a.get("assign_end_date") or pe)
 
 
 def calculate(M):
@@ -795,7 +815,7 @@ def calculate(M):
         proj = M.projects.get(a.get("project_id"))
         if not proj or a.get("person_id") not in M.people:
             continue
-        s, e = assignment_window(proj, a)
+        s, e = assignment_window(M, proj, a)
         if not s or not e:
             continue
         for y, m in months_between(s, e):
@@ -817,11 +837,16 @@ def calculate(M):
             rf += std_factor(M, proj, period_name, absent) or 0.0
         return rf
 
+    # V-23, recorded as it happens: the composition the lookup used, and only where the
+    # lookup fed a person-month. A month in no period at all is V-12's finding, not this
+    # one - there is no period name for a factor to be missing FOR.
+    gaps = {}
+
     for a in M.assignments:
         proj = M.projects.get(a.get("project_id"))
         if not proj or a.get("person_id") not in M.people:
             continue
-        s, e = assignment_window(proj, a)
+        s, e = assignment_window(M, proj, a)
         if not s or not e:
             continue
         for y, m in months_between(s, e):
@@ -832,6 +857,14 @@ def calculate(M):
             pw = (_as_num(seg.get("weight")) if seg else None)
             pw = 1.0 if pw is None else pw
             k = month_key(y, m - 1)
+            if seg and std_factor(M, proj, seg.get("period_name"), a.get("role_name")) is None:
+                key = (proj.get("project_type"), proj.get("clinical_phase") or "",
+                       scope_of(proj) or "", seg.get("period_name"), a.get("role_name"))
+                g = gaps.setdefault(key, {"proj": proj, "period_name": seg.get("period_name"),
+                                          "role": a.get("role_name"), "projects": set(),
+                                          "months": 0})
+                g["projects"].add(a["project_id"])
+                g["months"] += 1
             rf = effective_factor(proj, seg.get("period_name") if seg else None,
                                   a.get("role_name"), k)
             share = (len(sharers.get((a["project_id"], a.get("role_name"), k), ())) or 1) \
@@ -843,8 +876,32 @@ def calculate(M):
             pers_month[(a["person_id"], k)] += v
             pers_proj[(a["person_id"], k)][a["project_id"]] += v
             cell[(a["project_id"], a["person_id"], a.get("role_name"), k)] += v
+
+    report_gaps(M, gaps)
     return {"proj_month": proj_month, "pers_month": pers_month, "pers_proj": pers_proj,
-            "cell": cell, "lo": lo or 0, "hi": hi or 0}
+            "cell": cell, "gaps": gaps, "lo": lo or 0, "hi": hi or 0}
+
+
+def report_gaps(M, gaps):
+    """V-23, written onto the model once the calculation knows what it needed.
+
+    Rewritten rather than appended, so calculating the same model twice does not
+    report it twice. Still an ERROR: a role calculated at 1.00 is a different answer,
+    not an approximate one. What changed is only where it comes from, and therefore
+    what it can do - a finding that exists only after the arithmetic cannot refuse the
+    edit that led to it.
+    """
+    M.findings[:] = [f for f in M.findings if f["rule"] != "V-23"]
+    for g in sorted(gaps.values(), key=lambda g: g["months"]):
+        proj = g["proj"]
+        ph = proj.get("clinical_phase") if proj.get("project_type") in CLINICAL_TYPES else None
+        pl = sorted(g["projects"])
+        M.add("error", "V-23", "RoleFactor", "",
+              f"No role factor for {proj.get('project_type')} / {ph or '-'} / "
+              f"{proj.get('work_scope_type') or 'any scope'} / {g['period_name']} / "
+              f"{g['role']} - {g['months']} person-month(s) on {len(pl)} project(s) "
+              f"({', '.join(pl[:3])}{', ...' if len(pl) > 3 else ''}) were calculated at "
+              f"factor 1.00 instead.")
 
 
 def flags(M, C):

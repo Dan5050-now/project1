@@ -21,9 +21,35 @@
  *  months a person is counted IN cannot differ from the months they are counted
  *  AMONG. Two copies of this would eventually disagree, and the symptom would be a
  *  role share that does not add up to one. */
-function assignmentWindow(proj, a){
-  return [a.assign_start_date || proj.start_date,
-          a.assign_end_date   || proj.end_date];
+function assignmentWindow(M, proj, a){
+  const [ps, pe] = projectWindow(M, proj);
+  return [a.assign_start_date || ps,
+          a.assign_end_date   || pe];
+}
+
+/** How long the project runs, for the purpose of working out a number.
+ *
+ *  THE PERIODS ARE THE PROJECT (REQ-CAL-17). Milestones are reference dates - the
+ *  derivation reads them to lay the periods out, and several of them are markers that
+ *  sit INSIDE the run rather than bounding it. The periods are the run itself: one
+ *  after another, and the only thing any weight in this calculation is attached to.
+ *
+ *  Taking the window from the milestones instead put the two out of step wherever a
+ *  milestone fell outside the periods it produced. Those months belonged to no period,
+ *  so periodAt returned nothing and they were costed at weight 1.00 - the project
+ *  drawing resource in months its own plan does not cover, and the utilisation chart
+ *  growing a flat shoulder at each end that no period justified.
+ *
+ *  A project with NO periods keeps its own typed dates, because there is nothing to
+ *  take a window from and refusing to calculate it at all would be worse: that is a
+ *  plan somebody is part way through entering, and V-12 already says so. */
+function projectWindow(M, proj){
+  let lo = null, hi = null;
+  for (const s of ((M && M.periods && M.periods[proj.project_id]) || [])){
+    if (s.period_start instanceof Date && (lo === null || s.period_start < lo)) lo = s.period_start;
+    if (s.period_end   instanceof Date && (hi === null || s.period_end   > hi)) hi = s.period_end;
+  }
+  return [lo || proj.start_date, hi || proj.end_date];
 }
 
 function monthsBetween(a, b){
@@ -95,7 +121,7 @@ function calculate(M){
   for (const a of M.assignments){
     const proj = M.projects[a.project_id];
     if (!proj || !M.people[a.person_id] || a.__bad || a.__new) continue;
-    const [s, e] = assignmentWindow(proj, a);
+    const [s, e] = assignmentWindow(M, proj, a);
     if (!s || !e) continue;
     for (const [y, m] of monthsBetween(s, e)){
       if (coverage(y, m, s, e) <= 0) continue;
@@ -133,11 +159,33 @@ function calculate(M){
     return rf;
   }
 
+  /* ---------------------------------------------------- V-23, from the arithmetic
+     A missing role factor is not a fact about the RoleFactor sheet; it is something
+     that happened to a number. So it is recorded here, as it happens, by the exact
+     composition the lookup used - project type, clinical phase, work scope, period
+     name, role - and only where the lookup actually fed a person-month.
+
+     Asked the other way round, as it used to be, the answer was wrong twice over: it
+     walked every period of the project rather than the months an assignment reaches,
+     so it reported combinations no figure ever needed; and it ran before the
+     calculation, which made it an error about the DATA and therefore something that
+     could refuse an edit. It is neither. It is the calculation reporting what it had
+     to guess at. */
+  const gaps = new Map();
+  const noteGap = (proj, pn, role, pid) => {
+    const key = [proj.project_type, proj.clinical_phase || "", scopeOf(proj) || "",
+                 pn, role].join(" ");
+    let g = gaps.get(key);
+    if (!g) gaps.set(key, g = {proj, periodName:pn, role, projects:new Set(), months:0});
+    g.projects.add(pid);
+    g.months++;
+  };
+
   let lo = Infinity, hi = -Infinity;
   for (const a of M.assignments){
     const proj = M.projects[a.project_id];
     if (!proj || !M.people[a.person_id] || a.__bad) continue;
-    const [s, e] = assignmentWindow(proj, a);
+    const [s, e] = assignmentWindow(M, proj, a);
     // Only a row still being typed, or a project with no dates of its own, contributes
     // nothing now - a blank assignment date means the project's, not zero.
     if (!s || !e || a.__new) continue;
@@ -149,6 +197,10 @@ function calculate(M){
       // Schema 6: the project's own work scope first, then the any-scope row. One
       // function, shared with the validation, so the figure and the finding agree.
       const k = monthKey(y, m);
+      // A month in no period at all is V-12's finding, not this one - there is no period
+      // name to be missing a factor FOR, and saying both would be saying it twice.
+      if (seg && stdFactor(M, proj, seg.period_name, a.role_name) === undefined)
+        noteGap(proj, seg.period_name, a.role_name, a.project_id);
       const rf = effectiveFactor(proj, seg ? seg.period_name : null, a.role_name, k);
       const share = shareCount(a, k);       // how many people hold this role this month
       const v = pw * (rf / share) * personWeight(a, y, m) * cov;
@@ -169,8 +221,38 @@ function calculate(M){
       who.get(wk).push([a.person_id, a.role_name]);
     }
   }
+  reportGaps(M, gaps);
   return {projMonth, persMonth, persProj, projPers, cell, who, sharers, shareCount,
-          staffed, effectiveFactor,
+          staffed, effectiveFactor, gaps,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
+}
+
+/** V-23, written onto the model once the calculation knows what it needed.
+ *
+ *  Rewritten so the SAME model can be calculated twice without the finding appearing
+ *  twice: the previous set is dropped first. Every other finding is produced once, by
+ *  buildModel; this one is produced by whoever calls calculate, and that is not always
+ *  exactly once.
+ *
+ *  Still an ERROR, because the figures really are wrong - a role calculated at 1.00 is
+ *  not an approximation of the right answer, it is a different answer. What changed is
+ *  only where it comes from, and therefore what it can do: a finding that exists only
+ *  after the arithmetic cannot refuse the edit that led to it. */
+function reportGaps(M, gaps){
+  if (!M || !Array.isArray(M.findings)) return;
+  for (let i = M.findings.length - 1; i >= 0; i--)
+    if (M.findings[i].rule === "V-23") M.findings.splice(i, 1);
+  for (const g of [...gaps.values()].sort((a, b) => a.months - b.months)){
+    const ph = CLINICAL_TYPES.has(g.proj.project_type) ? g.proj.clinical_phase : null;
+    const pl = [...g.projects];
+    M.findings.push({sev:"error", rule:"V-23", sheet:"RoleFactor", row:"",
+      msg:`No role factor for ${g.proj.project_type} / ${ph || "-"} / `
+        + `${g.proj.work_scope_type || "any scope"} / ${g.periodName} / ${g.role} — `
+        + `${g.months} person-month(s) on ${pl.length} project(s) `
+        + `(${pl.slice(0, 3).join(", ")}${pl.length > 3 ? ", …" : ""}) were calculated at `
+        + `factor 1.00 instead. Add a row for that scope, or one with work_scope_type `
+        + `empty to cover every scope. Your data is kept either way — this says the `
+        + `figures are short of an assumption, not that the rows are wrong.`});
+  }
 }
 

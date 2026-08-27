@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.32"
+DOC_VERSION = "2.33"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -368,7 +368,36 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.32", "2026-08-26", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.33", "2026-08-27", "Claude Code", "Pending",
+     "TWO REQUESTS. (1) R-19: THE ROLE/FACTOR CHECK REPORTS, AND STOPS REFUSING ROWS - "
+     "and it is asked on the right composition. V-28 was retired at v2.32 for refusing "
+     "data entry, but it was only the newest of three rules doing it: V-03 and V-23 "
+     "refused as well, and for the same reason, so the complaint came straight back. "
+     "All of them ask one question - has anybody entered a factor for this role - and "
+     "the answer 'not yet' is a fact about the ASSUMPTIONS, a standing document "
+     "maintained separately and often by somebody else. The person really is on the "
+     "project. So both keep their severity, because the figures for that role really "
+     "are wrong, and neither can refuse an edit any more. V-23 is also re-asked "
+     "properly: it is now raised BY the calculation, keyed on the whole composition the "
+     "lookup uses (project_type, clinical_phase, work_scope_type, period_name, "
+     "role_name) and counted in the person-months that were actually calculated at 1.00. "
+     "Asked off the sheets it walked every period of every project an assignment "
+     "belonged to and demanded a row for each, including periods nobody was ever booked "
+     "into. (2) R-20, REQ-CAL-17: THE PROJECT'S WINDOW COMES FROM ITS PERIODS, NOT ITS "
+     "MILESTONES. Milestones are reference dates - the derivation reads them to lay the "
+     "periods out, and several of them mark moments inside the run rather than its "
+     "edges. Taking the window from them stretched the project over months belonging to "
+     "no period at all, which are costed at weight 1.00, so the utilisation chart grew a "
+     "flat shoulder at each end that no period justified. Now: the earliest period_start "
+     "to the latest period_end, with a project that has no periods keeping its own typed "
+     "dates because there is nothing to take a window from. Save writes the same window "
+     "back, reading the periods the user TYPED and falling back to the milestone span "
+     "where there are none - a derived period opens at the project's own start_date, so "
+     "reading the saved window back from it would mean a wrong window could never "
+     "correct itself. Figures move where the periods and the milestones disagreed: the "
+     "62-project dummy goes from 1,225 to 1,227 person-months.",
+     "Issued for review"],
+    ["2.32", "2026-08-26", "Claude Code", "Pending",
      "R-18: V-28 IS RETIRED, one version after it was added, because of what it did "
      "rather than what it said. An error refuses the edit that raised it (REQ-IMP-09) - "
      "that is deliberate and stays - and V-28 was the first error about the ASSUMPTIONS "
@@ -1187,6 +1216,7 @@ reqs = [
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-CAL-17", "Calculation", "A PROJECT'S WINDOW, wherever the calculation needs one, is the span of its ProjectPeriod rows: the earliest period_start to the latest period_end. Milestones are reference dates - the period derivation reads them, and several of them mark moments inside the run rather than its edges - so they describe the periods, they do not bound the project. Taking the window from them stretched a project over months belonging to no period, and a month in no period is weighted 1.00, so the project drew resource its own plan did not cover. A project with NO periods keeps its own typed dates, because there is nothing to take a window from and V-12 already reports that. This is what a blank assign_start_date or assign_end_date means (REQ-CAL-15). Save writes the same window back into Project.start_date and Project.end_date, with ONE difference: it reads the periods the user TYPED, and falls back to the milestone span where there are none. A trial whose periods are derived has them opened at its own start_date, so taking the saved window from those would read back the very dates being checked and a wrong window could never correct itself; there the milestones are the only independent statement of when the project runs. Typed periods beat them wherever both exist.", "Must", "R-20", "4"],
     [f"{MARK_NEW}REQ-CAL-16", "Calculation", "Where NOBODY holds a role on a project, its role factor is added to the factor of the role named in RoleFactor.absorbed_by - because the work still has to be done by whoever is there. A trial run without a Clinical Data Associator still has the data to handle, and it lands on the lead data manager, who is then under more pressure than the factor for their own role alone describes; costed without it, the project looks cheaper than it is. Counted PER MONTH, so cover ends by itself when somebody arrives. ONE HOP: if the absorbing role is itself unstaffed the work is not passed further along - V-29 reports that rather than piling three absent roles onto whoever is left. Which role covers for which is DATA, on RoleFactor.absorbed_by, never in the program (REQ-CAL-06). Kept as the setting absorb_unstaffed_role_factor.", "Must", "R-17", "4"],
     [f"{MARK_NEW}REQ-CAL-15", "Calculation", "BOTH ASSIGNMENT DATES ARE OPTIONAL. A blank assign_start_date means the project's own start date, and a blank assign_end_date the project's own end date - so an assignment with neither runs for the whole project, which is what most assignments are. Filling them in is for a PARTIAL involvement. The end date already behaved this way; the start did not, and a blank one made the assignment contribute nothing at all with no finding to say why.", "Must", "R-15", "4"],
     [f"{MARK_NEW}REQ-CAL-14", "Calculation", "Where SEVERAL PEOPLE hold the same role on the same project in the same month, the role factor is DIVIDED BETWEEN THEM. The role factor states what the ROLE costs the project in that period, not what each person holding it costs, so a project staffed by two data managers must not cost twice a project staffed by one. The count is per month, so a sharer leaving restores the others' full share without any edit; it counts distinct PEOPLE, so one person recorded on two rows is one person; and each person's own person_weight then applies to their share. Kept as the setting split_shared_role_fte so a figure produced before this rule can still be reproduced.", "Must", "R-13", "4"],
@@ -1466,14 +1496,14 @@ r = section(ws, r, "Referential rules checked on import")
 rules = [
     ["V-01", "Every Assignment.project_id exists in Project.", "Error - row rejected, reported with its row number."],
     ["V-02", "Every Assignment.person_id exists in Person.", "Error - row rejected."],
-    [f"{MARK_CHG}V-03", "Every Assignment.role_name appears in RoleFactor for that project's type.", "Error - row rejected. Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error."],
+    [f"{MARK_CHG}V-03", "Every Assignment.role_name appears in RoleFactor for that project's type - the coarse half of the question V-23 asks precisely.", "Error, REPORTED BUT NEVER REFUSING THE ROW (R-19). Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error and the figures for that role are wrong. It is still not a reason to refuse the row: RoleFactor is a standing document maintained separately from any one plan, and the person really is on the project whether or not somebody has entered a factor for their role yet. Kept alongside V-23 because it catches a mistyped role name at once, where V-23 only speaks once the assignment reaches a period and draws FTE."],
     [f"{MARK_NEW}V-24", "Every PersonPeriodWeight.assignment_id exists in Assignment, and (assignment_id, period_start) is unique.", "Error - an override on an assignment that does not exist is silently ignored, so the weight the user typed never applies and nothing says so."],
     [f"{MARK_NEW}V-27", "Every clinical trial's (project_type, clinical_phase, work_scope_type) has at least one row in PeriodWeightStandard - checked on the PROJECT, not on its periods.", "Error - V-19 is precise but only looks at periods a project actually has, so a project whose milestones are missing is never checked at all, and a combination that was never entered is reported once per period rather than once as the one thing that is wrong. This asks the blunter question first: is there any standard for this project at all. Without one, every period would be weighted 1.00."],
     [f"{MARK_CHG}V-28", "RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all.", "Retired - and deliberately not reinstated at a lower severity. What the rule SAID was true; what it did not account for was WHEN it said it. An error refuses the edit that raised it (REQ-IMP-09), and unlike V-23 this one did not need the project to have any periods - so it fired on a project still being built, which is exactly when assignments are being typed in. A user could not record who was on a project until the standing assumptions carried a factor for their role, which is backwards: the plan is the document being written, the assumptions are maintained separately. The gap is not denied - V-03 still refuses a role invalid for the project type, and V-23 still reports a role with no factor for a period the project spans, which is the same finding at the point where it can be acted on. The id is not reused."],
     [f"{MARK_NEW}V-29", "A role that carries a factor, that nobody holds on the project, and that nothing covers for.", "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct."],
     [f"{MARK_CHG}V-25", "RETIRED at schema 7 (R-16). It reported a project whose work_scope_type contradicted its outsourcing_type.", "Retired - the rule existed only because two columns sat on the same axis and one of them drove the weights. outsourcing_scope_det is free text now, so there is nothing left to contradict. A rule that can no longer fire is removed rather than left standing and unexplained; the id is not reused."],
     [f"{MARK_NEW}V-26", "No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'.", "Error - reported as itself rather than as a generic unknown value, because the remedy is a choice the file cannot make on the user's behalf. Only they know whether the trial ran in healthy volunteers or in patients, and guessing would put a wrong weight on real work."],
-    [f"{MARK_NEW}V-23", "For every (project_type, clinical_phase, period_name, role_name) an assignment can actually reach, a RoleFactor row exists.", "Error - a factor missing for ONE period of a project silently drops that stretch to 1.00, which is a wrong number rather than an obvious gap. Checked against the periods each assignment spans, not against the whole cross-product."],
+    [f"{MARK_CHG}V-23", "Every (project_type, clinical_phase, work_scope_type, period_name, role_name) that a PERSON-MONTH ACTUALLY LOOKED UP has a RoleFactor row. Raised BY the calculation (R-19), grouped on that whole composition, and counted in person-months affected.", "Error - a factor missing for one period silently drops that stretch to 1.00, which is a wrong number rather than an obvious gap. Two things changed at R-19. It is keyed on the composition the lookup uses, and reported only where a figure was actually produced - asked off the sheets it walked every period of every project an assignment belonged to, so it demanded rows for periods nobody was ever booked into. And because it exists only after the arithmetic, it CANNOT REFUSE AN EDIT: it says the figures are short of an assumption, not that the row is wrong."],
     ["V-04", "project_category is present for either clinical trial type.", "Warning - shown as blank in the dashboard."],
     ["V-05", "end_date is on or after start_date, for projects, assignments and all weight periods.", "Error - row rejected."],
     [f"{MARK_CHG}V-06", "Periods within one project, and override windows within one assignment, do not overlap.", "Error - overlapping pair reported. The assignment half was specified from v1.0 but not implemented until R-12; an overlap there makes the applied weight depend on row order."],

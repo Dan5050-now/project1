@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.30",
+  "version": "1.31",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -24,8 +24,8 @@
  },
  "schema_version": 8,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.32.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.6.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.33.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.7.xlsx",
   "ui_component_list": "docs/PRAP_UI_Component_List_v1.0.xlsx",
   "source_data_template": "templates/PRAP_SourceData_Template_v1.10.xlsx",
   "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.12.xlsx",
@@ -966,8 +966,8 @@
    "enforced_by_application": true
   },
   "V-03": {
-   "statement": "Every Assignment.role_name appears in RoleFactor for that project's type.",
-   "effect": "Error - row rejected. Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error.",
+   "statement": "Every Assignment.role_name appears in RoleFactor for that project's type - the coarse half of the question V-23 asks precisely.",
+   "effect": "Error, REPORTED BUT NEVER REFUSING THE ROW (R-19). Was a warning in v0.1; roles are now type-specific, so a mismatch is a real error and the figures for that role are wrong. It is still not a reason to refuse the row: RoleFactor is a standing document maintained separately from any one plan, and the person really is on the project whether or not somebody has entered a factor for their role yet. Kept alongside V-23 because it catches a mistyped role name at once, where V-23 only speaks once the assignment reaches a period and draws FTE.",
    "severity_reported_by_app": [
     "error"
    ],
@@ -1127,8 +1127,8 @@
    "enforced_by_application": true
   },
   "V-23": {
-   "statement": "For every (project_type, clinical_phase, period_name, role_name) an assignment can actually reach, a RoleFactor row exists.",
-   "effect": "Error - a factor missing for ONE period of a project silently drops that stretch to 1.00, which is a wrong number rather than an obvious gap. Checked against the periods each assignment spans, not against the whole cross-product.",
+   "statement": "Every (project_type, clinical_phase, work_scope_type, period_name, role_name) that a PERSON-MONTH ACTUALLY LOOKED UP has a RoleFactor row. Raised BY the calculation (R-19), grouped on that whole composition, and counted in person-months affected.",
+   "effect": "Error - a factor missing for one period silently drops that stretch to 1.00, which is a wrong number rather than an obvious gap. Two things changed at R-19. It is keyed on the composition the lookup uses, and reported only where a figure was actually produced - asked off the sheets it walked every period of every project an assignment belonged to, so it demanded rows for periods nobody was ever booked into. And because it exists only after the arithmetic, it CANNOT REFUSE AN EDIT: it says the figures are short of an assumption, not that the row is wrong.",
    "severity_reported_by_app": [
     "error"
    ],

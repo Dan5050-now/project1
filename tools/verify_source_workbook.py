@@ -37,11 +37,29 @@ def scope_of(row):
     return str((row or {}).get("work_scope_type") or "")
 
 
-def assignment_window(proj, a):
+def project_window(periods, proj):
+    """How long the project runs, for the purpose of working out a number.
+
+    THE PERIODS ARE THE PROJECT (REQ-CAL-17). Milestones are reference dates that the
+    period derivation reads; several of them mark moments inside the run rather than
+    its edges. A project with no periods keeps its own typed dates.
+    """
+    lo = hi = None
+    for s in (periods.get(proj["project_id"]) or []):
+        ps, pe = d(s.get("period_start")), d(s.get("period_end"))
+        if ps is not None and (lo is None or ps < lo):
+            lo = ps
+        if pe is not None and (hi is None or pe > hi):
+            hi = pe
+    return (lo or d(proj["start_date"]), hi or d(proj["end_date"]))
+
+
+def assignment_window(periods, proj, a):
     """Both assignment dates are optional; a blank one means the project's own
     (REQ-CAL-15). A blank START used to mean the row contributed nothing at all."""
-    return (d(a["assign_start_date"]) or d(proj["start_date"]),
-            d(a["assign_end_date"]) or d(proj["end_date"]))
+    ps, pe = project_window(periods, proj)
+    return (d(a["assign_start_date"]) or ps,
+            d(a["assign_end_date"]) or pe)
 
 
 def lookup(table, key, scope, tail):
@@ -215,23 +233,10 @@ def main(path):
                               f"{proj['project_type']} / {ph} / {s['period_name']}")
 
     # ---- role factor coverage (V-23) ----
-    # An assignment spans periods, so a factor missing for ONE of them silently zeroes
-    # part of the run. Check every combination the data can actually reach.
-    need = set()
-    for a in ASG:
-        proj = P.get(a["project_id"])
-        if not proj or a["person_id"] not in PSN:
-            continue
-        ph = proj["clinical_phase"] if proj["project_type"] in CLINICAL_TYPES else None
-        for s in PER.get(a["project_id"], []):
-            need.add((proj["project_type"], ph, scope_of(proj), s["period_name"],
-                      a["role_name"]))
-    for k in sorted(need, key=lambda x: tuple(str(v) for v in x)):
-        if lookup(RF, k[:2], k[2], k[3:]) is not None:
-            continue
-        errors.append(f"V-23: no role factor for {k[0]} / {k[1] or '-'} / "
-                      f"{k[2] or 'any scope'} / {k[3]} / {k[4]} - assignments covering that "
-                      f"period would be calculated at factor 1.00")
+    # Raised from the CALCULATION, further down, not from the sheets. Asked here it
+    # walked every period of every project an assignment belonged to and demanded a row
+    # for each - including periods no assignment ever reached. Asked from the arithmetic
+    # it names exactly the compositions a person-month had to guess a factor for.
 
     # ---- list membership (V-11) ----
     for pid, proj in P.items():
@@ -291,7 +296,7 @@ def main(path):
     for a in ASG:
         if a["project_id"] not in P or a["person_id"] not in PSN:
             continue
-        s, e = assignment_window(P[a["project_id"]], a)
+        s, e = assignment_window(PER, P[a["project_id"]], a)
         if not s or not e:
             continue
         for y, m in months_between(s, e):
@@ -316,17 +321,28 @@ def main(path):
 
     load = defaultdict(float)          # (person, y, m) -> FTE
     horizon = set()
+    gaps = {}                          # V-23: what the arithmetic had to guess at
     for a in ASG:
         if a["project_id"] not in P or a["person_id"] not in PSN:
             continue
         proj = P[a["project_id"]]
-        s, e = assignment_window(proj, a)
+        s, e = assignment_window(PER, proj, a)
         if not s or not e:
             continue
+        ph = proj["clinical_phase"] if proj["project_type"] in CLINICAL_TYPES else None
         for y, m in months_between(s, e):
             cov = coverage(y, m, s, e)
             if cov <= 0:
                 continue
+            pn = period_of(a["project_id"], y, m)
+            # A month in no period at all is V-12's finding: there is no period name for
+            # a factor to be missing FOR.
+            if pn is not None and lookup(RF, (proj["project_type"], ph), scope_of(proj),
+                                         (pn, a["role_name"])) is None:
+                g = gaps.setdefault((proj["project_type"], ph, scope_of(proj), pn,
+                                     a["role_name"]), [set(), 0])
+                g[0].add(a["project_id"])
+                g[1] += 1
             share = (len(sharers.get((a["project_id"], a["role_name"], y, m), ())) or 1) \
                 if split else 1
             v = (period_weight(a["project_id"], y, m)
@@ -334,6 +350,13 @@ def main(path):
                  * person_weight(a, y, m) * cov)
             load[(a["person_id"], y, m)] += v
             horizon.add((y, m))
+
+    for k in sorted(gaps, key=lambda x: tuple(str(v) for v in x)):
+        pl, n = sorted(gaps[k][0]), gaps[k][1]
+        errors.append(f"V-23: no role factor for {k[0]} / {k[1] or '-'} / "
+                      f"{k[2] or 'any scope'} / {k[3]} / {k[4]} - {n} person-month(s) on "
+                      f"{len(pl)} project(s) ({', '.join(pl[:3])}"
+                      f"{', ...' if len(pl) > 3 else ''}) were calculated at factor 1.00")
 
     # V-22: an absolute floor is only meaningful if everyone can reach it
     _floor = float(CFG["under_allocation_fte"])

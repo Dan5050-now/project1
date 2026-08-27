@@ -342,11 +342,18 @@ function validate(M, F){
     if (!M.people[a.person_id])
       add("error","V-02","Assignment",a.__row,
         `Assignment ${a.assignment_id} refers to person ${a.person_id}, which does not exist.`);
+    /* V-03 is the coarse half of the same question V-23 asks precisely: does RoleFactor
+       carry this role for this project's TYPE, at all. Worth keeping as well as V-23,
+       because it catches a mistyped role name at once, where V-23 only speaks if the
+       assignment actually reaches a period and draws FTE.
+       It reports; it does not refuse (R-19). See NEVER_REFUSES in 12_editing.js. */
     const roles = M.rfRoles[proj.project_type];
     if (!roles || !roles.has(a.role_name))
       add("error","V-03","Assignment",a.__row,
-        `Assignment ${a.assignment_id}: role '${a.role_name}' is not valid for a project of type `
-        + `'${proj.project_type}'. Valid roles for this type: ${roles ? [...roles].join(", ") : "none defined"}.`);
+        `Assignment ${a.assignment_id}: role '${a.role_name}' has no RoleFactor row for a project `
+        + `of type '${proj.project_type}', so it would be calculated at factor 1.00. Roles defined `
+        + `for this type: ${roles ? [...roles].join(", ") : "none"}. The row is kept either way — `
+        + `add the assumption when you have it.`);
     if (a.assign_end_date && a.assign_start_date && a.assign_end_date < a.assign_start_date)
       add("error","V-05","Assignment",a.__row,`Assignment ${a.assignment_id}: end before start.`);
     if (proj.end_date && a.assign_end_date && a.assign_end_date > proj.end_date)
@@ -477,23 +484,21 @@ function validate(M, F){
     }
   }
 
-  // V-23: a role factor missing for a period an assignment actually spans
-  const need = new Map();
-  for (const a of M.assignments){
-    const proj = M.projects[a.project_id];
-    if (!proj || !M.people[a.person_id]) continue;
-    for (const s of (M.periods[a.project_id] || []))
-      need.set([proj.project_type, proj.clinical_phase, scopeOf(proj), s.period_name,
-                a.role_name].join(""), [proj, s.period_name, a.role_name]);
-  }
-  for (const [, [proj, pn, role]] of need){
-    if (stdFactor(M, proj, pn, role) !== undefined) continue;
-    const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
-    add("error","V-23","RoleFactor","",
-      `No role factor for ${proj.project_type} / ${ph || "-"} / `
-      + `${proj.work_scope_type || "any scope"} / ${pn} / ${role} — assignments covering that `
-      + `period would be calculated at factor 1.00. Add a row for that scope, or one with `
-      + `work_scope_type empty to cover every scope.`);
-  }
+  /* V-23 is not here any more. It is raised by calculate() - see reportGaps() in
+     06_calculate.js - and that is a deliberate move rather than a tidy-up.
+
+     Where it sat, it walked every period of every project an assignment belonged to
+     and asked whether a factor existed. Two things were wrong with that. It counted
+     combinations no figure ever needed, because an assignment does not necessarily
+     reach every period of its project - so a row could be demanded for a period
+     nobody was ever booked into. And it ran BEFORE the arithmetic, which made it a
+     statement about the DATA: an error about the data refuses the edit that raised it
+     (REQ-IMP-09), so a role whose factor had not been entered yet could not be given
+     to anybody.
+
+     Raised from the calculation it is the same finding at the same severity, keyed on
+     the same composition - project type, clinical phase, work scope, period name,
+     role - but only for the lookups a person-month actually made, and it can no
+     longer stand between a user and their own rows. */
 }
 
