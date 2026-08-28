@@ -56,6 +56,7 @@ el("picker").onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]
 el("exportBtn").onclick = () => exportWorkbook(false);
 el("exportJsonBtn").onclick = () => exportWorkbook(true);
 el("repClose").onclick = () => el("report").close();
+el("cfgClose").onclick = () => el("cfgchg").close();
 el("chgBtn").onclick = () => { renderChanges(); el("changes").showModal(); };
 el("chgClose").onclick = () => el("changes").close();
 el("chgBig").onclick = () => {

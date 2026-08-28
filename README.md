@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.35 records Step 4 progress, schema 8, the fixed Config row set, the must/conditional/incomplete rule classes, the periods-are-the-project window and the absorption of an unstaffed role's factor |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.36 records Step 4 progress, schema 8, the settings check on import, the fixed Config row set, the must/conditional/incomplete rule classes, the periods-are-the-project window and the absorption of an unstaffed role's factor |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -68,7 +68,7 @@ File API call at all** — Python reads the workbook and hands the bytes to the 
 `127.0.0.1`. `core/` and `ui/` are untouched, so there is still one engine.
 
 ```
-python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.2.zip, 140 KB
+python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.3.zip, 143 KB
 python tools/test_storage_py.py          # 80 checks — kills mid-save, an 8-process race
 python tools/test_python_app.py          # 42 checks — a live server, a real browser
 ```
@@ -218,9 +218,10 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.35.xlsx` — **current.** 77 requirements, 29 live
+- `docs/PRAP_Development_Plan_v2.36.xlsx` — **current.** 78 requirements, 29 live
   validation rules (V-25 and V-28 retired), source schema version 8. Carries changes
-  **R-26 / R-27 — the `capacity_unit` note and the fixed Config row set** (below),
+  **R-28 — an import says which settings it brought**, **R-26 / R-27 — the
+  `capacity_unit` note and the fixed Config row set** (all below),
   **R-21 to R-25 — the five review points** (the calendar, the period generator, the
   drawn scrollbars, the sticky band and the rule classes), **R-20 — the periods are the
   project** (`REQ-CAL-17`), **R-19 — the role/factor check reports without refusing**,
@@ -238,7 +239,7 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.9.xlsx` — **current specification.** Schema 8
+- `docs/PRAP_Programming_Specification_v1.10.xlsx` — **current specification.** Schema 8
   (the two-step lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
   through, the cross-data rules, the shared-role division with its worked
   reasoning, and where the delivered defaults come from.
@@ -1000,6 +1001,21 @@ Requires `openpyxl`.
   project's combination has no `PeriodWeightStandard` rows at all, not for any period.
   `V-29` is information rather than an error: a role that carries a factor, that nobody
   holds, and that nothing covers for — work the figures are counting nowhere.
+- **An import says which settings it brought with it** (R-28, `REQ-IMP-14`). Importing a
+  workbook takes its `Config` as well as its rows — deliberately, and it is what lets a
+  plan be rebuilt from the file alone. But a `Config` row is not like any other row:
+  every other sheet describes the **plan**, while `Config` describes how the plan is
+  **read**. Two settings switch calculation rules on and off and three set the thresholds
+  every allocation flag is measured against — so opening a colleague's workbook to look
+  at their projects silently took their thresholds too, and every figure and flag shifted
+  for a reason nowhere on the screen. The settings in force are now captured before the
+  model is replaced and compared by name afterwards; anything that differs is named on
+  the banner, with a screen of its own giving what it was, what it is now, and what it
+  affects — a calculation rule, an allocation threshold, or display only. **Nothing is
+  refused: it is a check, not a gate.** Done in `adopt()`, which every import path
+  funnels through — the web picker, the Python shell's open, a version restore and the
+  difference report's apply — so it is asked once and asked of all of them. A first load
+  has nothing to compare against and says nothing.
 - **A configuration setting cannot be deleted, only changed** (R-27). Nothing references
   a `Config` row, so `V-17` had no hold on a deletion and nothing refused it — and
   nothing reported one either, because every setting is read through a fallback to a

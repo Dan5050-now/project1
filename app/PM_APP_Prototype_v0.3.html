@@ -910,6 +910,13 @@ dialog.big .dlg-b{max-height:84vh}
   <div class="dlg-b" id="cfBody"></div>
 </dialog>
 
+<!-- What an import changed about how the plan is READ, as opposed to what is in it. -->
+<dialog id="cfgchg">
+  <div class="dlg-h"><strong>Settings this file brought with it</strong>
+    <button class="btn" style="margin-left:auto" id="cfgClose">Close</button></div>
+  <div class="dlg-b" id="cfgBody"></div>
+</dialog>
+
 <dialog id="changes">
   <div class="dlg-h"><strong id="chgTitle">Unsaved changes</strong>
     <button class="btn" style="margin-left:auto" id="chgBig">Full screen</button>
@@ -919,7 +926,7 @@ dialog.big .dlg-b{max-height:84vh}
 
 <script>
 "use strict";
-const APP_VERSION = "1.33";
+const APP_VERSION = "1.34";
 const SCHEMA_EXPECTED = 8;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -928,9 +935,9 @@ const SCHEMA_EXPECTED = 8;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.35.xlsx",          ver:"2.35",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.36.xlsx",          ver:"2.36",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.34 records Step 4 progress, schema 8, the periods-are-the-project window and the must/conditional rule classes"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.9.xlsx", ver:"1.9",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.10.xlsx", ver:"1.10",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.5 adds schema 8 and the absorption rule, v1.8 adds the rule classes and the calendar — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
@@ -3198,6 +3205,54 @@ function reportGaps(M, gaps){
    key rather than an identity - every milestone of a project shares its project_id.
    These are the real composite keys, the same ones docs/prap_contract.json publishes,
    and tools/check_consistency.py holds the two to each other. */
+/* ----------------------------------------------- the settings an import would change
+   A Config row is not like any other row in the file, and comparing it as one misses
+   what makes it dangerous. Every other sheet describes the PLAN - projects, people,
+   who is on what - and replacing it is the whole point of an import. Config describes
+   how the plan is READ: two of its settings switch calculation rules on and off, three
+   more set the thresholds every allocation flag is measured against. Import a colleague's
+   workbook to look at their projects and you silently take their thresholds with it, and
+   every figure and every flag on your screen shifts for a reason that is nowhere on it.
+
+   So the settings are compared on their own, by name, before and after - and what
+   changed is put in front of the user rather than left as one sheet among ten in the
+   full difference report. Nothing is refused: importing a file MEANS taking its
+   settings, which is what makes the plan reproducible from the file alone. What was
+   missing was being told.
+
+   Pure, and here rather than in the shell, because both shells import. */
+const CFG_EFFECT = {
+  over_allocation_fte:         "moves every over-allocation flag",
+  under_allocation_fte:        "moves every under-allocation flag",
+  under_allocation_min_months: "moves every under-allocated run",
+  split_shared_role_fte:       "CHANGES EVERY FIGURE for a shared role (REQ-CAL-14)",
+  absorb_unstaffed_role_factor:"CHANGES EVERY FIGURE on a project with an unstaffed role (REQ-CAL-16)",
+  fte_hours_per_month:         "changes the hours shown, not the FTE",
+  capacity_unit:               "display only",
+  default_horizon_months:      "display only — the months the dashboard opens on",
+  schema_version:              "which structure the file was written to",
+};
+
+/** What importing this file would change about how the plan is read.
+ *
+ *  `before` and `after` are parameter -> value maps. Returns one entry per setting that
+ *  differs, newest state last, with `kind` saying which of the three things happened:
+ *  a value changed, the file adds a setting the application did not have, or the file is
+ *  missing one the application had (where the built-in default takes over — V-30). */
+function configChanges(before, after){
+  const out = [];
+  for (const k of [...new Set([...Object.keys(before || {}), ...Object.keys(after || {})])].sort()){
+    const a = (before || {})[k], b = (after || {})[k];
+    if (diffSame(a, b)) continue;
+    const had = a !== undefined && a !== null && a !== "";
+    const has = b !== undefined && b !== null && b !== "";
+    out.push({parameter:k, from:a, to:b,
+              kind: had && has ? "changed" : has ? "added" : "removed",
+              effect: CFG_EFFECT[k] || ""});
+  }
+  return out;
+}
+
 const DIFF_KEY = {
   Project:              ["project_id"],
   Milestone:            ["project_id", "milestone_name", "milestone_date"],
@@ -3358,6 +3413,8 @@ const S = {
   // against the live model, which already carries the consequences of every
   // keystroke since.
   baseFindings:[],
+  // What the last import changed about the SETTINGS, as opposed to the plan.
+  cfgChanges:[],
   genView:{pws:"matrix", rf:"matrix", lists:"matrix"},
 };
 
@@ -5576,15 +5633,54 @@ function showBanner(kind, text, findings){
   const n = findings ? findings.length : 0;
   const counts = {};
   if (findings) for (const f of findings) counts[f.sev] = (counts[f.sev] || 0) + 1;
+  // 'information' is uncountable - "3 informations" is not English, and this string is
+  // read every time a file is opened.
+  const plural = (k, v) => v === 1 || k === "information" ? k : k + "s";
   const summary = n
-    ? Object.entries(counts).map(([k,v]) => `${v} ${k}${v===1?"":"s"}`).join(", ")
+    ? Object.entries(counts).map(([k,v]) => `${v} ${plural(k, v)}`).join(", ")
     : "";
+  const cfgN = (S.cfgChanges || []).length;
   el("banner").innerHTML =
     `<div class="banner ${kind}"><strong>${esc(text)}</strong>`
-    + (n ? ` ${esc(summary)}.<span class="lk" id="openRep">Open full report</span>` : "")
+    + (n ? ` ${esc(summary)}.` : "")
+    + (cfgN ? `<span class="lk" id="openCfg">Which settings changed</span>` : "")
+    + (n ? `<span class="lk" id="openRep">Open full report</span>` : "")
     + `</div>`;
   const b = el("openRep");
   if (b) b.onclick = () => { renderReport(findings); el("report").showModal(); };
+  const c = el("openCfg");
+  if (c) c.onclick = () => { renderCfgChanges(); el("cfgchg").showModal(); };
+}
+
+/** The settings this import brought with it, and what each one does.
+ *
+ *  Its own screen rather than a sheet in the full difference report, because it answers
+ *  a different question. The difference report asks "what is in this file that is not in
+ *  my plan" - rows of work, which is what an import is FOR. This asks "what will now be
+ *  read differently", which is a question about every figure on the page at once, and it
+ *  has to be answerable without hunting for the Config sheet among ten others. */
+function renderCfgChanges(){
+  const rows = S.cfgChanges || [];
+  const WORD = {changed:"changed", added:"added by this file",
+                removed:"not in this file"};
+  el("cfgBody").innerHTML =
+    `<p class="cap">Importing a workbook takes its settings as well as its rows — that is
+      deliberate, and it is what makes a plan reproducible from the file alone. Nothing
+      here was refused. It is listed because these are the figures the whole page is read
+      against, and a change to one of them moves numbers that are nowhere near this
+      table.</p>`
+    + `<table class="data-t"><thead><tr><th>setting</th><th></th><th>was</th><th>now</th>
+        <th>what it affects</th></tr></thead><tbody>${rows.map(c =>
+        `<tr><td><code>${esc(c.parameter)}</code></td>`
+        + `<td><span class="cls ${c.kind === "changed" ? "conditional" : "incomplete"}">`
+        + `${esc(WORD[c.kind])}</span></td>`
+        + `<td>${esc(diffShown(c.from))}</td><td><strong>${esc(diffShown(c.to))}</strong></td>`
+        + `<td style="white-space:normal">${esc(c.effect)}</td></tr>`).join("")}</tbody></table>`
+    + (rows.some(c => c.kind === "removed")
+        ? `<p class="cap"><strong>Not in this file</strong> means the setting has no row in
+           the workbook you just loaded, so the application's own built-in default is now
+           in force — V-30 in the findings report names it.</p>`
+        : "");
 }
 
 const CLS_LABEL = {must:"must fix", conditional:"may keep", incomplete:"still to come"};
@@ -6113,12 +6209,22 @@ function adopt(sheets, name, opts){
   S.headers = {};
   for (const s of REQUIRED_SHEETS)
     S.headers[s] = ((sheets[s] || [])[0] || []).map(h => txt(h)).filter(Boolean);
+  // What is in force NOW, captured before the model is replaced. Every import path -
+  // the web file picker, the Python shell's open, a version restore, the difference
+  // report's apply - funnels through here, so this is the one place the question can
+  // be asked once and be asked of all of them.
+  // Any previous model counts, including one started blank: a blank start seeds the
+  // delivered settings, which is a legitimate baseline to be told you are leaving. What
+  // it must NOT do is skip the case where somebody started blank, entered a whole plan,
+  // and then imported over it - which is exactly when this matters most.
+  const wasCfg = S.model ? {...S.model.config} : null;
   const M = buildModel(sheets);
   if (M.fatal){
     showBanner("bad", "The workbook could not be loaded.", M.findings);
     renderReport(M.findings); el("report").showModal();
     return false;
   }
+  S.cfgChanges = wasCfg ? configChanges(wasCfg, M.config) : [];
   S.model = M; S.calc = calculate(M);
   S.fileName = name; S.loadedAt = new Date(); S.blank = !!opts.blank;
   S.pending = []; S.saved = 0; S.snapshot = null; S.baseFindings = M.findings.slice();
@@ -6136,7 +6242,11 @@ function adopt(sheets, name, opts){
     + `<span class="tz">(GMT${tz>=0?"+":""}${tz}, ${esc(tzName)})</span>`;
   renderProvenance();
   const errs = M.findings.filter(f => f.sev === "error").length;
-  showBanner(errs ? "bad" : "", opts.banner || (errs ? "Loaded with problems." : "Loaded cleanly."),
+  const n = S.cfgChanges.length;
+  showBanner(errs ? "bad" : (n ? "warn" : ""),
+             (opts.banner || (errs ? "Loaded with problems." : "Loaded cleanly."))
+             + (n ? ` This file's settings are not the ones that were in force: `
+                    + `${n} changed.` : ""),
              M.findings);
   renderAll(); showTab(opts.tab || S.tab);
   cueScrollers();
@@ -6213,6 +6323,7 @@ el("picker").onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]
 el("exportBtn").onclick = () => exportWorkbook(false);
 el("exportJsonBtn").onclick = () => exportWorkbook(true);
 el("repClose").onclick = () => el("report").close();
+el("cfgClose").onclick = () => el("cfgchg").close();
 el("chgBtn").onclick = () => { renderChanges(); el("changes").showModal(); };
 el("chgClose").onclick = () => el("changes").close();
 el("chgBig").onclick = () => {

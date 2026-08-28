@@ -5,15 +5,54 @@ function showBanner(kind, text, findings){
   const n = findings ? findings.length : 0;
   const counts = {};
   if (findings) for (const f of findings) counts[f.sev] = (counts[f.sev] || 0) + 1;
+  // 'information' is uncountable - "3 informations" is not English, and this string is
+  // read every time a file is opened.
+  const plural = (k, v) => v === 1 || k === "information" ? k : k + "s";
   const summary = n
-    ? Object.entries(counts).map(([k,v]) => `${v} ${k}${v===1?"":"s"}`).join(", ")
+    ? Object.entries(counts).map(([k,v]) => `${v} ${plural(k, v)}`).join(", ")
     : "";
+  const cfgN = (S.cfgChanges || []).length;
   el("banner").innerHTML =
     `<div class="banner ${kind}"><strong>${esc(text)}</strong>`
-    + (n ? ` ${esc(summary)}.<span class="lk" id="openRep">Open full report</span>` : "")
+    + (n ? ` ${esc(summary)}.` : "")
+    + (cfgN ? `<span class="lk" id="openCfg">Which settings changed</span>` : "")
+    + (n ? `<span class="lk" id="openRep">Open full report</span>` : "")
     + `</div>`;
   const b = el("openRep");
   if (b) b.onclick = () => { renderReport(findings); el("report").showModal(); };
+  const c = el("openCfg");
+  if (c) c.onclick = () => { renderCfgChanges(); el("cfgchg").showModal(); };
+}
+
+/** The settings this import brought with it, and what each one does.
+ *
+ *  Its own screen rather than a sheet in the full difference report, because it answers
+ *  a different question. The difference report asks "what is in this file that is not in
+ *  my plan" - rows of work, which is what an import is FOR. This asks "what will now be
+ *  read differently", which is a question about every figure on the page at once, and it
+ *  has to be answerable without hunting for the Config sheet among ten others. */
+function renderCfgChanges(){
+  const rows = S.cfgChanges || [];
+  const WORD = {changed:"changed", added:"added by this file",
+                removed:"not in this file"};
+  el("cfgBody").innerHTML =
+    `<p class="cap">Importing a workbook takes its settings as well as its rows — that is
+      deliberate, and it is what makes a plan reproducible from the file alone. Nothing
+      here was refused. It is listed because these are the figures the whole page is read
+      against, and a change to one of them moves numbers that are nowhere near this
+      table.</p>`
+    + `<table class="data-t"><thead><tr><th>setting</th><th></th><th>was</th><th>now</th>
+        <th>what it affects</th></tr></thead><tbody>${rows.map(c =>
+        `<tr><td><code>${esc(c.parameter)}</code></td>`
+        + `<td><span class="cls ${c.kind === "changed" ? "conditional" : "incomplete"}">`
+        + `${esc(WORD[c.kind])}</span></td>`
+        + `<td>${esc(diffShown(c.from))}</td><td><strong>${esc(diffShown(c.to))}</strong></td>`
+        + `<td style="white-space:normal">${esc(c.effect)}</td></tr>`).join("")}</tbody></table>`
+    + (rows.some(c => c.kind === "removed")
+        ? `<p class="cap"><strong>Not in this file</strong> means the setting has no row in
+           the workbook you just loaded, so the application's own built-in default is now
+           in force — V-30 in the findings report names it.</p>`
+        : "");
 }
 
 const CLS_LABEL = {must:"must fix", conditional:"may keep", incomplete:"still to come"};

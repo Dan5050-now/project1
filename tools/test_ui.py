@@ -19,6 +19,10 @@
   5. MUST vs CONDITIONAL vs INCOMPLETE. Severity says how wrong something is; the class
      says what the application may do about it. Must refuses. Conditional asks at Save
      and the user may force it. Incomplete reports and says nothing else.
+  7. AN IMPORT BRINGS ITS SETTINGS WITH IT, and now says which ones it changed. Every
+     other sheet describes the plan; Config describes how the plan is READ, so importing
+     a colleague's workbook to look at their projects silently took their thresholds too
+     and every figure and flag shifted for a reason nowhere on the screen.
   6. A CONFIGURATION SETTING CANNOT BE DELETED, only changed. Nothing referenced a Config
      row, so nothing refused a deletion and nothing reported one - and every setting is
      read through a fallback, so a plan whose floor had been moved to 0.80 reverted to
@@ -30,6 +34,7 @@
 
 import pathlib
 import sys
+import tempfile
 
 from playwright.sync_api import sync_playwright
 
@@ -37,6 +42,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 BIG = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.13.xlsx"
+SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.5.xlsx"
+sys.path.insert(0, str(ROOT / "tools"))
 
 fails = []
 
@@ -358,6 +365,59 @@ with sync_playwright() as pw:
           "V-30 REPORTS A SETTING THAT IS MISSING ANYWAY — from an older file or a "
           "hand-edited one — and names the default now in force",
           v30["msg"][:150] or "(nothing reported)")
+
+    # ---- 7. what an import changes about how the plan is READ ----------------
+    print("\n7. the settings an import brings with it")
+    import json as _json
+    import prap_io as _io                                            # noqa: E402
+    _tmp = pathlib.Path(tempfile.mkdtemp(prefix="prap_cfgimp_"))
+    _d = _io.read_xlsx(SMALL)
+    for _r in _d["Config"]:
+        if _r["parameter"] == "under_allocation_fte":  _r["value"] = 0.80
+        if _r["parameter"] == "split_shared_role_fte": _r["value"] = 0
+    _d["Config"] = [r for r in _d["Config"] if r["parameter"] != "default_horizon_months"]
+    OTHER = _tmp / "other.prap.json"
+    _io.write_json(_d, OTHER)
+
+    pg.goto(APP)
+    pg.wait_for_timeout(400)
+    pg.set_input_files("#picker", str(SMALL))
+    pg.wait_for_timeout(3200)
+    first = pg.evaluate("({n: S.cfgChanges.length, under: S.model.UNDER, split: S.model.SPLIT})")
+    check(first["n"] == 0 and pg.locator("#openCfg").count() == 0,
+          "the FIRST load has nothing to compare against, and says nothing",
+          f"{first['n']} changes, floor {first['under']}, split {first['split']}")
+
+    pg.set_input_files("#picker", str(OTHER))
+    pg.wait_for_timeout(3200)
+    banner = " ".join(pg.inner_text("#banner").split())
+    changes = pg.evaluate("S.cfgChanges.map(c => c.parameter + ':' + c.kind)")
+    check(sorted(changes) == ["default_horizon_months:removed",
+                              "split_shared_role_fte:changed",
+                              "under_allocation_fte:changed"]
+          and "settings are not the ones that were in force" in banner,
+          "A SECOND FILE WITH DIFFERENT SETTINGS SAYS SO ON THE BANNER, naming how many",
+          f"{changes}")
+
+    check(pg.locator("#openCfg").count() == 1, "with a link to what they are")
+    pg.click("#openCfg")
+    pg.wait_for_timeout(700)
+    rows = pg.eval_on_selector_all("#cfgBody tbody tr",
+                                   "es => es.map(e => e.innerText.split('\t'))")
+    body = pg.inner_text("#cfgBody")
+    check(pg.evaluate("document.getElementById('cfgchg').open") and len(rows) == 3
+          and "0.6" in body and "0.8" in body and "REQ-CAL-14" in body,
+          "and each one shows what it WAS, what it is now, and what it affects",
+          "; ".join(" ".join(r) for r in rows)[:170])
+    pg.click("#cfgClose")
+    pg.wait_for_timeout(400)
+
+    applied = pg.evaluate("({under: S.model.UNDER, split: S.model.SPLIT, "
+                          "v30: S.model.findings.filter(f=>f.rule==='V-30').length})")
+    check(applied["under"] == 0.8 and applied["split"] is False and applied["v30"] == 1,
+          "the settings ARE applied — importing a file means taking its settings; what "
+          "was missing was being told",
+          f"floor {applied['under']}, split {applied['split']}, V-30 {applied['v30']}")
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()

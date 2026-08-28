@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.35"
+DOC_VERSION = "2.36"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -368,7 +368,31 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.35", "2026-08-27", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.36", "2026-08-28", "Claude Code", "Pending",
+     "R-28, REQ-IMP-14: AN IMPORT SAYS WHICH SETTINGS IT BROUGHT WITH IT. Config stays "
+     "in the source workbook and an import still applies it - that is deliberate and is "
+     "what makes a plan reproducible from the file alone. What was missing was being "
+     "told. A Config row is not like any other row in the file: every other sheet "
+     "describes the PLAN, and replacing it is the point of an import, while Config "
+     "describes how the plan is READ. Two of its settings switch calculation rules on "
+     "and off and three more set the thresholds every allocation flag is measured "
+     "against, so importing a colleague's workbook to look at their projects took their "
+     "thresholds with it and every figure and flag on the screen shifted for a reason "
+     "that was nowhere on it. Now the settings in force are captured before the model is "
+     "replaced, compared by name afterwards, and any that differ are named on the banner "
+     "with a screen of their own: what each one was, what it is now, and what it affects "
+     "- calculation, flags or display only. Nothing is refused. It is a check, not a "
+     "gate. Done in adopt(), which every import path funnels through - the web picker, "
+     "the Python shell's open, a version restore and the difference report's apply - so "
+     "it is asked once and asked of all of them. A first load has nothing to compare "
+     "against and says nothing; a blank start counts as a baseline, because somebody who "
+     "started blank, entered a plan and then imported over it is exactly who this is "
+     "for. Also in this version: the reviewer confirmed that the display unit needs "
+     "neither to survive an edit nor to reach the exported file - it is information "
+     "while the application is open - so REQ-CAL-08 is unchanged and only the wording "
+     "that read '3 informations' is corrected.",
+     "Issued for review"],
+    ["2.35", "2026-08-27", "Claude Code", "Pending",
      "R-26: THE NOTE ON capacity_unit WAS WRONG, and wrong in the way that matters - it "
      "named a value the application has never understood. It read \"Display unit: 'FTE' "
      "or 'percent'\"; the two values actually implemented are 'FTE' and 'hours', and "
@@ -1315,6 +1339,7 @@ reqs = [
     [f"{MARK_NEW}REQ-IMP-08", "Import/Export", "Unsaved edits are visible as such, and the user is warned before any action that would discard them (closing the page, loading another file).", "Must", "Derived from REQ-IMP-07", "4"],
     [f"{MARK_CHG}REQ-IMP-09", "Import/Export", "Every field is editable, including identifiers. An on-screen edit is re-validated against the same rules as an imported value, so editing cannot introduce data the import would have rejected.", "Must", "Q-20", "4"],
     [f"{MARK_NEW}REQ-IMP-10", "Import/Export", "Editing an identifier that other sheets reference cascades to every referencing row, after showing how many rows will change. Deleting a referenced row is refused, naming what still points at it.", "Must", "Q-20", "4"],
+    [f"{MARK_NEW}REQ-IMP-14", "Import/Export", "An import that changes any Config setting says so. The settings in force are captured before the model is replaced and compared by name afterwards; every setting whose value differs, or that the incoming file adds or does not carry, is named on the load banner and listed on a screen of its own with what it was, what it is now, and what it affects - a calculation rule, an allocation threshold, or display only. The settings are APPLIED either way: importing a workbook means taking its settings, which is what makes a plan reproducible from the file alone. This is a check, not a gate. A first load has nothing to compare against and reports nothing.", "Must", "R-28", "4"],
     [f"{MARK_NEW}REQ-IMP-12", "Import/Export", "A column that holds a DATE offers a calendar panel beside the cell being edited, and the cell stays fully typeable while it is open: the caret does not move, every key still reaches the cell, and what is typed steers the panel to that month. Picking a day commits it through the ordinary edit path, so it is validated exactly like a typed one. Deliberately not the browser's own date control, which would give one editing model for text cells and another for dates - a different keyboard contract, a browser-dependent display format, and no way to leave a date deliberately blank the way every other cell does.", "Should", "R-21", "4"],
     [f"{MARK_NEW}REQ-IMP-13", "Import/Export", "Every validation rule carries a CLASS saying what the application may do about it, separately from its severity. MUST: something is wrong with the row itself and it is refused, on the cell edit and at Save. CONDITIONAL: the row is sound but something it depends on is missing, so the figures that need it are short an assumption - never refused, and at Save the application names every one that this batch of edits leaves unresolved and asks the user to confirm before keeping them. INCOMPLETE: the row is still being built and the finding will answer itself - reported, never questioned. The class is shown beside the severity wherever findings are listed.", "Must", "R-25", "4"],
     [f"{MARK_NEW}REQ-IMP-11", "Import/Export", "A new row can be inserted into any editable table, positioned immediately below the row the user acts on rather than appended at the end, and validated on entry like any other edit.", "Must", "P-01, S-01", "4"],

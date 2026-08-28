@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.2"
+VERSION = "1.3"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,23 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.3
+
+  * AN IMPORT NOW TELLS YOU WHICH SETTINGS IT BROUGHT WITH IT. Importing a
+    workbook takes its Configuration as well as its rows - that is deliberate, and
+    it is what lets a plan be rebuilt from the file alone. But every other sheet
+    describes the PLAN, while Configuration describes how the plan is READ: two of
+    its settings switch calculation rules on and off, three more set the thresholds
+    every over- and under-allocation flag is measured against. So opening a
+    colleague's file to look at their projects quietly took their thresholds too,
+    and every figure and flag on your screen moved for a reason that was nowhere on
+    it.
+    Now the load message says how many settings changed, with a link listing each
+    one: what it was, what it is now, and what it affects. Nothing is refused - it
+    is a check, not a gate. The first file you open has nothing to compare against
+    and says nothing.
+
 
 WHAT IS NEW IN 1.2
 

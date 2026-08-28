@@ -297,12 +297,22 @@ function adopt(sheets, name, opts){
   S.headers = {};
   for (const s of REQUIRED_SHEETS)
     S.headers[s] = ((sheets[s] || [])[0] || []).map(h => txt(h)).filter(Boolean);
+  // What is in force NOW, captured before the model is replaced. Every import path -
+  // the web file picker, the Python shell's open, a version restore, the difference
+  // report's apply - funnels through here, so this is the one place the question can
+  // be asked once and be asked of all of them.
+  // Any previous model counts, including one started blank: a blank start seeds the
+  // delivered settings, which is a legitimate baseline to be told you are leaving. What
+  // it must NOT do is skip the case where somebody started blank, entered a whole plan,
+  // and then imported over it - which is exactly when this matters most.
+  const wasCfg = S.model ? {...S.model.config} : null;
   const M = buildModel(sheets);
   if (M.fatal){
     showBanner("bad", "The workbook could not be loaded.", M.findings);
     renderReport(M.findings); el("report").showModal();
     return false;
   }
+  S.cfgChanges = wasCfg ? configChanges(wasCfg, M.config) : [];
   S.model = M; S.calc = calculate(M);
   S.fileName = name; S.loadedAt = new Date(); S.blank = !!opts.blank;
   S.pending = []; S.saved = 0; S.snapshot = null; S.baseFindings = M.findings.slice();
@@ -320,7 +330,11 @@ function adopt(sheets, name, opts){
     + `<span class="tz">(GMT${tz>=0?"+":""}${tz}, ${esc(tzName)})</span>`;
   renderProvenance();
   const errs = M.findings.filter(f => f.sev === "error").length;
-  showBanner(errs ? "bad" : "", opts.banner || (errs ? "Loaded with problems." : "Loaded cleanly."),
+  const n = S.cfgChanges.length;
+  showBanner(errs ? "bad" : (n ? "warn" : ""),
+             (opts.banner || (errs ? "Loaded with problems." : "Loaded cleanly."))
+             + (n ? ` This file's settings are not the ones that were in force: `
+                    + `${n} changed.` : ""),
              M.findings);
   renderAll(); showTab(opts.tab || S.tab);
   cueScrollers();

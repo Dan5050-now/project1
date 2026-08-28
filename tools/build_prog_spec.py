@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.9"
+DOC_VERSION = "1.10"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.35.xlsx"
+PLAN = "PRAP_Development_Plan_v2.36.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,12 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.10", "2026-08-28", "Claude Code", "Dan",
+         "R-28, REQ-IMP-14. Sheet 07 gains the config check on import: what is compared, "
+         "when, and why a Config row is not treated like any other row in the file - "
+         "every other sheet describes the plan, Config describes how the plan is read. "
+         "The comparison itself is in core/06a_diff.js beside the import difference "
+         "engine, because both shells import. Written against plan v2.36.", "Issued"],
         ["1.9", "2026-08-27", "Claude Code", "Dan",
          "R-26: the parse contract's row for capacity_unit named 'percent', which the "
          "application has never implemented - anything that is not 'hours' displays as "

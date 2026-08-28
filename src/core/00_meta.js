@@ -1,4 +1,4 @@
-const APP_VERSION = "1.33";
+const APP_VERSION = "1.34";
 const SCHEMA_EXPECTED = 8;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -7,9 +7,9 @@ const SCHEMA_EXPECTED = 8;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.35.xlsx",          ver:"2.35",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.36.xlsx",          ver:"2.36",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.34 records Step 4 progress, schema 8, the periods-are-the-project window and the must/conditional rule classes"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.9.xlsx", ver:"1.9",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.10.xlsx", ver:"1.10",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.5 adds schema 8 and the absorption rule, v1.8 adds the rule classes and the calendar — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},

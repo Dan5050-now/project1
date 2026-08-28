@@ -14,6 +14,8 @@ const S = {
   // against the live model, which already carries the consequences of every
   // keystroke since.
   baseFindings:[],
+  // What the last import changed about the SETTINGS, as opposed to the plan.
+  cfgChanges:[],
   genView:{pws:"matrix", rf:"matrix", lists:"matrix"},
 };
 
