@@ -36,8 +36,8 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 
 | Document | Version | Status | Next |
 |---|---|---|---|
-| TEA-PLAN-001 Development Plan | 1.2.0 | **APPROVED**, amended 2026-08-22 | — |
-| TEA-SPEC-001 Programming Specification | 2.3.0 | **APPROVED**, amended 2026-08-22 | — |
+| TEA-PLAN-001 Development Plan | 1.3.0 | **APPROVED**, amended 2026-08-22 | — |
+| TEA-SPEC-001 Programming Specification | 2.4.0 | **APPROVED**, amended 2026-08-22 | — |
 | Rule catalog | 2.0.0 | **FROZEN** 2026-08-21 | Unchanged by the v2.1.0 amendment |
 | Concept overview (HTML + PPTX) | — | Current | Regenerate when the plan or spec changes |
 
@@ -94,6 +94,12 @@ checkable and condensing to a summary is not.
 That mitigation introduces one risk, handled by **FR-21**: a missing parameter is silent where a
 truncation error is loud. AC-11 must now record whether each parameter was *found* — with its
 location — or *defaulted because it was not found*, and show the two differently at intake.
+
+The summary is prepared by hand by the **study data manager**, against a content selection rule
+agreed with the **Medical Monitor** (OI-07). It is therefore a system input, not a convenience:
+`protocol_summary` is a named block in the input contract, and its content hash, preparer and
+date enter the run provenance — a protocol configuration that cannot be traced to the exact
+document it came from is not reproducible.
 
 Steps 3–6 (prototype output, UI design, code generation, final application) are gated on
 approval of the specification.

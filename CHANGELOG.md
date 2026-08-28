@@ -3,6 +3,36 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## [Plan 1.3.0 / Spec 2.4.0] — 2026-08-22 — Step 3 preparation answers
+
+### Golden dataset sign-off (OQ-09 answered)
+- CDM and the Medical Monitor sign off the expected finding list. Unchanged from what was
+  assumed, now recorded as a decision.
+
+### Acceptance thresholds — deferred to after the prototype output, with a safeguard
+- **Decision:** thresholds are confirmed after the Step 3 output has been seen.
+- **Why that is reasonable:** several of these numbers cannot be guessed honestly in advance,
+  and a threshold invented at the desk is no more defensible than one set from evidence.
+- **What it costs, recorded plainly:** a threshold set after seeing the result is fitted to the
+  result. It stops being a test the system can fail and becomes a description of how it behaved
+  — which matters, because these numbers end up in the validation package as acceptance criteria.
+- **Safeguard:** the current targets stay on record as the expectation held *before* the run;
+  Step 3 records what was observed alongside them; moving a target requires a written reason —
+  why the original expectation was wrong, not merely that it was missed. The number that reaches
+  the validation package is then a decision with a rationale.
+
+### The protocol summary becomes a named system input
+- Prepared **by hand by the study data manager**, against a content selection rule agreed with
+  the Medical Monitor. The user who calls the agent is the same person who imported it, so a run
+  traces to a named preparer.
+- **`protocol_summary` added to the input contract** (TEA-CTR-001): document text, source
+  document id, content hash, preparer, date. The hash enters the run provenance — a protocol
+  configuration that cannot be traced to the exact document it came from is not reproducible.
+- **OI-07 opened:** agree the content selection rule once, with P1–P18 as the proposed basis.
+  Agreed once it is a control; re-decided per study by whoever prepares it, it is an untracked
+  variable that bounds what the agent can know.
+- AC-11 and pipeline stage ST-INTAKE amended: the input is the summary, not the full protocol.
+
 ## [Plan 1.2.0 / Spec 2.3.0] — 2026-08-22 — protocol extract mitigation
 
 ### B2 deferred, and mitigated
