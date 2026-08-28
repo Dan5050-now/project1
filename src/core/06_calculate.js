@@ -171,6 +171,13 @@ function calculate(M){
      calculation, which made it an error about the DATA and therefore something that
      could refuse an edit. It is neither. It is the calculation reporting what it had
      to guess at. */
+  /* Every term of every person-month, kept as it is worked out.
+     The results export has to be able to say HOW a figure was reached, and the only
+     honest way to answer that is to record what the arithmetic actually used. Asked
+     again afterwards, from the sheets, the explanation could drift from the figure it
+     claims to explain - which is the one thing an export like this must never do. */
+  const lines = [];
+
   const gaps = new Map();
   const noteGap = (proj, pn, role, pid) => {
     const key = [proj.project_type, proj.clinical_phase || "", scopeOf(proj) || "",
@@ -219,11 +226,32 @@ function calculate(M){
       const wk = a.project_id + "|" + k;
       if (!who.has(wk)) who.set(wk, []);
       who.get(wk).push([a.person_id, a.role_name]);
+
+      const own = seg ? stdFactor(M, proj, seg.period_name, a.role_name) : undefined;
+      const ppw = (M.ppw[a.assignment_id] || []).find(w =>
+        w.period_start && w.period_end
+        && w.period_start.getTime() <= Date.UTC(y, m, 1)
+        && Date.UTC(y, m, 1) <= w.period_end.getTime());
+      lines.push({
+        month:k, project_id:a.project_id, person_id:a.person_id,
+        assignment_id:a.assignment_id, role_name:a.role_name,
+        period_name: seg ? seg.period_name : null,
+        period_weight: pw, period_weight_source: seg ? "ProjectPeriod" : "none — V-12",
+        role_factor: own, role_factor_effective: rf,
+        absorbed: M.ABSORB && seg
+          ? absorbedInto(M, proj, seg.period_name, a.role_name)
+              .filter(r => !staffed(a.project_id, r, k))
+          : [],
+        sharers: share,
+        person_weight: personWeight(a, y, m),
+        person_weight_source: ppw ? "PersonPeriodWeight override" : "Assignment",
+        coverage: cov, fte: v,
+      });
     }
   }
   reportGaps(M, gaps);
   return {projMonth, persMonth, persProj, projPers, cell, who, sharers, shareCount,
-          staffed, effectiveFactor, gaps,
+          staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }
 

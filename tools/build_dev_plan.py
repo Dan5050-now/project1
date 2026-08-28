@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.36"
+DOC_VERSION = "2.37"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -368,7 +368,34 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.36", "2026-08-28", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.37", "2026-08-28", "Claude Code", "Pending",
+     "R-29, REQ-OUT-06: THE APPLICATION EXPORTS ITS ANSWERS AS WELL AS ITS QUESTIONS. "
+     "Until now Export meant one thing - the plan, so it could come back - and there was "
+     "no way to get the monthly figures out for a report, a spreadsheet or somebody "
+     "else's model short of reading them off the screen. The export control is now a "
+     "MENU with the choice on it: the plan as .xlsx or as the interchange file, both of "
+     "which round-trip, or the CALCULATED MONTHLY FTE, which deliberately does not. "
+     "Each item says which it is, so the choice can be made without trying it. The "
+     "results workbook carries seven sheets: a ReadMe that states it cannot be imported "
+     "and gives the formula; Summary, the Overall tab's tiles as figures; ProjectMonth "
+     "and PersonMonth, one row each per month; DETAIL, one row per assignment per month "
+     "carrying every term of the multiplication that produced it - period weight, the "
+     "role factor before and after absorption, the number of sharers, the person weight "
+     "and which row it came from, the month coverage; Flags, the over-allocated months "
+     "and under-allocated runs; and Assumptions, the settings in force, marked for "
+     "whether each one changed a figure or only its display. Two properties are held by "
+     "test_results.py rather than asserted: every project-month and person-month is "
+     "EXACTLY the sum of its Detail rows and all four totals in the file are the same "
+     "number - the monthly sheets are summed FROM the detail rather than from the "
+     "engine, so a reader who adds the column gets the total - and every Detail row "
+     "reconciles to its own four numbers. The file covers what was ON SCREEN, horizon "
+     "and filters included, and the ReadMe names them, so a file that has left the "
+     "building can still say what it does and does not cover. The calculation now "
+     "records each term as it works it out (calculate() returns `lines`), because an "
+     "explanation assembled afterwards from the sheets could drift from the figure it "
+     "claims to explain.",
+     "Issued for review"],
+    ["2.36", "2026-08-28", "Claude Code", "Pending",
      "R-28, REQ-IMP-14: AN IMPORT SAYS WHICH SETTINGS IT BROUGHT WITH IT. Config stays "
      "in the source workbook and an import still applies it - that is deliberate and is "
      "what makes a plan reproducible from the file alone. What was missing was being "
@@ -1340,6 +1367,7 @@ reqs = [
     [f"{MARK_CHG}REQ-IMP-09", "Import/Export", "Every field is editable, including identifiers. An on-screen edit is re-validated against the same rules as an imported value, so editing cannot introduce data the import would have rejected.", "Must", "Q-20", "4"],
     [f"{MARK_NEW}REQ-IMP-10", "Import/Export", "Editing an identifier that other sheets reference cascades to every referencing row, after showing how many rows will change. Deleting a referenced row is refused, naming what still points at it.", "Must", "Q-20", "4"],
     [f"{MARK_NEW}REQ-IMP-14", "Import/Export", "An import that changes any Config setting says so. The settings in force are captured before the model is replaced and compared by name afterwards; every setting whose value differs, or that the incoming file adds or does not carry, is named on the load banner and listed on a screen of its own with what it was, what it is now, and what it affects - a calculation rule, an allocation threshold, or display only. The settings are APPLIED either way: importing a workbook means taking its settings, which is what makes a plan reproducible from the file alone. This is a check, not a gate. A first load has nothing to compare against and reports nothing.", "Must", "R-28", "4"],
+    [f"{MARK_NEW}REQ-OUT-06", "Output", "The application exports the CALCULATED MONTHLY FTE as well as the source plan, and the export control offers the choice with each option described. The results workbook is derived throughout and cannot be imported, which its first sheet states. It carries: the Overall tab's summary figures; one row per project per month and one per person per month; a DETAIL sheet of one row per assignment per month carrying every term of the multiplication that produced it, so any figure can be checked without the application; the allocation flags; and the settings in force, marked for whether each changed a figure or only its display. Every monthly figure is exactly the sum of its detail rows and every total is exactly the sum of those. The file covers the horizon and filters that were on screen, and names them.", "Must", "R-29", "4"],
     [f"{MARK_NEW}REQ-IMP-12", "Import/Export", "A column that holds a DATE offers a calendar panel beside the cell being edited, and the cell stays fully typeable while it is open: the caret does not move, every key still reaches the cell, and what is typed steers the panel to that month. Picking a day commits it through the ordinary edit path, so it is validated exactly like a typed one. Deliberately not the browser's own date control, which would give one editing model for text cells and another for dates - a different keyboard contract, a browser-dependent display format, and no way to leave a date deliberately blank the way every other cell does.", "Should", "R-21", "4"],
     [f"{MARK_NEW}REQ-IMP-13", "Import/Export", "Every validation rule carries a CLASS saying what the application may do about it, separately from its severity. MUST: something is wrong with the row itself and it is refused, on the cell edit and at Save. CONDITIONAL: the row is sound but something it depends on is missing, so the figures that need it are short an assumption - never refused, and at Save the application names every one that this batch of edits leaves unresolved and asks the user to confirm before keeping them. INCOMPLETE: the row is still being built and the finding will answer itself - reported, never questioned. The class is shown beside the severity wherever findings are listed.", "Must", "R-25", "4"],
     [f"{MARK_NEW}REQ-IMP-11", "Import/Export", "A new row can be inserted into any editable table, positioned immediately below the row the user acts on rather than appended at the end, and validated on entry like any other edit.", "Must", "P-01, S-01", "4"],

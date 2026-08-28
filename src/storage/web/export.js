@@ -47,3 +47,55 @@ function exportWorkbook(asJson){
       + "and this application loads it straight back. "
     : ""}The source file on disk is untouched.`);
 }
+
+
+/* ------------------------------------------------------ the calculated figures
+   The other export, and deliberately a different thing. See core/06b_results.js for
+   what is in the file and why it is kept apart from the source workbook.
+
+   Two things it does NOT do, both on purpose:
+     * it does not refuse over unsaved changes the way the source export does. That
+       refusal exists so a plan cannot be exported half-written and re-imported; this
+       file is a snapshot for reading, and a snapshot of what is on screen right now
+       is exactly what somebody pressing it wants. The ReadMe carries the count of
+       unresolved findings so the reader knows what state it was taken in.
+     * it does not clear the saved-changes marker. Nothing has been written back to
+       the plan, so the plan is no less in need of exporting than it was before. */
+function exportResults(){
+  const M = S.model, C = S.calc;
+  if (!M || !C){ showBanner("bad", "Nothing to export yet — load a workbook first."); return; }
+  const months = grid();
+  if (!months.length){
+    showBanner("bad", "Export held — the horizon covers no months. Widen it, or press "
+      + "'Expand to all projects', and try again.");
+    return;
+  }
+  const named = Object.entries(S.f)
+    .filter(([, set]) => set.size)
+    .map(([k, set]) => `${FILTER_LABEL[k] || k}: ${[...set].join(", ")}`);
+  const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const sheets = buildResults(M, C, {
+    months, projects: activeProjects(), people: activePeople(),
+    filters: named.join(" · "), fileName: S.fileName, stamp,
+  });
+
+  const day = new Date().toISOString().slice(0, 10);
+  const base = (S.fileName || "PRAP").replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(buildXlsx(sheets));
+  a.download = `${base}_CalculatedFTE_${day}.xlsx`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+
+  const rows = sheets.Detail.length - 1;
+  showBanner("", `Exported ${a.download} — ${rows.toLocaleString()} assignment-month `
+    + `row(s) across ${sheets.ProjectMonth.length - 1} project-month(s) and `
+    + `${sheets.PersonMonth.length - 1} person-month(s)`
+    + (named.length ? `, for what is currently in view (${named.join("; ")})` : "")
+    + `. This one is for reading — it cannot be imported back. Your plan and the source `
+    + `file on disk are both untouched.`);
+}
+
+/** How each filter is named to a reader who was not looking at the screen. */
+const FILTER_LABEL = {type:"Project type", phase:"Clinical phase", out:"Work scope",
+                      proj:"Project", pers:"Person", role:"Role", dept:"Department"};

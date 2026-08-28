@@ -227,6 +227,28 @@ td.ins,th.ins{white-space:nowrap}
 .ms>summary:hover{border-color:var(--accent)}
 .ms[open]>summary{border-color:var(--accent)}
 .ms>summary.on{font-weight:560;color:var(--accent);border-color:var(--accent)}
+/* --- the export menu ----------------------------------------------------- */
+/* A drop-down built on the same <details> as the filter pickers, so it inherits their
+   open/close, focus and Escape behaviour rather than growing a second kind of menu.
+   <summary> cannot be disabled, so 'off' does the work: nothing to click, and the
+   pointer says so. */
+.exp{position:relative}
+.exp>summary{list-style:none;cursor:pointer}
+.exp>summary::-webkit-details-marker{display:none}
+.exp>summary::after{content:"  \25BE";font-size:.85em;opacity:.75}
+.exp.off{pointer-events:none;opacity:.45}
+.exp>.msp{width:340px;max-width:min(340px,calc(100vw - 32px));padding:6px;
+ max-height:none;left:auto;right:0}
+.expitem{display:block;width:100%;text-align:left;border:0;background:none;
+ font-family:inherit;font-size:13px;color:var(--ink);padding:9px 11px;
+ border-radius:var(--r-sm);cursor:pointer}
+.expitem:hover,.expitem:focus-visible{background:var(--fill)}
+.expitem b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+ color:var(--accent);font-weight:600}
+.expitem i{display:block;font-style:normal;font-size:11.5px;color:var(--ink2);
+ margin-top:3px;line-height:1.45;white-space:normal}
+.expitem i b{color:var(--crit);font-family:inherit;font-size:11.5px}
+
 .msp{position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:100%;
  max-height:280px;overflow:auto;background:var(--raised);border:1px solid var(--base);
  border-radius:var(--r-md);box-shadow:var(--shadow-lift);padding:5px;

@@ -107,7 +107,7 @@ with sync_playwright() as pw:
           "and the product calls itself by its own name (NR-APP-08)",
           pg.inner_text("h1"))
     check(pg.locator("#loadBtn").is_visible() is False
-          and pg.locator("#exportBtn").is_visible() is False,
+          and pg.locator("#expMenu").is_visible() is False,
           "the web application's file buttons are hidden — menus replace them (D-N02)")
     check(pg.locator("#themeBtn").is_visible() is False,
           "and the theme toggle is gone — the window follows Windows (D-N09, U-N04)")

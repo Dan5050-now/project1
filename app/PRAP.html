@@ -244,6 +244,28 @@ td.ins,th.ins{white-space:nowrap}
 .ms>summary:hover{border-color:var(--accent)}
 .ms[open]>summary{border-color:var(--accent)}
 .ms>summary.on{font-weight:560;color:var(--accent);border-color:var(--accent)}
+/* --- the export menu ----------------------------------------------------- */
+/* A drop-down built on the same <details> as the filter pickers, so it inherits their
+   open/close, focus and Escape behaviour rather than growing a second kind of menu.
+   <summary> cannot be disabled, so 'off' does the work: nothing to click, and the
+   pointer says so. */
+.exp{position:relative}
+.exp>summary{list-style:none;cursor:pointer}
+.exp>summary::-webkit-details-marker{display:none}
+.exp>summary::after{content:"  \25BE";font-size:.85em;opacity:.75}
+.exp.off{pointer-events:none;opacity:.45}
+.exp>.msp{width:340px;max-width:min(340px,calc(100vw - 32px));padding:6px;
+ max-height:none;left:auto;right:0}
+.expitem{display:block;width:100%;text-align:left;border:0;background:none;
+ font-family:inherit;font-size:13px;color:var(--ink);padding:9px 11px;
+ border-radius:var(--r-sm);cursor:pointer}
+.expitem:hover,.expitem:focus-visible{background:var(--fill)}
+.expitem b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+ color:var(--accent);font-weight:600}
+.expitem i{display:block;font-style:normal;font-size:11.5px;color:var(--ink2);
+ margin-top:3px;line-height:1.45;white-space:normal}
+.expitem i b{color:var(--crit);font-family:inherit;font-size:11.5px}
+
 .msp{position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:100%;
  max-height:280px;overflow:auto;background:var(--raised);border:1px solid var(--base);
  border-radius:var(--r-md);box-shadow:var(--shadow-lift);padding:5px;
@@ -652,9 +674,24 @@ dialog.big .dlg-b{max-height:84vh}
   <span class="file" id="fileline">no workbook loaded</span>
   <input type="file" id="picker" accept=".xlsx,.json" hidden>
   <button class="btn" id="loadBtn">Load workbook</button>
-  <button class="btn primary" id="exportBtn" disabled>Export</button>
-  <button class="btn" id="exportJsonBtn" disabled
-    title="The same data as plain text, for another program or an AI agent to read">Export JSON</button>
+  <!-- One menu, because the two exports answer different questions and picking between
+       them is the decision worth making. Built on <details> like the filter drop-downs,
+       so open, close, Escape and keyboard focus all come for free. -->
+  <details class="ms exp off" id="expMenu">
+    <summary class="btn primary" id="exportBtn" aria-disabled="true">Export</summary>
+    <div class="msp">
+      <button class="expitem" id="exportBtn2">Source data <b>.xlsx</b>
+        <i>The plan itself. Loads straight back into this application — use it to carry
+           on working, or to hand the plan to somebody else.</i></button>
+      <button class="expitem" id="exportJsonBtn">Source data <b>.prap.json</b>
+        <i>The same plan as plain text, for another program or an AI agent to read.
+           Also loads straight back.</i></button>
+      <button class="expitem" id="exportCalcBtn">Calculated monthly FTE <b>.xlsx</b>
+        <i>The figures, not the plan — every project-month and person-month in view,
+           with the working behind each one. For a report or a spreadsheet.
+           <b>Cannot be imported back.</b></i></button>
+    </div>
+  </details>
   <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
 </header>
 
@@ -788,7 +825,7 @@ dialog.big .dlg-b{max-height:84vh}
 
 <script>
 "use strict";
-const APP_VERSION = "1.34";
+const APP_VERSION = "1.35";
 const SCHEMA_EXPECTED = 8;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -797,9 +834,9 @@ const SCHEMA_EXPECTED = 8;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.36.xlsx",          ver:"2.36",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.37.xlsx",          ver:"2.37",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.34 records Step 4 progress, schema 8, the periods-are-the-project window and the must/conditional rule classes"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.10.xlsx", ver:"1.10",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.11.xlsx", ver:"1.11",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.5 adds schema 8 and the absorption rule, v1.8 adds the rule classes and the calendar — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
@@ -2950,6 +2987,13 @@ function calculate(M){
      calculation, which made it an error about the DATA and therefore something that
      could refuse an edit. It is neither. It is the calculation reporting what it had
      to guess at. */
+  /* Every term of every person-month, kept as it is worked out.
+     The results export has to be able to say HOW a figure was reached, and the only
+     honest way to answer that is to record what the arithmetic actually used. Asked
+     again afterwards, from the sheets, the explanation could drift from the figure it
+     claims to explain - which is the one thing an export like this must never do. */
+  const lines = [];
+
   const gaps = new Map();
   const noteGap = (proj, pn, role, pid) => {
     const key = [proj.project_type, proj.clinical_phase || "", scopeOf(proj) || "",
@@ -2998,11 +3042,32 @@ function calculate(M){
       const wk = a.project_id + "|" + k;
       if (!who.has(wk)) who.set(wk, []);
       who.get(wk).push([a.person_id, a.role_name]);
+
+      const own = seg ? stdFactor(M, proj, seg.period_name, a.role_name) : undefined;
+      const ppw = (M.ppw[a.assignment_id] || []).find(w =>
+        w.period_start && w.period_end
+        && w.period_start.getTime() <= Date.UTC(y, m, 1)
+        && Date.UTC(y, m, 1) <= w.period_end.getTime());
+      lines.push({
+        month:k, project_id:a.project_id, person_id:a.person_id,
+        assignment_id:a.assignment_id, role_name:a.role_name,
+        period_name: seg ? seg.period_name : null,
+        period_weight: pw, period_weight_source: seg ? "ProjectPeriod" : "none — V-12",
+        role_factor: own, role_factor_effective: rf,
+        absorbed: M.ABSORB && seg
+          ? absorbedInto(M, proj, seg.period_name, a.role_name)
+              .filter(r => !staffed(a.project_id, r, k))
+          : [],
+        sharers: share,
+        person_weight: personWeight(a, y, m),
+        person_weight_source: ppw ? "PersonPeriodWeight override" : "Assignment",
+        coverage: cov, fte: v,
+      });
     }
   }
   reportGaps(M, gaps);
   return {projMonth, persMonth, persProj, projPers, cell, who, sharers, shareCount,
-          staffed, effectiveFactor, gaps,
+          staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }
 
@@ -3258,6 +3323,278 @@ function importApply(diff, accepted, hooks){
     }
   }
   return {added, changed, cells};
+}
+/* ============================================== 6b. the calculated-results workbook
+
+   A second thing the application can export, and the opposite of the first.
+
+   The SOURCE export is the plan, and its whole purpose is to come back: it round-trips,
+   the application reads it again, and nothing in it is derived. This one is the
+   ANSWER - the monthly figures, for a spreadsheet, a report or somebody else's model -
+   and it deliberately does not round-trip. Re-importing it would be meaningless, so the
+   file says so on its first sheet rather than leaving somebody to find out.
+
+   The point of separating them is that they answer different questions and are wrong
+   in different ways. A source file with a derived column in it invites somebody to edit
+   the derived column. A results file that pretends to be source data invites somebody
+   to import it and lose their plan.
+
+   WHAT IS IN IT. Everything the Overall tab shows, plus the working behind it:
+
+     00_ReadMe      what this file is, what it is not, and the formula
+     Summary        the tiles - projects, people, total demand, the flags
+     ProjectMonth   one row per project per month
+     PersonMonth    one row per person per month, against their capacity
+     Detail         one row per ASSIGNMENT per month, with every term of the
+                    multiplication that produced it
+     Flags          the over-allocated months and under-allocated runs
+     Assumptions    the settings in force when the figures were produced
+
+   Detail is the sheet that makes the rest checkable: every figure on ProjectMonth and
+   PersonMonth is a sum of its rows, and each of those rows carries the four numbers it
+   was made from. Somebody who disagrees with a total can find out why without opening
+   the application.
+
+   Pure - it builds rows, and knows nothing about files or the DOM. Both shells export
+   through it, so a figure cannot differ between them. */
+
+const RESULT_SHEETS = ["00_ReadMe", "Summary", "ProjectMonth", "PersonMonth",
+                       "Detail", "Flags", "Assumptions"];
+
+/** Which settings changed the figures, as opposed to how they are displayed. */
+const CFG_AFFECTS = {
+  split_shared_role_fte:        "CHANGES FIGURES — a shared role's factor is divided",
+  absorb_unstaffed_role_factor: "CHANGES FIGURES — an unstaffed role's factor is absorbed",
+  over_allocation_fte:          "flags only — the over-allocation ceiling",
+  under_allocation_fte:         "flags only — the under-allocation floor",
+  under_allocation_min_months:  "flags only — months below the floor before a run",
+  fte_hours_per_month:          "display only — FTE to hours",
+  capacity_unit:                "display only",
+  default_horizon_months:       "display only — the months the dashboard opens on",
+  schema_version:               "the structure the source workbook was written to",
+};
+
+/** Build every sheet of the results workbook.
+ *
+ *  `scope` is what the user is looking at: the months, the projects and the people the
+ *  Overall tab currently has in view, and the words describing any filter. The export
+ *  follows the screen deliberately - somebody who has filtered to one department and
+ *  presses export means that department - and the ReadMe says so in full, so a file
+ *  that left the building can still explain what it does and does not cover.
+ */
+function buildResults(M, C, scope){
+  const months = scope.months, mset = new Set(months);
+  const projSet = new Set(scope.projects), persSet = new Set(scope.people);
+  const HOURS = M.HOURS;
+  const r4 = v => Math.round(v * 10000) / 10000;
+  const r2 = v => Math.round(v * 100) / 100;
+  const label = k => keyToLabel(k);
+  const iso = k => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
+
+  // ---- Detail: one row per assignment per month, with its whole multiplication ----
+  const detail = [["month", "month_iso", "project_id", "project_name", "project_type",
+                   "clinical_phase", "work_scope_type", "period_name",
+                   "period_weight", "period_weight_from",
+                   "person_id", "person_name", "department", "role_name",
+                   "role_factor", "role_factor_effective", "absorbed_from",
+                   "sharers", "person_weight", "person_weight_from",
+                   "month_coverage", "fte", "hours", "assignment_id"]];
+  for (const L of C.lines){
+    if (!mset.has(L.month) || !projSet.has(L.project_id) || !persSet.has(L.person_id)) continue;
+    const p = M.projects[L.project_id] || {}, who = M.people[L.person_id] || {};
+    detail.push([
+      label(L.month), iso(L.month), L.project_id, p.project_name ?? null,
+      p.project_type ?? null, p.clinical_phase ?? null, p.work_scope_type ?? null,
+      L.period_name, r4(L.period_weight), L.period_weight_source,
+      L.person_id, who.person_name ?? null, who.department ?? null, L.role_name,
+      L.role_factor === undefined ? null : r4(L.role_factor),
+      r4(L.role_factor_effective),
+      L.absorbed.length ? L.absorbed.join(", ") : null,
+      L.sharers, r4(L.person_weight), L.person_weight_source,
+      r4(L.coverage), r4(L.fte), r2(L.fte * HOURS), L.assignment_id,
+    ]);
+  }
+
+  /* ---- the two monthly sheets, SUMMED FROM THE DETAIL ROWS ABOVE ----------------
+     Not from the calculation's own totals, for two reasons, and the second one is a
+     correctness matter rather than a tidiness one.
+
+     Every figure in this file is rounded to four places. Add up a column of rounded
+     numbers and you do not get the rounded total - so totals taken from the engine
+     would sit a thousandth away from the rows they are supposed to be the sum of, and
+     a reader who added the column would find the file disagreeing with itself. In a
+     workbook whose entire purpose is to be checked, that is the wrong way round.
+
+     And the engine's totals cover EVERY assignment, while this file covers what is in
+     view. Filter to one department and a project-month taken from the engine would
+     still carry the people the filter removed - a total larger than the rows beneath
+     it, with nothing to say why. Summing the detail cannot make that mistake. */
+  const pAcc = new Map(), sAcc = new Map();
+  const bump = (map, key, fte, other) => {
+    let e = map.get(key);
+    if (!e) map.set(key, e = {fte:0, others:new Set()});
+    e.fte += fte;
+    e.others.add(other);
+  };
+  for (const row of detail.slice(1)){
+    const k = row[1], pid = row[2], sid = row[10], fte = row[21];
+    bump(pAcc, k + "|" + pid, fte, sid);
+    bump(sAcc, k + "|" + sid, fte, pid);
+  }
+
+  const projMonth = [["month", "month_iso", "project_id", "project_name", "project_type",
+                      "clinical_phase", "work_scope_type", "status", "period_name",
+                      "fte", "hours", "people"]];
+  for (const pid of scope.projects){
+    const p = M.projects[pid] || {};
+    for (const k of months){
+      const e = pAcc.get(iso(k) + "|" + pid);
+      if (!e) continue;                        // a month it does not run in is not a row
+      const seg = (M.periods[pid] || []).find(s =>
+        s.period_start && s.period_end
+        && s.period_start.getTime() <= Date.UTC(Math.floor(k / 12), k % 12, 1)
+        && Date.UTC(Math.floor(k / 12), k % 12, 1) <= s.period_end.getTime());
+      projMonth.push([label(k), iso(k), pid, p.project_name ?? null,
+        p.project_type ?? null, p.clinical_phase ?? null, p.work_scope_type ?? null,
+        p.status ?? null, seg ? seg.period_name : null,
+        r4(e.fte), r2(e.fte * HOURS), e.others.size]);
+    }
+  }
+
+  const persMonth = [["month", "month_iso", "person_id", "person_name", "department",
+                      "primary_role", "capacity_fte", "fte", "hours", "projects",
+                      "vs_capacity", "flag"]];
+  const persFte = new Map();                   // used by Flags and Summary alike
+  for (const sid of scope.people){
+    const who = M.people[sid] || {};
+    const cap = num(who.capacity_fte);
+    for (const k of months){
+      const e = sAcc.get(iso(k) + "|" + sid);
+      if (!e) continue;
+      const v = r4(e.fte);
+      persFte.set(sid + "|" + k, v);
+      persMonth.push([label(k), iso(k), sid, who.person_name ?? null,
+        who.department ?? null, who.primary_role ?? null, cap,
+        v, r2(e.fte * HOURS), e.others.size,
+        cap ? r4(v / cap) : null,
+        v > M.OVER ? "over" : v < M.UNDER ? "under" : null]);
+    }
+  }
+
+  // ---- Flags: exactly what the Overall tab counts ---------------------------------
+  const flags = [["kind", "person_id", "person_name", "from", "to", "months",
+                  "fte", "threshold"]];
+  let over = 0, runs = 0;
+  for (const sid of scope.people){
+    const who = M.people[sid] || {};
+    let run = [];
+    for (const k of months){
+      const v = persFte.get(sid + "|" + k) || 0;
+      if (v > M.OVER){
+        over++;
+        flags.push(["over-allocated", sid, who.person_name ?? null, label(k), label(k),
+                    1, r4(v), M.OVER]);
+      }
+      // A month a person is not on anything at all is not an under-allocated month -
+      // they are unassigned, which is a different statement and breaks the run rather
+      // than continuing it. The Overall tab counts runs the same way.
+      if (v > 0 && v < M.UNDER) run.push(k);
+      else {
+        if (run.length >= M.MINM){
+          runs++;
+          flags.push(["under-allocated run", sid, who.person_name ?? null,
+                      label(run[0]), label(run[run.length - 1]), run.length, null, M.UNDER]);
+        }
+        run = [];
+      }
+    }
+    if (run.length >= M.MINM){
+      runs++;
+      flags.push(["under-allocated run", sid, who.person_name ?? null,
+                  label(run[0]), label(run[run.length - 1]), run.length, null, M.UNDER]);
+    }
+  }
+
+  // ---- Summary: the tiles, as figures somebody can paste into a report ------------
+  // Summed from the same rounded rows, so the Summary total is exactly the total of
+  // the Detail column and exactly the total of each monthly sheet.
+  let total = 0;
+  for (const row of detail.slice(1)) total += row[21];
+  const summary = [["measure", "value", "unit", "note"],
+    ["Months in view", months.length, "months",
+     `${label(months[0])} to ${label(months[months.length - 1])}`],
+    ["Projects in view", scope.projects.length, "projects",
+     `of ${Object.keys(M.projects).length} in the source file`],
+    ["People in view", scope.people.length, "people",
+     `of ${Object.keys(M.people).length} in the source file`],
+    ["Total demand", r4(total), "FTE-months",
+     "the sum of every person-month in this file"],
+    ["Total demand", r2(total * HOURS), "hours",
+     `at ${HOURS} hours to 1.00 FTE`],
+    ["Over-allocated", over, "person-months", `above ${M.OVER} FTE`],
+    ["Under-allocation runs", runs, "runs",
+     `${M.MINM}+ consecutive months below ${M.UNDER} FTE`],
+    ["Detail rows", detail.length - 1, "assignment-months",
+     "each one a single multiplication; the two monthly sheets are their sums"],
+  ];
+
+  // ---- Assumptions: what shaped the figures ---------------------------------------
+  const assumptions = [["parameter", "value", "what it affected", "note"]];
+  for (const r of M.raw.Config){
+    if (!r.parameter) continue;
+    assumptions.push([r.parameter, r.value ?? null,
+                      CFG_AFFECTS[r.parameter] || "", r.note ?? null]);
+  }
+
+  // ---- ReadMe ----------------------------------------------------------------------
+  const readme = [["PRAP — calculated monthly FTE"], [],
+    ["WHAT THIS FILE IS"],
+    ["The figures the application worked out, for reading, reporting or analysis "
+     + "somewhere else."],
+    [],
+    ["WHAT IT IS NOT"],
+    ["It is NOT a source workbook and CANNOT be imported. Everything in it is derived; "
+     + "there is nothing here to edit and feed back. To keep working on the plan, "
+     + "export the source data instead — that is the other item on the export menu, and "
+     + "it round-trips."],
+    [],
+    ["HOW EVERY FIGURE WAS MADE"],
+    ["FTE  =  period weight  ×  (role factor ÷ sharers)  ×  person weight  ×  month coverage"],
+    ["Worked out once per assignment per month. The 'Detail' sheet is one row per "
+     + "assignment per month with all four numbers in it; ProjectMonth and PersonMonth "
+     + "are those rows summed by project and by person. Nothing else enters the "
+     + "multiplication — capacity_fte is what a person's load is compared against, "
+     + "never something it is scaled by."],
+    [],
+    ["WHERE A FIGURE CAN BE SHORT OF AN ASSUMPTION"],
+    ["period_weight_from says 'none — V-12' where the month fell in no period and was "
+     + "weighted 1.00. role_factor is empty where RoleFactor had no row for that "
+     + "combination and the factor was taken as 1.00 (V-23). Both are reported in the "
+     + "application's findings, and both mean the figure is short of something rather "
+     + "than wrong in itself."],
+    [],
+    ["WHAT IS COVERED"],
+    ["This file holds what was ON SCREEN when it was exported — the horizon and any "
+     + "filters. Anything outside them is not here."],
+    ["Horizon", months.length ? `${label(months[0])} to ${label(months[months.length - 1])}` : "(none)"],
+    ["Projects", `${scope.projects.length} of ${Object.keys(M.projects).length}`],
+    ["People", `${scope.people.length} of ${Object.keys(M.people).length}`],
+    ["Filters", scope.filters || "none — everything in the file"],
+    [],
+    ["PROVENANCE"],
+    ["Source file", scope.fileName || "(unsaved plan)"],
+    ["Exported", scope.stamp],
+    ["Application", `PRAP ${APP_VERSION}`],
+    ["Source schema", String(M.config.schema_version ?? "(not stated)")],
+    ["Unresolved findings",
+     `${(M.findings || []).filter(f => f.sev === "error" || f.sev === "fatal").length} error(s), `
+     + `${(M.findings || []).filter(f => f.sev === "warning").length} warning(s) — `
+     + `see the application's findings report`],
+  ];
+
+  return {"00_ReadMe": readme, Summary: summary, ProjectMonth: projMonth,
+          PersonMonth: persMonth, Detail: detail, Flags: flags,
+          Assumptions: assumptions};
 }
 /* ============================================================ 7. state + filters */
 
@@ -5489,6 +5826,58 @@ function exportWorkbook(asJson){
     : ""}The source file on disk is untouched.`);
 }
 
+
+/* ------------------------------------------------------ the calculated figures
+   The other export, and deliberately a different thing. See core/06b_results.js for
+   what is in the file and why it is kept apart from the source workbook.
+
+   Two things it does NOT do, both on purpose:
+     * it does not refuse over unsaved changes the way the source export does. That
+       refusal exists so a plan cannot be exported half-written and re-imported; this
+       file is a snapshot for reading, and a snapshot of what is on screen right now
+       is exactly what somebody pressing it wants. The ReadMe carries the count of
+       unresolved findings so the reader knows what state it was taken in.
+     * it does not clear the saved-changes marker. Nothing has been written back to
+       the plan, so the plan is no less in need of exporting than it was before. */
+function exportResults(){
+  const M = S.model, C = S.calc;
+  if (!M || !C){ showBanner("bad", "Nothing to export yet — load a workbook first."); return; }
+  const months = grid();
+  if (!months.length){
+    showBanner("bad", "Export held — the horizon covers no months. Widen it, or press "
+      + "'Expand to all projects', and try again.");
+    return;
+  }
+  const named = Object.entries(S.f)
+    .filter(([, set]) => set.size)
+    .map(([k, set]) => `${FILTER_LABEL[k] || k}: ${[...set].join(", ")}`);
+  const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const sheets = buildResults(M, C, {
+    months, projects: activeProjects(), people: activePeople(),
+    filters: named.join(" · "), fileName: S.fileName, stamp,
+  });
+
+  const day = new Date().toISOString().slice(0, 10);
+  const base = (S.fileName || "PRAP").replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(buildXlsx(sheets));
+  a.download = `${base}_CalculatedFTE_${day}.xlsx`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+
+  const rows = sheets.Detail.length - 1;
+  showBanner("", `Exported ${a.download} — ${rows.toLocaleString()} assignment-month `
+    + `row(s) across ${sheets.ProjectMonth.length - 1} project-month(s) and `
+    + `${sheets.PersonMonth.length - 1} person-month(s)`
+    + (named.length ? `, for what is currently in view (${named.join("; ")})` : "")
+    + `. This one is for reading — it cannot be imported back. Your plan and the source `
+    + `file on disk are both untouched.`);
+}
+
+/** How each filter is named to a reader who was not looking at the screen. */
+const FILTER_LABEL = {type:"Project type", phase:"Clinical phase", out:"Work scope",
+                      proj:"Project", pers:"Person", role:"Role", dept:"Department"};
+
 /* ============================================================ 13. findings report */
 
 function showBanner(kind, text, findings){
@@ -6096,7 +6485,9 @@ function adopt(sheets, name, opts){
   fillFilters();
   el("empty").hidden = true; el("tabs").hidden = false; el("filterbar").hidden = false;
   el("editbar").hidden = false;
-  el("exportBtn").disabled = el("exportJsonBtn").disabled = false;
+  // <summary> has no disabled state, so the menu is enabled by taking the marker off.
+  el("expMenu").classList.remove("off");
+  el("exportBtn").setAttribute("aria-disabled", "false");
   const tz = -new Date().getTimezoneOffset() / 60;
   const tzName = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").split("/").pop() || "local";
   const stamp = S.loadedAt.toISOString().slice(0,16).replace("T"," ");
@@ -6182,8 +6573,12 @@ renderProvenance();
 el("loadBtn").onclick = el("loadBtn2").onclick = () => el("picker").click();
 el("startBtn").onclick = startBlank;
 el("picker").onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); };
-el("exportBtn").onclick = () => exportWorkbook(false);
-el("exportJsonBtn").onclick = () => exportWorkbook(true);
+/* The export menu. Each item closes it before acting, so the panel is not left hanging
+   open over a banner that is reporting what just happened. */
+const expDone = fn => () => { el("expMenu").open = false; fn(); };
+el("exportBtn2").onclick = expDone(() => exportWorkbook(false));
+el("exportJsonBtn").onclick = expDone(() => exportWorkbook(true));
+el("exportCalcBtn").onclick = expDone(exportResults);
 el("repClose").onclick = () => el("report").close();
 el("cfgClose").onclick = () => el("cfgchg").close();
 el("chgBtn").onclick = () => { renderChanges(); el("changes").showModal(); };

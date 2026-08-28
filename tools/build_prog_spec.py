@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.10"
+DOC_VERSION = "1.11"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.36.xlsx"
+PLAN = "PRAP_Development_Plan_v2.37.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,14 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.11", "2026-08-28", "Claude Code", "Dan",
+         "R-29, REQ-OUT-06: the calculated-results export. Sheet 08 gains its seven "
+         "sheets column by column, the two properties that make it checkable - monthly "
+         "figures summed FROM the detail rather than from the engine, and every detail "
+         "row reconciling to its own four numbers - and why it deliberately does not "
+         "round-trip. Sheet 05 records that calculate() now returns `lines`, one per "
+         "assignment-month, so the explanation and the figure come from the same pass. "
+         "Written against plan v2.37.", "Issued"],
         ["1.10", "2026-08-28", "Claude Code", "Dan",
          "R-28, REQ-IMP-14. Sheet 07 gains the config check on import: what is compared, "
          "when, and why a Config row is not treated like any other row in the file - "

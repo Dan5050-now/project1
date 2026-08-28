@@ -144,7 +144,8 @@ def main(DUMMY):
             notes.append(f"calculation matches the reference on all {len(ref)} person-months")
 
         with pg.expect_download() as dl:
-            pg.click("#exportBtn")
+            pg.click("#exportBtn")            # opens the export menu
+            pg.click("#exportBtn2")           # …source data .xlsx
         exported = "/tmp/prap_export_test.xlsx"
         dl.value.save_as(exported)
 

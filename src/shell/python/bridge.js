@@ -285,6 +285,47 @@
     }
   }
 
+  /* The calculated figures, put where the user chooses. The file is built by the same
+     buildResults() the browser download uses, so the two cannot differ; this only adds
+     the destination. Unsaved changes do NOT hold it up - a results file is a snapshot
+     of what is on screen, and that is what somebody pressing it is asking for. */
+  async function exportResultsTo() {
+    const M = S.model, C = S.calc;
+    if (!M || !C) { showBanner("bad", "Nothing to export yet — open a plan first."); return; }
+    const months = grid();
+    if (!months.length) {
+      showBanner("bad", "Export held — the horizon covers no months. Widen it and try again.");
+      return;
+    }
+    const named = Object.entries(S.f).filter(([, set]) => set.size)
+      .map(([k, set]) => `${FILTER_LABEL[k] || k}: ${[...set].join(", ")}`);
+    const sheets = buildResults(M, C, {
+      months, projects: activeProjects(), people: activePeople(),
+      filters: named.join(" · "), fileName: S.fileName,
+      stamp: new Date().toISOString().slice(0, 16).replace("T", " "),
+    });
+    const day = new Date().toISOString().slice(0, 10);
+    const base = (S.fileName || "PRAP").replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+    const name = `${base}_CalculatedFTE_${day}.xlsx`;
+    const bytes = new Uint8Array(await buildXlsx(sheets).arrayBuffer());
+    try {
+      let out;
+      if (caps.nativeDialogs) {
+        out = await call("file/export", { bytes: bytesToB64(bytes), suggested: name });
+      } else {
+        const pth = await browseFor({ title: "Export calculated FTE to", folders: true,
+                                      name, okLabel: "Export" });
+        if (!pth) return;
+        out = await call("file/export", { bytes: bytesToB64(bytes), path: pth });
+      }
+      if (out) showBanner("", `Exported ${sheets.Detail.length - 1} assignment-month `
+        + `row(s) to ${out.path}. This one is for reading — it cannot be imported back. `
+        + `Your plan is untouched.`);
+    } catch (e) {
+      showBanner("bad", e.message);
+    }
+  }
+
   /* ---- the in-page folder browser ---------------------------------------- */
   /* Used when there is no tkinter, and whenever somebody wants to type a path -
      a share, say. It talks to fs/list, which returns names and sizes. No browser
@@ -443,6 +484,8 @@
       case "export": return exportWorkbook(false);       // the browser download
       case "exportJson": return exportWorkbook(true);
       case "exportTo": return exportTo(false);
+      case "exportCalc": return exportResults();          // the browser download
+      case "exportCalcTo": return exportResultsTo();
       case "commit": return el("saveBtn")?.click();
       case "discard": return el("discardBtn")?.click();
       case "changes": return el("chgBtn")?.click();

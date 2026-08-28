@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.36 records Step 4 progress, schema 8, the settings check on import, the fixed Config row set, the must/conditional/incomplete rule classes, the periods-are-the-project window and the absorption of an unstaffed role's factor |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.37 records Step 4 progress, schema 8, the calculated-FTE export, the settings check on import, the fixed Config row set, the must/conditional/incomplete rule classes, the periods-are-the-project window and the absorption of an unstaffed role's factor |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -68,7 +68,7 @@ File API call at all** — Python reads the workbook and hands the bytes to the 
 `127.0.0.1`. `core/` and `ui/` are untouched, so there is still one engine.
 
 ```
-python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.3.zip, 143 KB
+python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.4.zip, 150 KB
 python tools/test_storage_py.py          # 80 checks — kills mid-save, an 8-process race
 python tools/test_python_app.py          # 42 checks — a live server, a real browser
 ```
@@ -218,8 +218,9 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.36.xlsx` — **current.** 78 requirements, 29 live
+- `docs/PRAP_Development_Plan_v2.37.xlsx` — **current.** 79 requirements, 29 live
   validation rules (V-25 and V-28 retired), source schema version 8. Carries changes
+  **R-29 — the application exports its answers as well as its questions**,
   **R-28 — an import says which settings it brought**, **R-26 / R-27 — the
   `capacity_unit` note and the fixed Config row set** (all below),
   **R-21 to R-25 — the five review points** (the calendar, the period generator, the
@@ -239,7 +240,7 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.10.xlsx` — **current specification.** Schema 8
+- `docs/PRAP_Programming_Specification_v1.11.xlsx` — **current specification.** Schema 8
   (the two-step lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
   through, the cross-data rules, the shared-role division with its worked
   reasoning, and where the delivered defaults come from.
@@ -1001,6 +1002,28 @@ Requires `openpyxl`.
   project's combination has no `PeriodWeightStandard` rows at all, not for any period.
   `V-29` is information rather than an error: a role that carries a factor, that nobody
   holds, and that nothing covers for — work the figures are counting nowhere.
+- **The application exports its answers as well as its questions** (R-29,
+  `REQ-OUT-06`). Export used to mean one thing — the plan, so it could come back. It is
+  now a **menu**: the plan as `.xlsx` or as the interchange file, both of which
+  round-trip, or the **calculated monthly FTE**, which deliberately does not. Each item
+  says which it is, so the choice can be made without trying it.
+
+  The results workbook carries seven sheets — a ReadMe stating it cannot be imported and
+  giving the formula, a Summary of the Overall tab's figures, `ProjectMonth` and
+  `PersonMonth`, a **`Detail`** sheet of one row per assignment per month with every term
+  that produced it (period weight, the role factor before and after absorption, the
+  sharers, the person weight and which row it came from, the coverage), the allocation
+  flags, and the settings in force marked for whether each changed a figure or only its
+  display.
+
+  Two properties make it checkable, and are held by `tools/test_results.py` rather than
+  claimed: **every project-month and person-month is exactly the sum of its `Detail`
+  rows, and all four totals in the file are the same number** — the monthly sheets are
+  summed *from* the detail rather than from the engine, so a reader who adds the column
+  gets the total printed above it — and **every `Detail` row reconciles to its own four
+  numbers**. The file covers what was on screen, horizon and filters included, and the
+  ReadMe names them. `calculate()` now records each term as it works it out, because an
+  explanation assembled afterwards could drift from the figure it claims to explain.
 - **An import says which settings it brought with it** (R-28, `REQ-IMP-14`). Importing a
   workbook takes its `Config` as well as its rows — deliberately, and it is what lets a
   plan be rebuilt from the file alone. But a `Config` row is not like any other row:

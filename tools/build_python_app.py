@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.3"
+VERSION = "1.4"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,40 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.4
+
+  * YOU CAN NOW EXPORT THE FIGURES, not just the plan. File -> Export has two
+    kinds on it:
+
+      Export the plan to Excel        the source data. Re-importable - this is
+                                      the one to use to carry on working, or to
+                                      hand your plan to somebody else.
+      Export calculated FTE           the monthly numbers, for a report, a
+                                      spreadsheet or somebody else's model.
+                                      NOT re-importable, and its first sheet
+                                      says so.
+
+    Both have a '...to a folder' version if you want to choose where it goes.
+
+  * WHAT IS IN THE CALCULATED FILE. Seven sheets: a ReadMe with the formula and
+    what the file does and does not cover; a Summary of the Overall tab's
+    figures; one row per project per month; one row per person per month against
+    their capacity; a DETAIL sheet with one row per assignment per month
+    carrying every number that produced it - period weight, role factor before
+    and after absorption, how many people shared the role, the person weight and
+    whether it came from an override, and how much of the month was covered; the
+    over- and under-allocation flags; and the settings that were in force.
+
+  * IT ADDS UP. Every project-month and every person-month in the file is exactly
+    the sum of its Detail rows, and every total is exactly the sum of those. Add
+    the column in Excel and you get the total printed above it. And each Detail
+    row reconciles to its own four numbers, so any figure you disagree with can
+    be traced without opening this application.
+
+  * IT FOLLOWS THE SCREEN. Whatever horizon and filters you have set is what the
+    file holds, and the ReadMe names them.
+
 
 WHAT IS NEW IN 1.3
 

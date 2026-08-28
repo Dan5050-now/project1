@@ -53,8 +53,12 @@ renderProvenance();
 el("loadBtn").onclick = el("loadBtn2").onclick = () => el("picker").click();
 el("startBtn").onclick = startBlank;
 el("picker").onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); };
-el("exportBtn").onclick = () => exportWorkbook(false);
-el("exportJsonBtn").onclick = () => exportWorkbook(true);
+/* The export menu. Each item closes it before acting, so the panel is not left hanging
+   open over a banner that is reporting what just happened. */
+const expDone = fn => () => { el("expMenu").open = false; fn(); };
+el("exportBtn2").onclick = expDone(() => exportWorkbook(false));
+el("exportJsonBtn").onclick = expDone(() => exportWorkbook(true));
+el("exportCalcBtn").onclick = expDone(exportResults);
 el("repClose").onclick = () => el("report").close();
 el("cfgClose").onclick = () => el("cfgchg").close();
 el("chgBtn").onclick = () => { renderChanges(); el("changes").showModal(); };

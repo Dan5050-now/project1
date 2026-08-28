@@ -68,7 +68,10 @@
 
 /* D-N02: the menu replaces these. D-N09: the window follows the system.
    NR-IMP-09: and the picker is gone entirely - see bridge.js. */
-#loadBtn,#loadBtn2,#exportBtn,#exportJsonBtn,#themeBtn,#picker{display:none}
+/* The whole export MENU goes, not just its items: this shell exports through the
+   File menu, where 'to a folder' also lives. Hiding the summary alone would leave
+   an empty <details> stub in the header. */
+#loadBtn,#loadBtn2,#expMenu,#themeBtn,#picker{display:none}
 
 /* ---- the import difference report -------------------------------------- */
 .pm-diff{border:1px solid var(--grid);border-radius:10px;margin-bottom:9px;

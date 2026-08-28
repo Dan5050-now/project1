@@ -185,6 +185,7 @@ with sync_playwright() as pw:
         TMP.unlink()
     with pg.expect_download() as dl:
         pg.click("#exportBtn")
+        pg.click("#exportBtn2")
     dl.value.save_as(str(TMP))
     pg.wait_for_timeout(400)
 

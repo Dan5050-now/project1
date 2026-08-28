@@ -47,6 +47,7 @@ PARTS = [
     "core/05_model.js",
     "core/06_calculate.js",
     "core/06a_diff.js",
+    "core/06b_results.js",
     "ui/07_state.js",
     "ui/08_render.js",
     "ui/09_charts.js",

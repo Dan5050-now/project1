@@ -123,6 +123,7 @@ with sync_playwright() as pw:
           f"{left} row(s) still drafts")
 
     pg.click("#exportBtn")
+    pg.click("#exportBtn2")
     pg.wait_for_timeout(1200)
     banner = pg.inner_text("#banner")
     check("blocked" in banner.lower() and "supplied" in banner and "lost" in banner,

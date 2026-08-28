@@ -7,9 +7,24 @@
   <span class="file" id="fileline">no workbook loaded</span>
   <input type="file" id="picker" accept=".xlsx,.json" hidden>
   <button class="btn" id="loadBtn">Load workbook</button>
-  <button class="btn primary" id="exportBtn" disabled>Export</button>
-  <button class="btn" id="exportJsonBtn" disabled
-    title="The same data as plain text, for another program or an AI agent to read">Export JSON</button>
+  <!-- One menu, because the two exports answer different questions and picking between
+       them is the decision worth making. Built on <details> like the filter drop-downs,
+       so open, close, Escape and keyboard focus all come for free. -->
+  <details class="ms exp off" id="expMenu">
+    <summary class="btn primary" id="exportBtn" aria-disabled="true">Export</summary>
+    <div class="msp">
+      <button class="expitem" id="exportBtn2">Source data <b>.xlsx</b>
+        <i>The plan itself. Loads straight back into this application — use it to carry
+           on working, or to hand the plan to somebody else.</i></button>
+      <button class="expitem" id="exportJsonBtn">Source data <b>.prap.json</b>
+        <i>The same plan as plain text, for another program or an AI agent to read.
+           Also loads straight back.</i></button>
+      <button class="expitem" id="exportCalcBtn">Calculated monthly FTE <b>.xlsx</b>
+        <i>The figures, not the plan — every project-month and person-month in view,
+           with the working behind each one. For a report or a spreadsheet.
+           <b>Cannot be imported back.</b></i></button>
+    </div>
+  </details>
   <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
 </header>
 

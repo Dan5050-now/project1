@@ -143,7 +143,7 @@ with sync_playwright() as pw:
                        "o[s] = S.model.raw[s].length; return o;}")
     opened = pg.evaluate("() => ({tabs: !el('tabs').hidden, filters: !el('filterbar').hidden, "
                          "edit: !el('editbar').hidden, empty: el('empty').hidden, "
-                         "exp: !el('exportBtn').disabled, tab: S.tab})")
+                         "exp: !el('expMenu').classList.contains('off'), tab: S.tab})")
     check(all(opened[k] for k in ("tabs", "filters", "edit", "empty", "exp"))
           and rows["Lists"] > 0 and rows["Config"] > 0
           and rows["Project"] == 0 and rows["Person"] == 0 and rows["Assignment"] == 0,
@@ -375,6 +375,7 @@ with sync_playwright() as pw:
     # ---- 8. export, and read it back -----------------------------------------
     with pg.expect_download() as dl:
         pg.click("#exportBtn")
+        pg.click("#exportBtn2")
     out = TMP / "blank_plan.xlsx"
     dl.value.save_as(out)
     pg2 = ctx.new_page()

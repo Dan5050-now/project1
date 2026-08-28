@@ -322,7 +322,9 @@ function adopt(sheets, name, opts){
   fillFilters();
   el("empty").hidden = true; el("tabs").hidden = false; el("filterbar").hidden = false;
   el("editbar").hidden = false;
-  el("exportBtn").disabled = el("exportJsonBtn").disabled = false;
+  // <summary> has no disabled state, so the menu is enabled by taking the marker off.
+  el("expMenu").classList.remove("off");
+  el("exportBtn").setAttribute("aria-disabled", "false");
   const tz = -new Date().getTimezoneOffset() / 60;
   const tzName = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").split("/").pop() || "local";
   const stamp = S.loadedAt.toISOString().slice(0,16).replace("T"," ");

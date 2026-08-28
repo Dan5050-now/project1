@@ -297,15 +297,60 @@ def main():
                   "and the exported workbook gives the same figures again",
                   f"worst difference {worst3:.2e}" if worst3 is not None else "")
 
+            # ---- the OTHER export: the calculated figures ----------------------
+            # This shell reaches it through the File menu rather than a button, so the
+            # menu is what is checked - an item nobody can find is not a feature.
+            menu = pg.eval_on_selector_all(
+                "#pm-title .pm-menu a[data-do]", "es => es.map(e => e.dataset.do)")
+            check("exportCalc" in menu and "exportCalcTo" in menu and "export" in menu,
+                  "the File menu offers the calculated figures as well as the plan",
+                  ", ".join(m for m in menu if m.startswith("export")))
+
+            calc = str(home / "calculated.xlsx")
+            wrote2 = pg.evaluate("""async (p) => {
+                const named = Object.entries(S.f).filter(([, x]) => x.size)
+                  .map(([k, x]) => k + ": " + [...x].join(", "));
+                const sheets = buildResults(S.model, S.calc, {
+                    months: grid(), projects: activeProjects(), people: activePeople(),
+                    filters: named.join(" · "), fileName: S.fileName, stamp: "test"});
+                const u = new Uint8Array(await buildXlsx(sheets).arrayBuffer());
+                let s = ''; for (let i = 0; i < u.length; i += 0x8000)
+                    s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+                const r = await window.__pm.call('file/export', {bytes: btoa(s), path: p});
+                return {size: r.size, detail: sheets.Detail.length - 1,
+                        sheets: Object.keys(sheets)};
+            }""", calc)
+            check(os.path.exists(calc) and wrote2["detail"] > 0
+                  and wrote2["sheets"][0] == "00_ReadMe",
+                  "and it writes them, through the same builder the web shell uses",
+                  f"{wrote2['size']:,} bytes, {wrote2['detail']:,} assignment-month rows, "
+                  f"{len(wrote2['sheets'])} sheets")
+
+            from openpyxl import load_workbook as _lw
+            cwb = _lw(calc)
+            det = list(cwb["Detail"].iter_rows(values_only=True))
+            hdr = det[0]
+            fte, pw, rf, sh, ppw, cov = (hdr.index(c) for c in
+                ("fte", "period_weight", "role_factor_effective", "sharers",
+                 "person_weight", "month_coverage"))
+            bad = [r for r in det[1:]
+                   if abs(r[pw] * (r[rf] / r[sh]) * r[ppw] * r[cov] - r[fte]) > 5e-4]
+            check(not bad,
+                  "every row of it reconciles to its own four numbers",
+                  f"{len(det) - 1:,} rows checked")
+
             check(not errors, "no script error anywhere in the run",
                   "; ".join(errors[:3]))
             browser.close()
 
         # ---- nothing left outside its own folder -----------------------------
         print("\nleaving the machine as it found it")
+        # The two files this test asked the application to write are not strays: the
+        # point of the check is that NOTHING ELSE appeared.
+        asked_for = {pathlib.Path(out), pathlib.Path(calc)}
         stray = [p for p in home.rglob("*") if p.is_file()
                  and not str(p).startswith(str(app_dir))
-                 and p != pathlib.Path(out)]
+                 and p not in asked_for]
         check(not stray, "nothing is written outside the application folder",
               "; ".join(str(p) for p in stray[:3]))
         check((app_dir / "data").is_dir(), "the data folder is beside the application")

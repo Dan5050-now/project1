@@ -50,7 +50,7 @@ CHROME_CSS = """
 .pm-pill.read{background:var(--underbg);color:var(--underink)}
 .pm-grow{flex:1}
 /* D-N02: the menu bar replaces these. D-N09: the window follows Windows. */
-#loadBtn,#loadBtn2,#exportBtn,#exportJsonBtn,#themeBtn{display:none}
+#loadBtn,#loadBtn2,#expMenu,#themeBtn{display:none}
 """
 
 CHROME_HTML = """

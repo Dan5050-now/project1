@@ -134,6 +134,7 @@ def run(fixture, ctx):
     # ---- 5. the app's own JSON export --------------------------------------
     load(pg, fixture)
     with pg.expect_download() as dl:
+        pg.click("#exportBtn")
         pg.click("#exportJsonBtn")
     out = TMP / (fixture.stem + "_exported.prap.json")
     dl.value.save_as(out)

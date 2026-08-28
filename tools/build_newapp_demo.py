@@ -63,7 +63,7 @@ CHROME_CSS = """
    so they are hidden here rather than left to contradict the menu bar. The theme
    toggle goes too: the desktop window follows Windows and offers no setting of its
    own (D-N09, changed at the Gate N3 review). */
-#loadBtn,#exportBtn,#exportJsonBtn,#themeBtn{display:none}
+#loadBtn,#expMenu,#themeBtn{display:none}
 
 #pm-open{position:fixed;right:18px;bottom:18px;z-index:70}
 #pm-ov{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.42);
