@@ -36,7 +36,7 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 
 | Document | Version | Status | Next |
 |---|---|---|---|
-| TEA-PLAN-001 Development Plan | 1.3.0 | **APPROVED**, amended 2026-08-22 | — |
+| TEA-PLAN-001 Development Plan | 1.4.0 | **APPROVED**, amended 2026-08-22 | — |
 | TEA-SPEC-001 Programming Specification | 2.4.0 | **APPROVED**, amended 2026-08-22 | — |
 | Rule catalog | 2.0.0 | **FROZEN** 2026-08-21 | Unchanged by the v2.1.0 amendment |
 | Concept overview (HTML + PPTX) | — | Current | Regenerate when the plan or spec changes |
@@ -59,11 +59,18 @@ rather than marked individually. Step 3 is what makes that basis workable — th
 dataset tests all 83 live rules against a signed-off expected finding list, confirming the
 detail by evidence rather than by reading.
 
-**Step 3 is blocked on OI-05**, not OI-03: the de-identified Veeva export and structured CRF
-specification. That was an entry criterion for Step 2 and was never delivered — Step 2 closed on
-the strength of the rule review alone. Step 3 needs it more, because the synthetic dataset has to
-be shaped like an actual CRF, and TE-BL-011 and TE-FU-001 are CONDITIONAL on whether the sum is
-site-entered.
+**Nothing blocks Step 3 any more.** OI-05 (the raw Veeva export and CRF specification) is closed
+as *superseded, not delivered*: that data cannot be released, so **the input moves to SDTM** —
+standardised, publicly documented, and buildable against outside the company. OQ-01 is reversed
+accordingly; the v1.0.0 answer rested on the CRF specification being supplied as structured data,
+and that premise no longer holds.
+
+The next thing to **do** is OI-08, the SDTM input contract — which domains, which variables, which
+are required, and what happens when an optional one is absent. It belongs before the dummy data
+is built, not after, because it is the contract the dummy data and the later conversion both
+target. TU/TR/RS carry the tumor data and DM/EX/AE/DS/CM/PR cover the cross-domain rules; two gaps
+need a decision, tracked as OI-09 — SDTM has no query domain, and imaging metadata is not
+standard.
 
 **OI-03 (pilot study) has been restated**: its weight is on Step 6 UAT. The Step 3 dataset is
 curated and synthetic, so it can — and should — seed both RECIST 1.1 and iRECIST cases whichever

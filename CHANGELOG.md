@@ -3,6 +3,39 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## [Plan 1.4.0] — 2026-08-22 — input source moves to SDTM
+
+### OQ-01 reversed
+- **SDTM becomes the primary input**; the agent no longer reads the Veeva export directly. The
+  v1.0.0 answer rested on the CRF specification being supplied as structured data, and it cannot
+  be — so the reasoning behind it no longer holds. SDTM is standardised, publicly documented and
+  can be built against outside the company. The adapter interface is kept, so a direct Veeva
+  reader remains addable later without touching the rules.
+- **OI-05 closed as superseded, not delivered.** This unblocks Step 3 rather than deferring it.
+
+### New open items
+- **OI-08 — the SDTM input contract**, before the dummy data is built rather than after. It is
+  what the dummy data and the later conversion both target; defined afterwards it just documents
+  whatever emerged.
+- **OI-09 — supplementary query-history input.** SDTM has no query domain, so five
+  query-management rules and the whole of AC-06 have nothing to work from without a separate
+  extract. Without it the agent re-raises every finding at every data cut — the behaviour OBJ-04
+  exists to prevent.
+
+### New risks
+- **RSK-17 — SDTM is derived, not source.** If the conversion is wrong the agent reviews the
+  conversion's errors and raises queries about mapping bugs. Mitigated by conformance-checking
+  every incoming dataset before any rule runs, and treating a failure as run-blocking rather than
+  as a finding.
+- **RSK-18 — LLM-generated input, rated High/High.** Using a model to convert EDC data into SDTM
+  would put it upstream of every verdict, which is precisely what DP-01 exists to prevent: a model
+  that builds the input can invent a value, and the deterministic rules would then faithfully
+  check the invention. Volume makes it worse, and NFR-01 reproducibility cannot hold. The fix is
+  the same split already applied to review — the model writes the mapping **specification** and
+  drafts the mapping **code**, a human reviews both, and deterministic code executes the mapping
+  every time. A conversion is a transformation, not a judgement, so nothing is lost by making it
+  deterministic.
+
 ## [Plan 1.3.0 / Spec 2.4.0] — 2026-08-22 — Step 3 preparation answers
 
 ### Golden dataset sign-off (OQ-09 answered)
