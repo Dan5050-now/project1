@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 8
-TEMPLATE_VERSION = "1.11"
-DUMMY_VERSION = "1.13"
-DUMMY_SMALL_VERSION = "1.5"
+SCHEMA_VERSION = 9
+TEMPLATE_VERSION = "1.12"
+DUMMY_VERSION = "1.14"
+DUMMY_SMALL_VERSION = "1.6"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -262,6 +262,9 @@ SHEETS = {
         ("end_date", "Planned project end.", ""),
         ("total_period_months", "DERIVED - formula, do not type.", "calc"),
         ("status", "Planned / Active / On hold / Completed.", ""),
+        ("estimation_type", "'automatic' (default) or 'manual'. Manual means the monthly "
+         "FTE for THIS PROJECT is stated on MonthlyEstimate rather than calculated, and "
+         "the people assigned that month are scaled to add up to it.", ""),
         ("note_1", "Free text.", ""), ("note_2", "", ""), ("note_3", "", ""),
         ("note_4", "", ""), ("note_5", "", ""),
     ],
@@ -320,6 +323,8 @@ SHEETS = {
         ("assign_start_date", "Date the person joins. BLANK = the project's own start date.", ""),
         ("assign_end_date", "Date the person leaves. BLANK = the project's own end date.", ""),
         ("person_weight", "How much this person works on this project, e.g. 0.40.", ""),
+        ("estimation_type", "'automatic' (default) or 'manual'. Manual means the monthly "
+         "FTE for THIS ASSIGNMENT is stated on MonthlyEstimate rather than calculated.", ""),
         ("note_1", "Free text.", ""), ("note_2", "", ""), ("note_3", "", ""),
     ],
     "PersonPeriodWeight": [
@@ -328,6 +333,14 @@ SHEETS = {
         ("period_end", "Inclusive. Windows within one assignment must not overlap.", ""),
         ("weight_override", "REPLACES person_weight for these months - it does not multiply it.", ""),
         ("reason", "Why the weight differs.", ""),
+    ],
+    "MonthlyEstimate": [
+        ("scope", "'project' or 'assignment' - which of the two this figure is for.", "key"),
+        ("ref_id", "The project_id or assignment_id it belongs to, per scope.", ""),
+        ("month", "The month, as YYYY-MM.", ""),
+        ("fte", "The monthly FTE, STATED rather than calculated.", ""),
+        ("edited_at", "When it was last set. The application fills this in.", ""),
+        ("note_1", "Why this figure was stated.", ""),
     ],
     "Lists": [
         ("list_name", "Which list this value belongs to.", "key"),
@@ -795,6 +808,84 @@ def dummy_data(prof):
     return projects, ms, periods, pws, roles_tbl, people, A, ppw, inspections
 
 
+def manual_examples(projects, A, periods, pws, roles):
+    """One project and one assignment set to MANUAL, with figures for every month.
+
+    The point of putting these in the dummy set is that REQ-CAL-18 has two levels that
+    behave differently - an assignment figure REPLACES one person's contribution, a
+    project figure sets the whole month and the people on it are scaled to match - and a
+    fixture that exercised neither would leave both to a unit test.
+
+    Manual is all-or-nothing, so every month the thing spans gets a figure. These are
+    written as figures somebody would state: round, and shaped like a real project rather
+    than like the output of a formula. The application seeds them from its own
+    calculation instead, which is a different starting point for the same rule.
+
+    A project figure needs somebody assigned in that month or it cannot be shared out
+    (V-32), so the months come from the assignments, not from the periods.
+    """
+    # A third of the assignments carry no dates at all - a blank one means the project's
+    # own (REQ-CAL-15), so the window has to be resolved the same way the engine does it
+    # before any month can be named.
+    pwin = {p[0]: (p[15], p[16]) for p in projects}
+
+    def win(pid, s0, e0):
+        ps, pe = pwin.get(pid, (None, None))
+        s0, e0 = s0 or ps, e0 or pe
+        if not s0 or not e0:
+            return None
+        return (s0.year * 12 + s0.month - 1, e0.year * 12 + e0.month - 1)
+
+    span = {}                                    # pid -> (first month, last month)
+    for aid, sid, pid, role, s0, e0, w in A:
+        got = win(pid, s0, e0)
+        if not got:
+            continue
+        lo, hi = got
+        cur = span.get(pid)
+        span[pid] = (min(lo, cur[0]), max(hi, cur[1])) if cur else (lo, hi)
+
+    # A project with a decent run and several people on it - the case the reviewer
+    # described, where a manager two years in knows better than the assumptions.
+    counts = {}
+    for aid, sid, pid, role, s0, e0, w in A:
+        counts[pid] = counts.get(pid, 0) + 1
+    ranked = sorted((pid for pid in span if counts.get(pid, 0) >= 3),
+                    key=lambda pid: (-(span[pid][1] - span[pid][0]), pid))
+    manual_proj = ranked[0] if ranked else None
+
+    # An assignment on a DIFFERENT project, so the two levels can be read apart.
+    manual_asg = None
+    for aid, sid, pid, role, s0, e0, w in A:
+        got = win(pid, s0, e0)
+        if pid != manual_proj and got:
+            manual_asg, asg_span = aid, got
+            break
+
+    def iso(k):
+        return f"{k // 12}-{k % 12 + 1:02d}"
+
+    rows = []
+    if manual_proj:
+        lo, hi = span[manual_proj]
+        n = hi - lo + 1
+        for i, k in enumerate(range(lo, hi + 1)):
+            # A shape a manager would recognise: light at the start, heaviest through
+            # the middle, tailing off - stated to two places, as figures are.
+            frac = i / max(1, n - 1)
+            fte = 1.20 + 2.30 * (1 - abs(frac - 0.55) / 0.55) ** 1.4
+            rows.append(["project", manual_proj, iso(k), round(fte, 2), None,
+                         "Manager's own estimate - the assumptions understate this study"
+                         if i == 0 else None])
+    if manual_asg:
+        lo, hi = asg_span
+        for i, k in enumerate(range(lo, hi + 1)):
+            rows.append(["assignment", manual_asg, iso(k), round(0.35 + 0.05 * (i % 4), 2),
+                         None,
+                         "Agreed with the study lead" if i == 0 else None])
+    return rows, manual_proj, manual_asg
+
+
 def describe(prof, projects, ms, periods, people, A, ppw, inspections):
     """The 'what is in this file' block, computed from the rows rather than typed.
 
@@ -1185,7 +1276,10 @@ def build(kind):
     if kind in PROFILES:
         projects, ms, periods, pws, roles, people, A, ppw, inspections = dummy_data(PROFILES[kind])
         P = {p[0]: p[2] for p in projects}
-        proj_rows = [list(p[:17]) + [None] + [p[17]] + [None] * 5 for p in projects]
+        # ...start, end, total_period_months (derived, blank), status,
+        # estimation_type, then the five note columns.
+        proj_rows = [list(p[:17]) + [None] + [p[17], "automatic"] + [None] * 5
+                     for p in projects]
         mile_rows = []
         for pid, mm in ms.items():
             events = sorted(mm.items(), key=lambda kv: kv[1])
@@ -1199,14 +1293,29 @@ def build(kind):
         pws_rows = [list(x) for x in pws]
         role_rows = [list(x) for x in roles]
         person_rows = [list(p) + [None, None] + [None] * 5 for p in people]
-        asg_rows = [[a[0], a[1], None, a[2], a[3], a[4], a[5], a[6], None, None, None] for a in A]
+        asg_rows = [[a[0], a[1], None, a[2], a[3], a[4], a[5], a[6], "automatic",
+                     None, None, None] for a in A]
         ppw_rows = [list(x) for x in ppw]
+
+        # A worked example of each manual level, so the fixture exercises REQ-CAL-18
+        # rather than only describing it: one project whose months are stated outright,
+        # and one assignment on a different project whose own contribution is. Both are
+        # seeded from what the automatic calculation produced - which is what the
+        # application itself does when somebody switches - and then a few months are
+        # moved, exactly as a manager who knows the project better would.
+        est_rows, manual_proj, manual_asg = manual_examples(projects, A, periods, pws, roles)
+        for r in proj_rows:
+            if r[0] == manual_proj:
+                r[19] = "manual"
+        for r in asg_rows:
+            if r[0] == manual_asg:
+                r[8] = "manual"
         examples = {k: None for k in SHEETS}
         facts = describe(PROFILES[kind], projects, ms, periods, people, A, ppw, inspections)
     else:
         facts = None
         proj_rows = mile_rows = period_rows = []
-        person_rows = asg_rows = ppw_rows = []
+        person_rows = asg_rows = ppw_rows = est_rows = []
         # The template no longer arrives with these two sheets empty. They hold the
         # DEFAULT ASSUMPTIONS - the same figures the application starts a blank plan
         # with - so the workbook says something the moment it is opened, instead of
@@ -1219,7 +1328,7 @@ def build(kind):
                         "Partially outsourced (in-house for EDC)",
                         "EDC in-house; review with the CRO", "by SB", "by SB", "by CRO", "by SB", "Veeva EDC",
                         "Veeva DQS", "CluePoints", 5, date(2025, 10, 1), date(2027, 6, 30), None,
-                        "Active", "example row - delete before use", None, None, None, None],
+                        "Active", "automatic", "example row - delete before use", None, None, None, None],
             "Milestone": ["PRJ-001", None, "CTA submission", date(2026, 1, 15), 2, "example row - delete before use"],
             "ProjectPeriod": ["PRJ-001", "Start-up", 2, date(2025, 12, 15), date(2026, 4, 14), 1.30, "example row - delete before use"],
             # No example row: these two sheets now arrive full of real defaults, and
@@ -1230,8 +1339,11 @@ def build(kind):
             "Person": ["PSN-001", "Kim S.", "Data Management", "Lead data manager", 1.00,
                        None, None, "example row - delete before use", None, None, None, None],
             "Assignment": ["ASG-001", "PSN-001", None, "PRJ-001", "Lead data manager",
-                           date(2025, 10, 1), date(2027, 6, 30), 0.45, "example row - delete before use", None, None],
+                           date(2025, 10, 1), date(2027, 6, 30), 0.45, "automatic",
+                           "example row - delete before use", None, None],
             "PersonPeriodWeight": ["ASG-001", date(2026, 7, 1), date(2026, 9, 30), 0.20, "Part-time - parental leave"],
+            "MonthlyEstimate": ["project", "PRJ-001", "2026-06", 3.50, None,
+                                "example row - delete before use"],
             "Lists": None,
             "Config": None,
         }
@@ -1245,6 +1357,7 @@ def build(kind):
     write_sheet(wb, "Person", person_rows, examples["Person"], list_ranges)
     write_sheet(wb, "Assignment", asg_rows, examples["Assignment"], list_ranges)
     write_sheet(wb, "PersonPeriodWeight", ppw_rows, examples["PersonPeriodWeight"], list_ranges)
+    write_sheet(wb, "MonthlyEstimate", est_rows, examples["MonthlyEstimate"], list_ranges)
     write_sheet(wb, "Lists", list_rows, None, None)
     write_sheet(wb, "Config", [list(c) for c in CONFIG], None, None)
 

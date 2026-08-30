@@ -35,7 +35,7 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
-FIX = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.5.xlsx"
+FIX = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.6.xlsx"
 TMP = pathlib.Path(tempfile.mkdtemp(prefix="prap_results_"))
 
 sys.path.insert(0, str(ROOT / "tools"))
@@ -144,13 +144,41 @@ with sync_playwright() as pw:
           f"detail {td:.4f}, project {tp:.4f}, person {ts:.4f}, summary {tot:.4f}")
 
     # ---- each row is its own multiplication ---------------------------------------
-    bad = [r for r in detail
-           if abs(r["period_weight"] * (r["role_factor_effective"] / r["sharers"])
-                  * r["person_weight"] * r["month_coverage"] - r["fte"]) > 5e-4]
+    # A row whose figure was STATED is deliberately not the product of its four terms -
+    # that is what manual means. So the multiplication is checked against automatic_fte,
+    # which every row carries: on an automatic row it IS the figure, and on a stated one
+    # it is what the assumptions would have said. Checking it this way tests both the
+    # arithmetic and the claim the file makes about which rows are which.
+    def product(r):
+        return (r["period_weight"] * (r["role_factor_effective"] / r["sharers"])
+                * r["person_weight"] * r["month_coverage"])
+
+    auto = [r for r in detail if r["estimation"] == "automatic"]
+    stated = [r for r in detail if r["estimation"] != "automatic"]
+    bad = [r for r in detail if abs(product(r) - r["automatic_fte"]) > 5e-4]
     check(not bad,
           "EVERY DETAIL ROW IS ITS OWN FOUR NUMBERS — a reader can check any figure "
           "without the application",
           f"{len(detail)} rows" + (f"; {len(bad)} do not reconcile" if bad else ""))
+    bad = [r for r in auto if abs(r["fte"] - r["automatic_fte"]) > 5e-4]
+    check(not bad, "and on an automatic row that product IS the figure",
+          f"{len(auto)} automatic row(s)" + (f"; {len(bad)} differ" if bad else ""))
+
+    # ---- and a stated figure says so, and says how it was reached ------------------
+    check(stated and all(r["estimation"].startswith("manual") for r in stated),
+          "A STATED FIGURE IS MARKED AS ONE — a manual row never passes for a calculated "
+          "one, at either level",
+          f"{len(stated)} of {len(detail)} rows: "
+          + ", ".join(sorted({r["estimation"] for r in stated})))
+    scaled = [r for r in stated if r["project_scale"] is not None]
+    check(scaled and all(abs(r["automatic_fte"] * r["project_scale"] - r["fte"]) < 5e-4
+                         or r["estimation"].startswith("manual (assignment")
+                         for r in scaled),
+          "and a project figure shows the factor its people were scaled by, so a person "
+          "whose figure moved can find out why",
+          f"{len(scaled)} scaled row(s)"
+          + (f"; totals to {scaled[0]['project_manual_total']} in "
+             f"{scaled[0]['month_iso']}" if scaled else ""))
 
     shared = [r for r in detail if r["sharers"] > 1]
     absorbed = [r for r in detail if r["absorbed_from"]]

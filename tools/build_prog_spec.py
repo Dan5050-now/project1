@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.11"
+DOC_VERSION = "1.12"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.37.xlsx"
+PLAN = "PRAP_Development_Plan_v2.38.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -123,7 +123,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Governing document", f"{PLAN} - APPROVED BASELINE, Dan 2026-08-02"),
-    ("Schema version specified", "8"),
+    ("Schema version specified", "9"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -166,7 +166,7 @@ guide = [
     ("06_UI_Spec", "The four tabs, their components, filters and states."),
     ("07_Editing_IO", "Edit buffer, dirty state, cascading identifier edits, import and export."),
     ("08_Versioning", "Schema compatibility check and version display."),
-    ("09_Traceability", "All 70 requirements mapped to the section that implements them."),
+    ("09_Traceability", "Every requirement in the plan, mapped to the section that implements it."),
     ("10_Open_Points", "The six points raised at the v0.3 review, with the answers given and what changed. None open."),
 ]
 r = table(ws, r, ["Sheet", "Contents"], guide, [24, 86], wrap_cols=(2,))
@@ -193,6 +193,20 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.12", "2026-08-30", "Claude Code", "Dan",
+         "R-30, REQ-CAL-18, SCHEMA 9: a monthly figure may be STATED instead of "
+         "calculated. Sheet 03 gains the MonthlyEstimate sheet and its key - scope + "
+         "ref_id + month, the only key in the workbook that carries the name of its own "
+         "parent table, because `scope` decides whether ref_id points at a project or an "
+         "assignment - and estimation_type on Project and Assignment. Sheet 04 gains "
+         "V-31 and V-32, both raised from the CALCULATION rather than from a sheet, so "
+         "neither can refuse an edit. Sheet 05 records the order the two levels are "
+         "applied in and why a project figure SCALES its people rather than replacing "
+         "them: the results export guarantees every total is exactly the sum of its "
+         "detail rows, and a project month that did not equal the sum of its people "
+         "would break it. Sheet 08 records the four columns the results export gains so "
+         "a stated row can be told from a calculated one. Written against plan v2.38.",
+         "Issued"],
         ["1.11", "2026-08-28", "Claude Code", "Dan",
          "R-29, REQ-OUT-06: the calculated-results export. Sheet 08 gains its seven "
          "sheets column by column, the two properties that make it checkable - monthly "
@@ -414,6 +428,7 @@ sheets = [
     ["Person", "person_id", "-", "12", "Master."],
     ["Assignment", "assignment_id", "Person, Project, RoleFactor", "11", "One row per person + project + role."],
     ["PersonPeriodWeight", "assignment_id + period_start", "Assignment", "5", "Optional. Overrides person_weight for its window. period_start IS part of the key: one assignment may carry several non-overlapping windows, so assignment_id alone does not identify a row. See the note below."],
+    ["MonthlyEstimate", "scope + ref_id + month", "Project or Assignment", "6", "Schema 9. Monthly FTE STATED rather than calculated (REQ-CAL-18). The only sheet whose parent depends on a value IN the row: scope says whether ref_id names a project or an assignment, which is why it is part of the key. Read only where the owning row carries estimation_type = 'manual'."],
     ["Lists", "list_name + value", "-", "3", "Value lists, long format. Each list occupies a contiguous block."],
     ["Config", "parameter", "-", "3", "Thresholds and settings."],
 ]
@@ -476,6 +491,7 @@ notes_tbl = [
     ["ProjectPeriod", "note_1"], ["PeriodWeightStandard", "note_1"],
     ["RoleFactor", "role_note"], ["Person", "note_1 .. note_5"],
     ["Assignment", "note_1 .. note_3"], ["PersonPeriodWeight", "reason"],
+    ["MonthlyEstimate", "note_1"],
     ["Lists", "note_1"], ["Config", "note"],
 ]
 r = table(ws, r, ["Sheet", "Note column(s)"], notes_tbl, [26, 34])
@@ -526,7 +542,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "8", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "9", "Compared with the version this application expects (sheet 08)."],
     ["absorb_unstaffed_role_factor", "Integer", "1", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (sheet 05). 0 = an unstaffed role costs nothing, the arithmetic of every version before this one."],
     ["split_shared_role_fte", "Integer", "1", "1 = the role factor is divided between the people sharing a role in a month (sheet 05). 0 = each carries the whole factor, the arithmetic of every version before this one. A switch, not a threshold - so the Config reader must distinguish a value of 0 from an absent value, which is the defect this setting exposed."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
@@ -591,6 +607,8 @@ rules = [
     ["V-25", "Warning", "A project's work_scope_type contradicts its outsourcing_type at one of the two unambiguous ends.", "Project PRJ-012: outsourcing_type says 'Full In-house' but work_scope_type says 'fully outsourced'. The weights follow work_scope_type; check which is right."],
     ["V-26", "Error", "A project carries a project_type that schema 6 retired.", "Project PRJ-003: project_type 'Biosimilar CT' was split in schema 6. Change it to Biosimilar CT (Healthy) or Biosimilar CT (Patient)."],
     ["V-22", "Warning", "Person.capacity_fte is below config.under_allocation_fte.", "PSN-018: capacity 0.50 FTE is below the under-allocation floor of 0.60, so this person can never clear it however fully they are booked. Lower the floor or raise the capacity."],
+    ["V-31", "Error", "A project or assignment set to estimation_type = 'manual' has months it covers with no MonthlyEstimate row.", "Project PRJ-019 is set to MANUAL but MonthlyEstimate has no figure for 3 of its month(s): 2028-01, 2028-02, 2028-03. Those months are counted as 0.00."],
+    ["V-32", "Error", "A manual PROJECT has a figure for a month in which nobody is assigned to it, so there is nobody to share it out to.", "Project PRJ-019 has a manual figure for 2 month(s) in which nobody is assigned to it. It has NOT been applied - the project would otherwise show a total that none of its people account for."],
 ]
 r = table(ws, r, ["ID", "Severity", "Trigger", "Message shown to the user"],
           rules, [8, 15, 56, 76], wrap_cols=(3, 4))
@@ -1039,7 +1057,7 @@ r = note(ws, r, "Cascading an edit and refusing a delete are deliberately asymme
 
 r = section(ws, r, "Export   [REQ-IMP-04, REQ-IMP-07]")
 exp = [
-    ["Writes all 10 sheets in template order, with the template's headers and formats.", "So the export re-imports without edits."],
+    ["Writes all 11 sheets in template order, with the template's headers and formats.", "So the export re-imports without edits."],
     ["Includes every edit made on screen.", "REQ-IMP-07 - this is the point of the feature."],
     ["Derived columns are written as values, not formulas.", "A formula referencing a row that moved would be wrong; the importer recomputes them anyway."],
     ["Filename defaults to the loaded name with a date suffix.", "Never silently overwrite the source of record."],
@@ -1051,7 +1069,7 @@ r = table(ws, r, ["Behaviour", "Reason"], exp, [76, 56], wrap_cols=(1, 2))
 ws, r = sheet(wb, "08_Versioning", "Versioning and compatibility")
 ver = [
     ["Application version", "Constant in the HTML, shown in the header and footer.", "REQ-VC-02"],
-    ["Expected schema version", "Constant in the HTML. Currently 5.", "REQ-VC-02"],
+    ["Expected schema version", "Constant in the HTML. Currently 9.", "REQ-VC-02"],
     ["Check on load", "Compare Config.schema_version with the expected value.", "REQ-VC-03"],
     ["Equal", "Proceed silently.", "REQ-VC-03"],
     ["File older", "Proceed; warn that columns added since may be missing.", "REQ-VC-03"],

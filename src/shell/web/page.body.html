@@ -97,7 +97,7 @@
       <button class="btn primary" id="loadBtn2">Choose file</button>
       <p class="note">Need the layout? Build one with
         <code>python tools/build_source_workbook.py</code>, or start from
-        <code>PRAP_SourceData_Template_v1.11.xlsx</code>.</p>
+        <code>PRAP_SourceData_Template_v1.12.xlsx</code>.</p>
     </div>
     <div class="drop start" id="startCard">
       <span class="tag">From nothing</span>
@@ -140,6 +140,16 @@
     <button class="btn" style="margin-left:auto" id="cfNo">Go back</button>
     <button class="btn primary" id="cfYes">Save anyway</button></div>
   <div class="dlg-b" id="cfBody"></div>
+</dialog>
+
+<!-- Changing the way a figure is arrived at. Asked every time, in both directions:
+     switching to manual hands a set of months to the user permanently, and switching
+     back deletes what they wrote. Neither is something to discover afterwards. -->
+<dialog id="estchg">
+  <div class="dlg-h"><strong id="estTitle">Change how this is estimated?</strong>
+    <button class="btn" style="margin-left:auto" id="estNo">Go back</button>
+    <button class="btn primary" id="estYes">Switch</button></div>
+  <div class="dlg-b" id="estBody"></div>
 </dialog>
 
 <!-- What an import changed about how the plan is READ, as opposed to what is in it. -->

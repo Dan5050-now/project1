@@ -255,6 +255,23 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
   const target = M.raw[sheet].find(r => r.__row === rowNum);
   if (!target) return;
 
+  /* estimation_type has ONE way in, and it is not this cell (REQ-CAL-18).
+     Typing 'manual' here would set the flag without copying a single month across, so
+     every month would read as missing and the thing would drop to 0.00 - the one change
+     in the application that silently zeroes a figure. The button does the switch AND the
+     copy, and asks first. Refusing here rather than accepting-and-then-seeding keeps one
+     path instead of two that have to stay in step. */
+  if (col === "estimation_type"){
+    const scope = sheet === "Project" ? "project" : "assignment";
+    flashBad(tdEl, `Use the Switch button in the Monthly estimation panel below. `
+      + `Switching to manual has to COPY the calculated months across first, or every `
+      + `month would be counted as 0.00 — typing here would do the flag without the `
+      + `figures.`);
+    tdEl.textContent = target[col] ?? "";
+    if (target[KEY_COL[sheet]]) switchEstimation(scope, target[KEY_COL[sheet]]);
+    return;
+  }
+
   // A proxy column is resolved to the identifier it names, and the identifier is what
   // is written. Everything after this point sees an ordinary edit to an ordinary column.
   const px = proxyFor(sheet, col);

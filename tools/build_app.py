@@ -54,6 +54,7 @@ PARTS = [
     "ui/10_tables.js",
     "ui/11_tabs.js",
     "ui/12_editing.js",
+    "ui/12b_manual.js",
     "storage/web/export.js",
     "ui/13_findings.js",
     "shell/web/14a_wiring.js",

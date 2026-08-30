@@ -23,8 +23,8 @@ APP = (ROOT / "app" / "PRAP.html").as_uri()
 # Both dummy sizes are checked. The small one is not a lighter version of the same
 # test - it has a different period mix, a different overlap profile and a single-person
 # role pool, so it exercises paths the large set happens not to reach.
-FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.13.xlsx",
-            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.5.xlsx"]
+FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.14.xlsx",
+            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.6.xlsx"]
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 sys.path.insert(0, str(ROOT / "tools"))
@@ -77,7 +77,7 @@ def reference_person_months(path):
             if coverage(y, m, s, e) > 0:
                 sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
 
-    out = defaultdict(float)
+    lines = []
     for a in ASG:
         pr = P[a["project_id"]]
         s, e = assignment_window(PER, pr, a)
@@ -98,8 +98,47 @@ def reference_person_months(path):
                 extra = lookup(RF, (pr["project_type"], ph), scope_of(pr), (pn, absent))
                 rf += 0.0 if extra is None else extra
             share = len(sharers[(a["project_id"], a["role_name"], y, m)]) or 1
-            out[(a["person_id"], y * 12 + m - 1)] += (
-                (sg["weight"] if sg else 1.0) * (rf / share) * weight(a, y, m) * cov)
+            lines.append({"aid": a["assignment_id"], "pid": a["project_id"],
+                          "sid": a["person_id"], "y": y, "m": m,
+                          "fte": (sg["weight"] if sg else 1.0) * (rf / share)
+                                 * weight(a, y, m) * cov})
+
+    # REQ-CAL-18. A manual assignment takes the figure it was given - and 0.00 where it
+    # was given none, which is the only reading of "the user owns every month" that does
+    # not quietly fall back to the arithmetic they rejected. A manual PROJECT keeps its
+    # people in proportion: scale the lines of that project-month to the stated total.
+    EST = {}
+    if "MonthlyEstimate" in wb.sheetnames:
+        for r in rows(wb["MonthlyEstimate"]):
+            if r.get("scope") and r.get("ref_id") and r.get("month"):
+                EST[(str(r["scope"]), str(r["ref_id"]), str(r["month"]))] = r.get("fte")
+    man_p = {pid for pid, pr in P.items()
+             if str(pr.get("estimation_type") or "").strip().lower() == "manual"}
+    man_a = {a["assignment_id"] for a in ASG
+             if str(a.get("estimation_type") or "").strip().lower() == "manual"}
+    for L in lines:
+        if L["aid"] in man_a:
+            v = EST.get(("assignment", L["aid"], f"{L['y']}-{L['m']:02d}"))
+            L["fte"] = 0.0 if v is None else float(v)
+    grp = defaultdict(list)
+    for L in lines:
+        if L["pid"] in man_p:
+            grp[(L["pid"], L["y"], L["m"])].append(L)
+    for (pid, y, m), g in grp.items():
+        want = EST.get(("project", pid, f"{y}-{m:02d}"))
+        if want is None:
+            for L in g:
+                L["fte"] = 0.0
+            continue
+        have = sum(L["fte"] for L in g)
+        if abs(have) < 1e-9:            # nobody to carry it - left alone, and reported
+            continue
+        for L in g:
+            L["fte"] *= float(want) / have
+
+    out = defaultdict(float)
+    for L in lines:
+        out[(L["sid"], L["y"] * 12 + L["m"] - 1)] += L["fte"]
     return out
 
 

@@ -212,20 +212,6 @@ function calculate(M){
       const share = shareCount(a, k);       // how many people hold this role this month
       const v = pw * (rf / share) * personWeight(a, y, m) * cov;
       lo = Math.min(lo, k); hi = Math.max(hi, k);
-      add(projMonth, a.project_id + "|" + k, v);
-      add(persMonth, a.person_id + "|" + k, v);
-      add(cell, [a.project_id, a.person_id, a.role_name, k].join("|"), v);
-      const pk = a.person_id + "|" + k;
-      if (!persProj.has(pk)) persProj.set(pk, new Map());
-      const byp = persProj.get(pk);
-      byp.set(a.project_id, (byp.get(a.project_id) || 0) + v);
-      const qk = a.project_id + "|" + k;                 // the same split seen the other way
-      if (!projPers.has(qk)) projPers.set(qk, new Map());
-      const bys = projPers.get(qk);
-      bys.set(a.person_id, (bys.get(a.person_id) || 0) + v);
-      const wk = a.project_id + "|" + k;
-      if (!who.has(wk)) who.set(wk, []);
-      who.get(wk).push([a.person_id, a.role_name]);
 
       const own = seg ? stdFactor(M, proj, seg.period_name, a.role_name) : undefined;
       const ppw = (M.ppw[a.assignment_id] || []).find(w =>
@@ -245,14 +231,180 @@ function calculate(M){
         sharers: share,
         person_weight: personWeight(a, y, m),
         person_weight_source: ppw ? "PersonPeriodWeight override" : "Assignment",
-        coverage: cov, fte: v,
+        coverage: cov, fte: v, auto: v, source: "automatic",
       });
     }
   }
+  applyManual(M, lines);
+
+  /* Every map is built HERE, from the lines, rather than accumulated as the lines were
+     produced. Two things depend on it and neither would survive the maps being filled
+     in first: a manual figure has to be able to change what the totals say, and the
+     results export claims that every total is exactly the sum of its detail rows. Both
+     are true by construction this way and would have to be maintained by hand the
+     other way. */
+  for (const L of lines){
+    const k = L.month, v = L.fte;
+    add(projMonth, L.project_id + "|" + k, v);
+    add(persMonth, L.person_id + "|" + k, v);
+    add(cell, [L.project_id, L.person_id, L.role_name, k].join("|"), v);
+    const pk = L.person_id + "|" + k;
+    if (!persProj.has(pk)) persProj.set(pk, new Map());
+    persProj.get(pk).set(L.project_id, (persProj.get(pk).get(L.project_id) || 0) + v);
+    const qk = L.project_id + "|" + k;
+    if (!projPers.has(qk)) projPers.set(qk, new Map());
+    projPers.get(qk).set(L.person_id, (projPers.get(qk).get(L.person_id) || 0) + v);
+    if (!who.has(qk)) who.set(qk, []);
+    who.get(qk).push([L.person_id, L.role_name]);
+  }
+
   reportGaps(M, gaps);
+  reportManual(M, lines);
   return {projMonth, persMonth, persProj, projPers, cell, who, sharers, shareCount,
           staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
+}
+
+/** V-31 and V-32: what a manual figure could not do.
+ *
+ *  Both are raised from the calculation for the same reason V-23 is - they are things
+ *  that happened to a number, not facts about a sheet, and asking the sheets afterwards
+ *  could produce an explanation that does not match the figure on screen. Rewritten
+ *  each time so calculating twice does not report twice. */
+function reportManual(M, lines){
+  if (!M || !Array.isArray(M.findings)) return;
+  for (let i = M.findings.length - 1; i >= 0; i--)
+    if (M.findings[i].rule === "V-31" || M.findings[i].rule === "V-32") M.findings.splice(i, 1);
+
+  const strays = M.__manualStrays || [];
+  if (strays.length){
+    const by = new Map();
+    for (const [scope, id, mon] of strays){
+      const k = scope + "|" + id;
+      if (!by.has(k)) by.set(k, []);
+      by.get(k).push(mon);
+    }
+    for (const [k, months] of by){
+      const [scope, id] = k.split("|");
+      M.findings.push({sev:"error", rule:"V-31", sheet:"MonthlyEstimate", row:"",
+        msg:`${scope === "project" ? "Project" : "Assignment"} ${id} is set to MANUAL `
+          + `but MonthlyEstimate has no figure for ${months.length} of its month(s): `
+          + `${months.slice(0, 6).join(", ")}${months.length > 6 ? ", …" : ""}. Those `
+          + `months are counted as 0.00. Switching to manual copies every calculated `
+          + `month across, so a month with no figure is one that has since been removed `
+          + `— put it back, or switch this back to automatic.`});
+    }
+  }
+
+  // A project figure nobody can carry.
+  const iso = k => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
+  const carried = new Set();
+  for (const L of lines) carried.add(L.project_id + "|" + iso(L.month));
+  const orphan = new Map();
+  for (const key of Object.keys(M.manual || {})){
+    const [scope, id, mon] = key.split("|");
+    if (scope !== "project" || !M.isManual("project", id)) continue;
+    if (!(num(M.manual[key]) > 0)) continue;
+    if (carried.has(id + "|" + mon)) continue;
+    if (!orphan.has(id)) orphan.set(id, []);
+    orphan.get(id).push(mon);
+  }
+  for (const [id, months] of orphan)
+    M.findings.push({sev:"error", rule:"V-32", sheet:"MonthlyEstimate", row:"",
+      msg:`Project ${id} has a manual figure for ${months.length} month(s) `
+        + `(${months.slice(0, 6).join(", ")}${months.length > 6 ? ", …" : ""}) in which `
+        + `nobody is assigned to it. A project's month is shared out among the people on `
+        + `it, so there is nobody to give this to and it has NOT been applied — the `
+        + `project would otherwise show a total that none of its people account for. `
+        + `Assign somebody to those months, or remove the figure.`});
+}
+
+/* ================================================ manual figures (REQ-CAL-18)
+
+   Sometimes the assumptions are not the best information available. A trial two years
+   in has a manager who knows what it actually takes, and a standard weight multiplied
+   by a standard factor is a worse answer than the one in their head. So a project or an
+   assignment can be set to MANUAL, and its monthly figures are then stated rather than
+   worked out.
+
+   MANUAL IS ALL-OR-NOTHING for the thing it is set on, and that is the user's own
+   decision recorded in the plan: switching to manual copies every calculated month
+   across first, so the figures do not jump and there is no such thing as a half-manual
+   run. Nothing has to remember which months were touched, no month carries its own
+   flag, and switching back discards the lot. What the user takes on in exchange is
+   responsibility for all of them, which the application says when it asks.
+
+   TWO LEVELS, applied in that order:
+
+     ASSIGNMENT   the figure IS that person's contribution to that project. It replaces
+                  the multiplication outright.
+     PROJECT      the figure is the project's whole month, and the people on it are
+                  SCALED so they still add up to it. A project total that did not equal
+                  the sum of its people would put the two utilisation charts in
+                  disagreement and cost the results export its one real guarantee - and
+                  the scaling factor is recorded on every line, so a person can always
+                  find out why their figure moved.
+
+   A project figure with nobody assigned that month cannot be distributed to anybody, so
+   it is NOT applied - V-32 reports it rather than the application inventing a carrier
+   for the work or quietly breaking the sum. */
+function applyManual(M, lines){
+  if (!M.manual) return;
+  const iso = k => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
+  const strays = [];
+
+  // ---- assignment level ----------------------------------------------------
+  for (const L of lines){
+    if (!M.isManual("assignment", L.assignment_id)) continue;
+    const key = `assignment|${L.assignment_id}|${iso(L.month)}`;
+    const v = M.manual[key];
+    L.manual_assignment = true;
+    if (v === undefined || v === null){
+      strays.push(["assignment", L.assignment_id, iso(L.month)]);
+      L.fte = 0;
+      L.source = "manual (assignment) — NO FIGURE GIVEN";
+    } else {
+      L.fte = v;
+      L.source = "manual (assignment)";
+      L.manual_at = M.manualAt[key] ?? null;
+    }
+  }
+
+  // ---- project level, on top ------------------------------------------------
+  const byProjMonth = new Map();
+  for (const L of lines){
+    if (!M.isManual("project", L.project_id)) continue;
+    const k = L.project_id + "|" + L.month;
+    if (!byProjMonth.has(k)) byProjMonth.set(k, []);
+    byProjMonth.get(k).push(L);
+  }
+  for (const [k, group] of byProjMonth){
+    const [pid, mk] = [k.slice(0, k.lastIndexOf("|")), +k.slice(k.lastIndexOf("|") + 1)];
+    const key = `project|${pid}|${iso(mk)}`;
+    const want = M.manual[key];
+    for (const L of group) L.manual_project = true;
+    if (want === undefined || want === null){
+      strays.push(["project", pid, iso(mk)]);
+      for (const L of group){ L.fte = 0; L.source = "manual (project) — NO FIGURE GIVEN"; }
+      continue;
+    }
+    const have = group.reduce((t, L) => t + L.fte, 0);
+    if (Math.abs(have) < 1e-9){
+      // Nobody to give it to. Reported by V-32; the figure is not applied, because the
+      // alternative is a project total no person on the project accounts for.
+      continue;
+    }
+    const scale = want / have;
+    for (const L of group){
+      L.fte *= scale;
+      L.project_scale = scale;
+      L.manual_project_total = want;
+      L.source = L.manual_assignment ? "manual (assignment, scaled to the project figure)"
+                                     : "manual (project, shared out)";
+      L.manual_at = M.manualAt[key] ?? L.manual_at ?? null;
+    }
+  }
+  M.__manualStrays = strays;
 }
 
 /** V-23, written onto the model once the calculation knows what it needed.

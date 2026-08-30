@@ -95,6 +95,7 @@ const SECTION = {
   Person:"People", Assignment:"Assignments", PersonPeriodWeight:"Weight overrides",
   PeriodWeightStandard:"Standard period weights", RoleFactor:"Role factors",
   Lists:"Value lists", Config:"Configuration",
+  MonthlyEstimate:"Monthly estimation",
   "(cascade)":"Carried through automatically",
 };
 const TAB_OF = {
@@ -103,6 +104,9 @@ const TAB_OF = {
   Assignment:"Source data (person)", PersonPeriodWeight:"Source data (person)",
   PeriodWeightStandard:"General assumptions", RoleFactor:"General assumptions",
   Lists:"General assumptions", Config:"General assumptions",
+  // Both, genuinely: a project figure is edited on one tab and an assignment figure on
+  // the other. Naming one would send half the log to the wrong place.
+  MonthlyEstimate:"Source data (project / person)",
 };
 
 /** Every change waiting to be saved, newest first.

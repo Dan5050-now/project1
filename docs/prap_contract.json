@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.35",
+  "version": "1.36",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -22,14 +22,14 @@
    "both_end_the_same": "A plan started blank exports to the same .xlsx and the same .prap.json as any other, so nothing downstream needs to know which way it began."
   }
  },
- "schema_version": 8,
+ "schema_version": 9,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.37.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.11.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.38.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.12.xlsx",
   "ui_component_list": "docs/PRAP_UI_Component_List_v1.0.xlsx",
-  "source_data_template": "templates/PRAP_SourceData_Template_v1.11.xlsx",
-  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.13.xlsx",
-  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.5.xlsx",
+  "source_data_template": "templates/PRAP_SourceData_Template_v1.12.xlsx",
+  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.14.xlsx",
+  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.6.xlsx",
   "agent_guide": "docs/PRAP_AI_Agent_Guide.md"
  },
  "sheets": {
@@ -172,6 +172,12 @@
      "editable": true,
      "note": "Planned / Active / On hold / Completed.",
      "value_list": "project_status"
+    },
+    {
+     "name": "estimation_type",
+     "type": "text",
+     "editable": true,
+     "note": "'automatic' (default) or 'manual'. Manual means the monthly FTE for THIS PROJECT is stated on MonthlyEstimate rather than calculated, and the people assigned that month are scaled to add up to it."
     },
     {
      "name": "note_1",
@@ -591,6 +597,12 @@
      "note": "How much this person works on this project, e.g. 0.40."
     },
     {
+     "name": "estimation_type",
+     "type": "text",
+     "editable": true,
+     "note": "'automatic' (default) or 'manual'. Manual means the monthly FTE for THIS ASSIGNMENT is stated on MonthlyEstimate rather than calculated."
+    },
+    {
      "name": "note_1",
      "type": "text",
      "editable": true,
@@ -653,6 +665,56 @@
      "type": "text",
      "editable": true,
      "note": "Why the weight differs."
+    }
+   ]
+  },
+  "MonthlyEstimate": {
+   "role": "child",
+   "parent_sheet": "Project|Assignment",
+   "key": [
+    "scope",
+    "ref_id",
+    "month"
+   ],
+   "identifier_column": "ref_id",
+   "derived_columns": [],
+   "date_columns": [],
+   "columns": [
+    {
+     "name": "scope",
+     "type": "identifier",
+     "editable": true,
+     "note": "'project' or 'assignment' - which of the two this figure is for."
+    },
+    {
+     "name": "ref_id",
+     "type": "text",
+     "editable": true,
+     "note": "The project_id or assignment_id it belongs to, per scope."
+    },
+    {
+     "name": "month",
+     "type": "text",
+     "editable": true,
+     "note": "The month, as YYYY-MM."
+    },
+    {
+     "name": "fte",
+     "type": "text",
+     "editable": true,
+     "note": "The monthly FTE, STATED rather than calculated."
+    },
+    {
+     "name": "edited_at",
+     "type": "text",
+     "editable": true,
+     "note": "When it was last set. The application fills this in."
+    },
+    {
+     "name": "note_1",
+     "type": "text",
+     "editable": true,
+     "note": "Why this figure was stated."
     }
    ]
   },
@@ -727,6 +789,7 @@
   "Person",
   "Assignment",
   "PersonPeriodWeight",
+  "MonthlyEstimate",
   "Lists",
   "Config"
  ],
@@ -841,7 +904,7 @@
  },
  "config": {
   "schema_version": {
-   "default": 8,
+   "default": 9,
    "meaning": "Structure version of this workbook. The application warns on a mismatch."
   },
   "fte_hours_per_month": {
@@ -1183,6 +1246,22 @@
    "effect": "Information - the file is not malformed and the application is doing the only sensible thing with it, so this is a note rather than a fault. It exists because the absence is otherwise INVISIBLE: every setting is read through a fallback, and the delivered values equal the defaults, so on a stock file nothing moves. A plan whose under-allocation floor had been set to 0.80, or whose shared-role division had been turned off to compare with last year, would revert the moment its row went missing - every dependent figure changing, and nothing on screen saying why. Since v2.35 the row cannot be DELETED in the application (the Config table offers neither '+ row' nor 'Delete', because each setting is read by name), so this now reports a hand-edited workbook or one from a version that predates the setting.",
    "severity_reported_by_app": [
     "information"
+   ],
+   "enforced_by_application": true
+  },
+  "V-31": {
+   "statement": "A project or assignment set to MANUAL has months it covers that carry no MonthlyEstimate figure. Named, with the months listed.",
+   "effect": "Error - those months are counted as 0.00, and a figure silently dropping to zero is the one outcome this feature must never produce quietly. Not a refusal: it is raised from the CALCULATION, like V-23, because it is something that happened to a number rather than a fact about a sheet, and a finding that exists only after the arithmetic cannot refuse the edit that led to it. Switching to manual copies every month across, so a month with no figure is one that has since been removed or a month the thing has grown into - the application offers to fill them from the calculation.",
+   "severity_reported_by_app": [
+    "error"
+   ],
+   "enforced_by_application": true
+  },
+  "V-32": {
+   "statement": "A project set to MANUAL has a figure for a month in which nobody is assigned to it.",
+   "effect": "Error - the figure is NOT applied. A project month is shared out among the people on it, so there is nobody to give this to; applying it anyway would give the project a total that none of its people account for, which is exactly the disagreement REQ-CAL-18 scales the people to avoid. Assign somebody to those months, or remove the figure.",
+   "severity_reported_by_app": [
+    "error"
    ],
    "enforced_by_application": true
   }

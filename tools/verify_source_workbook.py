@@ -322,6 +322,7 @@ def main(path):
     load = defaultdict(float)          # (person, y, m) -> FTE
     horizon = set()
     gaps = {}                          # V-23: what the arithmetic had to guess at
+    lines = []                         # REQ-CAL-18: manual figures replace these
     for a in ASG:
         if a["project_id"] not in P or a["person_id"] not in PSN:
             continue
@@ -348,8 +349,44 @@ def main(path):
             v = (period_weight(a["project_id"], y, m)
                  * (effective_factor(proj, a, y, m) / share)
                  * person_weight(a, y, m) * cov)
-            load[(a["person_id"], y, m)] += v
+            lines.append({"aid": a["assignment_id"], "pid": a["project_id"],
+                          "sid": a["person_id"], "y": y, "m": m, "fte": v})
             horizon.add((y, m))
+
+    # ---- REQ-CAL-18: manual figures, assignment first, then the project scaling ----
+    EST = {}
+    for r in rows(wb["MonthlyEstimate"]) if "MonthlyEstimate" in wb.sheetnames else []:
+        if r.get("scope") and r.get("ref_id") and r.get("month"):
+            EST[(str(r["scope"]), str(r["ref_id"]), str(r["month"]))] = r.get("fte")
+    manual_p = {pid for pid, pr in P.items()
+                if str(pr.get("estimation_type") or "").strip().lower() == "manual"}
+    manual_a = {a["assignment_id"] for a in ASG
+                if str(a.get("estimation_type") or "").strip().lower() == "manual"}
+
+    def mkey(y, m):
+        return f"{y}-{m:02d}"
+
+    for L in lines:
+        if L["aid"] in manual_a:
+            v = EST.get(("assignment", L["aid"], mkey(L["y"], L["m"])))
+            L["fte"] = 0.0 if v is None else float(v)
+    grp = defaultdict(list)
+    for L in lines:
+        if L["pid"] in manual_p:
+            grp[(L["pid"], L["y"], L["m"])].append(L)
+    for (pid, y, m), g in grp.items():
+        want = EST.get(("project", pid, mkey(y, m)))
+        if want is None:
+            for L in g:
+                L["fte"] = 0.0
+            continue
+        have = sum(L["fte"] for L in g)
+        if abs(have) < 1e-9:
+            continue
+        for L in g:
+            L["fte"] *= float(want) / have
+    for L in lines:
+        load[(L["sid"], L["y"], L["m"])] += L["fte"]
 
     for k in sorted(gaps, key=lambda x: tuple(str(v) for v in x)):
         pl, n = sorted(gaps[k][0]), gaps[k][1]

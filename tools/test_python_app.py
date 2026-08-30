@@ -34,7 +34,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PKG = ROOT / "dist" / "PM_APP_py"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.13.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.14.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 fails = []
@@ -330,8 +330,12 @@ def main():
             cwb = _lw(calc)
             det = list(cwb["Detail"].iter_rows(values_only=True))
             hdr = det[0]
+            # Against automatic_fte rather than fte: a row whose figure was STATED
+            # (REQ-CAL-18) is deliberately not the product of its four terms - that is
+            # what manual means - and every row carries what the assumptions alone would
+            # have produced, so the multiplication is still checkable on all of them.
             fte, pw, rf, sh, ppw, cov = (hdr.index(c) for c in
-                ("fte", "period_weight", "role_factor_effective", "sharers",
+                ("automatic_fte", "period_weight", "role_factor_effective", "sharers",
                  "person_weight", "month_coverage"))
             bad = [r for r in det[1:]
                    if abs(r[pw] * (r[rf] / r[sh]) * r[ppw] * r[cov] - r[fte]) > 5e-4]

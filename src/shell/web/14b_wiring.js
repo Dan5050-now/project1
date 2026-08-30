@@ -139,6 +139,21 @@ document.addEventListener("click", e => {
     if (act.dataset.act === "blankms") blankMilestones(act.dataset.pid);
     if (act.dataset.act === "autoper") autoPeriods(act.dataset.pid);
     if (act.dataset.act === "blankper") blankPeriods(act.dataset.pid);
+    if (act.dataset.act === "estswitch") switchEstimation(act.dataset.scope, act.dataset.id);
+    if (act.dataset.act === "estfill") fillEstimates(act.dataset.scope, act.dataset.id);
+    /* The two levels of a manual figure are on different tabs, and the question the
+       panel raises - "which assignment is stated, and what does it say" - is only
+       answerable on the other one. So it takes you there, with the row already
+       selected, rather than naming it and leaving you to find it. */
+    if (act.dataset.act === "gopers"){
+      S.selPers = act.dataset.sid;
+      S.selAsg = act.dataset.aid;
+      showTab("t-pers"); renderAll(); showTab("t-pers");
+    }
+    if (act.dataset.act === "goproj"){
+      S.selProj = act.dataset.pid;
+      showTab("t-proj"); renderAll(); showTab("t-proj");
+    }
     return;
   }
   const ins = e.target.closest("[data-ins]");

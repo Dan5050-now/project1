@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.37 records Step 4 progress, schema 8, the calculated-FTE export, the settings check on import, the fixed Config row set, the must/conditional/incomplete rule classes, the periods-are-the-project window and the absorption of an unstaffed role's factor |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.38 records Step 4 progress, schema 9, manual monthly estimation, the calculated-FTE export, the settings check on import, the fixed Config row set, the must/conditional/incomplete rule classes, the periods-are-the-project window and the absorption of an unstaffed role's factor |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -68,7 +68,7 @@ File API call at all** — Python reads the workbook and hands the bytes to the 
 `127.0.0.1`. `core/` and `ui/` are untouched, so there is still one engine.
 
 ```
-python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.4.zip, 150 KB
+python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.5.zip, 150 KB
 python tools/test_storage_py.py          # 80 checks — kills mid-save, an 8-process race
 python tools/test_python_app.py          # 42 checks — a live server, a real browser
 ```
@@ -218,8 +218,9 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.37.xlsx` — **current.** 79 requirements, 29 live
-  validation rules (V-25 and V-28 retired), source schema version 8. Carries changes
+- `docs/PRAP_Development_Plan_v2.38.xlsx` — **current.** 80 requirements, 31 live
+  validation rules (V-25 and V-28 retired), source schema version 9. Carries changes
+  **R-30 — a figure can be stated instead of calculated** (`REQ-CAL-18`, schema 9),
   **R-29 — the application exports its answers as well as its questions**,
   **R-28 — an import says which settings it brought**, **R-26 / R-27 — the
   `capacity_unit` note and the fixed Config row set** (all below),
@@ -240,8 +241,9 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.11.xlsx` — **current specification.** Schema 8
-  (the two-step lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
+- `docs/PRAP_Programming_Specification_v1.12.xlsx` — **current specification.** Schema 9
+  (the `MonthlyEstimate` sheet, `estimation_type`, `V-31` and `V-32`; the two-step
+  lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
   through, the cross-data rules, the shared-role division with its worked
   reasoning, and where the delivered defaults come from.
 - `docs/PRAP_Development_Plan_v2.0.xlsx` — **THE APPROVED BASELINE** (Dan, 2026-08-02),
@@ -721,9 +723,9 @@ document through the manifest rather than by sorting filenames.
   covering all 70 requirements. Sheet 10 records the six open points from the v0.3
   review, the answers given, and what each one changed. None open.
 
-- `templates/PRAP_SourceData_Template_v1.11.xlsx` — blank workbook: 10 sheets, headers,
+- `templates/PRAP_SourceData_Template_v1.12.xlsx` — blank workbook: 11 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README. Every sheet
-  carries at least one free-text note column (schema version 8). `PeriodWeightStandard`
+  carries at least one free-text note column (schema version 9). `PeriodWeightStandard`
   and `RoleFactor` arrive **filled in** with the same delivered defaults the application
   starts from, so a blank plan and a fresh template agree from the first figure.
 
@@ -735,14 +737,14 @@ document through the manifest rather than by sorting filenames.
   inserting, deleting and sorting rows all still work. Only adding or removing *columns*
   is blocked, because the column set is the schema. The application's export writes the
   same locks, so the guard rail survives a round trip.
-- `templates/PRAP_SourceData_Dummy_v1.13.xlsx` — the same structure populated with
+- `templates/PRAP_SourceData_Dummy_v1.14.xlsx` — the same structure populated with
   **16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12
   `Others` projects and 20 people** (277 assignments, 372 milestones, 308 periods
   across 73 months). It carries **252 `PeriodWeightStandard` rows and
   849 `RoleFactor` rows** — a baseline set with `work_scope_type` empty, plus
   scope-specific rows for two of the three scopes, so the fallback is exercised by the
   fixture and not only by a unit test.
-- `templates/PRAP_SourceData_Dummy_10x10_v1.5.xlsx` — the same again at **10 projects
+- `templates/PRAP_SourceData_Dummy_10x10_v1.6.xlsx` — the same again at **10 projects
   and 10 people** (8 clinical trials + 2 `Others`, 48 assignments, 60 milestones,
   50 periods across 50 months): small enough to read every row on screen and check the
   arithmetic by hand. It is not a lighter test — it carries both clinical types, all
@@ -759,7 +761,7 @@ schema the other follows. The data is seeded: every sheet rebuilds byte-for-byte
 Validate any of them with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.5.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.6.xlsx
 ```
 
 And check the application against the reference implementation:
@@ -886,6 +888,24 @@ one of the 27 monthly figures equals the formula worked by hand, that the overri
 replaces the weight for its three months and no others, and that the exported workbook
 reproduces the plan on re-import.
 
+And check that a figure somebody *stated* is used, marked, and reversible:
+
+```bash
+python tools/test_manual.py
+```
+
+That switches a project to manual and back through the real dialog, and holds the four
+properties the feature stands on: the switch **asks first in both directions**; switching
+to manual **moves nothing** (every month is copied across as it stood, to the precision it
+is stated in); a typed figure is then the one the project month, the people on it and the
+charts all show; and switching back **restores the calculation exactly** and leaves no
+stated month behind. It also checks that the whole switch is undone by *Leave without
+change* like any other edit, that typing `manual` into the cell opens the same dialog
+instead of setting the flag, that the project panel **names which assignments** are manual
+(and the assignment panel names the project), that deleting a manual assignment is refused
+because its stated months still point at it, and that the figures and both flags survive
+the export round trip.
+
 And check that the command-line tools and the browser still agree, which is the whole
 basis for telling another AI system it can validate a draft without opening the app:
 
@@ -906,9 +926,9 @@ And check the documents still describe the artifacts they claim to:
 python tools/check_consistency.py
 ```
 
-That cross-checks 64 documented columns against the template's real headers, the
+That cross-checks 77 documented columns against the template's real headers, the
 schema version across all four files, the `project_type` values, every `Config`
-default the specification quotes against the value the template actually holds, all 69
+default the specification quotes against the value the template actually holds, all 80
 requirements plan-to-specification in both directions, that no build markers were
 left in a shipped workbook, and that `docs/prap_contract.json` still describes the real
 schema — its columns against the template's headers, its value lists against the
@@ -980,6 +1000,45 @@ Requires `openpyxl`.
   and the two never fall out of step when the project's dates move. Fill them in only
   for a partial involvement. The end date always behaved this way; the start did not,
   and a blank one made the assignment contribute **nothing at all**, silently.
+- **A figure can be stated instead of calculated** (R-30, `REQ-CAL-18`, schema 9). The
+  assumptions are a good default and a poor last word: a trial two years in has a manager
+  who knows what the rest of it takes, and a standard period weight times a standard role
+  factor is the worse of the two available answers. So `estimation_type` on **Project** and
+  on **Assignment** selects `automatic` (the default) or `manual`, and the new
+  **`MonthlyEstimate`** sheet carries the stated figures, keyed on
+  `(scope, ref_id, month)` so one sheet serves both levels.
+
+  **Two levels, applied in that order.** An **assignment** figure *is* that person's
+  contribution to that project and replaces the multiplication outright. A **project**
+  figure is the whole month, and the people on it are **scaled** so they still add up to
+  it — chosen over the alternatives because a project total that did not equal the sum of
+  its people would put the two utilisation charts in disagreement and cost the results
+  export its one real guarantee. The scaling factor is recorded on every line, so a person
+  whose figure moved with nothing of their own changing can find out why.
+
+  **Manual is all or nothing** for the thing it is set on. Switching copies **every** month
+  across from the figures currently on screen, so nothing jumps, and switching back
+  discards the lot. Per-month marking was considered and rejected: once a figure has been
+  edited, the months still calculated would keep moving under a signed-off plan whenever an
+  assumption changed, and *which months are mine* has no useful answer. What the user takes
+  on in exchange is responsibility for all of them, and the confirmation says so in those
+  words.
+
+  **Every change of calculation way is confirmed**, in both directions — one deletes work,
+  the other hands over a run of figures permanently. Typing `manual` into the cell opens
+  the same dialog rather than setting the flag, because the flag without the copy would
+  count every month as 0.00: the one change in the application that could silently zero a
+  figure. `V-31` reports a manual thing with a month carrying no figure; `V-32` a project
+  figure in a month nobody is assigned to, which cannot be shared out and is therefore
+  **not applied**. Both are raised from the calculation, like `V-23`, because they are
+  things that happened to a number.
+
+  The stated figures **round-trip** through the source export, and the calculated-FTE
+  export gains `estimation`, `automatic_fte`, `project_manual_total` and `project_scale`,
+  so a reader can see which rows were stated, at which level, and what the assumptions
+  would have said instead. `tools/test_manual.py` holds the screen behaviour;
+  `tools/test_app.py` holds the arithmetic, with a manual project and a manual assignment
+  in both dummy sets so all four implementations are compared on them.
 - **An empty post still costs the project** (R-17, `REQ-CAL-16`, schema 8). `role_factor`
   answers *what does this role cost the project this period* — so if nobody at all is
   holding it, that cost has not gone away. It is being carried by whoever is left, who

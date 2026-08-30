@@ -49,6 +49,7 @@ NUM_COLS = {
     "Person": {"capacity_fte"},
     "Assignment": {"person_weight"},
     "PersonPeriodWeight": {"weight_override"},
+    "MonthlyEstimate": {"fte"},
     "Lists": set(), "Config": set(),
 }
 class _ClinicalTypes:
@@ -205,13 +206,19 @@ def _coerce(sheet, rows):
 def read_xlsx(path):
     """Workbook -> {sheet: [row dict]}. Blank rows are skipped, as the application does."""
     wb = load_workbook(path, data_only=True)
-    missing = [s for s in SHEET_ORDER if s not in wb.sheetnames]
+    # MonthlyEstimate arrived at schema 9; a file written before it simply carries no
+    # manual figures, and refusing it would gain nothing. Every other sheet IS the plan.
+    missing = [s for s in SHEET_ORDER
+               if s not in wb.sheetnames and s != "MonthlyEstimate"]
     if missing:
         raise Problem(f"{Path(path).name}: sheet(s) not found: {', '.join(missing)}. "
                       f"Compare the file against templates/PRAP_SourceData_Template_"
                       f"v{B.TEMPLATE_VERSION}.xlsx.")
     sheets = {}
     for s in SHEET_ORDER:
+        if s not in wb.sheetnames:
+            sheets[s] = []
+            continue
         ws = wb[s]
         renamed = RENAMED_COLS.get(s, {})
         hdr = [renamed.get(c.value, c.value) for c in ws[1]]
@@ -233,13 +240,16 @@ def read_json(path):
         raise Problem(f"{Path(path).name}: format_version {doc.get('format_version')!r}; "
                       f"this build writes and reads {FORMAT_VERSION}.")
     src = doc.get("sheets") or {}
-    missing = [s for s in SHEET_ORDER if s not in src]
+    # MonthlyEstimate arrived at schema 9, and a file written before it carries no manual
+    # figures - a complete plan, not a broken one. The same tolerance read_xlsx extends,
+    # for the same reason. Every other sheet has always been there and is still required.
+    missing = [s for s in SHEET_ORDER if s not in src and s != "MonthlyEstimate"]
     if missing:
         raise Problem(f"{Path(path).name}: sheets missing: {', '.join(missing)}. All "
                       f"{len(SHEET_ORDER)} must be present, even if empty.")
     sheets = {}
     for s in SHEET_ORDER:
-        rows = src[s] or []
+        rows = src.get(s) or []
         renamed = RENAMED_COLS.get(s, {})
         for r in rows:
             for was, now in renamed.items():
@@ -539,6 +549,16 @@ class Model:
         for pid in self.periods:
             self.periods[pid].sort(key=lambda s: (s.get("period_seq") or 0))
 
+        # Manual monthly figures (REQ-CAL-18). A workbook written before schema 9 has no
+        # MonthlyEstimate sheet at all, which simply means it carries none.
+        self.manual, self.manual_at = {}, {}
+        for r in sheets.get("MonthlyEstimate", []) or []:
+            if not r.get("scope") or not r.get("ref_id") or not r.get("month"):
+                continue
+            k = f"{r['scope']}|{r['ref_id']}|{r['month']}"
+            self.manual[k] = _as_num(r.get("fte"))
+            self.manual_at[k] = r.get("edited_at")
+
         self.ppw = defaultdict(list)
         for w in sheets["PersonPeriodWeight"]:
             self.ppw[w.get("assignment_id")].append(w)
@@ -549,6 +569,14 @@ class Model:
         # until the arithmetic has run. Cheap, and it keeps `prap_io validate` telling
         # an agent exactly what the application will show.
         calculate(self)
+
+    def is_manual(self, scope, ref):
+        if scope == "project":
+            row = self.projects.get(ref)
+        else:
+            row = next((a for a in self.raw.get("Assignment", [])
+                        if a.get("assignment_id") == ref), None)
+        return str((row or {}).get("estimation_type") or "").strip().lower() == "manual"
 
     def add(self, sev, rule, sheet, row, msg):
         self.findings.append({"sev": sev, "rule": rule, "sheet": sheet,
@@ -891,6 +919,7 @@ def calculate(M):
     # lookup fed a person-month. A month in no period at all is V-12's finding, not this
     # one - there is no period name for a factor to be missing FOR.
     gaps = {}
+    lines = []
 
     for a in M.assignments:
         proj = M.projects.get(a.get("project_id"))
@@ -922,14 +951,60 @@ def calculate(M):
             v = pw * (rf / share) * person_weight(a, y, m) * cov
             lo = k if lo is None else min(lo, k)
             hi = k if hi is None else max(hi, k)
-            proj_month[(a["project_id"], k)] += v
-            pers_month[(a["person_id"], k)] += v
-            pers_proj[(a["person_id"], k)][a["project_id"]] += v
-            cell[(a["project_id"], a["person_id"], a.get("role_name"), k)] += v
+            lines.append({"month": k, "project_id": a["project_id"],
+                          "person_id": a["person_id"],
+                          "assignment_id": a.get("assignment_id"),
+                          "role_name": a.get("role_name"), "fte": v})
+
+    apply_manual(M, lines)
+    # Every map built from the lines, so a manual figure moves the totals and the two
+    # can never disagree - the same reason the browser engine does it this way.
+    for L in lines:
+        proj_month[(L["project_id"], L["month"])] += L["fte"]
+        pers_month[(L["person_id"], L["month"])] += L["fte"]
+        pers_proj[(L["person_id"], L["month"])][L["project_id"]] += L["fte"]
+        cell[(L["project_id"], L["person_id"], L["role_name"], L["month"])] += L["fte"]
 
     report_gaps(M, gaps)
     return {"proj_month": proj_month, "pers_month": pers_month, "pers_proj": pers_proj,
-            "cell": cell, "gaps": gaps, "lo": lo or 0, "hi": hi or 0}
+            "cell": cell, "gaps": gaps, "lines": lines, "lo": lo or 0, "hi": hi or 0}
+
+
+def apply_manual(M, lines):
+    """REQ-CAL-18, exactly as core/06_calculate.js does it.
+
+    Assignment first - the figure REPLACES that person's contribution - then project,
+    which sets the whole month and SCALES the people on it so they still add up to it.
+    A project figure with nobody assigned is not applied; the browser reports V-32.
+    """
+    if not getattr(M, "manual", None):
+        return
+
+    def iso(k):
+        return f"{k // 12}-{k % 12 + 1:02d}"
+
+    for L in lines:
+        if not M.is_manual("assignment", L["assignment_id"]):
+            continue
+        v = M.manual.get(f"assignment|{L['assignment_id']}|{iso(L['month'])}")
+        L["fte"] = 0.0 if v is None else v
+
+    groups = defaultdict(list)
+    for L in lines:
+        if M.is_manual("project", L["project_id"]):
+            groups[(L["project_id"], L["month"])].append(L)
+    for (pid, k), group in groups.items():
+        want = M.manual.get(f"project|{pid}|{iso(k)}")
+        if want is None:
+            for L in group:
+                L["fte"] = 0.0
+            continue
+        have = sum(L["fte"] for L in group)
+        if abs(have) < 1e-9:
+            continue                       # nobody to share it out to - V-32
+        scale = want / have
+        for L in group:
+            L["fte"] *= scale
 
 
 def report_gaps(M, gaps):

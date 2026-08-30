@@ -573,6 +573,19 @@ td.drvcell{font-style:italic}
  line-height:1.5;background:color-mix(in srgb,var(--accent) 8%,transparent);
  color:var(--ink)}
 .asgline.muted{background:var(--fill);color:var(--muted)}
+/* How a figure was arrived at. A badge rather than a word in a sentence: the reader's
+   question at the top of this panel is which of the two they are looking at, and a
+   stated figure and a calculated one are indistinguishable once they are on the page. */
+.est{font-weight:640;font-size:10px;letter-spacing:.04em;border-radius:100px;
+ padding:2px 9px;margin-left:auto;white-space:nowrap}
+.est.aut{color:var(--muted);background:var(--fill)}
+.est.man{color:#fff;background:var(--warn)}
+.phead .est + .btn,.phead .est ~ .scope{margin-left:6px}
+.note.bad{color:var(--crit)}
+.estlist{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:11.5px;
+ line-height:1.9}
+.estlist code{color:var(--ink2)}
+.estlist .btn{margin-left:6px}
 /* An entry column reads the opposite way round to a lookup - it is typed into, and it
    drives another column - so it is marked in the accent colour, not the muted one. */
 .drv.ent{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}

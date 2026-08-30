@@ -268,6 +268,10 @@ const NEW_ROW = {
   Person:             {capacity_fte: 1.00},
   Assignment:         {person_weight: 1.00},
   PersonPeriodWeight: {weight_override: 1.00},
+  // The scope that goes with the ref_id PARENT_OF seeds. Not a default the user is meant
+  // to reconsider: a row added from the project panel is a project figure, and one added
+  // from the assignment panel is an assignment figure.
+  MonthlyEstimate:    {scope: () => S.tab === "t-proj" ? "project" : "assignment"},
 };
 
 /** One past the highest sequence number among a parent's own children. */

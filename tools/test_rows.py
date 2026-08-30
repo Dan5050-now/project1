@@ -36,7 +36,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.13.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.14.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 TMP = ROOT / "output" / "test_rows_export.xlsx"
 
@@ -136,7 +136,15 @@ with sync_playwright() as pw:
         shown1 = rows_on_screen(pg, loc)
         check(shown1 == shown0 + 1, f"{sheet}: the inserted row is visible",
               f"rows on screen {shown0} -> {shown1}")
-        pg.locator(f"{loc} button[data-del]").first.click()
+        # The row just inserted, by its own row number - not `.first`, which is whatever
+        # happens to be at the top of the table. That distinction started mattering when
+        # MonthlyEstimate arrived: the first assignment in the dummy set is the manual
+        # one, so it carries stated months that reference it and V-17 refuses to delete
+        # it. Refusing is right, and it is what test_nokey.py checks; here the subject is
+        # insert-then-delete, so the click has to land on the inserted row.
+        new_row = pg.evaluate(
+            f"Math.max(...S.model.raw['{sheet}'].map(r => r.__row))")
+        pg.locator(f"{loc} button[data-del][data-row='{new_row}']").first.click()
         pg.wait_for_timeout(1100)
         shown2 = rows_on_screen(pg, loc)
         model2 = pg.evaluate(f"S.model.raw['{sheet}'].length")

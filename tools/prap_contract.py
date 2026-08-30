@@ -35,8 +35,8 @@ CONTRACT_VERSION = "1.0"
 
 # The current issue of each controlled document. check_consistency.py verifies the
 # files exist and that the versions agree with the application's provenance strip.
-PLAN = f"PRAP_Development_Plan_v{'2.37'}.xlsx"
-SPEC = "PRAP_Programming_Specification_v1.11.xlsx"
+PLAN = f"PRAP_Development_Plan_v{'2.38'}.xlsx"
+SPEC = "PRAP_Programming_Specification_v1.12.xlsx"
 UIL = "PRAP_UI_Component_List_v1.0.xlsx"
 TEMPLATE = f"PRAP_SourceData_Template_v{B.TEMPLATE_VERSION}.xlsx"
 DUMMY = f"PRAP_SourceData_Dummy_v{B.DUMMY_VERSION}.xlsx"
@@ -159,6 +159,12 @@ SHEET_ROLE = {
     "Assignment": {"role": "child", "key": ["assignment_id"], "parent": "Person"},
     "PersonPeriodWeight": {"role": "child", "key": ["assignment_id", "period_start"],
                            "parent": "Assignment"},
+    # Schema 9. The one sheet whose parent depends on a value IN the row: `scope` says
+    # whether ref_id names a project or an assignment, so it is keyed on all three of
+    # scope, ref_id and month and has no single parent sheet. A reading program must
+    # branch on scope rather than assume either table.
+    "MonthlyEstimate": {"role": "child", "key": ["scope", "ref_id", "month"],
+                        "parent": "Project|Assignment"},
     "Lists": {"role": "vocabulary", "key": ["list_name", "value"], "parent": None},
     "Config": {"role": "settings", "key": ["parameter"], "parent": None},
 }

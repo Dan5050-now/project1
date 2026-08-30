@@ -98,7 +98,22 @@ function incomplete(f){ return isErr(f) && ruleClass(f.rule) === "incomplete"; }
 function buildModel(sheets){
   const F = [];
   for (const s of REQUIRED_SHEETS){
-    if (!sheets[s]) F.push({sev:"fatal", rule:"V-00", sheet:s, row:"",
+    if (sheets[s]) continue;
+    /* A sheet added by a later schema is not a reason to refuse a workbook that predates
+       it. MonthlyEstimate arrived at schema 9 and holds figures somebody stated by hand;
+       a file without it simply has none, which is the ordinary case. Refusing it would
+       make every plan written before schema 9 unopenable to gain nothing.
+       Every other sheet is still required: they are the plan itself, and a file missing
+       one of them is a file the application cannot describe. */
+    if (s === "MonthlyEstimate"){
+      sheets[s] = [SHEET_HEADERS[s].slice()];
+      F.push({sev:"information", rule:"V-09", sheet:s, row:"",
+        msg:`This workbook has no MonthlyEstimate sheet, so it carries no manual monthly `
+          + `figures — which is what a plan written before schema 9 looks like. Exporting `
+          + `it again adds the sheet.`});
+      continue;
+    }
+    F.push({sev:"fatal", rule:"V-00", sheet:s, row:"",
       msg:`Sheet '${s}' not found. The workbook must contain all ${REQUIRED_SHEETS.length} sheets — `
         + `compare it against the delivered template.`});
   }
@@ -166,6 +181,36 @@ function buildModel(sheets){
      that is not fully staffed, and somebody comparing against last year's report has
      to be able to turn it off and see where the difference came from. */
   M.ABSORB = cfg("absorb_unstaffed_role_factor", 1) !== 0;
+
+  /* ------------------------------------------- manual monthly figures (REQ-CAL-18)
+     A project or an assignment whose estimation_type is 'manual' does not have its
+     months worked out from the assumptions - somebody has stated them. Indexed here
+     by what they are for and which month, so the calculation can ask one question per
+     month rather than searching a sheet.
+
+     MANUAL IS ALL-OR-NOTHING for the thing it is set on. Switching to manual copies
+     every calculated month across first, so there is never a half-manual run and no
+     month has to be marked one way or the other; and the user then edits the months
+     they have better knowledge of. A month with no row after that is a figure somebody
+     removed, and V-31 says so rather than the application quietly filling it back in. */
+  M.manual = {};                               // "project|PRJ-001|2027-03" -> fte
+  M.manualAt = {};                             // the same key -> when it was set
+  for (const r of raw.MonthlyEstimate){
+    if (!r.scope || !r.ref_id || !r.month) continue;
+    const k = `${r.scope}|${r.ref_id}|${r.month}`;
+    if (k in M.manual)
+      F.push({sev:"error", rule:"V-08", sheet:"MonthlyEstimate", row:r.__row,
+        msg:`MonthlyEstimate has more than one figure for ${r.scope} ${r.ref_id} in `
+          + `${r.month}. One month can only have one figure.`});
+    M.manual[k] = num(r.fte);
+    M.manualAt[k] = r.edited_at ?? null;
+  }
+  M.isManual = (scope, id) => {
+    const row = scope === "project" ? M.projects[id]
+              : M.assignments.find(a => a.assignment_id === id)
+                || raw.Assignment.find(a => a.assignment_id === id);
+    return String((row || {}).estimation_type || "").trim().toLowerCase() === "manual";
+  };
 
   const sv = num(M.config.schema_version);
   if (sv === null) F.push({sev:"warning", rule:"V-09", sheet:"Config", row:"",

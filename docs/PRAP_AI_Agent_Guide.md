@@ -6,11 +6,11 @@ This document is written for a language model or an agent, not for a person. It 
 
 |  |  |
 |---|---|
-| Application | `app/PRAP.html` v1.35 |
-| Source schema version | 8 |
+| Application | `app/PRAP.html` v1.36 |
+| Source schema version | 9 |
 | Contract version | 1.0 |
 | Guide version | 1.0 |
-| Generated | 2026-08-28 |
+| Generated | 2026-08-30 |
 
 ---
 
@@ -64,12 +64,12 @@ The repository keeps every issue of every document, so pick from `docs/PRAP_Mani
 
 | What | Path |
 |---|---|
-| Development plan | `docs/PRAP_Development_Plan_v2.37.xlsx` |
-| Programming specification | `docs/PRAP_Programming_Specification_v1.11.xlsx` |
+| Development plan | `docs/PRAP_Development_Plan_v2.38.xlsx` |
+| Programming specification | `docs/PRAP_Programming_Specification_v1.12.xlsx` |
 | UI component list | `docs/PRAP_UI_Component_List_v1.0.xlsx` |
-| Source data template | `templates/PRAP_SourceData_Template_v1.11.xlsx` |
-| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.13.xlsx` |
-| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.5.xlsx` |
+| Source data template | `templates/PRAP_SourceData_Template_v1.12.xlsx` |
+| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.14.xlsx` |
+| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.6.xlsx` |
 | This guide | `docs/PRAP_AI_Agent_Guide.md` |
 
 ## 2. The eight words you need
@@ -91,14 +91,15 @@ Ten sheets, all required, in this order. A missing sheet is fatal (V-00).
 
 | Sheet | Role | Parent | Key | Columns |
 |---|---|---|---|---|
-| `Project` | master | — | `project_id` | 24 |
+| `Project` | master | — | `project_id` | 25 |
 | `Milestone` | child | `Project` | `project_id`, `milestone_name`, `milestone_date` | 6 |
 | `ProjectPeriod` | child | `Project` | `project_id`, `period_name` | 7 |
 | `PeriodWeightStandard` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name` | 6 |
 | `RoleFactor` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name`, `role_name` | 8 |
 | `Person` | master | — | `person_id` | 12 |
-| `Assignment` | child | `Person` | `assignment_id` | 11 |
+| `Assignment` | child | `Person` | `assignment_id` | 12 |
 | `PersonPeriodWeight` | child | `Assignment` | `assignment_id`, `period_start` | 5 |
+| `MonthlyEstimate` | child | `Project\|Assignment` | `scope`, `ref_id`, `month` | 6 |
 | `Lists` | vocabulary | — | `list_name`, `value` | 3 |
 | `Config` | settings | — | `parameter` | 3 |
 
@@ -137,6 +138,7 @@ Lists, Config                      vocabulary and settings
 | `end_date` | date | Planned project end. |
 | `total_period_months` | derived · **do not write** | DERIVED - formula, do not type. |
 | `status` | text · list `project_status` | Planned / Active / On hold / Completed. |
+| `estimation_type` | text | 'automatic' (default) or 'manual'. Manual means the monthly FTE for THIS PROJECT is stated on MonthlyEstimate rather than calculated, and the people assigned that month are scaled to add up to it. |
 | `note_1` | text | Free text. |
 | `note_2` | text |  |
 | `note_3` | text |  |
@@ -219,6 +221,7 @@ Lists, Config                      vocabulary and settings
 | `assign_start_date` | date | Date the person joins. BLANK = the project's own start date. |
 | `assign_end_date` | date | Date the person leaves. BLANK = the project's own end date. |
 | `person_weight` | text | How much this person works on this project, e.g. 0.40. |
+| `estimation_type` | text | 'automatic' (default) or 'manual'. Manual means the monthly FTE for THIS ASSIGNMENT is stated on MonthlyEstimate rather than calculated. |
 | `note_1` | text | Free text. |
 | `note_2` | text |  |
 | `note_3` | text |  |
@@ -232,6 +235,17 @@ Lists, Config                      vocabulary and settings
 | `period_end` | date | Inclusive. Windows within one assignment must not overlap. |
 | `weight_override` | text | REPLACES person_weight for these months - it does not multiply it. |
 | `reason` | text | Why the weight differs. |
+
+#### `MonthlyEstimate`
+
+| Column | Type | Meaning |
+|---|---|---|
+| `scope` | identifier | 'project' or 'assignment' - which of the two this figure is for. |
+| `ref_id` | text | The project_id or assignment_id it belongs to, per scope. |
+| `month` | text | The month, as YYYY-MM. |
+| `fte` | text | The monthly FTE, STATED rather than calculated. |
+| `edited_at` | text | When it was last set. The application fills this in. |
+| `note_1` | text | Why this figure was stated. |
 
 #### `Lists`
 
@@ -371,7 +385,7 @@ over_allocation_fte and under_allocation_fte are ABSOLUTE FTE figures. They are 
 
 | Parameter | Default | Controls |
 |---|---|---|
-| `schema_version` | 8 | Structure version of this workbook. The application warns on a mismatch. |
+| `schema_version` | 9 | Structure version of this workbook. The application warns on a mismatch. |
 | `fte_hours_per_month` | 160 | Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month. |
 | `over_allocation_fte` | 1.5 | A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01). |
 | `under_allocation_fte` | 0.6 | A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01). |
@@ -436,6 +450,8 @@ Severities: **fatal** nothing loads · **error** the figures would be wrong · *
 | **V-28** | — | RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all. |
 | **V-29** | information | A role that carries a factor, that nobody holds on the project, and that nothing covers for. |
 | **V-30** | information | Config has no row for a setting the application reads, so its built-in default is in force. Reported for every such setting, naming the value being used. |
+| **V-31** | error | A project or assignment set to MANUAL has months it covers that carry no MonthlyEstimate figure. Named, with the months listed. |
+| **V-32** | error | A project set to MANUAL has a figure for a month in which nobody is assigned to it. |
 
 **Aim for zero errors and zero warnings you cannot explain.** A file that loads with errors still shows numbers, and those numbers are wrong in ways the user will not see.
 
@@ -579,4 +595,4 @@ A plain-text form of the source workbook, so a program or an AI agent that canno
 
 ---
 
-Generated by `tools/build_ai_reference.py` on 2026-08-28 from `app/PRAP.html` v1.35, `PRAP_Development_Plan_v2.37.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.
+Generated by `tools/build_ai_reference.py` on 2026-08-30 from `app/PRAP.html` v1.36, `PRAP_Development_Plan_v2.38.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.

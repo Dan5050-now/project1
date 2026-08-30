@@ -34,6 +34,7 @@ const SHEET_COLS = {
   Person: {date:["employment_start","employment_end"], num:["capacity_fte"]},
   Assignment: {date:["assign_start_date","assign_end_date"], num:["person_weight"]},
   PersonPeriodWeight: {date:["period_start","period_end"], num:["weight_override"]},
+  MonthlyEstimate: {date:[], num:["fte"]},
   Lists: {date:[], num:[]},
   Config: {date:[], num:[]},
 };
@@ -47,7 +48,7 @@ const SHEET_HEADERS = {
   Project:["project_id","project_name","project_type","project_category","clinical_phase",
     "work_scope_type","outsourcing_scope_det","EDC_setup","DataReviewSystem_setup","RBQM_setup","DM_conduct",
     "EDC_system","DataReviewSystem","RBQM_system","planned_member_count","start_date",
-    "end_date","total_period_months","status","note_1","note_2","note_3","note_4","note_5"],
+    "end_date","total_period_months","status","estimation_type","note_1","note_2","note_3","note_4","note_5"],
   Milestone:["project_id","project_name","milestone_name","milestone_date","milestone_seq","note_1"],
   ProjectPeriod:["project_id","period_name","period_seq","period_start","period_end","weight","note_1"],
   PeriodWeightStandard:["project_type","clinical_phase","work_scope_type","period_name",
@@ -57,8 +58,10 @@ const SHEET_HEADERS = {
   Person:["person_id","person_name","department","primary_role","capacity_fte",
     "employment_start","employment_end","note_1","note_2","note_3","note_4","note_5"],
   Assignment:["assignment_id","person_id","person_name","project_id","role_name",
-    "assign_start_date","assign_end_date","person_weight","note_1","note_2","note_3"],
+    "assign_start_date","assign_end_date","person_weight","estimation_type",
+    "note_1","note_2","note_3"],
   PersonPeriodWeight:["assignment_id","period_start","period_end","weight_override","reason"],
+  MonthlyEstimate:["scope","ref_id","month","fte","edited_at","note_1"],
   Lists:["list_name","value","note_1"],
   Config:["parameter","value","note"],
 };
@@ -113,7 +116,11 @@ const DERIVATION_MILESTONES = new Set(["CTA submission","interim DB lock","final
 const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignment_id",
                  Milestone:"project_id", ProjectPeriod:"project_id",
                  PersonPeriodWeight:"assignment_id", Config:"parameter", Lists:"list_name",
-                 PeriodWeightStandard:"project_type", RoleFactor:"project_type"};
+                 PeriodWeightStandard:"project_type", RoleFactor:"project_type",
+                 // A manual figure hangs off whatever it is FOR, and that is named by
+                 // ref_id - a project_id on a project row, an assignment_id on an
+                 // assignment row. Which of the two is said by `scope`.
+                 MonthlyEstimate:"ref_id"};
 // Which sheet OWNS each identifier. KEY_COL names the key column of every sheet, but
 // on a child sheet that column is a FOREIGN key - Milestone.project_id points at a
 // project, it does not define one. Deleting a milestone must not go looking for rows
@@ -122,6 +129,14 @@ const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignmen
    data model - the point is that someone filling in the workbook should not have to
    open a specification to find out what a column is for. */
 const COLUMN_HELP = {
+  estimation_type:"'automatic' (the default) or 'manual'. AUTOMATIC means the figures come from the assumptions, as everything always has. MANUAL means somebody has stated the monthly FTE themselves, on the MonthlyEstimate sheet, and those figures are used instead. Switching to manual COPIES the calculated figures across as a starting point so nothing jumps; switching back to automatic DISCARDS them. The application asks before doing either.",
+  scope:"'project' or 'assignment' — which of the two a manual figure is for. A project figure sets the project's whole month and the people on it are scaled to match; an assignment figure sets one person's contribution to one project.",
+  ref_id:"The project_id or the assignment_id this manual figure belongs to, according to `scope`.",
+  month:"The month this figure is for, as YYYY-MM.",
+  fte:"The monthly FTE, stated rather than calculated. 1.00 is one person working a full month.",
+  edited_at:"When this figure was last set, so a reader can tell a figure somebody typed from one the application copied across on switching.",
+  automatic_fte:"What the assumptions ALONE would have produced for this month — period weight × (role factor ÷ sharers) × person weight × month coverage. Shown for comparison only; it is not stored anywhere and changing an assumption moves it, not the stated figure beside it.",
+  difference:"The stated figure minus the automatic one. This is the size of the departure the manual estimate is making, month by month.",
   project_id:"Unique identifier for the project. Editing it cascades to every row that references it.",
   project_name:"Display name. Shown wherever the project appears.",
   project_type:"'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Everything but 'Others' is a clinical trial: they share one period set and differ in their weights.",
@@ -204,6 +219,23 @@ const HELP = {
     + "the value cell and type, like any other cell.",
   del:"<b>Delete this row</b><br>Refused if anything still references it, naming what does (V-17). "
     + "A delete is never cascaded. Provisional like any other change — 'Leave without change' puts it back.",
+  estman:"<b>Switch to manual estimation</b><br>Stops calculating these months and lets you "
+    + "STATE them instead — for when you know better than the assumptions do, which on a "
+    + "project part way through you usually do. Switching copies every calculated month "
+    + "across first, exactly as it stands, so nothing jumps; you then edit the months you "
+    + "know better and leave the rest. It is ALL OF THEM from then on: changing a period "
+    + "weight, a role factor or a person's weight will no longer move any of these months. "
+    + "The application asks before it does it.",
+  estauto:"<b>Switch back to automatic calculation</b><br>DELETES every stated month for this "
+    + "one and goes back to period weight × (role factor ÷ sharers) × person weight × month "
+    + "coverage. There is nothing to come back to afterwards — the figures are removed, not "
+    + "set aside. Provisional until you press Save, like any other change. The application "
+    + "asks before it does it.",
+  estfill:"<b>Fill the missing months</b><br>Months this covers that carry no stated figure are "
+    + "counted as 0.00 and reported by V-31. It happens legitimately — extend the dates and "
+    + "the new months have never been stated. This copies the calculated figure into each of "
+    + "them, which is what you would otherwise type by hand. Months that already have a "
+    + "figure are left alone.",
 };
 
 /* A row becomes a RECORD when it carries its sheet's identifier, and not before.
@@ -254,11 +286,18 @@ const PARENT_OF = {
     const first = S.model.raw.Assignment.find(a => a.person_id === S.selPers && a.assignment_id);
     return ["assignment_id", first ? first.assignment_id : null];
   },
+  /* A manual figure is shown in a panel that belongs to ONE thing, and which thing
+     depends on the tab it was added from. Seeding ref_id alone is not enough here -
+     'PRJ-004' and 'ASG-011' mean different things in the same column - so `scope` is
+     seeded with it, by NEW_ROW below. */
+  MonthlyEstimate: () =>
+    S.tab === "t-proj" ? ["ref_id", S.selProj] : ["ref_id", S.selAsg],
 };
 const REFS = {
-  project_id: [["Milestone","project_id"],["ProjectPeriod","project_id"],["Assignment","project_id"]],
+  project_id: [["Milestone","project_id"],["ProjectPeriod","project_id"],
+               ["Assignment","project_id"],["MonthlyEstimate","ref_id"]],
   person_id:  [["Assignment","person_id"]],
-  assignment_id: [["PersonPeriodWeight","assignment_id"]],
+  assignment_id: [["PersonPeriodWeight","assignment_id"],["MonthlyEstimate","ref_id"]],
 };
 
 /** Rows -> objects keyed by header, with per-column coercion. Findings collected. */

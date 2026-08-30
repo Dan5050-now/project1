@@ -72,7 +72,16 @@ function buildResults(M, C, scope){
                    "person_id", "person_name", "department", "role_name",
                    "role_factor", "role_factor_effective", "absorbed_from",
                    "sharers", "person_weight", "person_weight_from",
-                   "month_coverage", "fte", "hours", "assignment_id"]];
+                   "month_coverage", "fte", "hours", "assignment_id",
+                   /* REQ-CAL-18. Four columns rather than one flag, because "this figure
+                      was stated" is not the whole answer a reader needs: they need to
+                      know at WHICH level it was stated - a project figure and an
+                      assignment figure are different claims about different things -
+                      what the assumptions would have said instead, and, where a project
+                      total was shared out, the factor this person's share was multiplied
+                      by. Without the last one a person whose figure moved has no way to
+                      find out why, because nothing they own changed. */
+                   "estimation", "automatic_fte", "project_manual_total", "project_scale"]];
   for (const L of C.lines){
     if (!mset.has(L.month) || !projSet.has(L.project_id) || !persSet.has(L.person_id)) continue;
     const p = M.projects[L.project_id] || {}, who = M.people[L.person_id] || {};
@@ -86,6 +95,9 @@ function buildResults(M, C, scope){
       L.absorbed.length ? L.absorbed.join(", ") : null,
       L.sharers, r4(L.person_weight), L.person_weight_source,
       r4(L.coverage), r4(L.fte), r2(L.fte * HOURS), L.assignment_id,
+      L.source, r4(L.auto ?? 0),
+      L.manual_project_total === undefined ? null : r4(L.manual_project_total),
+      L.project_scale === undefined ? null : r4(L.project_scale),
     ]);
   }
 
@@ -239,6 +251,26 @@ function buildResults(M, C, scope){
      + "are those rows summed by project and by person. Nothing else enters the "
      + "multiplication — capacity_fte is what a person's load is compared against, "
      + "never something it is scaled by."],
+    [],
+    ["WHERE A FIGURE WAS STATED RATHER THAN CALCULATED"],
+    ["Not every figure here came from that multiplication. A project, or one person's "
+     + "assignment to a project, can be set to MANUAL, and its monthly FTE is then "
+     + "stated by whoever knows the work rather than worked out from the assumptions. "
+     + "The 'estimation' column on Detail says which every row is:"],
+    ["automatic", "the multiplication above, and nothing else."],
+    ["manual (assignment)", "this person's own contribution to this project that month "
+     + "was stated outright. The four terms are still shown, but they describe what "
+     + "WOULD have been calculated — they no longer produce the fte beside them."],
+    ["manual (project, shared out)", "the project's whole month was stated, and every "
+     + "person on it that month was scaled by 'project_scale' so they still add up to "
+     + "'project_manual_total'. That is why a person's figure can move without anything "
+     + "about that person changing."],
+    ["automatic_fte", "on EVERY row, what the assumptions alone would have produced. On "
+     + "an automatic row it equals fte; on a stated one, the difference between the two "
+     + "is the size of the departure being made."],
+    ["Manual is all or nothing for the thing it is set on: switching to it copies every "
+     + "calculated month across first, so there is no half-manual run and no month "
+     + "carries a flag of its own."],
     [],
     ["WHERE A FIGURE CAN BE SHORT OF AN ASSUMPTION"],
     ["period_weight_from says 'none — V-12' where the month fell in no period and was "

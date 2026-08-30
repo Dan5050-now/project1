@@ -590,6 +590,19 @@ td.drvcell{font-style:italic}
  line-height:1.5;background:color-mix(in srgb,var(--accent) 8%,transparent);
  color:var(--ink)}
 .asgline.muted{background:var(--fill);color:var(--muted)}
+/* How a figure was arrived at. A badge rather than a word in a sentence: the reader's
+   question at the top of this panel is which of the two they are looking at, and a
+   stated figure and a calculated one are indistinguishable once they are on the page. */
+.est{font-weight:640;font-size:10px;letter-spacing:.04em;border-radius:100px;
+ padding:2px 9px;margin-left:auto;white-space:nowrap}
+.est.aut{color:var(--muted);background:var(--fill)}
+.est.man{color:#fff;background:var(--warn)}
+.phead .est + .btn,.phead .est ~ .scope{margin-left:6px}
+.note.bad{color:var(--crit)}
+.estlist{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:11.5px;
+ line-height:1.9}
+.estlist code{color:var(--ink2)}
+.estlist .btn{margin-left:6px}
 /* An entry column reads the opposite way round to a lookup - it is typed into, and it
    drives another column - so it is marked in the accent colour, not the muted one. */
 .drv.ent{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
@@ -764,7 +777,7 @@ dialog.big .dlg-b{max-height:84vh}
       <button class="btn primary" id="loadBtn2">Choose file</button>
       <p class="note">Need the layout? Build one with
         <code>python tools/build_source_workbook.py</code>, or start from
-        <code>PRAP_SourceData_Template_v1.11.xlsx</code>.</p>
+        <code>PRAP_SourceData_Template_v1.12.xlsx</code>.</p>
     </div>
     <div class="drop start" id="startCard">
       <span class="tag">From nothing</span>
@@ -809,6 +822,16 @@ dialog.big .dlg-b{max-height:84vh}
   <div class="dlg-b" id="cfBody"></div>
 </dialog>
 
+<!-- Changing the way a figure is arrived at. Asked every time, in both directions:
+     switching to manual hands a set of months to the user permanently, and switching
+     back deletes what they wrote. Neither is something to discover afterwards. -->
+<dialog id="estchg">
+  <div class="dlg-h"><strong id="estTitle">Change how this is estimated?</strong>
+    <button class="btn" style="margin-left:auto" id="estNo">Go back</button>
+    <button class="btn primary" id="estYes">Switch</button></div>
+  <div class="dlg-b" id="estBody"></div>
+</dialog>
+
 <!-- What an import changed about how the plan is READ, as opposed to what is in it. -->
 <dialog id="cfgchg">
   <div class="dlg-h"><strong>Settings this file brought with it</strong>
@@ -825,8 +848,8 @@ dialog.big .dlg-b{max-height:84vh}
 
 <script>
 "use strict";
-const APP_VERSION = "1.35";
-const SCHEMA_EXPECTED = 8;
+const APP_VERSION = "1.36";
+const SCHEMA_EXPECTED = 9;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
    specification and outputs are version-controlled together and cross-referenced).
@@ -834,13 +857,13 @@ const SCHEMA_EXPECTED = 8;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.37.xlsx",          ver:"2.37",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.34 records Step 4 progress, schema 8, the periods-are-the-project window and the must/conditional rule classes"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.11.xlsx", ver:"1.11",
-   status:"v1.0 APPROVED by Dan, 2026-08-02; v1.5 adds schema 8 and the absorption rule, v1.8 adds the rule classes and the calendar — this document governs the code"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.38.xlsx",          ver:"2.38",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.38 adds schema 9 and REQ-CAL-18 — a monthly figure may be STATED instead of calculated, at project or assignment level"},
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.12.xlsx", ver:"1.12",
+   status:"v1.0 APPROVED by Dan, 2026-08-02; v1.12 adds the MonthlyEstimate sheet, V-31 and V-32 — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
-  {what:"Source data template",   file:"PRAP_SourceData_Template_v1.11.xlsx",       ver:"1.11",
+  {what:"Source data template",   file:"PRAP_SourceData_Template_v1.12.xlsx",       ver:"1.12",
    status:`Schema version ${SCHEMA_EXPECTED} — the layout this application reads`},
   {what:"AI agent reference",     file:"PRAP_AI_Agent_Guide_v1.0.xlsx",             ver:"1.0",
    status:"Instructions for another program or AI agent; docs/prap_contract.json is its machine-readable half"},
@@ -1150,7 +1173,7 @@ const JSON_FORMAT_VERSION = 1;
    and nothing else. The projects, people and assignments are what the user is here
    to enter.                                                                        */
 
-/* SEED-BEGIN — generated by tools/build_app_seed.py from PRAP_SourceData_Template_v1.11.xlsx.
+/* SEED-BEGIN — generated by tools/build_app_seed.py from PRAP_SourceData_Template_v1.12.xlsx.
    The reference content of a blank start: the value lists and the settings, and
    the reference content of a blank start: the value lists, the settings, and the
    DEFAULT ASSUMPTIONS. Do not edit by hand — rebuild it, or check_consistency
@@ -1214,7 +1237,7 @@ const SEED_LISTS = [
   ["role_others","Other staff",null],
 ];
 const SEED_CONFIG = [
-  ["schema_version",8,"Structure version of this workbook. The application warns on a mismatch."],
+  ["schema_version",9,"Structure version of this workbook. The application warns on a mismatch."],
   ["fte_hours_per_month",160,"Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month."],
   ["over_allocation_fte",1.5,"A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01)."],
   ["under_allocation_fte",0.6,"A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01)."],
@@ -1815,7 +1838,13 @@ function readPrapJson(text){
     throw new Error(`format_version is ${JSON.stringify(doc.format_version)}; this `
       + `application reads ${JSON_FORMAT_VERSION}.`);
   const src = doc.sheets || {};
-  const missing = REQUIRED_SHEETS.filter(s => !Array.isArray(src[s]));
+  /* MonthlyEstimate arrived at schema 9, and a file written before it simply carries no
+     manual figures - which is a complete and readable plan, not a broken one. Refusing
+     it would tell somebody their last export is no longer openable in order to report
+     the absence of a feature they have never used. Every OTHER sheet is still required:
+     those have always been there, and one missing is a file that has lost something. */
+  const missing = REQUIRED_SHEETS.filter(s => !Array.isArray(src[s])
+                                              && s !== "MonthlyEstimate");
   if (missing.length)
     throw new Error(`sheet(s) missing or not an array: ${missing.join(", ")}. All `
       + `${REQUIRED_SHEETS.length} must be present, even where a sheet has no rows.`);
@@ -1824,7 +1853,7 @@ function readPrapJson(text){
     const hdr = SHEET_HEADERS[s];
     const rows = [hdr.slice()];
     const renamed = RENAMED_COLS[s] || {};
-    src[s].forEach((r, i) => {
+    (src[s] || []).forEach((r, i) => {
       // A column the schema RENAMED is moved across rather than refused - the same
       // courtesy the workbook reader extends, and for the same reason: the alternative
       // is telling somebody their last export is no longer readable.
@@ -1906,6 +1935,7 @@ const SHEET_COLS = {
   Person: {date:["employment_start","employment_end"], num:["capacity_fte"]},
   Assignment: {date:["assign_start_date","assign_end_date"], num:["person_weight"]},
   PersonPeriodWeight: {date:["period_start","period_end"], num:["weight_override"]},
+  MonthlyEstimate: {date:[], num:["fte"]},
   Lists: {date:[], num:[]},
   Config: {date:[], num:[]},
 };
@@ -1919,7 +1949,7 @@ const SHEET_HEADERS = {
   Project:["project_id","project_name","project_type","project_category","clinical_phase",
     "work_scope_type","outsourcing_scope_det","EDC_setup","DataReviewSystem_setup","RBQM_setup","DM_conduct",
     "EDC_system","DataReviewSystem","RBQM_system","planned_member_count","start_date",
-    "end_date","total_period_months","status","note_1","note_2","note_3","note_4","note_5"],
+    "end_date","total_period_months","status","estimation_type","note_1","note_2","note_3","note_4","note_5"],
   Milestone:["project_id","project_name","milestone_name","milestone_date","milestone_seq","note_1"],
   ProjectPeriod:["project_id","period_name","period_seq","period_start","period_end","weight","note_1"],
   PeriodWeightStandard:["project_type","clinical_phase","work_scope_type","period_name",
@@ -1929,8 +1959,10 @@ const SHEET_HEADERS = {
   Person:["person_id","person_name","department","primary_role","capacity_fte",
     "employment_start","employment_end","note_1","note_2","note_3","note_4","note_5"],
   Assignment:["assignment_id","person_id","person_name","project_id","role_name",
-    "assign_start_date","assign_end_date","person_weight","note_1","note_2","note_3"],
+    "assign_start_date","assign_end_date","person_weight","estimation_type",
+    "note_1","note_2","note_3"],
   PersonPeriodWeight:["assignment_id","period_start","period_end","weight_override","reason"],
+  MonthlyEstimate:["scope","ref_id","month","fte","edited_at","note_1"],
   Lists:["list_name","value","note_1"],
   Config:["parameter","value","note"],
 };
@@ -1985,7 +2017,11 @@ const DERIVATION_MILESTONES = new Set(["CTA submission","interim DB lock","final
 const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignment_id",
                  Milestone:"project_id", ProjectPeriod:"project_id",
                  PersonPeriodWeight:"assignment_id", Config:"parameter", Lists:"list_name",
-                 PeriodWeightStandard:"project_type", RoleFactor:"project_type"};
+                 PeriodWeightStandard:"project_type", RoleFactor:"project_type",
+                 // A manual figure hangs off whatever it is FOR, and that is named by
+                 // ref_id - a project_id on a project row, an assignment_id on an
+                 // assignment row. Which of the two is said by `scope`.
+                 MonthlyEstimate:"ref_id"};
 // Which sheet OWNS each identifier. KEY_COL names the key column of every sheet, but
 // on a child sheet that column is a FOREIGN key - Milestone.project_id points at a
 // project, it does not define one. Deleting a milestone must not go looking for rows
@@ -1994,6 +2030,14 @@ const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignmen
    data model - the point is that someone filling in the workbook should not have to
    open a specification to find out what a column is for. */
 const COLUMN_HELP = {
+  estimation_type:"'automatic' (the default) or 'manual'. AUTOMATIC means the figures come from the assumptions, as everything always has. MANUAL means somebody has stated the monthly FTE themselves, on the MonthlyEstimate sheet, and those figures are used instead. Switching to manual COPIES the calculated figures across as a starting point so nothing jumps; switching back to automatic DISCARDS them. The application asks before doing either.",
+  scope:"'project' or 'assignment' — which of the two a manual figure is for. A project figure sets the project's whole month and the people on it are scaled to match; an assignment figure sets one person's contribution to one project.",
+  ref_id:"The project_id or the assignment_id this manual figure belongs to, according to `scope`.",
+  month:"The month this figure is for, as YYYY-MM.",
+  fte:"The monthly FTE, stated rather than calculated. 1.00 is one person working a full month.",
+  edited_at:"When this figure was last set, so a reader can tell a figure somebody typed from one the application copied across on switching.",
+  automatic_fte:"What the assumptions ALONE would have produced for this month — period weight × (role factor ÷ sharers) × person weight × month coverage. Shown for comparison only; it is not stored anywhere and changing an assumption moves it, not the stated figure beside it.",
+  difference:"The stated figure minus the automatic one. This is the size of the departure the manual estimate is making, month by month.",
   project_id:"Unique identifier for the project. Editing it cascades to every row that references it.",
   project_name:"Display name. Shown wherever the project appears.",
   project_type:"'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Everything but 'Others' is a clinical trial: they share one period set and differ in their weights.",
@@ -2076,6 +2120,23 @@ const HELP = {
     + "the value cell and type, like any other cell.",
   del:"<b>Delete this row</b><br>Refused if anything still references it, naming what does (V-17). "
     + "A delete is never cascaded. Provisional like any other change — 'Leave without change' puts it back.",
+  estman:"<b>Switch to manual estimation</b><br>Stops calculating these months and lets you "
+    + "STATE them instead — for when you know better than the assumptions do, which on a "
+    + "project part way through you usually do. Switching copies every calculated month "
+    + "across first, exactly as it stands, so nothing jumps; you then edit the months you "
+    + "know better and leave the rest. It is ALL OF THEM from then on: changing a period "
+    + "weight, a role factor or a person's weight will no longer move any of these months. "
+    + "The application asks before it does it.",
+  estauto:"<b>Switch back to automatic calculation</b><br>DELETES every stated month for this "
+    + "one and goes back to period weight × (role factor ÷ sharers) × person weight × month "
+    + "coverage. There is nothing to come back to afterwards — the figures are removed, not "
+    + "set aside. Provisional until you press Save, like any other change. The application "
+    + "asks before it does it.",
+  estfill:"<b>Fill the missing months</b><br>Months this covers that carry no stated figure are "
+    + "counted as 0.00 and reported by V-31. It happens legitimately — extend the dates and "
+    + "the new months have never been stated. This copies the calculated figure into each of "
+    + "them, which is what you would otherwise type by hand. Months that already have a "
+    + "figure are left alone.",
 };
 
 /* A row becomes a RECORD when it carries its sheet's identifier, and not before.
@@ -2126,11 +2187,18 @@ const PARENT_OF = {
     const first = S.model.raw.Assignment.find(a => a.person_id === S.selPers && a.assignment_id);
     return ["assignment_id", first ? first.assignment_id : null];
   },
+  /* A manual figure is shown in a panel that belongs to ONE thing, and which thing
+     depends on the tab it was added from. Seeding ref_id alone is not enough here -
+     'PRJ-004' and 'ASG-011' mean different things in the same column - so `scope` is
+     seeded with it, by NEW_ROW below. */
+  MonthlyEstimate: () =>
+    S.tab === "t-proj" ? ["ref_id", S.selProj] : ["ref_id", S.selAsg],
 };
 const REFS = {
-  project_id: [["Milestone","project_id"],["ProjectPeriod","project_id"],["Assignment","project_id"]],
+  project_id: [["Milestone","project_id"],["ProjectPeriod","project_id"],
+               ["Assignment","project_id"],["MonthlyEstimate","ref_id"]],
   person_id:  [["Assignment","person_id"]],
-  assignment_id: [["PersonPeriodWeight","assignment_id"]],
+  assignment_id: [["PersonPeriodWeight","assignment_id"],["MonthlyEstimate","ref_id"]],
 };
 
 /** Rows -> objects keyed by header, with per-column coercion. Findings collected. */
@@ -2333,7 +2401,22 @@ function incomplete(f){ return isErr(f) && ruleClass(f.rule) === "incomplete"; }
 function buildModel(sheets){
   const F = [];
   for (const s of REQUIRED_SHEETS){
-    if (!sheets[s]) F.push({sev:"fatal", rule:"V-00", sheet:s, row:"",
+    if (sheets[s]) continue;
+    /* A sheet added by a later schema is not a reason to refuse a workbook that predates
+       it. MonthlyEstimate arrived at schema 9 and holds figures somebody stated by hand;
+       a file without it simply has none, which is the ordinary case. Refusing it would
+       make every plan written before schema 9 unopenable to gain nothing.
+       Every other sheet is still required: they are the plan itself, and a file missing
+       one of them is a file the application cannot describe. */
+    if (s === "MonthlyEstimate"){
+      sheets[s] = [SHEET_HEADERS[s].slice()];
+      F.push({sev:"information", rule:"V-09", sheet:s, row:"",
+        msg:`This workbook has no MonthlyEstimate sheet, so it carries no manual monthly `
+          + `figures — which is what a plan written before schema 9 looks like. Exporting `
+          + `it again adds the sheet.`});
+      continue;
+    }
+    F.push({sev:"fatal", rule:"V-00", sheet:s, row:"",
       msg:`Sheet '${s}' not found. The workbook must contain all ${REQUIRED_SHEETS.length} sheets — `
         + `compare it against the delivered template.`});
   }
@@ -2401,6 +2484,36 @@ function buildModel(sheets){
      that is not fully staffed, and somebody comparing against last year's report has
      to be able to turn it off and see where the difference came from. */
   M.ABSORB = cfg("absorb_unstaffed_role_factor", 1) !== 0;
+
+  /* ------------------------------------------- manual monthly figures (REQ-CAL-18)
+     A project or an assignment whose estimation_type is 'manual' does not have its
+     months worked out from the assumptions - somebody has stated them. Indexed here
+     by what they are for and which month, so the calculation can ask one question per
+     month rather than searching a sheet.
+
+     MANUAL IS ALL-OR-NOTHING for the thing it is set on. Switching to manual copies
+     every calculated month across first, so there is never a half-manual run and no
+     month has to be marked one way or the other; and the user then edits the months
+     they have better knowledge of. A month with no row after that is a figure somebody
+     removed, and V-31 says so rather than the application quietly filling it back in. */
+  M.manual = {};                               // "project|PRJ-001|2027-03" -> fte
+  M.manualAt = {};                             // the same key -> when it was set
+  for (const r of raw.MonthlyEstimate){
+    if (!r.scope || !r.ref_id || !r.month) continue;
+    const k = `${r.scope}|${r.ref_id}|${r.month}`;
+    if (k in M.manual)
+      F.push({sev:"error", rule:"V-08", sheet:"MonthlyEstimate", row:r.__row,
+        msg:`MonthlyEstimate has more than one figure for ${r.scope} ${r.ref_id} in `
+          + `${r.month}. One month can only have one figure.`});
+    M.manual[k] = num(r.fte);
+    M.manualAt[k] = r.edited_at ?? null;
+  }
+  M.isManual = (scope, id) => {
+    const row = scope === "project" ? M.projects[id]
+              : M.assignments.find(a => a.assignment_id === id)
+                || raw.Assignment.find(a => a.assignment_id === id);
+    return String((row || {}).estimation_type || "").trim().toLowerCase() === "manual";
+  };
 
   const sv = num(M.config.schema_version);
   if (sv === null) F.push({sev:"warning", rule:"V-09", sheet:"Config", row:"",
@@ -3028,20 +3141,6 @@ function calculate(M){
       const share = shareCount(a, k);       // how many people hold this role this month
       const v = pw * (rf / share) * personWeight(a, y, m) * cov;
       lo = Math.min(lo, k); hi = Math.max(hi, k);
-      add(projMonth, a.project_id + "|" + k, v);
-      add(persMonth, a.person_id + "|" + k, v);
-      add(cell, [a.project_id, a.person_id, a.role_name, k].join("|"), v);
-      const pk = a.person_id + "|" + k;
-      if (!persProj.has(pk)) persProj.set(pk, new Map());
-      const byp = persProj.get(pk);
-      byp.set(a.project_id, (byp.get(a.project_id) || 0) + v);
-      const qk = a.project_id + "|" + k;                 // the same split seen the other way
-      if (!projPers.has(qk)) projPers.set(qk, new Map());
-      const bys = projPers.get(qk);
-      bys.set(a.person_id, (bys.get(a.person_id) || 0) + v);
-      const wk = a.project_id + "|" + k;
-      if (!who.has(wk)) who.set(wk, []);
-      who.get(wk).push([a.person_id, a.role_name]);
 
       const own = seg ? stdFactor(M, proj, seg.period_name, a.role_name) : undefined;
       const ppw = (M.ppw[a.assignment_id] || []).find(w =>
@@ -3061,14 +3160,180 @@ function calculate(M){
         sharers: share,
         person_weight: personWeight(a, y, m),
         person_weight_source: ppw ? "PersonPeriodWeight override" : "Assignment",
-        coverage: cov, fte: v,
+        coverage: cov, fte: v, auto: v, source: "automatic",
       });
     }
   }
+  applyManual(M, lines);
+
+  /* Every map is built HERE, from the lines, rather than accumulated as the lines were
+     produced. Two things depend on it and neither would survive the maps being filled
+     in first: a manual figure has to be able to change what the totals say, and the
+     results export claims that every total is exactly the sum of its detail rows. Both
+     are true by construction this way and would have to be maintained by hand the
+     other way. */
+  for (const L of lines){
+    const k = L.month, v = L.fte;
+    add(projMonth, L.project_id + "|" + k, v);
+    add(persMonth, L.person_id + "|" + k, v);
+    add(cell, [L.project_id, L.person_id, L.role_name, k].join("|"), v);
+    const pk = L.person_id + "|" + k;
+    if (!persProj.has(pk)) persProj.set(pk, new Map());
+    persProj.get(pk).set(L.project_id, (persProj.get(pk).get(L.project_id) || 0) + v);
+    const qk = L.project_id + "|" + k;
+    if (!projPers.has(qk)) projPers.set(qk, new Map());
+    projPers.get(qk).set(L.person_id, (projPers.get(qk).get(L.person_id) || 0) + v);
+    if (!who.has(qk)) who.set(qk, []);
+    who.get(qk).push([L.person_id, L.role_name]);
+  }
+
   reportGaps(M, gaps);
+  reportManual(M, lines);
   return {projMonth, persMonth, persProj, projPers, cell, who, sharers, shareCount,
           staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
+}
+
+/** V-31 and V-32: what a manual figure could not do.
+ *
+ *  Both are raised from the calculation for the same reason V-23 is - they are things
+ *  that happened to a number, not facts about a sheet, and asking the sheets afterwards
+ *  could produce an explanation that does not match the figure on screen. Rewritten
+ *  each time so calculating twice does not report twice. */
+function reportManual(M, lines){
+  if (!M || !Array.isArray(M.findings)) return;
+  for (let i = M.findings.length - 1; i >= 0; i--)
+    if (M.findings[i].rule === "V-31" || M.findings[i].rule === "V-32") M.findings.splice(i, 1);
+
+  const strays = M.__manualStrays || [];
+  if (strays.length){
+    const by = new Map();
+    for (const [scope, id, mon] of strays){
+      const k = scope + "|" + id;
+      if (!by.has(k)) by.set(k, []);
+      by.get(k).push(mon);
+    }
+    for (const [k, months] of by){
+      const [scope, id] = k.split("|");
+      M.findings.push({sev:"error", rule:"V-31", sheet:"MonthlyEstimate", row:"",
+        msg:`${scope === "project" ? "Project" : "Assignment"} ${id} is set to MANUAL `
+          + `but MonthlyEstimate has no figure for ${months.length} of its month(s): `
+          + `${months.slice(0, 6).join(", ")}${months.length > 6 ? ", …" : ""}. Those `
+          + `months are counted as 0.00. Switching to manual copies every calculated `
+          + `month across, so a month with no figure is one that has since been removed `
+          + `— put it back, or switch this back to automatic.`});
+    }
+  }
+
+  // A project figure nobody can carry.
+  const iso = k => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
+  const carried = new Set();
+  for (const L of lines) carried.add(L.project_id + "|" + iso(L.month));
+  const orphan = new Map();
+  for (const key of Object.keys(M.manual || {})){
+    const [scope, id, mon] = key.split("|");
+    if (scope !== "project" || !M.isManual("project", id)) continue;
+    if (!(num(M.manual[key]) > 0)) continue;
+    if (carried.has(id + "|" + mon)) continue;
+    if (!orphan.has(id)) orphan.set(id, []);
+    orphan.get(id).push(mon);
+  }
+  for (const [id, months] of orphan)
+    M.findings.push({sev:"error", rule:"V-32", sheet:"MonthlyEstimate", row:"",
+      msg:`Project ${id} has a manual figure for ${months.length} month(s) `
+        + `(${months.slice(0, 6).join(", ")}${months.length > 6 ? ", …" : ""}) in which `
+        + `nobody is assigned to it. A project's month is shared out among the people on `
+        + `it, so there is nobody to give this to and it has NOT been applied — the `
+        + `project would otherwise show a total that none of its people account for. `
+        + `Assign somebody to those months, or remove the figure.`});
+}
+
+/* ================================================ manual figures (REQ-CAL-18)
+
+   Sometimes the assumptions are not the best information available. A trial two years
+   in has a manager who knows what it actually takes, and a standard weight multiplied
+   by a standard factor is a worse answer than the one in their head. So a project or an
+   assignment can be set to MANUAL, and its monthly figures are then stated rather than
+   worked out.
+
+   MANUAL IS ALL-OR-NOTHING for the thing it is set on, and that is the user's own
+   decision recorded in the plan: switching to manual copies every calculated month
+   across first, so the figures do not jump and there is no such thing as a half-manual
+   run. Nothing has to remember which months were touched, no month carries its own
+   flag, and switching back discards the lot. What the user takes on in exchange is
+   responsibility for all of them, which the application says when it asks.
+
+   TWO LEVELS, applied in that order:
+
+     ASSIGNMENT   the figure IS that person's contribution to that project. It replaces
+                  the multiplication outright.
+     PROJECT      the figure is the project's whole month, and the people on it are
+                  SCALED so they still add up to it. A project total that did not equal
+                  the sum of its people would put the two utilisation charts in
+                  disagreement and cost the results export its one real guarantee - and
+                  the scaling factor is recorded on every line, so a person can always
+                  find out why their figure moved.
+
+   A project figure with nobody assigned that month cannot be distributed to anybody, so
+   it is NOT applied - V-32 reports it rather than the application inventing a carrier
+   for the work or quietly breaking the sum. */
+function applyManual(M, lines){
+  if (!M.manual) return;
+  const iso = k => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
+  const strays = [];
+
+  // ---- assignment level ----------------------------------------------------
+  for (const L of lines){
+    if (!M.isManual("assignment", L.assignment_id)) continue;
+    const key = `assignment|${L.assignment_id}|${iso(L.month)}`;
+    const v = M.manual[key];
+    L.manual_assignment = true;
+    if (v === undefined || v === null){
+      strays.push(["assignment", L.assignment_id, iso(L.month)]);
+      L.fte = 0;
+      L.source = "manual (assignment) — NO FIGURE GIVEN";
+    } else {
+      L.fte = v;
+      L.source = "manual (assignment)";
+      L.manual_at = M.manualAt[key] ?? null;
+    }
+  }
+
+  // ---- project level, on top ------------------------------------------------
+  const byProjMonth = new Map();
+  for (const L of lines){
+    if (!M.isManual("project", L.project_id)) continue;
+    const k = L.project_id + "|" + L.month;
+    if (!byProjMonth.has(k)) byProjMonth.set(k, []);
+    byProjMonth.get(k).push(L);
+  }
+  for (const [k, group] of byProjMonth){
+    const [pid, mk] = [k.slice(0, k.lastIndexOf("|")), +k.slice(k.lastIndexOf("|") + 1)];
+    const key = `project|${pid}|${iso(mk)}`;
+    const want = M.manual[key];
+    for (const L of group) L.manual_project = true;
+    if (want === undefined || want === null){
+      strays.push(["project", pid, iso(mk)]);
+      for (const L of group){ L.fte = 0; L.source = "manual (project) — NO FIGURE GIVEN"; }
+      continue;
+    }
+    const have = group.reduce((t, L) => t + L.fte, 0);
+    if (Math.abs(have) < 1e-9){
+      // Nobody to give it to. Reported by V-32; the figure is not applied, because the
+      // alternative is a project total no person on the project accounts for.
+      continue;
+    }
+    const scale = want / have;
+    for (const L of group){
+      L.fte *= scale;
+      L.project_scale = scale;
+      L.manual_project_total = want;
+      L.source = L.manual_assignment ? "manual (assignment, scaled to the project figure)"
+                                     : "manual (project, shared out)";
+      L.manual_at = M.manualAt[key] ?? L.manual_at ?? null;
+    }
+  }
+  M.__manualStrays = strays;
 }
 
 /** V-23, written onto the model once the calculation knows what it needed.
@@ -3190,6 +3455,10 @@ const DIFF_KEY = {
   Person:               ["person_id"],
   Assignment:           ["assignment_id"],
   PersonPeriodWeight:   ["assignment_id", "period_start"],
+  // Schema 9. Keyed on all three: `scope` decides whether ref_id names a project
+  // or an assignment, so ref_id + month alone would merge a project figure with an
+  // assignment figure the moment the two identifiers ever collide.
+  MonthlyEstimate:      ["scope", "ref_id", "month"],
   Lists:                ["list_name", "value"],
   Config:               ["parameter"],
 };
@@ -3398,7 +3667,16 @@ function buildResults(M, C, scope){
                    "person_id", "person_name", "department", "role_name",
                    "role_factor", "role_factor_effective", "absorbed_from",
                    "sharers", "person_weight", "person_weight_from",
-                   "month_coverage", "fte", "hours", "assignment_id"]];
+                   "month_coverage", "fte", "hours", "assignment_id",
+                   /* REQ-CAL-18. Four columns rather than one flag, because "this figure
+                      was stated" is not the whole answer a reader needs: they need to
+                      know at WHICH level it was stated - a project figure and an
+                      assignment figure are different claims about different things -
+                      what the assumptions would have said instead, and, where a project
+                      total was shared out, the factor this person's share was multiplied
+                      by. Without the last one a person whose figure moved has no way to
+                      find out why, because nothing they own changed. */
+                   "estimation", "automatic_fte", "project_manual_total", "project_scale"]];
   for (const L of C.lines){
     if (!mset.has(L.month) || !projSet.has(L.project_id) || !persSet.has(L.person_id)) continue;
     const p = M.projects[L.project_id] || {}, who = M.people[L.person_id] || {};
@@ -3412,6 +3690,9 @@ function buildResults(M, C, scope){
       L.absorbed.length ? L.absorbed.join(", ") : null,
       L.sharers, r4(L.person_weight), L.person_weight_source,
       r4(L.coverage), r4(L.fte), r2(L.fte * HOURS), L.assignment_id,
+      L.source, r4(L.auto ?? 0),
+      L.manual_project_total === undefined ? null : r4(L.manual_project_total),
+      L.project_scale === undefined ? null : r4(L.project_scale),
     ]);
   }
 
@@ -3565,6 +3846,26 @@ function buildResults(M, C, scope){
      + "are those rows summed by project and by person. Nothing else enters the "
      + "multiplication — capacity_fte is what a person's load is compared against, "
      + "never something it is scaled by."],
+    [],
+    ["WHERE A FIGURE WAS STATED RATHER THAN CALCULATED"],
+    ["Not every figure here came from that multiplication. A project, or one person's "
+     + "assignment to a project, can be set to MANUAL, and its monthly FTE is then "
+     + "stated by whoever knows the work rather than worked out from the assumptions. "
+     + "The 'estimation' column on Detail says which every row is:"],
+    ["automatic", "the multiplication above, and nothing else."],
+    ["manual (assignment)", "this person's own contribution to this project that month "
+     + "was stated outright. The four terms are still shown, but they describe what "
+     + "WOULD have been calculated — they no longer produce the fte beside them."],
+    ["manual (project, shared out)", "the project's whole month was stated, and every "
+     + "person on it that month was scaled by 'project_scale' so they still add up to "
+     + "'project_manual_total'. That is why a person's figure can move without anything "
+     + "about that person changing."],
+    ["automatic_fte", "on EVERY row, what the assumptions alone would have produced. On "
+     + "an automatic row it equals fte; on a stated one, the difference between the two "
+     + "is the size of the departure being made."],
+    ["Manual is all or nothing for the thing it is set on: switching to it copies every "
+     + "calculated month across first, so there is no half-manual run and no month "
+     + "carries a flag of its own."],
     [],
     ["WHERE A FIGURE CAN BE SHORT OF AN ASSUMPTION"],
     ["period_weight_from says 'none — V-12' where the month fell in no period and was "
@@ -4555,6 +4856,10 @@ const NEW_ROW = {
   Person:             {capacity_fte: 1.00},
   Assignment:         {person_weight: 1.00},
   PersonPeriodWeight: {weight_override: 1.00},
+  // The scope that goes with the ref_id PARENT_OF seeds. Not a default the user is meant
+  // to reconsider: a row added from the project panel is a project figure, and one added
+  // from the assignment panel is an assignment figure.
+  MonthlyEstimate:    {scope: () => S.tab === "t-proj" ? "project" : "assignment"},
 };
 
 /** One past the highest sequence number among a parent's own children. */
@@ -4923,6 +5228,7 @@ function projDetail(pid){
         life (${util.ownAvg.toFixed(2)} FTE). They are context, not pass or fail.
         <strong>Hover any segment</strong> for that person's role and share of the month.</p>
       <div class="scrollx fit">${util.svg}</div></div>
+    ${manualPanel("project", pid)}
     <div class="two">
       <div class="panel">
         <div class="phead"><h2>Milestones — ${esc(pr.project_name)}</h2>
@@ -5131,7 +5437,7 @@ function persDetail(sid){
           <strong>+ row</strong> allocates the next <code>assignment_id</code>.</p>
         ${dataTable("Assignment", asg,
           ["assignment_id","project_name","project_id","role_name","assign_start_date",
-           "assign_end_date","person_weight","note_1","note_2","note_3"],
+           "assign_end_date","person_weight","estimation_type","note_1","note_2","note_3"],
           "assignment_id", aid)}</div>
       <div id="asgDetail">${overridesPanel(sid)}</div>
     </div>`;
@@ -5187,7 +5493,8 @@ function overridesPanel(sid){
          role_name: r => {
            const a = assignmentById(r.assignment_id);
            return a ? (a.role_name ?? "") : "";
-         }})}</div>`;
+         }})}</div>
+    ${aid ? manualPanel("assignment", aid) : ""}`;
 }
 
 /* The assignment a window points at, and the project it names — read from RAW rather
@@ -5592,6 +5899,23 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
   const target = M.raw[sheet].find(r => r.__row === rowNum);
   if (!target) return;
 
+  /* estimation_type has ONE way in, and it is not this cell (REQ-CAL-18).
+     Typing 'manual' here would set the flag without copying a single month across, so
+     every month would read as missing and the thing would drop to 0.00 - the one change
+     in the application that silently zeroes a figure. The button does the switch AND the
+     copy, and asks first. Refusing here rather than accepting-and-then-seeding keeps one
+     path instead of two that have to stay in step. */
+  if (col === "estimation_type"){
+    const scope = sheet === "Project" ? "project" : "assignment";
+    flashBad(tdEl, `Use the Switch button in the Monthly estimation panel below. `
+      + `Switching to manual has to COPY the calculated months across first, or every `
+      + `month would be counted as 0.00 — typing here would do the flag without the `
+      + `figures.`);
+    tdEl.textContent = target[col] ?? "";
+    if (target[KEY_COL[sheet]]) switchEstimation(scope, target[KEY_COL[sheet]]);
+    return;
+  }
+
   // A proxy column is resolved to the identifier it names, and the identifier is what
   // is written. Everything after this point sees an ordinary edit to an ordinary column.
   const px = proxyFor(sheet, col);
@@ -5775,6 +6099,335 @@ function deleteRow(sheet, rowNum){
   renderKeepingTab();
   showBanner("", `Deleted ${val ? `${val} from ${sheet}` : `a blank row from ${sheet}`}. `
     + `This is provisional — 'Leave without change' puts it back.`);
+}
+/* ==================================== 12b. manual monthly estimation (REQ-CAL-18)
+
+   The assumptions are a good default and a poor last word. A trial two years in has a
+   manager who knows what the next eight months actually take, and a standard period
+   weight multiplied by a standard role factor is a worse answer than the one in their
+   head. So a project, or one person's assignment to a project, can be switched to
+   MANUAL: its monthly figures are then stated rather than worked out.
+
+   Three decisions are worth stating here, because the panel below only makes sense once
+   they are:
+
+   ALL OR NOTHING. Switching to manual copies EVERY month across first, from the figures
+   currently on screen, and the user then edits the ones they know better. Nothing has to
+   remember which months were touched and no month carries a flag of its own. That was a
+   deliberate choice over per-month marking: once a figure has been edited, "which months
+   are still automatic" is a question with no useful answer - the automatic ones are only
+   automatic until the assumptions beneath them change, at which point they would move
+   under a plan somebody has already signed off. What the user takes on in exchange is
+   responsibility for all of them, and the confirmation says so in those words.
+
+   ONE WAY IN. estimation_type is not typed into the table like every other column - the
+   cell refuses the edit and points here. Typing 'manual' into a cell would set the flag
+   without copying anything across, so every month would read as missing and the project
+   would drop to zero. The button is the only route because it is the only route that
+   leaves the data in a state that means anything.
+
+   IT IS AN EDIT LIKE ANY OTHER. The switch, the seeding and the discard all go through
+   beginEditSession / S.pending, so they appear in the change log, they are undone by
+   'Leave without change', and they reach the file only when the user presses Save. */
+
+const isoMonth = k => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
+const monthLabel = mm => {
+  const [y, m] = String(mm || "").split("-");
+  return m ? keyToLabel((+y) * 12 + (+m) - 1) : String(mm || "");
+};
+const estType = row =>
+  String((row || {}).estimation_type || "").trim().toLowerCase() === "manual"
+    ? "manual" : "automatic";
+
+const EST_SHEET = {project:"Project", assignment:"Assignment"};
+const estRow = (scope, id) =>
+  ((S.model.raw[EST_SHEET[scope]] || []).find(r => r[KEY_COL[EST_SHEET[scope]]] === id)) || null;
+
+/** The MonthlyEstimate rows belonging to one thing, oldest month first.
+ *  Rows still being typed are included even before scope and ref_id are on them, so a
+ *  row added by hand is visible in the panel that created it. */
+function estRows(scope, id){
+  return (S.model.raw.MonthlyEstimate || [])
+    .filter(r => (r.scope === scope && r.ref_id === id)
+              || (r.__new && !r.scope && !r.ref_id))
+    .sort((a, b) => String(a.month || "").localeCompare(String(b.month || "")));
+}
+
+/** What this thing draws each month, and what the assumptions alone would have said.
+ *
+ *  `now` is the figure ON SCREEN - after any manual figure already in force - and it is
+ *  what a switch to manual seeds from, so the figures do not jump at the moment of
+ *  switching. `auto` is the untouched multiplication, kept on every line as it was worked
+ *  out, and it is what the panel shows beside a stated figure so the difference between
+ *  the two is readable rather than implied. */
+function monthlyOf(scope, id){
+  const now = new Map(), auto = new Map();
+  for (const L of ((S.calc && S.calc.lines) || [])){
+    if (scope === "project" ? L.project_id !== id : L.assignment_id !== id) continue;
+    const k = isoMonth(L.month);
+    now.set(k, (now.get(k) || 0) + L.fte);
+    auto.set(k, (auto.get(k) || 0) + (L.auto ?? 0));
+  }
+  return {now, auto};
+}
+
+/* ------------------------------------------------------------------ the switch */
+
+/** Ask, then do. Every change of calculation way goes through this - there is no path
+ *  that changes one silently, which is the whole of the user's last requirement. */
+function switchEstimation(scope, id){
+  const row = estRow(scope, id);
+  if (!row){
+    showBanner("bad", `${id} is not saved yet, so its estimation type cannot be changed. `
+      + `Fill the row in and press Save first.`);
+    return;
+  }
+  const to = estType(row) === "manual" ? "automatic" : "manual";
+  const {now, auto} = monthlyOf(scope, id);
+  const have = estRows(scope, id).filter(r => r.scope === scope);
+  const what = scope === "project" ? "Project" : "Assignment";
+  const name = scope === "project"
+    ? `${what} ${id} — ${esc((S.model.projects[id] || {}).project_name || "")}`
+    : `${what} ${id} — ${esc(assignmentLabel(id))}`;
+  const total = [...now.values()].reduce((a, b) => a + b, 0);
+
+  const body = to === "manual"
+    ? `<p class="cap">${name}</p>
+       <p><strong>${now.size} month${now.size === 1 ? "" : "s"}</strong> will be copied
+         across exactly as they stand now (${total.toFixed(2)} FTE-months in total), and
+         from then on those figures are used <em>instead of</em> the calculation. Nothing
+         moves at the moment you switch — the copy is what stops the figures jumping.</p>
+       <p class="note"><strong>All of them become yours, not just the ones you edit.</strong>
+         Changing a period weight, a role factor or a person's weight will no longer move
+         any of these ${now.size} months. That is the point of switching, and it is also
+         the thing to remember: from here on, keeping them right is your job.
+         ${scope === "project"
+           ? "A project figure is the whole month, and the people assigned that month are "
+             + "scaled so they still add up to it."
+           : "An assignment figure is this person's own contribution to this project, and "
+             + "it replaces the multiplication outright."}</p>`
+    : `<p class="cap">${name}</p>
+       <p><strong>All ${have.length} stated month${have.length === 1 ? "" : "s"} will be
+         deleted</strong> and the figures go back to being worked out from the assumptions
+         — period weight × (role factor ÷ sharers) × person weight × month coverage.</p>
+       <p class="note">There is nothing to come back to afterwards: the stated figures are
+         removed, not set aside. This is still provisional like any other change, so
+         <strong>Leave without change</strong> puts them back until you press Save — after
+         Save they are gone.</p>`;
+
+  askEstimation(to === "manual" ? "Switch to manual estimation?"
+                                : "Switch back to automatic calculation?",
+    body,
+    to === "manual" ? "Switch to manual" : "Discard and recalculate",
+    () => applyEstimationSwitch(scope, id, row, to, now));
+}
+
+/** The dialog. Its own, rather than the conditional-save one: those two questions are
+ *  asked at different moments about different things, and a shared dialog whose heading
+ *  changes underneath you is how a confirmation stops being read. */
+function askEstimation(title, bodyHtml, yesLabel, go){
+  const dlg = el("estchg");
+  el("estTitle").textContent = title;
+  el("estYes").textContent = yesLabel;
+  el("estBody").innerHTML = bodyHtml;
+  let done = false;
+  const finish = ok => { if (done) return; done = true; dlg.close(); if (ok) go(); };
+  el("estYes").onclick = () => finish(true);
+  el("estNo").onclick = () => finish(false);
+  dlg.onclose = () => finish(false);                  // Escape, and the backdrop
+  dlg.showModal();
+}
+
+function applyEstimationSwitch(scope, id, row, to, seed){
+  const M = S.model;
+  beginEditSession();
+  const from = estType(row);
+  const at = new Date();
+  S.pending.push({at, sheet:EST_SHEET[scope], row:row.__row, col:"estimation_type",
+                  from, to});
+  row.estimation_type = to;
+
+  if (to === "manual"){
+    const have = new Set(estRows(scope, id).filter(r => r.scope === scope).map(r => r.month));
+    for (const mm of [...seed.keys()].sort()){
+      if (have.has(mm)) continue;
+      const r = newRow("MonthlyEstimate", {scope, ref_id:id, month:mm,
+                                           fte:round4(seed.get(mm)), edited_at:at});
+      delete r.__new;                 // seeded complete, not a draft waiting to be typed
+      S.pending.push({at, sheet:"MonthlyEstimate", row:r.__row, col:`${id} ${mm}`,
+                      from:null, to:round4(seed.get(mm))});
+    }
+  } else {
+    const rows = M.raw.MonthlyEstimate;
+    for (let i = rows.length - 1; i >= 0; i--){
+      const r = rows[i];
+      if (r.scope !== scope || r.ref_id !== id) continue;
+      S.pending.push({at, sheet:"MonthlyEstimate", row:r.__row,
+                      col:`${id} ${r.month}`, from:r.fte, to:null});
+      for (const k of [...S.editedCells])
+        if (k.startsWith(`MonthlyEstimate|${r.__row}|`)) S.editedCells.delete(k);
+      rows.splice(i, 1);
+    }
+  }
+  rebuild(true);
+  renderKeepingTab();
+  showBanner("", to === "manual"
+    ? `${id} is now estimated MANUALLY. ${seed.size} month(s) were copied from the `
+      + `calculation as they stood; edit the ones you know better. This is provisional — `
+      + `press Save to keep it.`
+    : `${id} is back to AUTOMATIC calculation and its stated months were discarded. `
+      + `This is provisional — 'Leave without change' puts them back until you Save.`);
+}
+
+/** Months the thing now spans that carry no stated figure — the case V-31 reports.
+ *  It happens legitimately: extend a project's dates and the new months have never been
+ *  stated. Filling them from the calculation is what the user would otherwise do by
+ *  hand, so the button does it. */
+function fillEstimates(scope, id){
+  const {now} = monthlyOf(scope, id);
+  const have = new Set(estRows(scope, id).filter(r => r.scope === scope).map(r => r.month));
+  const add = [...now.keys()].sort().filter(mm => !have.has(mm));
+  if (!add.length){
+    showBanner("", `Every month ${id} covers already has a stated figure. Nothing added.`);
+    return;
+  }
+  beginEditSession();
+  const at = new Date();
+  for (const mm of add){
+    const r = newRow("MonthlyEstimate", {scope, ref_id:id, month:mm,
+                                         fte:round4(now.get(mm)), edited_at:at});
+    delete r.__new;
+    S.pending.push({at, sheet:"MonthlyEstimate", row:r.__row, col:`${id} ${mm}`,
+                    from:null, to:round4(now.get(mm))});
+  }
+  rebuild(true);
+  renderKeepingTab();
+  showBanner("", `${add.length} month(s) were filled in for ${id} from the calculation `
+    + `(${add[0]}${add.length > 1 ? ` … ${add[add.length - 1]}` : ""}). Edit any of them.`);
+}
+
+const round4 = v => Math.round((v ?? 0) * 10000) / 10000;
+
+/** How an assignment reads when it has to be named rather than selected. */
+function assignmentLabel(aid){
+  const a = (S.model.raw.Assignment || []).find(x => x.assignment_id === aid);
+  if (!a) return aid;
+  const who = (S.model.people[a.person_id] || {}).person_name || a.person_id || "—";
+  const what = projectNameOf(a.project_id) || a.project_id || "—";
+  return `${who} / ${what} / ${a.role_name || "—"}`;
+}
+
+/* ------------------------------------------------------------------- the panel */
+
+/** The Monthly estimation panel, drawn the same way for both levels.
+ *
+ *  The table is the ordinary editable one, over the MonthlyEstimate sheet, so a stated
+ *  figure is edited, validated, logged and undone exactly like every other cell in the
+ *  application. What is added to it is the comparison: beside each stated figure, what
+ *  the assumptions alone would have produced, and the difference. A manual plan whose
+ *  panel did not show what it departed from would be a set of numbers with no argument
+ *  attached to them. */
+function manualPanel(scope, id){
+  const row = estRow(scope, id);
+  if (!row) return "";
+  const on = estType(row) === "manual";
+  const {now, auto} = monthlyOf(scope, id);
+  const rows = estRows(scope, id);
+  const mine = rows.filter(r => r.scope === scope);
+  const missing = [...now.keys()].filter(mm => !mine.some(r => r.month === mm));
+  const stray = mine.filter(r => r.month && !now.has(r.month));
+  const what = scope === "project" ? "project" : "assignment";
+  const totalNow = [...now.values()].reduce((a, b) => a + b, 0);
+  const totalAuto = [...auto.values()].reduce((a, b) => a + b, 0);
+
+  const head = `<div class="phead"><h2>Monthly estimation — ${esc(id)}</h2>
+      <span class="est ${on ? "man" : "aut"}">${on ? "MANUAL" : "AUTOMATIC"}</span>
+      <button class="btn tiny ${on ? "" : "primary"}" data-act="estswitch"
+        data-scope="${att(scope)}" data-id="${att(id)}"
+        data-tip="${att(on ? HELP.estauto : HELP.estman)}"
+        >${on ? "Switch to automatic" : "Switch to manual"}</button>
+      ${on && missing.length
+        ? `<button class="btn tiny" data-act="estfill" data-scope="${att(scope)}"
+             data-id="${att(id)}" data-tip="${att(HELP.estfill)}"
+             >Fill ${missing.length} missing month(s)</button>` : ""}
+      <span class="scope k">${on ? `${mine.length} stated month(s)`
+                                 : `${now.size} calculated month(s)`}</span></div>`;
+
+  if (!on)
+    return `<div class="panel">${head}
+      <p class="cap">This ${what}'s months are <strong>calculated</strong>: period weight
+        × (role factor ÷ sharers) × person weight × month coverage, month by month —
+        ${totalAuto.toFixed(2)} FTE-months across ${now.size} month(s). Change an
+        assumption and every one of them follows.</p>
+      <p class="note">Switch to <strong>manual</strong> if you have better information
+        than the assumptions do — a ${what} part way through, where what it has actually
+        taken is known. Switching copies these ${now.size} figures across as they stand,
+        so nothing jumps, and you then edit the ones you know better. The application
+        asks before it does either.</p>
+      ${manualElsewhere(scope, id)}</div>`;
+
+  return `<div class="panel">${head}
+    <p class="cap">These figures are <strong>stated, not calculated</strong>.
+      ${scope === "project"
+        ? "Each one is the whole project for that month, and the people assigned that "
+          + "month are scaled so they still add up to it."
+        : "Each one is this person's own contribution to this project for that month, "
+          + "and it replaces the multiplication outright."}
+      <code>automatic_fte</code> beside it is what the assumptions alone would have said,
+      so the departure is readable: <strong>${totalNow.toFixed(2)}</strong> stated against
+      <strong>${totalAuto.toFixed(2)}</strong> calculated across ${now.size} month(s).</p>
+    ${missing.length ? `<p class="note bad">${missing.length} month(s) this ${what} covers
+      have <strong>no stated figure</strong> (${esc(missing.slice(0, 6).join(", "))}${
+      missing.length > 6 ? ", …" : ""}) and are counted as <strong>0.00</strong> — V-31.
+      Either fill them in with the button above, or switch back to automatic.</p>` : ""}
+    ${stray.length ? `<p class="note">${stray.length} stated month(s) fall outside the
+      months this ${what} covers (${esc(stray.map(r => r.month).slice(0, 6).join(", "))}${
+      stray.length > 6 ? ", …" : ""}). They are kept but not used${
+      scope === "project" ? " — a project month with nobody assigned has nobody to share "
+        + "it out to, which V-32 reports" : ""}.</p>` : ""}
+    ${dataTable("MonthlyEstimate", rows,
+      ["month", "fte", "automatic_fte", "difference", "edited_at", "note_1"],
+      null, null,
+      {automatic_fte: r => auto.has(r.month) ? auto.get(r.month).toFixed(4) : "",
+       difference: r => {
+         if (!auto.has(r.month) || r.fte === null || r.fte === undefined) return "";
+         const dd = Number(r.fte) - auto.get(r.month);
+         return (dd >= 0 ? "+" : "") + dd.toFixed(4);
+       }})}
+    ${manualElsewhere(scope, id)}</div>`;
+}
+
+/** Which OTHER level is manual on the same work.
+ *
+ *  A project total can be manual for two quite different reasons - somebody stated the
+ *  project's month, or somebody stated one person's contribution to it - and the figure
+ *  looks identical either way. So the project panel names the assignments that are
+ *  manual, by assignment_id and by who they are, and the assignment panel says when the
+ *  project above it is stated too. Without this the honest question "why is this figure
+ *  what it is" has no answer on the screen that shows the figure. */
+function manualElsewhere(scope, id){
+  const M = S.model;
+  if (scope === "project"){
+    const man = (M.raw.Assignment || [])
+      .filter(a => a.project_id === id && estType(a) === "manual");
+    if (!man.length) return "";
+    return `<p class="note"><strong>${man.length} assignment(s) on this project are
+      themselves manual</strong>, so part of every month below is stated at the personal
+      level rather than the project level:</p>
+      <ul class="estlist">${man.map(a =>
+        `<li><code>${esc(a.assignment_id)}</code> — ${esc(assignmentLabel(a.assignment_id))}
+          <button class="btn tiny" data-act="gopers" data-sid="${att(a.person_id)}"
+            data-aid="${att(a.assignment_id)}">Open</button></li>`).join("")}</ul>`;
+  }
+  const a = (M.raw.Assignment || []).find(x => x.assignment_id === id);
+  if (!a || estType(M.projects[a.project_id] || {}) !== "manual") return "";
+  return `<p class="note"><strong>The project this belongs to
+    (<code>${esc(a.project_id)}</code>) is manual too.</strong> Its stated month is the
+    whole project, so this assignment's figure is scaled along with everyone else's to add
+    up to it — what you type here decides this person's SHARE of that month, not the
+    month's total.
+    <button class="btn tiny" data-act="goproj" data-pid="${att(a.project_id)}"
+      >Open the project</button></p>`;
 }
 
 function exportWorkbook(asJson){
@@ -5974,6 +6627,7 @@ const SECTION = {
   Person:"People", Assignment:"Assignments", PersonPeriodWeight:"Weight overrides",
   PeriodWeightStandard:"Standard period weights", RoleFactor:"Role factors",
   Lists:"Value lists", Config:"Configuration",
+  MonthlyEstimate:"Monthly estimation",
   "(cascade)":"Carried through automatically",
 };
 const TAB_OF = {
@@ -5982,6 +6636,9 @@ const TAB_OF = {
   Assignment:"Source data (person)", PersonPeriodWeight:"Source data (person)",
   PeriodWeightStandard:"General assumptions", RoleFactor:"General assumptions",
   Lists:"General assumptions", Config:"General assumptions",
+  // Both, genuinely: a project figure is edited on one tab and an assignment figure on
+  // the other. Naming one would send half the log to the wrong place.
+  MonthlyEstimate:"Source data (project / person)",
 };
 
 /** Every change waiting to be saved, newest first.
@@ -6659,6 +7316,21 @@ document.addEventListener("click", e => {
     if (act.dataset.act === "blankms") blankMilestones(act.dataset.pid);
     if (act.dataset.act === "autoper") autoPeriods(act.dataset.pid);
     if (act.dataset.act === "blankper") blankPeriods(act.dataset.pid);
+    if (act.dataset.act === "estswitch") switchEstimation(act.dataset.scope, act.dataset.id);
+    if (act.dataset.act === "estfill") fillEstimates(act.dataset.scope, act.dataset.id);
+    /* The two levels of a manual figure are on different tabs, and the question the
+       panel raises - "which assignment is stated, and what does it say" - is only
+       answerable on the other one. So it takes you there, with the row already
+       selected, rather than naming it and leaving you to find it. */
+    if (act.dataset.act === "gopers"){
+      S.selPers = act.dataset.sid;
+      S.selAsg = act.dataset.aid;
+      showTab("t-pers"); renderAll(); showTab("t-pers");
+    }
+    if (act.dataset.act === "goproj"){
+      S.selProj = act.dataset.pid;
+      showTab("t-proj"); renderAll(); showTab("t-proj");
+    }
     return;
   }
   const ins = e.target.closest("[data-ins]");

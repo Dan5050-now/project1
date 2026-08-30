@@ -218,6 +218,7 @@ function projDetail(pid){
         life (${util.ownAvg.toFixed(2)} FTE). They are context, not pass or fail.
         <strong>Hover any segment</strong> for that person's role and share of the month.</p>
       <div class="scrollx fit">${util.svg}</div></div>
+    ${manualPanel("project", pid)}
     <div class="two">
       <div class="panel">
         <div class="phead"><h2>Milestones — ${esc(pr.project_name)}</h2>
@@ -426,7 +427,7 @@ function persDetail(sid){
           <strong>+ row</strong> allocates the next <code>assignment_id</code>.</p>
         ${dataTable("Assignment", asg,
           ["assignment_id","project_name","project_id","role_name","assign_start_date",
-           "assign_end_date","person_weight","note_1","note_2","note_3"],
+           "assign_end_date","person_weight","estimation_type","note_1","note_2","note_3"],
           "assignment_id", aid)}</div>
       <div id="asgDetail">${overridesPanel(sid)}</div>
     </div>`;
@@ -482,7 +483,8 @@ function overridesPanel(sid){
          role_name: r => {
            const a = assignmentById(r.assignment_id);
            return a ? (a.role_name ?? "") : "";
-         }})}</div>`;
+         }})}</div>
+    ${aid ? manualPanel("assignment", aid) : ""}`;
 }
 
 /* The assignment a window points at, and the project it names — read from RAW rather
