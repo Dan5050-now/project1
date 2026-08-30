@@ -3,6 +3,25 @@
 All notable changes to the Tumor Evaluation Review Agent (TEA) artifacts.
 Each artifact is versioned independently; see `docs/README.md`.
 
+## [Plan 1.5.0 / Spec 2.5.0] — 2026-08-22 — SDTM input requirements
+
+### Added — TEA-CTR-003, the SDTM_Requirements sheet (OI-08 drafted)
+- **42 variables across 10 SDTM domains** plus 3 supplementary inputs, derived from what the 83
+  live rules actually consume rather than from a generic SDTM note. Each carries a requirement
+  level (23 required, 18 conditional, 1 optional), the rules that depend on it, and **what breaks
+  if it is absent** — so a partial delivery can be triaged rather than rejected.
+- **10 conversion traps**, the errors a mapping actually makes. The first is the one to test
+  first: `TULNKID` re-issued per visit instead of once per lesion, which fragments lesion history
+  into one-visit lesions and silently destroys nadir, percent change and response.
+- Guidance for building the dummy data to the same contract, so the synthetic study and the later
+  conversion target one definition.
+
+### Three inputs that are not SDTM
+- **Query history** — marked required. SDTM has no query domain, and without it five rules
+  deactivate *and* AC-06 stops working, so every finding recurs at every data cut.
+- **Imaging metadata** — optional; two rules deactivate cleanly.
+- **Protocol summary** — required, per OI-07.
+
 ## [Plan 1.4.0] — 2026-08-22 — input source moves to SDTM
 
 ### OQ-01 reversed

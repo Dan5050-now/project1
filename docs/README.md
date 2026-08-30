@@ -36,8 +36,8 @@ counts. Yellow cells are reviewer input; everything else is controlled content.
 
 | Document | Version | Status | Next |
 |---|---|---|---|
-| TEA-PLAN-001 Development Plan | 1.4.0 | **APPROVED**, amended 2026-08-22 | — |
-| TEA-SPEC-001 Programming Specification | 2.4.0 | **APPROVED**, amended 2026-08-22 | — |
+| TEA-PLAN-001 Development Plan | 1.5.0 | **APPROVED**, amended 2026-08-22 | — |
+| TEA-SPEC-001 Programming Specification | 2.5.0 | **APPROVED**, amended 2026-08-22 | — |
 | Rule catalog | 2.0.0 | **FROZEN** 2026-08-21 | Unchanged by the v2.1.0 amendment |
 | Concept overview (HTML + PPTX) | — | Current | Regenerate when the plan or spec changes |
 
@@ -65,12 +65,17 @@ standardised, publicly documented, and buildable against outside the company. OQ
 accordingly; the v1.0.0 answer rested on the CRF specification being supplied as structured data,
 and that premise no longer holds.
 
-The next thing to **do** is OI-08, the SDTM input contract — which domains, which variables, which
-are required, and what happens when an optional one is absent. It belongs before the dummy data
-is built, not after, because it is the contract the dummy data and the later conversion both
-target. TU/TR/RS carry the tumor data and DM/EX/AE/DS/CM/PR cover the cross-domain rules; two gaps
-need a decision, tracked as OI-09 — SDTM has no query domain, and imaging metadata is not
-standard.
+**OI-08 is drafted**: the specification's **SDTM_Requirements** sheet (TEA-CTR-003) states what the
+agent needs from an SDTM delivery — 42 variables across 10 domains plus 3 supplementary inputs,
+each marked required / conditional / optional, with the rules that depend on it and what happens
+when it is absent. It also lists **10 conversion traps** — the errors a mapping actually makes.
+
+Build the dummy data to that sheet, so the synthetic study and the later conversion target the
+same contract.
+
+**OI-09 is the one to confirm early:** query history has no SDTM home and must travel alongside as
+a flat file. Without it, five rules deactivate *and* query reconciliation stops working, so every
+finding is re-raised at every data cut — the behaviour OBJ-04 exists to prevent.
 
 **OI-03 (pilot study) has been restated**: its weight is on Step 6 UAT. The Step 3 dataset is
 curated and synthetic, so it can — and should — seed both RECIST 1.1 and iRECIST cases whichever
