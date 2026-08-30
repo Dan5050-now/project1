@@ -1018,7 +1018,11 @@ Requires `openpyxl`.
 
   **Manual is all or nothing** for the thing it is set on. Switching copies **every** month
   across from the figures currently on screen, so nothing jumps, and switching back
-  discards the lot. Per-month marking was considered and rejected: once a figure has been
+  discards the lot. The copy is written to **two decimal places**: a stated figure lands in
+  a cell somebody reads and edits, and two places is the finest edit that means anything in
+  the unit people think in — at 160 hours to the FTE, `0.01` is 1.6 hours. So a month can
+  move by up to `0.005` FTE, about 48 minutes, at the moment of switching. That is the
+  trade, taken deliberately; a figure typed afterwards may carry more places. Per-month marking was considered and rejected: once a figure has been
   edited, the months still calculated would keep moving under a signed-off plan whenever an
   assumption changed, and *which months are mine* has no useful answer. What the user takes
   on in exchange is responsibility for all of them, and the confirmation says so in those

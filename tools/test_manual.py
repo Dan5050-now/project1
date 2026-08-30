@@ -147,16 +147,18 @@ with sync_playwright() as pw:
     worst = max((abs(before.get(k, 0) - after.get(k, 0)) for k in set(before) | set(after)),
                 default=0)
     # Within the rounding of the figure that was seeded, and no further. The seed is
-    # written to four decimal places because it lands in a cell a person then reads and
-    # edits, and 0.8814374999 is not a figure anybody states - so a month can move by up
-    # to half a unit in the last place, 5e-5 FTE, which is half a minute. The claim being
-    # tested is that nothing MEANINGFUL moves; asserting bit-equality here would be
-    # asserting the wrong thing, and would be fixed by making the panel worse.
-    check(worst <= 5e-5,
+    # written to TWO decimal places, because a stated figure lands in a cell a person then
+    # reads and edits and 0.8814374999 is not a number anybody states - and because two
+    # places is the finest edit that means anything in the unit people think in: at 160
+    # hours to the FTE, 0.01 is 1.6 hours. So a month can move by up to half a unit in the
+    # last place, 0.005 FTE, which is 48 minutes. The claim being tested is that nothing
+    # MEANINGFUL moves; asserting bit-equality here would be asserting the wrong thing,
+    # and would be satisfied only by making the panel worse.
+    check(worst <= 5e-3,
           "SWITCHING TO MANUAL MOVES NOTHING — every month was copied across as it stood, "
           "to the precision it is stated in",
           f"{len(after)} project-months, worst difference {worst:.2e} FTE "
-          f"({worst * 160:.4f} hours)")
+          f"({worst * 160:.2f} hours), against the 0.005 FTE the rounding allows")
     seeded = pg.evaluate("""(pid) => S.model.raw.MonthlyEstimate
         .filter(r => r.scope === 'project' && r.ref_id === pid).length""", auto_pid)
     check(seeded == n_months,

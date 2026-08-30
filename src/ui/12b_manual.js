@@ -92,9 +92,11 @@ function switchEstimation(scope, id){
   const body = to === "manual"
     ? `<p class="cap">${name}</p>
        <p><strong>${now.size} month${now.size === 1 ? "" : "s"}</strong> will be copied
-         across exactly as they stand now (${total.toFixed(2)} FTE-months in total), and
-         from then on those figures are used <em>instead of</em> the calculation. Nothing
-         moves at the moment you switch — the copy is what stops the figures jumping.</p>
+         across as they stand now, to two decimal places
+         (${total.toFixed(2)} FTE-months in total), and from then on those figures are
+         used <em>instead of</em> the calculation. The copy is what stops the figures
+         jumping: nothing moves by more than the rounding, which at
+         ${S.model.HOURS} hours to the FTE is under an hour a month.</p>
        <p class="note"><strong>All of them become yours, not just the ones you edit.</strong>
          Changing a period weight, a role factor or a person's weight will no longer move
          any of these ${now.size} months. That is the point of switching, and it is also
@@ -150,10 +152,10 @@ function applyEstimationSwitch(scope, id, row, to, seed){
     for (const mm of [...seed.keys()].sort()){
       if (have.has(mm)) continue;
       const r = newRow("MonthlyEstimate", {scope, ref_id:id, month:mm,
-                                           fte:round4(seed.get(mm)), edited_at:at});
+                                           fte:round2(seed.get(mm)), edited_at:at});
       delete r.__new;                 // seeded complete, not a draft waiting to be typed
       S.pending.push({at, sheet:"MonthlyEstimate", row:r.__row, col:`${id} ${mm}`,
-                      from:null, to:round4(seed.get(mm))});
+                      from:null, to:round2(seed.get(mm))});
     }
   } else {
     const rows = M.raw.MonthlyEstimate;
@@ -193,10 +195,10 @@ function fillEstimates(scope, id){
   const at = new Date();
   for (const mm of add){
     const r = newRow("MonthlyEstimate", {scope, ref_id:id, month:mm,
-                                         fte:round4(now.get(mm)), edited_at:at});
+                                         fte:round2(now.get(mm)), edited_at:at});
     delete r.__new;
     S.pending.push({at, sheet:"MonthlyEstimate", row:r.__row, col:`${id} ${mm}`,
-                    from:null, to:round4(now.get(mm))});
+                    from:null, to:round2(now.get(mm))});
   }
   rebuild(true);
   renderKeepingTab();
@@ -204,7 +206,15 @@ function fillEstimates(scope, id){
     + `(${add[0]}${add.length > 1 ? ` … ${add[add.length - 1]}` : ""}). Edit any of them.`);
 }
 
-const round4 = v => Math.round((v ?? 0) * 10000) / 10000;
+/* Two places, and the unit is the reason. A stated figure is a figure somebody has
+   decided on, and it lands in a cell they then read and edit - 0.8814374999 is not a
+   number anybody states. Two places is also the finest edit that means anything in the
+   unit people actually think in: at 160 hours to the FTE, 0.01 is 1.6 hours, and there
+   is no useful answer to what 0.0001 FTE would be. The cost is that a month can move by
+   up to half a unit in the last place when it is copied across - 0.005 FTE, about 48
+   minutes - which is the trade being made deliberately, not an oversight. Nothing stops
+   a typed figure carrying more places; this is only what the SEED is written to. */
+const round2 = v => Math.round((v ?? 0) * 100) / 100;
 
 /** How an assignment reads when it has to be named rather than selected. */
 function assignmentLabel(aid){
@@ -260,8 +270,9 @@ function manualPanel(scope, id){
       <p class="note">Switch to <strong>manual</strong> if you have better information
         than the assumptions do — a ${what} part way through, where what it has actually
         taken is known. Switching copies these ${now.size} figures across as they stand,
-        so nothing jumps, and you then edit the ones you know better. The application
-        asks before it does either.</p>
+        rounded to two places — 0.01 FTE is ${(S.model.HOURS / 100).toFixed(1)} hours, and
+        there is no useful edit finer than that — so nothing jumps, and you then edit the
+        ones you know better. The application asks before it does either.</p>
       ${manualElsewhere(scope, id)}</div>`;
 
   return `<div class="panel">${head}
