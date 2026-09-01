@@ -83,6 +83,57 @@ if __name__ == "__main__":
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
 
+WHAT IS NEW IN 1.5
+
+  * A FIGURE CAN NOW BE STATED INSTEAD OF CALCULATED. Sometimes the assumptions
+    are not the best information you have. A study two years in has a manager who
+    knows what the rest of it takes, and a standard period weight multiplied by a
+    standard role factor is the worse of the two available answers.
+
+    So a PROJECT, or ONE PERSON'S ASSIGNMENT to a project, can be switched to
+    MANUAL. Open a project on 'Source data (project)', or pick an assignment on
+    'Source data (person)', and use the MONTHLY ESTIMATION panel:
+
+      Switch to manual      copies every month across exactly as it stands, to
+                            two decimal places, and from then on those figures
+                            are used instead of the calculation. You then edit
+                            the months you know better.
+      Switch to automatic   deletes the stated months and goes back to working
+                            them out from the assumptions.
+
+    BOTH ASK FIRST. One of them hands you a run of figures permanently; the other
+    deletes work. Neither is something to find out about afterwards.
+
+  * THE TWO LEVELS ARE DIFFERENT, and the panel says which you are looking at.
+    An ASSIGNMENT figure is that person's own contribution to that project - it
+    replaces their multiplication outright. A PROJECT figure is the WHOLE month,
+    and everyone assigned that month is scaled so they still add up to it. That
+    is why a person's figure can move when you have not touched anything of
+    theirs; the export records the scaling factor so you can see why.
+
+  * IT IS ALL OR NOTHING for whatever you set it on. Switching copies EVERY
+    month, so nothing jumps and no month is half one thing and half the other.
+    What you take on in exchange is all of them: changing a period weight or a
+    role factor will no longer move any of those months. The confirmation says
+    so before you agree to it.
+
+  * WHY TWO DECIMAL PLACES. A stated figure is one you read and edit, and at 160
+    hours to the FTE, 0.01 is 1.6 hours - there is no useful edit finer than
+    that. A month can therefore shift by up to 0.005 FTE, about 48 minutes, at
+    the moment you switch. Nothing else moves.
+
+  * YOUR EXISTING FILES STILL OPEN. A workbook saved before this version simply
+    carries no stated figures. Exporting the plan keeps everything you have
+    stated, so it comes back next time; the calculated export marks which rows
+    were stated, at which level, and what the assumptions would have said.
+
+  * TWO NEW CHECKS. One reports a manual project or assignment with a month that
+    has no figure - those count as 0.00, and a figure quietly dropping to zero is
+    the one thing this feature must never do in silence. The other reports a
+    project figure for a month with nobody assigned: there is nobody to share it
+    out to, so it is NOT applied rather than inventing somebody to carry it.
+
+
 WHAT IS NEW IN 1.4
 
   * YOU CAN NOW EXPORT THE FIGURES, not just the plan. File -> Export has two
