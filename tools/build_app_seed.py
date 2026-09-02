@@ -37,7 +37,7 @@ from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "core" / "02_xlsx_write.js"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.12.xlsx"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.13.xlsx"
 BEGIN = "/* SEED-BEGIN"
 END = "/* SEED-END */"
 

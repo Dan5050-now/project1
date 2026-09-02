@@ -301,7 +301,7 @@ with sync_playwright() as pw:
     # A blank start now seeds the DELIVERED DEFAULTS rather than a placeholder 1.00, so
     # the role factor varies by period and has to be read rather than assumed. Read from
     # the RoleFactor ROWS, not through the application's own lookup, so this stays an
-    # independent计算 of the same thing.
+    # independent calculation of the same thing.
     # The whole RoleFactor block for this project, not just the one role: REQ-CAL-16
     # means a role that nobody holds lands on whoever covers for it, and this plan has
     # exactly one person on it. Worked out here rather than asked of the application.
@@ -310,6 +310,13 @@ with sync_playwright() as pw:
                   && !r.work_scope_type)
         .map(r => ({p: r.period_name, role: r.role_name, f: r.role_factor,
                     by: r.absorbed_by}))""")
+    # REQ-CAL-19: the month's DEMAND in FTE, read from the standards sheet the blank
+    # start seeded. Worked out from the ROWS here, not through the application's lookup.
+    std_rows = pg.evaluate("""() => S.model.raw.PeriodWeightStandard
+        .filter(r => r.project_type === 'NewDrug CT' && r.clinical_phase === 'Phase 2'
+                  && !r.work_scope_type)
+        .map(r => ({p: r.period_name, s: r.standard_fte}))""")
+    standards = {r["p"]: r["s"] for r in std_rows}
     HELD = {"Lead data manager"}          # the only role anybody holds on this plan
     factors = {}
     for row in rf_rows:
@@ -331,8 +338,13 @@ with sync_playwright() as pw:
         pw = (seg[3] if seg else 1.0) or 1.0
         rf = factors.get(seg[0]) if seg else None
         rf = 1.0 if rf is None else rf         # no row for the period -> 1.00, V-23
-        # One person on the role, so nothing is shared and the divisor is 1 (REQ-CAL-14).
-        return pw * rf * weight * cov
+        std = standards.get(seg[0]) if seg else None
+        std = 1.0 if std is None else std      # no standard -> 1.00, V-19
+        # REQ-CAL-19: the standard is the demand and the period weight adjusts it; the
+        # role factors then divide it between the roles STAFFED. Exactly one role is
+        # staffed on this plan, so its share is the whole of it and `rf` cancels out -
+        # which is worth seeing rather than hiding, so it is computed and then divided.
+        return std * pw * (rf / rf) * weight * cov
 
     bad = []
     for k, v in got["pm"].items():

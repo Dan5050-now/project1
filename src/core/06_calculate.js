@@ -134,6 +134,18 @@ function calculate(M){
     M.SPLIT ? ((sharers.get(shareKey(a, k)) || {size:1}).size || 1) : 1;
   const staffed = (pid, role, k) => sharers.has(roleKey(pid, role, k));
 
+  /* Which roles are staffed on a project in a month, so the demand can be divided
+     between them. Built from the same `sharers` pass as the divisor and the absorption
+     test, for the same reason those two share it: three answers about one month must
+     come from one picture of that month. */
+  const rolesOn = new Map();                       // project|month -> Set(role)
+  for (const kk of sharers.keys()){
+    const [pid, role, k] = kk.split("\u0000");
+    const q = pid + "\u0000" + k;
+    if (!rolesOn.has(q)) rolesOn.set(q, new Set());
+    rolesOn.get(q).add(role);
+  }
+
   /** The factor this role carries THIS MONTH: its own, plus the factor of any role
    *  that names it as cover and that nobody is holding (REQ-CAL-16).
    *
@@ -159,6 +171,50 @@ function calculate(M){
     return rf;
   }
 
+  /** The month's demand in FTE, before this project's own adjustment (REQ-CAL-19).
+   *
+   *  PeriodWeightStandard holds it. The column is named `standard_fte` because that is
+   *  what it is - a monthly FTE for a project of this type, phase and scope in this
+   *  period - and it was called `weight` until schema 10, which is most of why it went
+   *  unused for so long: a "weight" reads like something to multiply by, so the
+   *  calculation multiplied by the PROJECT's weight and never asked the standards sheet
+   *  anything at all. Every figure the application produced was therefore a relative
+   *  shape with no magnitude behind it.
+   *
+   *  Missing, it falls back to 1.00 and V-19 reports it. That fallback is deliberately
+   *  the OLD behaviour - the project month becomes its own period weight, exactly as
+   *  before - so a file whose standards are incomplete degrades to figures its author
+   *  will recognise rather than to zero. */
+  const stdCache = new Map();
+  function stdMonthly(proj, periodName){
+    if (periodName === null || periodName === undefined) return 1;
+    const key = proj.project_id + "\u0000" + periodName;
+    if (stdCache.has(key)) return stdCache.get(key);
+    const v = num(stdWeight(M, proj, periodName));
+    const out = (v === null || v === undefined) ? 1 : v;
+    stdCache.set(key, out);
+    return out;
+  }
+
+  /** What the staffed roles add up to this month - the denominator the demand is
+   *  divided by, so the shares come to one.
+   *
+   *  Summed over DISTINCT ROLES, not over people: the factor states what the role costs
+   *  the project, and two people holding one role split that role's share rather than
+   *  claiming it twice. Each role is counted at its EFFECTIVE factor, so a role covering
+   *  for an absent one (REQ-CAL-16) is bigger here as well as in the numerator - the
+   *  absorbed work moves to whoever covers it instead of spreading over everybody. */
+  const demandCache = new Map();
+  function roleDemand(proj, periodName, pid, k){
+    const key = pid + "\u0000" + k;
+    if (demandCache.has(key)) return demandCache.get(key);
+    let t = 0;
+    for (const role of (rolesOn.get(pid + "\u0000" + k) || []))
+      t += effectiveFactor(proj, periodName, role, k);
+    demandCache.set(key, t);
+    return t;
+  }
+
   /* ---------------------------------------------------- V-23, from the arithmetic
      A missing role factor is not a fact about the RoleFactor sheet; it is something
      that happened to a number. So it is recorded here, as it happens, by the exact
@@ -181,7 +237,7 @@ function calculate(M){
   const gaps = new Map();
   const noteGap = (proj, pn, role, pid) => {
     const key = [proj.project_type, proj.clinical_phase || "", scopeOf(proj) || "",
-                 pn, role].join(" ");
+                 pn, role].join("\u0000");
     let g = gaps.get(key);
     if (!g) gaps.set(key, g = {proj, periodName:pn, role, projects:new Set(), months:0});
     g.projects.add(pid);
@@ -210,7 +266,17 @@ function calculate(M){
         noteGap(proj, seg.period_name, a.role_name, a.project_id);
       const rf = effectiveFactor(proj, seg ? seg.period_name : null, a.role_name, k);
       const share = shareCount(a, k);       // how many people hold this role this month
-      const v = pw * (rf / share) * personWeight(a, y, m) * cov;
+      /* REQ-CAL-19. The STANDARD is the month's demand in FTE - what a project of this
+         type, phase and scope takes in this period - and the project's own period weight
+         adjusts it up or down for this particular study. The role factors then divide
+         that demand between the roles ACTUALLY STAFFED, so the shares add to one and the
+         project month equals the standard however many people are on it. An unstaffed
+         role is not in the denominator, so its work lands on the others rather than
+         disappearing; REQ-CAL-16 still decides WHERE it lands when a role names cover. */
+      const denom = roleDemand(proj, seg ? seg.period_name : null, a.project_id, k);
+      const stdF = stdMonthly(proj, seg ? seg.period_name : null);
+      const frac = denom > 0 ? (rf / share) / denom : 0;
+      const v = stdF * pw * frac * personWeight(a, y, m) * cov;
       lo = Math.min(lo, k); hi = Math.max(hi, k);
 
       const own = seg ? stdFactor(M, proj, seg.period_name, a.role_name) : undefined;
@@ -223,6 +289,8 @@ function calculate(M){
         assignment_id:a.assignment_id, role_name:a.role_name,
         period_name: seg ? seg.period_name : null,
         period_weight: pw, period_weight_source: seg ? "ProjectPeriod" : "none — V-12",
+        standard_fte: stdF, role_share: frac,
+        roles_staffed: (rolesOn.get(a.project_id + "\u0000" + k) || new Set()).size,
         role_factor: own, role_factor_effective: rf,
         absorbed: M.ABSORB && seg
           ? absorbedInto(M, proj, seg.period_name, a.role_name)

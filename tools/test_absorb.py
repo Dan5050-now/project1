@@ -57,16 +57,35 @@ def check(ok, label, detail=""):
 
 
 LEAD, OTHER, MAIN = "Project lead", "Other staff", "Main staff"
+ANALYST = "Data Analyst"          # a fourth role, only the chain case needs it
+F_ANALYST = 0.57
 F_LEAD, F_OTHER, F_MAIN = 1.00, 0.60, 0.80
+# REQ-CAL-19: the month's DEMAND. 6.00 divides cleanly by the factor sums below.
+STANDARD = 6.00
+# Every fixture staffs Main staff as well as the lead. Since schema 10 the demand is
+# divided between the roles STAFFED, so an unstaffed role's work is redistributed
+# whether or not anything covers for it - and with only ONE role staffed it would all
+# land on that role either way, making absorption invisible. What absorbed_by decides
+# now is WHO picks the work up, and showing that needs a second staffed role to not
+# pick it up. MAIN is that role: it never covers for anything.
 P_START, P_END = "2027-01-01", "2027-12-31"
 
 
-def factors(absorbed=True, main_absorbed_by=None):
-    """The three 'Others' roles, with Other staff covered by Project lead."""
+def factors(absorbed=True, main_absorbed_by=None, chain=False):
+    """The 'Others' roles, with Other staff covered by Project lead.
+
+    `chain` adds a fourth role covered by Other staff - who is themselves absent. That is
+    the one-hop case, and it needs a fourth role to be observable at all since schema 10:
+    the demand is divided between the roles STAFFED, so with a single staffed role every
+    absent factor lands on it whether the mapping says so or not.
+    """
+    rows = [(LEAD, F_LEAD, None),
+            (OTHER, F_OTHER, LEAD if absorbed else None),
+            (MAIN, F_MAIN, main_absorbed_by)]
+    if chain:
+        rows.append((ANALYST, F_ANALYST, OTHER))
     out = []
-    for role, f, by in ((LEAD, F_LEAD, None),
-                        (OTHER, F_OTHER, LEAD if absorbed else None),
-                        (MAIN, F_MAIN, main_absorbed_by)):
+    for role, f, by in rows:
         out.append({"project_type": "Others", "clinical_phase": None,
                     "work_scope_type": None, "period_name": "Planning",
                     "role_name": role, "role_factor": f, "absorbed_by": by})
@@ -85,7 +104,9 @@ def doc(assignments, rf=None, absorb=1):
         "ProjectPeriod": [{"project_id": "PRJ-001", "period_name": "Planning",
                            "period_seq": 1, "period_start": P_START,
                            "period_end": P_END, "weight": 1.00}],
-        "PeriodWeightStandard": [],
+        "PeriodWeightStandard": [{"project_type": "Others", "clinical_phase": None,
+                                  "work_scope_type": None, "period_name": "Planning",
+                                  "standard_fte": STANDARD}],
         "RoleFactor": rf if rf is not None else factors(),
         "Person": [{"person_id": s, "person_name": f"Person {s[-1]}",
                     "department": "Ops", "primary_role": MAIN, "capacity_fte": 1.00}
@@ -110,26 +131,28 @@ def write(name, d):
 
 
 # The lead alone: nobody holds 'Other staff', so its 0.60 lands on them.
-ALONE = write("alone.prap.json", doc([asg("ASG-001", "PSN-001", LEAD)]))
+MAINER = asg("ASG-003", "PSN-003", MAIN)
+ALONE = write("alone.prap.json", doc([asg("ASG-001", "PSN-001", LEAD), MAINER]))
 # Both roles held: nothing to absorb.
 BOTH = write("both.prap.json", doc([asg("ASG-001", "PSN-001", LEAD),
-                                    asg("ASG-002", "PSN-002", OTHER)]))
+                                    asg("ASG-002", "PSN-002", OTHER), MAINER]))
 # The same as ALONE, with the mapping cleared: the rule is data, so nothing happens.
-NOMAP = write("nomap.prap.json", doc([asg("ASG-001", "PSN-001", LEAD)],
+NOMAP = write("nomap.prap.json", doc([asg("ASG-001", "PSN-001", LEAD), MAINER],
                                      rf=factors(absorbed=False)))
 # 'Other staff' arrives in July: the cover must end that month, by itself.
 ARRIVES = write("arrives.prap.json", doc([
     asg("ASG-001", "PSN-001", LEAD),
-    asg("ASG-002", "PSN-002", OTHER, "2027-07-01", P_END)]))
+    asg("ASG-002", "PSN-002", OTHER, "2027-07-01", P_END), MAINER]))
 # Two leads and no Other staff: the absorbed factor is shared like any other.
 SHARED = write("shared.prap.json", doc([asg("ASG-001", "PSN-001", LEAD),
-                                        asg("ASG-002", "PSN-002", LEAD)]))
+                                        asg("ASG-002", "PSN-002", LEAD), MAINER]))
 # ONE HOP: Main staff is covered by Other staff, who is also absent. Main's factor
 # must NOT reach the lead, and V-29 must say the work is uncounted.
-CHAIN = write("chain.prap.json", doc([asg("ASG-001", "PSN-001", LEAD)],
-                                     rf=factors(main_absorbed_by=OTHER)))
+CHAIN = write("chain.prap.json", doc([asg("ASG-001", "PSN-001", LEAD),
+                                      asg("ASG-004", "PSN-002", MAIN)],
+                                     rf=factors(chain=True)))
 # The switch off.
-OFF = write("off.prap.json", doc([asg("ASG-001", "PSN-001", LEAD)], absorb=0))
+OFF = write("off.prap.json", doc([asg("ASG-001", "PSN-001", LEAD), MAINER], absorb=0))
 
 JAN, JUN, JUL = (2027 * 12 + m for m in (0, 5, 6))
 
@@ -155,72 +178,93 @@ with sync_playwright() as pw:
 
     print("app/PRAP.html — an unstaffed role's work lands on whoever covers for it")
 
+    # Every figure below is STANDARD x (this role's effective factor) / (the sum of the
+    # effective factors of the roles STAFFED that month). Written out rather than
+    # abbreviated, so a reader can check each one against the sentence above it.
+    share = lambda eff, den: STANDARD * eff / den                        # noqa: E731
+    ALL3 = F_LEAD + F_OTHER + F_MAIN                                     # 2.40
+
     both = load(pg, BOTH)
-    check(abs(both["pm"][f"PSN-001|{JAN}"] - F_LEAD) < 1e-9,
-          "with both roles held, the lead carries their own factor and no more",
-          f"{both['pm'][f'PSN-001|{JAN}']:.4f}, expected {F_LEAD:.2f}")
+    check(abs(both["pm"][f"PSN-001|{JAN}"] - share(F_LEAD, ALL3)) < 1e-9,
+          "with all three roles held, the lead carries their own factor and no more",
+          f"{both['pm'][f'PSN-001|{JAN}']:.4f}, expected {share(F_LEAD, ALL3):.4f}")
 
     alone = load(pg, ALONE)
-    check(abs(alone["pm"][f"PSN-001|{JAN}"] - (F_LEAD + F_OTHER)) < 1e-9,
-          "WITH NOBODY IN 'Other staff', ITS FACTOR LANDS ON THE LEAD",
+    check(abs(alone["pm"][f"PSN-001|{JAN}"] - share(F_LEAD + F_OTHER, ALL3)) < 1e-9,
+          "WITH NOBODY IN 'Other staff', ITS FACTOR LANDS ON THE LEAD — who goes from "
+          f"{share(F_LEAD, ALL3):.2f} to {share(F_LEAD + F_OTHER, ALL3):.2f} while the "
+          "project month does not move",
           f"{alone['pm'][f'PSN-001|{JAN}']:.4f}, expected "
-          f"{F_LEAD:.2f} + {F_OTHER:.2f} = {F_LEAD + F_OTHER:.2f}")
-    # 'Main staff' is unstaffed here too, and nothing covers for it - so V-29 SHOULD
-    # fire for that one and must not fire for 'Other staff', which is covered. That
-    # distinction is the whole value of the rule: it names the work nobody is counting,
-    # not every role that happens to be absent.
+          f"{share(F_LEAD + F_OTHER, ALL3):.4f}")
+    check(abs(alone["pm"][f"PSN-003|{JAN}"] - share(F_MAIN, ALL3)) < 1e-9,
+          "and Main staff, who covers for nobody, carries exactly what they did before",
+          f"{alone['pm'][f'PSN-003|{JAN}']:.4f}, expected {share(F_MAIN, ALL3):.4f}")
     said = " | ".join(alone["msgs"])
-    check(MAIN in said and OTHER not in said,
-          "V-29 names the uncovered role and stays quiet about the covered one",
+    check(OTHER not in said,
+          "V-29 stays quiet about a role that IS covered",
           said[:120] or "(nothing reported)")
 
     nomap = load(pg, NOMAP)
-    check(abs(nomap["pm"][f"PSN-001|{JAN}"] - F_LEAD) < 1e-9,
-          "clear absorbed_by and nothing is absorbed — the mapping is DATA, not two "
-          "role names buried in the code",
-          f"{nomap['pm'][f'PSN-001|{JAN}']:.4f}, expected {F_LEAD:.2f}")
+    check(abs(nomap["pm"][f"PSN-001|{JAN}"] - share(F_LEAD, F_LEAD + F_MAIN)) < 1e-9
+          and abs(nomap["pm"][f"PSN-003|{JAN}"] - share(F_MAIN, F_LEAD + F_MAIN)) < 1e-9,
+          "CLEAR absorbed_by AND THE WORK SPREADS INSTEAD OF BEING DIRECTED — the mapping "
+          "is DATA, and what it decides now is WHO picks the absent role up, not whether "
+          "anybody does",
+          f"lead {nomap['pm'][f'PSN-001|{JAN}']:.4f} (was "
+          f"{share(F_LEAD + F_OTHER, ALL3):.4f} with the mapping), main "
+          f"{nomap['pm'][f'PSN-003|{JAN}']:.4f}")
     check(any(r == "information|V-29" for r in nomap["rules"]),
-          "and V-29 reports the work that is now counted nowhere",
+          "and V-29 reports the role nothing covers for",
           "; ".join(m[:80] for m in nomap["msgs"][:1]))
 
     arr = load(pg, ARRIVES)
-    check(abs(arr["pm"][f"PSN-001|{JUN}"] - (F_LEAD + F_OTHER)) < 1e-9
-          and abs(arr["pm"][f"PSN-001|{JUL}"] - F_LEAD) < 1e-9,
+    check(abs(arr["pm"][f"PSN-001|{JUN}"] - share(F_LEAD + F_OTHER, ALL3)) < 1e-9
+          and abs(arr["pm"][f"PSN-001|{JUL}"] - share(F_LEAD, ALL3)) < 1e-9,
           "the cover is PER MONTH: it ends the month somebody arrives, by itself",
           f"June {arr['pm'][f'PSN-001|{JUN}']:.4f}, July {arr['pm'][f'PSN-001|{JUL}']:.4f}")
 
     sh = load(pg, SHARED)
-    check(abs(sh["pm"][f"PSN-001|{JAN}"] - (F_LEAD + F_OTHER) / 2) < 1e-9,
+    check(abs(sh["pm"][f"PSN-001|{JAN}"] - share(F_LEAD + F_OTHER, ALL3) / 2) < 1e-9,
           "two leads share the absorbed factor like any other — the project's total "
           "does not move",
           f"{sh['pm'][f'PSN-001|{JAN}']:.4f} each, expected "
-          f"{(F_LEAD + F_OTHER) / 2:.4f}")
+          f"{share(F_LEAD + F_OTHER, ALL3) / 2:.4f}")
 
+    # ONE HOP. Data Analyst is covered by Other staff, who is absent too. The analyst's
+    # factor must stop there and never reach the lead, so the lead's effective factor is
+    # F_LEAD + F_OTHER and NOT F_LEAD + F_OTHER + F_ANALYST.
     ch = load(pg, CHAIN)
-    check(abs(ch["pm"][f"PSN-001|{JAN}"] - (F_LEAD + F_OTHER)) < 1e-9,
-          "ONE HOP: Main staff is covered by Other staff, who is absent too, so Main's "
-          "factor does not reach the lead",
-          f"{ch['pm'][f'PSN-001|{JAN}']:.4f}, expected {F_LEAD + F_OTHER:.2f} "
-          f"and not {F_LEAD + F_OTHER + F_MAIN:.2f}")
+    one_hop = share(F_LEAD + F_OTHER, F_LEAD + F_OTHER + F_MAIN)
+    two_hops = share(F_LEAD + F_OTHER + F_ANALYST,
+                     F_LEAD + F_OTHER + F_ANALYST + F_MAIN)
+    check(abs(ch["pm"][f"PSN-001|{JAN}"] - one_hop) < 1e-9,
+          "ONE HOP: an absent role covered by another ABSENT role does not reach the "
+          "lead — the work is not passed along a chain",
+          f"{ch['pm'][f'PSN-001|{JAN}']:.4f}, expected {one_hop:.4f} "
+          f"and not {two_hops:.4f}")
     check(any(r == "information|V-29" for r in ch["rules"]),
           "and V-29 names the role whose work reaches nobody",
           "; ".join(m[:90] for m in ch["msgs"][:1]))
 
     off = load(pg, OFF)
-    check(abs(off["pm"][f"PSN-001|{JAN}"] - F_LEAD) < 1e-9,
-          "absorb_unstaffed_role_factor = 0 restores the arithmetic of every earlier "
-          "version",
-          f"{off['pm'][f'PSN-001|{JAN}']:.4f}, expected {F_LEAD:.2f}")
+    check(abs(off["pm"][f"PSN-001|{JAN}"] - share(F_LEAD, F_LEAD + F_MAIN)) < 1e-9,
+          "absorb_unstaffed_role_factor = 0 turns the direction off — the absent role's "
+          "work still has to go somewhere, and spreads over the staffed roles instead",
+          f"{off['pm'][f'PSN-001|{JAN}']:.4f}, expected "
+          f"{share(F_LEAD, F_LEAD + F_MAIN):.4f}")
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()
 
 print("\ntools/prap_io.py — the same plans, worked out separately")
-for name, path, expect in (("both roles held", BOTH, F_LEAD),
-                           ("nobody in Other staff", ALONE, F_LEAD + F_OTHER),
-                           ("the mapping cleared", NOMAP, F_LEAD),
-                           ("one hop only", CHAIN, F_LEAD + F_OTHER),
-                           ("absorption off", OFF, F_LEAD)):
+_ALL3 = F_LEAD + F_OTHER + F_MAIN
+_two = F_LEAD + F_MAIN
+for name, path, expect in (
+        ("all three roles held", BOTH, STANDARD * F_LEAD / _ALL3),
+        ("nobody in Other staff", ALONE, STANDARD * (F_LEAD + F_OTHER) / _ALL3),
+        ("the mapping cleared", NOMAP, STANDARD * F_LEAD / _two),
+        ("one hop only", CHAIN, STANDARD * (F_LEAD + F_OTHER) / _ALL3),
+        ("absorption off", OFF, STANDARD * F_LEAD / _two)):
     M = prap_io.Model(prap_io.read_json(path))
     got = prap_io.calculate(M)["pers_month"].get(("PSN-001", JAN))
     check(got is not None and abs(got - expect) < 1e-9,

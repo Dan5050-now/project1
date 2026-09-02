@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.12"
+DOC_VERSION = "1.13"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.38.xlsx"
+PLAN = "PRAP_Development_Plan_v2.39.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -123,7 +123,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Governing document", f"{PLAN} - APPROVED BASELINE, Dan 2026-08-02"),
-    ("Schema version specified", "9"),
+    ("Schema version specified", "10"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -193,6 +193,16 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.13", "2026-09-02", "Claude Code", "Dan",
+         "R-31, REQ-CAL-19, SCHEMA 10: the standard monthly FTE reaches the calculation. "
+         "Sheet 05 replaces the formula: standard_fte x period weight x role_share x "
+         "person weight x month coverage, with role_share normalised over the roles "
+         "ACTUALLY STAFFED so the shares add to one. Sheet 03 renames "
+         "PeriodWeightStandard.weight to standard_fte and records that it is a magnitude "
+         "rather than a multiplier, and that ProjectPeriod.weight is now an adjustment "
+         "around 1.00. Sheet 08 records the four columns the results export gains so a "
+         "reader can see where a figure got its size. Written against plan v2.39.",
+         "Issued"],
         ["1.12", "2026-08-30", "Claude Code", "Dan",
          "R-30, REQ-CAL-18, SCHEMA 9: a monthly figure may be STATED instead of "
          "calculated. Sheet 03 gains the MonthlyEstimate sheet and its key - scope + "
@@ -542,7 +552,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "9", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "10", "Compared with the version this application expects (sheet 08)."],
     ["absorb_unstaffed_role_factor", "Integer", "1", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (sheet 05). 0 = an unstaffed role costs nothing, the arithmetic of every version before this one."],
     ["split_shared_role_fte", "Integer", "1", "1 = the role factor is divided between the people sharing a role in a month (sheet 05). 0 = each carries the whole factor, the arithmetic of every version before this one. A switch, not a threshold - so the Config reader must distinguish a value of 0 from an absent value, which is the defect this setting exposed."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
@@ -1069,7 +1079,7 @@ r = table(ws, r, ["Behaviour", "Reason"], exp, [76, 56], wrap_cols=(1, 2))
 ws, r = sheet(wb, "08_Versioning", "Versioning and compatibility")
 ver = [
     ["Application version", "Constant in the HTML, shown in the header and footer.", "REQ-VC-02"],
-    ["Expected schema version", "Constant in the HTML. Currently 9.", "REQ-VC-02"],
+    ["Expected schema version", "Constant in the HTML. Currently 10.", "REQ-VC-02"],
     ["Check on load", "Compare Config.schema_version with the expected value.", "REQ-VC-03"],
     ["Equal", "Proceed silently.", "REQ-VC-03"],
     ["File older", "Proceed; warn that columns added since may be missing.", "REQ-VC-03"],

@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.38"
+DOC_VERSION = "2.39"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -368,7 +368,42 @@ rows = [
      "thresholds confirmed ABSOLUTE with the under-allocation floor moved 0.80 to 0.60; repeated period "
      "names must be distinguishable on screen. REQ-DSH-09, REQ-DSH-10 and V-22 added.",
      "Superseded by v1.6"],
-    [f"{MARK_NEW}2.38", "2026-08-30", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.39", "2026-09-02", "Claude Code", "Pending",
+     "R-31, REQ-CAL-19, SCHEMA 10: THE STANDARD IS WHERE A FIGURE GETS ITS SIZE, and "
+     "until now it reached no figure at all. PeriodWeightStandard seeded a derived "
+     "period's weight and fed V-19, and that was the whole of it: every number the "
+     "application produced came from ProjectPeriod.weight times the role factors, which "
+     "is a relative SHAPE with no magnitude behind it. Reported by the reviewer. Two "
+     "things were wrong and the naming was most of the cause. The column was called "
+     "`weight`, which reads like something to multiply by, so the calculation multiplied "
+     "by the PROJECT's weight and never asked the standards sheet anything; and the "
+     "delivered data seeded the project weight FROM the standard, so the two columns held "
+     "the same number twice and reading both would have squared it. The column is now "
+     "`standard_fte` and holds the month's DEMAND in FTE - 4.02 against NewDrug CT Phase "
+     "3 Start-up means that period takes about four full-time people a month. The formula "
+     "becomes standard_fte x period weight x role_share x person weight x month coverage, "
+     "where role_share is this role's effective factor divided by the people holding it, "
+     "over the sum of the effective factors of the roles ACTUALLY STAFFED. Three "
+     "consequences, each a decision the reviewer took: the shares add to one, so a fully "
+     "committed project-month IS standard x period weight however many roles are on it; "
+     "an unstaffed role's work lands on the others rather than making the project cheaper, "
+     "which is REQ-CAL-16 arriving by construction (absorbed_by still decides WHERE it "
+     "lands); and person_weight scales that person's share, so a part-time commitment "
+     "leaves the project SHORT of its standard, which is the gap worth seeing. A missing "
+     "standard falls back to 1.00 and V-19 reports it - deliberately the old behaviour, so "
+     "an incomplete standards sheet degrades to figures its author recognises rather than "
+     "to zero. stdWeight now nulls the phase for a non-clinical type exactly as stdFactor "
+     "does; that cost nothing while the figure only seeded a period and is the difference "
+     "between a real answer and 1.00 now. The delivered defaults are re-authored "
+     "throughout: the standards carry FTE magnitudes, ProjectPeriod.weight becomes an "
+     "adjustment around 1.00, and \'Others\' projects gain the standards they never had. "
+     "A schema 9 file still opens - the column is renamed on the way in. NOTE FOR THE "
+     "REVIEWER: with real magnitudes the delivered 62-project / 20-person example is "
+     "resourced at 17% of its own standard, which is arithmetic rather than a defect - 62 "
+     "concurrent trials at these standards need about 59 people. The fixture keeps the "
+     "size that was requested; the staffing assumptions are a data decision.",
+     "Issued for review"],
+    ["2.38", "2026-08-30", "Claude Code", "Pending",
      "R-30, REQ-CAL-18, SCHEMA 9: A FIGURE CAN BE STATED INSTEAD OF CALCULATED. Until "
      "now every monthly FTE came from the assumptions, and on a project two years in "
      "that is often the worse of the two available answers - the manager knows what the "
@@ -1366,6 +1401,7 @@ reqs = [
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
     [f"{MARK_NEW}REQ-DSH-13", "Dashboard", "Every bounded scroll region draws its own scrollbars rather than relying on the browser's. A region deliberately capped on both axes is only honest if the reader can see there is more and reach it, and the browser's bar does not do that on a build that uses overlay scrollbars: it occupies no layout space and fades out when idle, so a table with eleven columns off to the right looks exactly like one with none. The drawn bar is present whenever there is anywhere to scroll to, can be dragged, and pages when its track is clicked. Native scrolling - wheel, shift-wheel, trackpad, keyboard - is untouched.", "Must", "R-23", "4"],
+    [f"{MARK_NEW}REQ-CAL-19", "Calculation", "A PROJECT-MONTH'S SIZE COMES FROM PeriodWeightStandard.standard_fte - the DEMAND in FTE for a project of this type, clinical phase and work scope in this period. The project's own ProjectPeriod.weight ADJUSTS that standard for the particular study (1.00 = an ordinary project of its kind); it no longer supplies the magnitude, which is what it was doing when the standards sheet went unread. The role factors then divide the demand between the roles ACTUALLY STAFFED that month: role_share = (effective factor / people holding that role) / (sum of the effective factors of the staffed roles). FTE = standard_fte x period weight x role_share x person weight x month coverage. The shares add to one, so a fully committed project-month equals standard_fte x period weight; an unstaffed role's work lands on the others rather than lowering the project; and person_weight scales that person's share, so a partial commitment leaves the project SHORT of its standard - that gap is what the plan does not resource, and it is meant to be visible. A missing standard falls back to 1.00 and V-19 reports it.", "Must", "R-31", "4"],
     [f"{MARK_NEW}REQ-CAL-18", "Calculation", "A PROJECT, OR ONE ASSIGNMENT, MAY HAVE ITS MONTHLY FTE STATED RATHER THAN CALCULATED. estimation_type on Project and on Assignment selects which; MonthlyEstimate carries the stated figures. TWO LEVELS, applied in that order: an ASSIGNMENT figure IS that person's contribution to that project and replaces the multiplication outright; a PROJECT figure is the whole month, and every person on it that month is SCALED so they still add up to it - because a project total that did not equal the sum of its people would put the two utilisation charts in disagreement and cost the results export its one guarantee. The scaling factor is recorded on every line, so a person whose figure moved with nothing of their own changing can find out why. MANUAL IS ALL OR NOTHING for the thing it is set on: switching copies every month across from the figures currently on screen, so nothing jumps, and switching back discards them all. The copy is written to TWO DECIMAL PLACES: a stated figure lands in a cell somebody reads and edits, and two places is the finest edit that means anything in the unit people think in - at 160 hours to the FTE, 0.01 is 1.6 hours. A month can therefore move by up to 0.005 FTE, about 48 minutes, at the moment of switching. Per-month marking was considered and rejected - once a figure has been edited, months still calculated would keep moving under a signed-off plan whenever an assumption changed, and 'which months are mine' has no useful answer. Every change of calculation way is CONFIRMED, in both directions. A project figure in a month nobody is assigned to cannot be shared out and is NOT applied (V-32); a manual thing with a month carrying no figure counts that month as 0.00 and V-31 says so.", "Must", "R-30", "4"],
     [f"{MARK_NEW}REQ-CAL-17", "Calculation", "A PROJECT'S WINDOW, wherever the calculation needs one, is the span of its ProjectPeriod rows: the earliest period_start to the latest period_end. Milestones are reference dates - the period derivation reads them, and several of them mark moments inside the run rather than its edges - so they describe the periods, they do not bound the project. Taking the window from them stretched a project over months belonging to no period, and a month in no period is weighted 1.00, so the project drew resource its own plan did not cover. A project with NO periods keeps its own typed dates, because there is nothing to take a window from and V-12 already reports that. This is what a blank assign_start_date or assign_end_date means (REQ-CAL-15). Save writes the same window back into Project.start_date and Project.end_date, with ONE difference: it reads the periods the user TYPED, and falls back to the milestone span where there are none. A trial whose periods are derived has them opened at its own start_date, so taking the saved window from those would read back the very dates being checked and a wrong window could never correct itself; there the milestones are the only independent statement of when the project runs. Typed periods beat them wherever both exist.", "Must", "R-20", "4"],
     [f"{MARK_NEW}REQ-CAL-16", "Calculation", "Where NOBODY holds a role on a project, its role factor is added to the factor of the role named in RoleFactor.absorbed_by - because the work still has to be done by whoever is there. A trial run without a Clinical Data Associator still has the data to handle, and it lands on the lead data manager, who is then under more pressure than the factor for their own role alone describes; costed without it, the project looks cheaper than it is. Counted PER MONTH, so cover ends by itself when somebody arrives. ONE HOP: if the absorbing role is itself unstaffed the work is not passed further along - V-29 reports that rather than piling three absent roles onto whoever is left. Which role covers for which is DATA, on RoleFactor.absorbed_by, never in the program (REQ-CAL-06). Kept as the setting absorb_unstaffed_role_factor.", "Must", "R-17", "4"],
@@ -1517,7 +1553,7 @@ pp = [
     [f"{MARK_CHG}period_seq", "Integer", "Yes", "Orders the periods along the timeline. Unique within a project. No longer part of the key - it carries order, not identity (R-11).", "REQ-CAL-11"],
     [f"{MARK_CHG}period_start", "Date", "Yes", "Inclusive. For Clinical Trial, computed from milestones (sheet 05) and then editable. For Others, entered directly.", "REQ-CAL-09"],
     [f"{MARK_CHG}period_end", "Date", "Yes", "Inclusive. Periods for one project must not overlap and must leave no gap (REQ-CAL-10).", "REQ-CAL-09"],
-    [f"{MARK_CHG}weight", "Decimal", "Yes", "Effort multiplier for this period. For a clinical trial, seeded from PeriodWeightStandard by clinical phase and then editable. For 'Others', entered by hand (Q-28). Values are data (Q-17), not fixed in this plan.", "REQ-PRJ-06"],
+    [f"{MARK_CHG}weight", "Decimal", "Yes", "THIS PROJECT'S OWN ADJUSTMENT to the standard for its type, phase and scope (REQ-CAL-19). 1.00 means an ordinary project of its kind; 1.20 means this one takes a fifth more. SCHEMA 10 changed what it means: until then it carried the magnitude itself and the standards sheet was read by nothing, so the delivered data held the same number in both columns. Values are data (Q-17), not fixed in this plan.", "REQ-PRJ-06, R-31"],
     [f"{MARK_NEW}note_1", "Text", "No", "Free extension column, e.g. why a derived date was overridden.", "REQ-PRJ-07"],
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
@@ -1535,8 +1571,8 @@ pws = [
     [f"{MARK_CHG}project_type", "List", "Yes", "A clinical trial type. Part of the key: a biosimilar trial at a given phase is not the same workload as a new-drug trial at that phase. 'Others' take manual weights (Q-28).", "R-05"],
     [f"{MARK_CHG}clinical_phase", "List", "Yes", "The phase the standard applies to.", "Q-26"],
     [f"{MARK_NEW}work_scope_type", "List", "No", "The work scope this standard applies to. SCHEMA 6. EMPTY means the row applies to EVERY scope - see the note below, which is the important part of this change.", "R-12"],
+    [f"{MARK_CHG}standard_fte", "Decimal", "Yes", "SCHEMA 10, renamed from `weight`. THE STANDARD MONTHLY FTE for this type, phase, scope and period - a MAGNITUDE, not a multiplier: 4.02 means the period takes about four full-time people a month. This is where every figure gets its size (REQ-CAL-19). It was called `weight` until schema 10 and was read by nothing except the period seeder, which is most of why: a weight reads like something to multiply by. A schema 9 file is read - the column is renamed on the way in.", "R-31"],
     ["period_name", "List", "Yes", "A period from that type's set.", "Q-04, Q-18"],
-    [f"{MARK_CHG}weight", "Decimal", "Yes", "Default multiplier. You fill these in the source workbook (Q-17); the plan fixes only where they live.", "Q-01"],
     [f"{MARK_NEW}note_1", "Text", "No", "Free extension column, e.g. the basis for the weight.", "Q-01"],
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "Basis"],
@@ -1646,7 +1682,7 @@ r = note(ws, r, "Read only where the owning Project or Assignment carries estima
 
 r = section(ws, r, "Sheet: Config")
 cfg = [
-    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16), 8 at v2.31 (R-17), 9 at v2.38 (R-30).", "9", "REQ-VC-02"],
+    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16), 8 at v2.31 (R-17), 9 at v2.38 (R-30), 10 at v2.39 (R-31).", "10", "REQ-VC-02"],
     [f"{MARK_NEW}absorb_unstaffed_role_factor", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (REQ-CAL-16). 0 = an unstaffed role simply costs nothing, which is how every version before v2.31 behaved. A setting for the same reason the last one is: it moves every figure on a project that is not fully staffed.", "1", "REQ-CAL-16"],
     [f"{MARK_NEW}split_shared_role_fte", "1 = where several people hold the same role on one project in a month, the role factor is divided between them (REQ-CAL-14). 0 = each carries the whole factor, which is how every version before v2.28 behaved. A setting rather than a constant because it changes every figure a shared role ever produced, and somebody comparing this month's report with last year's has to be able to see where the difference came from.", "1", "REQ-CAL-14"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],

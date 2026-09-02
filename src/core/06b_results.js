@@ -68,7 +68,12 @@ function buildResults(M, C, scope){
   // ---- Detail: one row per assignment per month, with its whole multiplication ----
   const detail = [["month", "month_iso", "project_id", "project_name", "project_type",
                    "clinical_phase", "work_scope_type", "period_name",
-                   "period_weight", "period_weight_from",
+                   /* REQ-CAL-19: where the figure gets its SIZE. standard_fte is
+                      the month's demand for a project of this type, phase and
+                      scope; period_weight adjusts it for this study; role_share is
+                      this person's slice of it, over the roles actually staffed. */
+                   "standard_fte", "period_weight", "period_weight_from",
+                   "role_share", "roles_staffed",
                    "person_id", "person_name", "department", "role_name",
                    "role_factor", "role_factor_effective", "absorbed_from",
                    "sharers", "person_weight", "person_weight_from",
@@ -88,7 +93,8 @@ function buildResults(M, C, scope){
     detail.push([
       label(L.month), iso(L.month), L.project_id, p.project_name ?? null,
       p.project_type ?? null, p.clinical_phase ?? null, p.work_scope_type ?? null,
-      L.period_name, r4(L.period_weight), L.period_weight_source,
+      L.period_name, r4(L.standard_fte ?? 1), r4(L.period_weight), L.period_weight_source,
+      r4(L.role_share ?? 0), L.roles_staffed ?? null,
       L.person_id, who.person_name ?? null, who.department ?? null, L.role_name,
       L.role_factor === undefined ? null : r4(L.role_factor),
       r4(L.role_factor_effective),
@@ -122,8 +128,15 @@ function buildResults(M, C, scope){
     e.fte += fte;
     e.others.add(other);
   };
+  /* By NAME, not by position. These were hard-coded indices into the header above,
+     which is fine until the header grows - and REQ-CAL-19 grew it by four columns in the
+     middle, silently turning `fte` into `person_weight`. A totals sheet built from the
+     wrong column is the one defect this file exists to make impossible, so the column
+     numbers are read from the header rather than counted by hand. */
+  const col = Object.fromEntries(detail[0].map((h, i) => [h, i]));
   for (const row of detail.slice(1)){
-    const k = row[1], pid = row[2], sid = row[10], fte = row[21];
+    const k = row[col.month_iso], pid = row[col.project_id];
+    const sid = row[col.person_id], fte = row[col.fte];
     bump(pAcc, k + "|" + pid, fte, sid);
     bump(sAcc, k + "|" + sid, fte, pid);
   }
@@ -205,7 +218,7 @@ function buildResults(M, C, scope){
   // Summed from the same rounded rows, so the Summary total is exactly the total of
   // the Detail column and exactly the total of each monthly sheet.
   let total = 0;
-  for (const row of detail.slice(1)) total += row[21];
+  for (const row of detail.slice(1)) total += row[col.fte];
   const summary = [["measure", "value", "unit", "note"],
     ["Months in view", months.length, "months",
      `${label(months[0])} to ${label(months[months.length - 1])}`],
@@ -245,7 +258,10 @@ function buildResults(M, C, scope){
      + "it round-trips."],
     [],
     ["HOW EVERY FIGURE WAS MADE"],
-    ["FTE  =  period weight  ×  (role factor ÷ sharers)  ×  person weight  ×  month coverage"],
+    ["FTE  =  standard_fte  ×  period weight  ×  role_share  ×  person weight  ×  month coverage"],
+    ["standard_fte", "the month's DEMAND for a project of this type, phase and work scope in this period, from PeriodWeightStandard. A magnitude in FTE: 4.02 means the period takes about four full-time people a month."],
+    ["period weight", "this project's own adjustment to that standard, from ProjectPeriod. 1.00 means an ordinary project of its kind."],
+    ["role_share", "this person's slice of the demand: their role's factor, divided by the number of people holding that role, over the sum of the factors of the roles ACTUALLY STAFFED that month (roles_staffed says how many). The shares add to one, so a fully committed project month equals standard_fte x period weight - and an unstaffed role's work lands on the others rather than disappearing."],
     ["Worked out once per assignment per month. The 'Detail' sheet is one row per "
      + "assignment per month with all four numbers in it; ProjectMonth and PersonMonth "
      + "are those rows summed by project and by person. Nothing else enters the "

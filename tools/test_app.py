@@ -23,8 +23,8 @@ APP = (ROOT / "app" / "PRAP.html").as_uri()
 # Both dummy sizes are checked. The small one is not a lighter version of the same
 # test - it has a different period mix, a different overlap profile and a single-person
 # role pool, so it exercises paths the large set happens not to reach.
-FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.14.xlsx",
-            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.6.xlsx"]
+FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.15.xlsx",
+            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.7.xlsx"]
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 sys.path.insert(0, str(ROOT / "tools"))
@@ -42,6 +42,9 @@ def reference_person_months(path):
     # scope - see lookup() in verify_source_workbook.py, which this reuses.
     RF = {(r["project_type"], r["clinical_phase"], scope_of(r), r["period_name"],
            r["role_name"]): r["role_factor"] for r in rows(wb["RoleFactor"])}
+    # REQ-CAL-19: the month's demand in FTE, keyed exactly as the factors are.
+    PWS = {(r["project_type"], r["clinical_phase"], scope_of(r), r["period_name"]):
+           r["standard_fte"] for r in rows(wb["PeriodWeightStandard"])}
     # REQ-CAL-16, worked out here independently: which absent roles land on this one.
     ABSORB = defaultdict(list)
     for r in rows(wb["RoleFactor"]):
@@ -77,6 +80,24 @@ def reference_person_months(path):
             if coverage(y, m, s, e) > 0:
                 sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
 
+    # Which roles are staffed on a project in a month - the denominator's membership.
+    roles_on = defaultdict(set)
+    for (pid_, role_, y_, m_) in sharers:
+        roles_on[(pid_, y_, m_)].add(role_)
+
+    def eff(pr, ph, pn, role, y, m):
+        """One role's effective factor, absorption included - worked out here rather
+        than borrowed, which is the whole point of a reference implementation."""
+        rf = lookup(RF, (pr["project_type"], ph), scope_of(pr), (pn, role))
+        rf = 1.0 if rf is None else rf
+        for absent in (lookup(ABSORB, (pr["project_type"], ph), scope_of(pr),
+                              (pn, role)) or []):
+            if sharers[(pr["project_id"], absent, y, m)]:
+                continue
+            extra = lookup(RF, (pr["project_type"], ph), scope_of(pr), (pn, absent))
+            rf += 0.0 if extra is None else extra
+        return rf
+
     lines = []
     for a in ASG:
         pr = P[a["project_id"]]
@@ -87,20 +108,21 @@ def reference_person_months(path):
             if cov <= 0:
                 continue
             sg = seg(a["project_id"], y, m)
-            rf = lookup(RF, (pr["project_type"], ph), scope_of(pr),
-                        (sg["period_name"] if sg else None, a["role_name"]))
-            rf = 1.0 if rf is None else rf
             pn = sg["period_name"] if sg else None
-            for absent in (lookup(ABSORB, (pr["project_type"], ph), scope_of(pr),
-                                  (pn, a["role_name"])) or []):
-                if sharers[(a["project_id"], absent, y, m)]:
-                    continue
-                extra = lookup(RF, (pr["project_type"], ph), scope_of(pr), (pn, absent))
-                rf += 0.0 if extra is None else extra
+            rf = eff(pr, ph, pn, a["role_name"], y, m)
             share = len(sharers[(a["project_id"], a["role_name"], y, m)]) or 1
+            # REQ-CAL-19. PeriodWeightStandard is the month's DEMAND in FTE; the
+            # project's own period weight adjusts it; the role factors divide it
+            # between the roles actually staffed, so the shares come to one.
+            denom = sum(eff(pr, ph, pn, r_, y, m)
+                        for r_ in roles_on[(a["project_id"], y, m)])
+            std = lookup(PWS, (pr["project_type"], pr["clinical_phase"]),
+                         scope_of(pr), (pn,)) if pn is not None else None
+            std = 1.0 if std is None else float(std)
+            frac = (rf / share) / denom if denom > 0 else 0.0
             lines.append({"aid": a["assignment_id"], "pid": a["project_id"],
                           "sid": a["person_id"], "y": y, "m": m,
-                          "fte": (sg["weight"] if sg else 1.0) * (rf / share)
+                          "fte": std * (sg["weight"] if sg else 1.0) * frac
                                  * weight(a, y, m) * cov})
 
     # REQ-CAL-18. A manual assignment takes the figure it was given - and 0.00 where it

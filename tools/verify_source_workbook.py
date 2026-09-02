@@ -127,7 +127,7 @@ def main(path):
             RF_ABSORB[(r["project_type"], r["clinical_phase"], scope_of(r),
                        r["period_name"], r["absorbed_by"])].append(r["role_name"])
     PWS = {(r["project_type"], r["clinical_phase"], scope_of(r), r["period_name"]):
-           r["weight"] for r in rows(wb["PeriodWeightStandard"])}
+           r["standard_fte"] for r in rows(wb["PeriodWeightStandard"])}
     PSN = {r["person_id"]: r for r in rows(wb["Person"])}
     ASG = list(rows(wb["Assignment"]))
     PPW = defaultdict(list)
@@ -303,6 +303,17 @@ def main(path):
             if coverage(y, m, s, e) > 0:
                 sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
 
+    roles_on = defaultdict(set)
+    for (pid_, role_, y_, m_) in sharers:
+        roles_on[(pid_, y_, m_)].add(role_)
+
+    def std_monthly(proj, pn):
+        """REQ-CAL-19: the month's demand in FTE, from PeriodWeightStandard."""
+        if pn is None:
+            return 1.0
+        v = lookup(PWS, (proj["project_type"], proj["clinical_phase"]), scope_of(proj), (pn,))
+        return 1.0 if v is None else float(v)
+
     def effective_factor(proj, a, y, m):
         """The role's factor plus the factor of any role that names it as cover and
         that nobody holds this month (REQ-CAL-16). One hop, deliberately."""
@@ -346,9 +357,14 @@ def main(path):
                 g[1] += 1
             share = (len(sharers.get((a["project_id"], a["role_name"], y, m), ())) or 1) \
                 if split else 1
-            v = (period_weight(a["project_id"], y, m)
-                 * (effective_factor(proj, a, y, m) / share)
-                 * person_weight(a, y, m) * cov)
+            # REQ-CAL-19: the standard is the demand, the project's period weight
+            # adjusts it, and the role factors divide it between the roles STAFFED.
+            denom = 0.0
+            for r_ in roles_on.get((a["project_id"], y, m), ()):
+                denom += effective_factor(proj, {**a, "role_name": r_}, y, m)
+            frac = (effective_factor(proj, a, y, m) / share) / denom if denom > 0 else 0.0
+            v = (std_monthly(proj, pn) * period_weight(a["project_id"], y, m)
+                 * frac * person_weight(a, y, m) * cov)
             lines.append({"aid": a["assignment_id"], "pid": a["project_id"],
                           "sid": a["person_id"], "y": y, "m": m, "fte": v})
             horizon.add((y, m))

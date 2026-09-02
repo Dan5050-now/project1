@@ -34,7 +34,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PKG = ROOT / "dist" / "PM_APP_py"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.14.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.15.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 fails = []
@@ -331,16 +331,18 @@ def main():
             det = list(cwb["Detail"].iter_rows(values_only=True))
             hdr = det[0]
             # Against automatic_fte rather than fte: a row whose figure was STATED
-            # (REQ-CAL-18) is deliberately not the product of its four terms - that is
-            # what manual means - and every row carries what the assumptions alone would
-            # have produced, so the multiplication is still checkable on all of them.
-            fte, pw, rf, sh, ppw, cov = (hdr.index(c) for c in
-                ("automatic_fte", "period_weight", "role_factor_effective", "sharers",
+            # (REQ-CAL-18) is deliberately not the product of its terms - that is what
+            # manual means - and every row carries what the assumptions alone would have
+            # produced, so the multiplication is still checkable on all of them.
+            # REQ-CAL-19 added standard_fte and role_share: the standard is the month's
+            # demand, the period weight adjusts it, role_share is this person's slice.
+            fte, std, pw, share, ppw, cov = (hdr.index(c) for c in
+                ("automatic_fte", "standard_fte", "period_weight", "role_share",
                  "person_weight", "month_coverage"))
             bad = [r for r in det[1:]
-                   if abs(r[pw] * (r[rf] / r[sh]) * r[ppw] * r[cov] - r[fte]) > 5e-4]
+                   if abs(r[std] * r[pw] * r[share] * r[ppw] * r[cov] - r[fte]) > 5e-4]
             check(not bad,
-                  "every row of it reconciles to its own four numbers",
+                  "every row of it reconciles to its own five numbers",
                   f"{len(det) - 1:,} rows checked")
 
             check(not errors, "no script error anywhere in the run",

@@ -44,7 +44,7 @@ NUM_COLS = {
     "Project": {"planned_member_count", "total_period_months"},
     "Milestone": {"milestone_seq"},
     "ProjectPeriod": {"period_seq", "weight"},
-    "PeriodWeightStandard": {"weight"},
+    "PeriodWeightStandard": {"standard_fte"},
     "RoleFactor": {"role_factor"},
     "Person": {"capacity_fte"},
     "Assignment": {"person_weight"},
@@ -79,7 +79,9 @@ RETIRED_TYPES = {"Biosimilar CT": "Biosimilar CT (Healthy) or Biosimilar CT (Pat
 # Columns the schema RENAMED, and what they are now. A rename is the one schema change
 # that loses data in silence - the old column is read into a key nothing looks at, the
 # new one comes back empty, and every rule still passes.
-RENAMED_COLS = {"Project": {"outsourcing_type": "outsourcing_scope_det"}}   # schema 6 -> 7
+RENAMED_COLS = {"Project": {"outsourcing_type": "outsourcing_scope_det"},   # schema 6 -> 7
+                # schema 9 -> 10: it always held a monthly FTE, not a multiplier.
+                "PeriodWeightStandard": {"weight": "standard_fte"}}
 
 ANY_SCOPE = ""
 
@@ -90,9 +92,11 @@ def scope_of(row):
 
 
 def std_weight(M, proj, period_name):
-    """The standard period weight: this project's own scope first, then the any-scope
-    row. One function, so the calculation and V-19 cannot disagree."""
-    k = (proj.get("project_type"), proj.get("clinical_phase"))
+    """The standard MONTHLY FTE: this project's own scope first, then the any-scope row.
+    One function, so the calculation and V-19 cannot disagree. The phase is nulled for a
+    non-clinical type exactly as std_factor does it - see stdWeight() in 05_model.js."""
+    ph = proj.get("clinical_phase") if proj.get("project_type") in CLINICAL_TYPES else None
+    k = (proj.get("project_type"), ph)
     v = M.pws.get((*k, scope_of(proj), period_name))
     return M.pws.get((*k, ANY_SCOPE, period_name)) if v is None else v
 
@@ -518,7 +522,7 @@ class Model:
         # Schema 6: both standards tables are keyed on the work scope as well, and a
         # row with an EMPTY scope applies to every scope.
         self.pws = {(r.get("project_type"), r.get("clinical_phase"), scope_of(r),
-                     r.get("period_name")): _as_num(r.get("weight"))
+                     r.get("period_name")): _as_num(r.get("standard_fte"))
                     for r in sheets["PeriodWeightStandard"]}
         self.rf, self.rf_roles = {}, defaultdict(set)
         # Indexed by the ABSORBING role, because that is the question the calculation
@@ -904,6 +908,13 @@ def calculate(M):
                 sharers[(a["project_id"], a.get("role_name"),
                          month_key(y, m - 1))].add(a["person_id"])
 
+    # Which roles are staffed on a project in a month, so the demand can be divided
+    # between them (REQ-CAL-19). Built from the same pass as the divisor and the
+    # absorption test: three answers about one month, one picture of that month.
+    roles_on = defaultdict(set)
+    for (pid_, role_, k_) in sharers:
+        roles_on[(pid_, k_)].add(role_)
+
     def effective_factor(proj, period_name, role_name, k):
         """This role's factor plus the factor of any role that names it as cover and
         that nobody is holding this month. One hop: if the absorbing role is itself
@@ -921,6 +932,25 @@ def calculate(M):
     # V-23, recorded as it happens: the composition the lookup used, and only where the
     # lookup fed a person-month. A month in no period at all is V-12's finding, not this
     # one - there is no period name for a factor to be missing FOR.
+    _std_cache = {}
+
+    def std_monthly(proj, period_name):
+        """The month's demand in FTE, before this project's own adjustment.
+
+        PeriodWeightStandard holds it - see stdMonthly() in core/06_calculate.js for why
+        it went unused until schema 10. Missing, it falls back to 1.00 and V-19 reports
+        it, which is deliberately the OLD behaviour: the project month becomes its own
+        period weight, so an incomplete standards sheet degrades to figures its author
+        will recognise rather than to zero.
+        """
+        if period_name is None:
+            return 1.0
+        key = (proj.get("project_id"), period_name)
+        if key not in _std_cache:
+            v = std_weight(M, proj, period_name)
+            _std_cache[key] = 1.0 if v is None else float(v)
+        return _std_cache[key]
+
     gaps = {}
     lines = []
 
@@ -947,11 +977,18 @@ def calculate(M):
                                           "months": 0})
                 g["projects"].add(a["project_id"])
                 g["months"] += 1
-            rf = effective_factor(proj, seg.get("period_name") if seg else None,
-                                  a.get("role_name"), k)
+            pn = seg.get("period_name") if seg else None
+            rf = effective_factor(proj, pn, a.get("role_name"), k)
             share = (len(sharers.get((a["project_id"], a.get("role_name"), k), ())) or 1) \
                 if M.SPLIT else 1
-            v = pw * (rf / share) * person_weight(a, y, m) * cov
+            # REQ-CAL-19. The STANDARD is the month's demand in FTE; the project's own
+            # period weight adjusts it for this study; the role factors then divide that
+            # demand between the roles ACTUALLY STAFFED, so the shares add to one.
+            denom = sum(effective_factor(proj, pn, r_, k)
+                        for r_ in roles_on.get((a["project_id"], k), ()))
+            std_f = std_monthly(proj, pn)
+            frac = (rf / share) / denom if denom > 0 else 0.0
+            v = std_f * pw * frac * person_weight(a, y, m) * cov
             lo = k if lo is None else min(lo, k)
             hi = k if hi is None else max(hi, k)
             lines.append({"month": k, "project_id": a["project_id"],

@@ -29,7 +29,7 @@ const SHEET_COLS = {
   Project: {date:["start_date","end_date"], num:["planned_member_count","total_period_months"]},
   Milestone: {date:["milestone_date"], num:["milestone_seq"]},
   ProjectPeriod: {date:["period_start","period_end"], num:["period_seq","weight"]},
-  PeriodWeightStandard: {date:[], num:["weight"]},
+  PeriodWeightStandard: {date:[], num:["standard_fte"]},
   RoleFactor: {date:[], num:["role_factor"]},
   Person: {date:["employment_start","employment_end"], num:["capacity_fte"]},
   Assignment: {date:["assign_start_date","assign_end_date"], num:["person_weight"]},
@@ -52,7 +52,7 @@ const SHEET_HEADERS = {
   Milestone:["project_id","project_name","milestone_name","milestone_date","milestone_seq","note_1"],
   ProjectPeriod:["project_id","period_name","period_seq","period_start","period_end","weight","note_1"],
   PeriodWeightStandard:["project_type","clinical_phase","work_scope_type","period_name",
-    "weight","note_1"],
+    "standard_fte","note_1"],
   RoleFactor:["project_type","clinical_phase","work_scope_type","period_name","role_name",
     "role_factor","absorbed_by","role_note"],
   Person:["person_id","person_name","department","primary_role","capacity_fte",
@@ -92,6 +92,12 @@ const RETIRED_TYPES = {
    it is refusing to be the reason somebody loses a column they filled in last week. */
 const RENAMED_COLS = {
   Project: {outsourcing_type: "outsourcing_scope_det"},   // schema 6 -> 7
+  /* schema 9 -> 10. The column always held a monthly FTE, and calling it a "weight"
+     is most of why it went unused for so long: a weight reads like something to
+     multiply by, so the calculation multiplied by the PROJECT's weight and never
+     asked this sheet anything. Renaming it is the smaller half of REQ-CAL-19; the
+     values move across on read, so a schema 9 file keeps its figures. */
+  PeriodWeightStandard: {weight: "standard_fte"},
 };
 const CLINICAL_PERIODS = ["Before-Start-up","Start-up","Conduct (interim)","Close-out (interim)",
                           "Conduct (final)","Close-out (final)","After Close-out (final)"];
@@ -130,6 +136,7 @@ const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignmen
    open a specification to find out what a column is for. */
 const COLUMN_HELP = {
   estimation_type:"'automatic' (the default) or 'manual'. AUTOMATIC means the figures come from the assumptions, as everything always has. MANUAL means somebody has stated the monthly FTE themselves, on the MonthlyEstimate sheet, and those figures are used instead. Switching to manual COPIES the calculated figures across as a starting point so nothing jumps; switching back to automatic DISCARDS them. The application asks before doing either.",
+  standard_fte:"The STANDARD MONTHLY FTE for this project type, phase, scope and period — a MAGNITUDE, not a multiplier. 4.02 means a project of this kind takes about four full-time people a month through this period. It is where a figure gets its SIZE (REQ-CAL-19): the project's own ProjectPeriod.weight then adjusts it for that particular study, and the role factors divide it between the roles actually staffed. Called 'weight' until schema 10, which is most of why it went unused — a weight reads like something to multiply by.",
   scope:"'project' or 'assignment' — which of the two a manual figure is for. A project figure sets the project's whole month and the people on it are scaled to match; an assignment figure sets one person's contribution to one project.",
   ref_id:"The project_id or the assignment_id this manual figure belongs to, according to `scope`.",
   month:"The month this figure is for, as YYYY-MM.",

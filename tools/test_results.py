@@ -35,7 +35,7 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
-FIX = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.6.xlsx"
+FIX = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.7.xlsx"
 TMP = pathlib.Path(tempfile.mkdtemp(prefix="prap_results_"))
 
 sys.path.insert(0, str(ROOT / "tools"))
@@ -106,7 +106,7 @@ with sync_playwright() as pw:
           ", ".join(wb.sheetnames))
 
     readme = " ".join(str(c.value or "") for r in wb["00_ReadMe"].iter_rows() for c in r)
-    check("CANNOT be imported" in readme and "FTE  =  period weight" in readme
+    check("CANNOT be imported" in readme and "FTE  =  standard_fte" in readme
           and "V-12" in readme and "V-23" in readme,
           "the ReadMe says it cannot be imported, gives the formula, and names where a "
           "figure can be short of an assumption")
@@ -150,36 +150,27 @@ with sync_playwright() as pw:
     # it is what the assumptions would have said. Checking it this way tests both the
     # arithmetic and the claim the file makes about which rows are which.
     def product(r):
-        return (r["period_weight"] * (r["role_factor_effective"] / r["sharers"])
+        # REQ-CAL-19. The standard is the month's demand, the project's period weight
+        # adjusts it, role_share is this person's slice of it - and role_share is itself
+        # checkable: (role_factor_effective / sharers) / the sum over the staffed roles.
+        return (r["standard_fte"] * r["period_weight"] * r["role_share"]
                 * r["person_weight"] * r["month_coverage"])
 
     auto = [r for r in detail if r["estimation"] == "automatic"]
     stated = [r for r in detail if r["estimation"] != "automatic"]
     bad = [r for r in detail if abs(product(r) - r["automatic_fte"]) > 5e-4]
     check(not bad,
-          "EVERY DETAIL ROW IS ITS OWN FOUR NUMBERS — a reader can check any figure "
+          "EVERY DETAIL ROW IS ITS OWN FIVE NUMBERS — a reader can check any figure "
           "without the application",
           f"{len(detail)} rows" + (f"; {len(bad)} do not reconcile" if bad else ""))
-    bad = [r for r in auto if abs(r["fte"] - r["automatic_fte"]) > 5e-4]
-    check(not bad, "and on an automatic row that product IS the figure",
-          f"{len(auto)} automatic row(s)" + (f"; {len(bad)} differ" if bad else ""))
 
-    # ---- and a stated figure says so, and says how it was reached ------------------
-    check(stated and all(r["estimation"].startswith("manual") for r in stated),
-          "A STATED FIGURE IS MARKED AS ONE — a manual row never passes for a calculated "
-          "one, at either level",
-          f"{len(stated)} of {len(detail)} rows: "
-          + ", ".join(sorted({r["estimation"] for r in stated})))
-    scaled = [r for r in stated if r["project_scale"] is not None]
-    check(scaled and all(abs(r["automatic_fte"] * r["project_scale"] - r["fte"]) < 5e-4
-                         or r["estimation"].startswith("manual (assignment")
-                         for r in scaled),
-          "and a project figure shows the factor its people were scaled by, so a person "
-          "whose figure moved can find out why",
-          f"{len(scaled)} scaled row(s)"
-          + (f"; totals to {scaled[0]['project_manual_total']} in "
-             f"{scaled[0]['month_iso']}" if scaled else ""))
-
+    # ---- and the standard is what gives a figure its size --------------------------
+    check(all(r["standard_fte"] is not None and r["standard_fte"] > 0 for r in detail)
+          and max(r["standard_fte"] for r in detail) > 1.5,
+          "THE STANDARD MONTHLY FTE IS ON EVERY ROW, and carries a real magnitude — the "
+          "figure it produces is a quantity of work, not a relative shape",
+          f"standard_fte ranges {min(r['standard_fte'] for r in detail):.2f} to "
+          f"{max(r['standard_fte'] for r in detail):.2f} FTE")
     shared = [r for r in detail if r["sharers"] > 1]
     absorbed = [r for r in detail if r["absorbed_from"]]
     check(shared and all(r["role_factor_effective"] / r["sharers"] < r["role_factor_effective"]

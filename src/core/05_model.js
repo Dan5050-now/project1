@@ -24,9 +24,17 @@
 const ANY_SCOPE = "";
 const scopeOf = row => (row && row.work_scope_type) ? String(row.work_scope_type) : ANY_SCOPE;
 
-/** The standard period weight for this project's own scope, or the any-scope row. */
+/** The standard MONTHLY FTE for this project's own scope, or the any-scope row.
+ *
+ *  The phase is nulled for a non-clinical type, exactly as stdFactor does it. An
+ *  'Others' project carries no phase and the table stores its rows under a null one, so
+ *  a stray phase typed onto such a project used to miss the lookup silently. That cost
+ *  nothing while this figure only seeded a derived period; since REQ-CAL-19 it is the
+ *  magnitude of every figure the project produces, so a missed lookup is the difference
+ *  between a real answer and 1.00. */
 function stdWeight(M, proj, periodName){
-  const k = [proj.project_type, proj.clinical_phase];
+  const ph = CLINICAL_TYPES.has(proj.project_type) ? proj.clinical_phase : null;
+  const k = [proj.project_type, ph];
   return M.pws[[...k, scopeOf(proj), periodName]]
       ?? M.pws[[...k, ANY_SCOPE, periodName]];
 }
@@ -248,7 +256,7 @@ function buildModel(sheets){
      The rule lives in stdWeight/stdFactor, once, so the calculation and the two
      validations cannot come to different conclusions about the same project. */
   for (const r of raw.PeriodWeightStandard)
-    M.pws[[r.project_type, r.clinical_phase, scopeOf(r), r.period_name]] = num(r.weight);
+    M.pws[[r.project_type, r.clinical_phase, scopeOf(r), r.period_name]] = num(r.standard_fte);
   for (const r of raw.RoleFactor){
     M.rf[[r.project_type, r.clinical_phase, scopeOf(r), r.period_name, r.role_name]]
       = num(r.role_factor);

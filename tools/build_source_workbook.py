@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 9
-TEMPLATE_VERSION = "1.12"
-DUMMY_VERSION = "1.14"
-DUMMY_SMALL_VERSION = "1.6"
+SCHEMA_VERSION = 10
+TEMPLATE_VERSION = "1.13"
+DUMMY_VERSION = "1.15"
+DUMMY_SMALL_VERSION = "1.7"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -122,22 +122,41 @@ LISTS = [
 # --------------------------------------------------------------------------
 DEFAULT_NOTE = "Default assumption - replace with your own figure"
 
-# Keyed by clinical phase, then by period. The two Conduct entries carry the SAME
-# weight, deliberately: R-11 split the name, and a rename must not reweight anything.
+# THE STANDARD MONTHLY FTE, keyed by clinical phase and then by period (REQ-CAL-19).
+#
+# These are MAGNITUDES, not multipliers: 4.02 against Phase 3 Start-up means a new-drug
+# trial of that phase takes about four full-time people a month while it is starting up.
+# That is what makes a figure in this application a quantity of work rather than a
+# relative shape - the project's own ProjectPeriod.weight adjusts this for a particular
+# study, and the role factors divide it between the roles staffed.
+#
+# Until schema 10 the same table held numbers around 1.00 and was called a "weight",
+# which read like something to multiply by; the calculation multiplied by the PROJECT's
+# weight instead and never consulted this sheet at all. The shape below is the shape
+# those weights always had, scaled to the FTE a trial of each phase actually takes.
+#
+# The two Conduct entries carry the SAME figure, deliberately: R-11 split the name, and
+# a rename must not reweight anything.
 DEFAULT_PHASE_PROFILE = {
-    "Phase 1": {"Before-Start-up": 0.60, "Start-up": 1.30, "Conduct (interim)": 1.00,
-                "Close-out (interim)": 1.20, "Conduct (final)": 1.00,
-                "Close-out (final)": 1.40, "After Close-out (final)": 0.84},
-    "Phase 2": {"Before-Start-up": 0.70, "Start-up": 1.40, "Conduct (interim)": 1.10,
-                "Close-out (interim)": 1.30, "Conduct (final)": 1.10,
-                "Close-out (final)": 1.50, "After Close-out (final)": 0.90},
-    "Phase 3": {"Before-Start-up": 0.80, "Start-up": 1.60, "Conduct (interim)": 1.20,
-                "Close-out (interim)": 1.40, "Conduct (final)": 1.20,
-                "Close-out (final)": 1.70, "After Close-out (final)": 1.02},
-    "Phase 4": {"Before-Start-up": 0.50, "Start-up": 1.10, "Conduct (interim)": 0.90,
-                "Close-out (interim)": 1.00, "Conduct (final)": 0.90,
-                "Close-out (final)": 1.20, "After Close-out (final)": 0.72},
+    "Phase 1": {"Before-Start-up": 1.51, "Start-up": 3.27, "Conduct (interim)": 2.51,
+                "Close-out (interim)": 3.02, "Conduct (final)": 2.51,
+                "Close-out (final)": 3.52, "After Close-out (final)": 2.11},
+    "Phase 2": {"Before-Start-up": 1.76, "Start-up": 3.52, "Conduct (interim)": 2.76,
+                "Close-out (interim)": 3.27, "Conduct (final)": 2.76,
+                "Close-out (final)": 3.77, "After Close-out (final)": 2.26},
+    "Phase 3": {"Before-Start-up": 2.01, "Start-up": 4.02, "Conduct (interim)": 3.02,
+                "Close-out (interim)": 3.52, "Conduct (final)": 3.02,
+                "Close-out (final)": 4.27, "After Close-out (final)": 2.56},
+    "Phase 4": {"Before-Start-up": 1.26, "Start-up": 2.76, "Conduct (interim)": 2.26,
+                "Close-out (interim)": 2.51, "Conduct (final)": 2.26,
+                "Close-out (final)": 3.02, "After Close-out (final)": 1.81},
 }
+# 'Others' projects take the three hand-entered periods and carry no phase, so their
+# standards are stored under a null one - exactly as their role factors are. They were
+# missing entirely until schema 10, which did not matter while nothing read this table
+# and matters a great deal now: without a row the standard falls back to 1.00 and every
+# internal project would be costed at a fraction of a real one.
+DEFAULT_OTHER_PROFILE = {"Planning": 1.21, "Develop": 2.31, "Close": 1.51}
 # A biosimilar trial is lighter than a new-drug trial at the same phase; a patient
 # study is heavier than a healthy-volunteer one.
 DEFAULT_TYPE_FACTOR = {"NewDrug CT": 1.00, "Biosimilar CT (Healthy)": 0.85,
@@ -202,6 +221,8 @@ def default_period_weights():
             for pn in _listed("period_name_clinical"):
                 w = DEFAULT_PHASE_PROFILE[ph][pn] * DEFAULT_TYPE_FACTOR.get(ct, 1.00)
                 out.append((ct, ph, None, pn, round(w, 2), DEFAULT_NOTE))
+    for pn in _listed("period_name_others"):
+        out.append(("Others", None, None, pn, DEFAULT_OTHER_PROFILE[pn], DEFAULT_NOTE))
     return out
 
 
@@ -290,7 +311,7 @@ SHEETS = {
         ("clinical_phase", "The phase this standard applies to.", "key"),
         ("work_scope_type", "The work scope this standard applies to. LEAVE EMPTY for a row that applies to EVERY scope - fill only the scopes that really differ.", "key"),
         ("period_name", "One of the seven clinical periods. Unique within a project (R-11).", "key"),
-        ("weight", "YOU SUPPLY. Default multiplier for this phase and period.", "fill"),
+        ("standard_fte", "YOU SUPPLY. The STANDARD MONTHLY FTE a project of this type, phase and scope takes in this period - a magnitude, not a multiplier. 4.02 means the period costs about four full-time people a month. The project's own ProjectPeriod.weight then adjusts it up or down for that particular study, and the role factors divide it between the roles staffed.", "fill"),
         ("note_1", "Free text. e.g. the basis for this weight.", ""),
     ],
     "RoleFactor": [
@@ -621,7 +642,6 @@ def dummy_data(prof):
                 "Clinical Database Programmer", "Data Analyst"]
     OT_ROLES = ["Project lead", "Main staff", "Other staff"]
 
-    phase_profile = DEFAULT_PHASE_PROFILE
 
     N_CT, N_OT = prof["n_ct"], prof["n_other"]
     OT_NAMES = ['CDISC library migration', 'eTMF rollout', 'EDC vendor evaluation',
@@ -793,17 +813,26 @@ def dummy_data(prof):
         pid, ptype, pstart, pend = p[0], p[2], p[15], p[16]
         if ptype != "Others":
             phase, scope = p[4], p[5]
-            fac = TYPE_FACTOR[ptype] * SCOPE_FACTOR.get(scope, 1.00)
+            # THE PROJECT'S OWN WEIGHT IS AN ADJUSTMENT, around 1.00 (REQ-CAL-19).
+            # Until schema 10 it was generated from the same phase profile as the
+            # standards table, which is to say the two columns held the same number
+            # twice - harmless while only one of them was read, and a squared figure
+            # the moment both are. What belongs here is what makes THIS study differ
+            # from the standard for its type: how much of the work it keeps, and the
+            # ordinary variation between two trials that look alike on paper.
+            fac = SCOPE_FACTOR.get(scope, 1.00)
             for name, seq, s_, e_ in derive_periods(pstart, pend, ms[pid], inspections.get(pid, [])):
                 periods.append((pid, name, seq, s_, e_,
-                                round(phase_profile[phase][name] * fac, 2)))
+                                round(fac * rng.uniform(0.92, 1.12), 2)))
         else:
             span = (pend - pstart).days
             b1 = pstart + timedelta(days=int(span * 0.25))
             b2 = pstart + timedelta(days=int(span * 0.80))
-            periods.append((pid, "Planning", 1, pstart, b1, 0.80))
-            periods.append((pid, "Develop", 2, b1 + timedelta(days=1), b2, 1.20))
-            periods.append((pid, "Close", 3, b2 + timedelta(days=1), pend, 0.90))
+            periods.append((pid, "Planning", 1, pstart, b1, round(rng.uniform(0.92, 1.12), 2)))
+            periods.append((pid, "Develop", 2, b1 + timedelta(days=1), b2,
+                            round(rng.uniform(0.92, 1.12), 2)))
+            periods.append((pid, "Close", 3, b2 + timedelta(days=1), pend,
+                            round(rng.uniform(0.92, 1.12), 2)))
 
     return projects, ms, periods, pws, roles_tbl, people, A, ppw, inspections
 

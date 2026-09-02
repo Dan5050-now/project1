@@ -59,6 +59,11 @@ def check(ok, label, detail=""):
 # So one person alone on the role costs 1.00 x 2.00 x 1.00 = 2.00 FTE in a full month.
 PERIOD_W = 1.00
 ROLE_F = 2.00
+# REQ-CAL-19: the month's DEMAND in FTE. Before schema 10 the standards sheet was left
+# empty here and the role factor supplied the magnitude; now the factor decides only how
+# the demand is SPLIT, so a fixture without a standard would be testing the 1.00
+# fallback rather than the rule.
+STANDARD = 4.00
 
 
 def sheets(assignments, split=1):
@@ -73,7 +78,9 @@ def sheets(assignments, split=1):
         "ProjectPeriod": [{"project_id": "PRJ-001", "period_name": "Planning",
                            "period_seq": 1, "period_start": "2027-01-01",
                            "period_end": "2027-12-31", "weight": PERIOD_W}],
-        "PeriodWeightStandard": [],
+        "PeriodWeightStandard": [{"project_type": "Others", "clinical_phase": None,
+                                  "work_scope_type": None, "period_name": "Planning",
+                                  "standard_fte": STANDARD}],
         "RoleFactor": [{"project_type": "Others", "clinical_phase": None,
                         "work_scope_type": None, "period_name": "Planning",
                         "role_name": "Main staff", "role_factor": ROLE_F}],
@@ -173,9 +180,12 @@ with sync_playwright() as pw:
 
     a = load(pg, ALONE)
     solo = a["pers"][f"PSN-001|{MAR}"]
-    check(abs(solo - PERIOD_W * ROLE_F) < 1e-9,
-          "one person holding a role carries the whole factor",
-          f"{solo:.4f} FTE in Mar 2027, expected {PERIOD_W * ROLE_F:.4f}")
+    check(abs(solo - STANDARD * PERIOD_W) < 1e-9,
+          "ONE PERSON HOLDING THE ONLY STAFFED ROLE CARRIES THE WHOLE MONTH — the demand "
+          "is the standard, and their share of it is all of it (REQ-CAL-19). The role "
+          "factor sets no magnitude here; with one role staffed there is nothing to "
+          "divide, so 2.00 and 0.20 would both give this same figure",
+          f"{solo:.4f} FTE in Mar 2027, expected {STANDARD * PERIOD_W:.4f}")
 
     p = load(pg, PAIR)
     one, two = p["pers"][f"PSN-001|{MAR}"], p["pers"][f"PSN-002|{MAR}"]
@@ -202,10 +212,19 @@ with sync_playwright() as pw:
           "one person recorded on two rows is still one person",
           f"{t['pers'][f'PSN-001|{MAR}']:.4f} then {t['pers'][f'PSN-001|{SEP}']:.4f}")
 
+    # Two DIFFERENT roles do not share a factor - but since schema 10 they do divide the
+    # project's demand between them, in proportion to their factors. 'Project lead' has no
+    # RoleFactor row on this fixture, so it falls back to 1.00 against Main staff's 2.00:
+    # two thirds and one third of a month that is still exactly the standard.
     r = load(pg, ROLES)
-    check(abs(r["pers"][f"PSN-001|{MAR}"] - solo) < 1e-9,
-          "two people on different roles share nothing",
-          f"{r['pers'][f'PSN-001|{MAR}']:.4f}")
+    lead, main_ = r["pers"][f"PSN-002|{MAR}"], r["pers"][f"PSN-001|{MAR}"]
+    check(abs(main_ - solo * 2 / 3) < 1e-9 and abs(lead - solo / 3) < 1e-9,
+          "TWO PEOPLE ON DIFFERENT ROLES SHARE NO FACTOR, but they do divide the month "
+          "between them in proportion to their factors — 2.00 against 1.00",
+          f"{main_:.4f} and {lead:.4f} of a {solo:.4f} month")
+    check(abs(r["proj"][f"PRJ-001|{MAR}"] - solo) < 1e-9,
+          "and the project month is unchanged by how many roles are on it",
+          f"{r['proj'][f'PRJ-001|{MAR}']:.4f} vs {solo:.4f} with one role")
 
     w = load(pg, WEIGHTED)
     check(abs(w["pers"][f"PSN-001|{MAR}"] - solo / 2) < 1e-9
@@ -226,9 +245,9 @@ with sync_playwright() as pw:
 
 # ---- and the same conclusions from the independent implementation ------------
 print("\ntools/prap_io.py — the same plans, worked out separately")
-for name, path, expect in (("one person alone", ALONE, PERIOD_W * ROLE_F),
-                           ("two people sharing", PAIR, PERIOD_W * ROLE_F / 2),
-                           ("the split turned off", OFF, PERIOD_W * ROLE_F)):
+for name, path, expect in (("one person alone", ALONE, STANDARD * PERIOD_W),
+                           ("two people sharing", PAIR, STANDARD * PERIOD_W / 2),
+                           ("the split turned off", OFF, STANDARD * PERIOD_W)):
     got = ref(path).get(("PSN-001", MAR))
     check(got is not None and abs(got - expect) < 1e-9,
           f"{name}: PSN-001 carries {expect:.4f} FTE in Mar 2027", f"got {got}")

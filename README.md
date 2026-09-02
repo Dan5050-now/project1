@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.38 records Step 4 progress, schema 9, manual monthly estimation, the calculated-FTE export, the settings check on import, the fixed Config row set, the must/conditional/incomplete rule classes, the periods-are-the-project window and the absorption of an unstaffed role's factor |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.39 records Step 4 progress, schema 10, the standard monthly FTE, manual monthly estimation, the calculated-FTE export, the settings check on import, the fixed Config row set, the must/conditional/incomplete rule classes, the periods-are-the-project window and the absorption of an unstaffed role's factor |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -218,8 +218,10 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.38.xlsx` — **current.** 80 requirements, 31 live
-  validation rules (V-25 and V-28 retired), source schema version 9. Carries changes
+- `docs/PRAP_Development_Plan_v2.39.xlsx` — **current.** 81 requirements, 31 live
+  validation rules (V-25 and V-28 retired), source schema version 10. Carries changes
+  **R-31 — the standard monthly FTE is where a figure gets its size** (`REQ-CAL-19`,
+  schema 10),
   **R-30 — a figure can be stated instead of calculated** (`REQ-CAL-18`, schema 9),
   **R-29 — the application exports its answers as well as its questions**,
   **R-28 — an import says which settings it brought**, **R-26 / R-27 — the
@@ -241,8 +243,9 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.12.xlsx` — **current specification.** Schema 9
-  (the `MonthlyEstimate` sheet, `estimation_type`, `V-31` and `V-32`; the two-step
+- `docs/PRAP_Programming_Specification_v1.13.xlsx` — **current specification.** Schema 10
+  (the load formula, `standard_fte`; the `MonthlyEstimate` sheet, `estimation_type`,
+  `V-31` and `V-32`; the two-step
   lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
   through, the cross-data rules, the shared-role division with its worked
   reasoning, and where the delivered defaults come from.
@@ -723,9 +726,9 @@ document through the manifest rather than by sorting filenames.
   covering all 70 requirements. Sheet 10 records the six open points from the v0.3
   review, the answers given, and what each one changed. None open.
 
-- `templates/PRAP_SourceData_Template_v1.12.xlsx` — blank workbook: 11 sheets, headers,
+- `templates/PRAP_SourceData_Template_v1.13.xlsx` — blank workbook: 11 sheets, headers,
   value lists, dropdowns, one example row per sheet, colour-coded README. Every sheet
-  carries at least one free-text note column (schema version 9). `PeriodWeightStandard`
+  carries at least one free-text note column (schema version 10). `PeriodWeightStandard`
   and `RoleFactor` arrive **filled in** with the same delivered defaults the application
   starts from, so a blank plan and a fresh template agree from the first figure.
 
@@ -737,14 +740,14 @@ document through the manifest rather than by sorting filenames.
   inserting, deleting and sorting rows all still work. Only adding or removing *columns*
   is blocked, because the column set is the schema. The application's export writes the
   same locks, so the guard rail survives a round trip.
-- `templates/PRAP_SourceData_Dummy_v1.14.xlsx` — the same structure populated with
+- `templates/PRAP_SourceData_Dummy_v1.15.xlsx` — the same structure populated with
   **16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12
   `Others` projects and 20 people** (277 assignments, 372 milestones, 308 periods
   across 73 months). It carries **252 `PeriodWeightStandard` rows and
   849 `RoleFactor` rows** — a baseline set with `work_scope_type` empty, plus
   scope-specific rows for two of the three scopes, so the fallback is exercised by the
   fixture and not only by a unit test.
-- `templates/PRAP_SourceData_Dummy_10x10_v1.6.xlsx` — the same again at **10 projects
+- `templates/PRAP_SourceData_Dummy_10x10_v1.7.xlsx` — the same again at **10 projects
   and 10 people** (8 clinical trials + 2 `Others`, 48 assignments, 60 milestones,
   50 periods across 50 months): small enough to read every row on screen and check the
   arithmetic by hand. It is not a lighter test — it carries both clinical types, all
@@ -761,7 +764,7 @@ schema the other follows. The data is seeded: every sheet rebuilds byte-for-byte
 Validate any of them with:
 
 ```bash
-python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.6.xlsx
+python tools/verify_source_workbook.py templates/PRAP_SourceData_Dummy_10x10_v1.7.xlsx
 ```
 
 And check the application against the reference implementation:
@@ -1026,6 +1029,55 @@ Requires `openpyxl`.
   and the two never fall out of step when the project's dates move. Fill them in only
   for a partial involvement. The end date always behaved this way; the start did not,
   and a blank one made the assignment contribute **nothing at all**, silently.
+- **The standard monthly FTE is where a figure gets its size** (R-31, `REQ-CAL-19`,
+  schema 10). Reported by the reviewer, and correct: `PeriodWeightStandard` **never
+  reached the calculation**. It seeded a derived period's weight and it fed `V-19`, and
+  that was all — so every figure the application produced came from `ProjectPeriod.weight`
+  times the role factors, which is a relative *shape* with no magnitude behind it.
+
+  **The naming was most of the cause.** The column was called `weight`, which reads like
+  something to multiply by; so the calculation multiplied by the *project's* weight and
+  never asked the standards sheet anything. Worse, the delivered data seeded the project
+  weight **from** the standard, so the two columns held the same number twice and reading
+  both would have squared it. The column is now **`standard_fte`** and holds the month's
+  **demand in FTE**: 4.02 against `NewDrug CT` / Phase 3 / Start-up means that period
+  takes about four full-time people a month.
+
+  ```
+  FTE = standard_fte × period weight × role_share × person weight × month coverage
+
+               this role's effective factor ÷ people holding it
+  role_share = ------------------------------------------------
+               sum of the effective factors of the roles STAFFED that month
+  ```
+
+  Three consequences, each a decision taken deliberately:
+
+  - **The shares add to one**, so a fully committed project-month *is* `standard_fte ×
+    period weight` — however many roles are on it, and whatever the factors happen to sum
+    to. (The delivered factors sum to between 2.15 and 5.99, never 1.00; normalising is
+    what makes them a split rather than a multiplier.)
+  - **An unstaffed role's work lands on the others** rather than making the project
+    cheaper — `REQ-CAL-16` arriving by construction. `absorbed_by` still matters, but what
+    it decides now is *who* picks the work up, not *whether* anybody does.
+  - **`person_weight` scales that person's share**, so a partial commitment leaves the
+    project **short of its standard**. That gap is what the plan does not resource, and it
+    is meant to be visible.
+
+  A missing standard falls back to 1.00 and `V-19` reports it — deliberately the *old*
+  behaviour, so an incomplete standards sheet degrades to figures its author will
+  recognise rather than to zero. `stdWeight` now nulls the phase for a non-clinical type
+  exactly as `stdFactor` does; that cost nothing while the figure only seeded a period,
+  and is the difference between a real answer and 1.00 now. A schema 9 file still opens —
+  the column is renamed on the way in. `tools/test_standard.py` holds all of it against
+  hand-computed fixtures, including the reviewer's own worked example to the digit.
+
+  **One consequence worth knowing before you look at the dummy.** With real magnitudes,
+  the delivered 62-project / 20-person example portfolio is resourced at **17%** of its own
+  standard — 62 concurrent trials at these standards need about 59 people, not 20. That is
+  arithmetic, not a defect, and it is exactly the kind of thing the change makes visible.
+  The fixture keeps the size that was requested; what the staffing assumptions should be is
+  a data decision.
 - **A figure can be stated instead of calculated** (R-30, `REQ-CAL-18`, schema 9). The
   assumptions are a good default and a poor last word: a trial two years in has a manager
   who knows what the rest of it takes, and a standard period weight times a standard role

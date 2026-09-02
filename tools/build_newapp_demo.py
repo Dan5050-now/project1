@@ -27,7 +27,7 @@ from pathlib import Path
 VERSION = "0.3"
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "app" / "PRAP.html"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.14.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.15.xlsx"
 OUT = ROOT / "app" / f"PM_APP_Prototype_v{VERSION}.html"
 
 # The eight screens come from the v0.1 prototype generator, so the two cannot drift
