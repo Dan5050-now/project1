@@ -906,6 +906,32 @@ instead of setting the flag, that the project panel **names which assignments** 
 because its stated months still point at it, and that the figures and both flags survive
 the export round trip.
 
+And check that a trial with milestones but no dates of its own still opens:
+
+```bash
+python tools/test_nodates.py
+```
+
+Reported from the field: a hand-built workbook failed with *Could not read that file:
+Cannot read properties of null (reading 'getTime')* and nothing loaded at all. The period
+derivation read `Project.start_date` and `Project.end_date` as though a project always
+carried them — but it runs on a trial that has **no periods**, which is most often a plan
+part way through being entered or built from the milestones outward, so a blank date there
+is ordinary. A blank `end_date` **threw**, and the exception escaped `buildModel`, so one
+project cost the user the whole file. A blank `start_date` was quieter and worse: `suS0 >
+null` compares against zero and is always true, so no floor was applied *and* a
+`Before-Start-up` period was emitted running from `null`, which travelled on into the
+calculation looking like any other row.
+
+Both dates are **floors and nothing more**. Absent, there is no floor and the milestones
+alone describe the run — which is what such a file is actually saying, and what
+`REQ-CAL-17` means by *the periods are the project*. The test covers all four combinations
+of the two dates, checks directly that no derived period carries a null date, pins where
+the derivation anchors with and without them, confirms the figures are **unchanged** where
+both dates are present, and holds the browser against `prap_io.py` on every person-month —
+the two derivations were fixed separately and must not drift. It also checks that a project
+whose periods cannot be derived is *named* by `V-16` while the rest of the workbook loads.
+
 And check that the command-line tools and the browser still agree, which is the whole
 basis for telling another AI system it can validate a draft without opening the app:
 

@@ -385,17 +385,20 @@ def derive_periods(proj, ms):
     fdbl = get("final DB lock") or idbl
     if not cta or not fdbl:
         return None
-    start, end = proj["start_date"], proj["end_date"]
+    # The project's own dates are OPTIONAL here, and a blank one is not an error - see
+    # the long note in derivePeriods() in src/core/04_derive.js. Both are floors and
+    # nothing more; absent, the milestones alone describe the run.
+    start, end = proj.get("start_date"), proj.get("end_date")
     su_s0 = (protocol + timedelta(days=1)) if protocol else add_months(cta, -1)
-    su_s = max(su_s0, start)
+    su_s = max(su_s0, start) if start else su_s0
     su_e = siv if (siv and siv >= su_s) else add_months(su_s, 4) - timedelta(days=1)
     later = [d for d in (ms.get("Inspection") or []) if d > fdbl]
     p7_s = min(later) if later else None
-    p7_e = max(max(later), end) if later else None
+    p7_e = (max(max(later), end) if end else max(later)) if later else None
     cof_s = add_months(fdbl, -3)
-    cof_e = (p7_s - timedelta(days=1)) if p7_s else max(fdbl, end)
+    cof_e = (p7_s - timedelta(days=1)) if p7_s else (max(fdbl, end) if end else fdbl)
     segs = []
-    if su_s > start:
+    if start and su_s > start:
         segs.append(["Before-Start-up", start, su_s - timedelta(days=1)])
     segs.append(["Start-up", su_s, su_e])
     if idbl and idbl < fdbl:

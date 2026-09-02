@@ -268,7 +268,25 @@ function buildModel(sheets){
   }
   for (const [pid, proj] of Object.entries(M.projects)){
     if (!M.periods[pid] && CLINICAL_TYPES.has(proj.project_type)){
-      const derived = derivePeriods(proj, M.milestones[pid] || {});
+      /* One project must not be able to cost the user the whole file.
+         The derivation reads dates that a hand-built plan may not carry yet, and until
+         now anything it threw escaped buildModel: the load failed outright, with a raw
+         JavaScript message that named no project and left nothing on screen to repair.
+         The specific cause of that is fixed in 04_derive.js - blank project dates are
+         now ordinary - but the shape of the failure is worth closing too, because the
+         next unhandled case would present the same way. A project whose periods cannot
+         be worked out is a project with no periods, which V-16 already describes; this
+         says so loudly, names it, and lets the other 61 projects load. */
+      let derived = null;
+      try {
+        derived = derivePeriods(proj, M.milestones[pid] || {});
+      } catch (e){
+        F.push({sev:"error", rule:"V-16", sheet:"Project", row:proj.__row,
+          msg:`Project ${pid}: its periods could not be derived from its milestones `
+            + `(${e && e.message ? e.message : e}). The project is loaded and its rows are `
+            + `kept, but it has no periods, so its months are calculated at weight 1.00. `
+            + `Enter its periods by hand, or check its milestone dates.`});
+      }
       if (derived){
         M.periods[pid] = derived.map(d => ({...d, project_id:pid, __derived:true,
           weight: stdWeight(M, proj, d.period_name) ?? 1.00}));
