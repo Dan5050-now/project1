@@ -142,6 +142,18 @@ OFF = write("off.prap.json", sheets([
     asg("ASG-001", "PSN-001", "Main staff", "2027-01-01", "2027-12-31"),
     asg("ASG-002", "PSN-002", "Main staff", "2027-01-01", "2027-12-31")], split=0))
 
+# Two people on 'Main staff' beside one on 'Project lead', with the division on and
+# off. Project lead carries no RoleFactor row here, so it falls back to 1.00 against
+# Main staff's 2.00 - which makes the two settings 1/3 and 1/5 of the month for the lead.
+MIXED_ON = write("mixed_on.prap.json", sheets([
+    asg("ASG-001", "PSN-001", "Main staff", "2027-01-01", "2027-12-31"),
+    asg("ASG-002", "PSN-002", "Main staff", "2027-01-01", "2027-12-31"),
+    asg("ASG-003", "PSN-003", "Project lead", "2027-01-01", "2027-12-31")]))
+MIXED_OFF = write("mixed_off.prap.json", sheets([
+    asg("ASG-001", "PSN-001", "Main staff", "2027-01-01", "2027-12-31"),
+    asg("ASG-002", "PSN-002", "Main staff", "2027-01-01", "2027-12-31"),
+    asg("ASG-003", "PSN-003", "Project lead", "2027-01-01", "2027-12-31")], split=0))
+
 MAR = 2027 * 12 + 2            # a full month, nothing starting or ending in it
 SEP = 2027 * 12 + 8
 
@@ -226,19 +238,43 @@ with sync_playwright() as pw:
           "and the project month is unchanged by how many roles are on it",
           f"{r['proj'][f'PRJ-001|{MAR}']:.4f} vs {solo:.4f} with one role")
 
+    # Claims of 1.00 and 0.50 against a month that is still the standard: two thirds and
+    # one third. The weight decides the SPLIT, not the size (REQ-CAL-19).
     w = load(pg, WEIGHTED)
-    check(abs(w["pers"][f"PSN-001|{MAR}"] - solo / 2) < 1e-9
-          and abs(w["pers"][f"PSN-002|{MAR}"] - solo / 2 * 0.50) < 1e-9,
-          "the division is by headcount; each person's own weight applies to their half",
+    check(abs(w["pers"][f"PSN-001|{MAR}"] - solo * 2 / 3) < 1e-9
+          and abs(w["pers"][f"PSN-002|{MAR}"] - solo / 3) < 1e-9,
+          "A PART-TIME SHARER GIVES THEIR COLLEAGUE MORE, not the project less — the two "
+          "of them still carry the whole month between them",
           f"{w['pers'][f'PSN-001|{MAR}']:.4f} at weight 1.00, "
-          f"{w['pers'][f'PSN-002|{MAR}']:.4f} at weight 0.50")
+          f"{w['pers'][f'PSN-002|{MAR}']:.4f} at weight 0.50, "
+          f"together {w['pers'][f'PSN-001|{MAR}'] + w['pers'][f'PSN-002|{MAR}']:.4f}")
 
+    # The setting no longer changes a total - nothing can, since the month IS the
+    # standard - but it still changes the SPLIT wherever the roles have different
+    # numbers of holders, which is the only case it was ever really about. On a
+    # one-role project it is now inert, and saying so is more useful than a check that
+    # quietly passes because both sides are 4.00.
     o = load(pg, OFF)
-    check(abs(o["pers"][f"PSN-001|{MAR}"] - solo) < 1e-9
-          and abs(o["proj"][f"PRJ-001|{MAR}"] - solo * 2) < 1e-9,
-          "split_shared_role_fte = 0 restores the arithmetic of every earlier version",
-          f"{o['pers'][f'PSN-001|{MAR}']:.4f} each, {o['proj'][f'PRJ-001|{MAR}']:.4f} "
-          f"for the project")
+    on = load(pg, PAIR)
+    check(abs(o["pers"][f"PSN-001|{MAR}"] - on["pers"][f"PSN-001|{MAR}"]) < 1e-9
+          and abs(o["proj"][f"PRJ-001|{MAR}"] - solo) < 1e-9,
+          "split_shared_role_fte = 0 CANNOT INFLATE A PROJECT any more — the month is its "
+          "standard either way, so on a single-role project the setting is now inert",
+          f"{o['pers'][f'PSN-001|{MAR}']:.4f} each with it off, "
+          f"{on['pers'][f'PSN-001|{MAR}']:.4f} with it on; project "
+          f"{o['proj'][f'PRJ-001|{MAR}']:.4f} both ways")
+    # Where it DOES still bite: two people on one role, beside one person on another.
+    # With the division on, the shared role claims 2.00 between them; with it off, each
+    # claims 2.00, so that role takes a bigger slice of the month at the lead's expense.
+    two_on = load(pg, MIXED_ON)
+    two_off = load(pg, MIXED_OFF)
+    lead_on = two_on["pers"][f"PSN-003|{MAR}"]
+    lead_off = two_off["pers"][f"PSN-003|{MAR}"]
+    check(abs(lead_on - solo * 1 / 3) < 1e-9 and abs(lead_off - solo * 1 / 5) < 1e-9,
+          "but with a SECOND role beside it the setting still decides the split — two "
+          "sharers claiming 2.00 between them, or 2.00 each, changes what is left for "
+          "the lead",
+          f"the lead takes {lead_on:.4f} with the division on, {lead_off:.4f} with it off")
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()
@@ -247,7 +283,7 @@ with sync_playwright() as pw:
 print("\ntools/prap_io.py — the same plans, worked out separately")
 for name, path, expect in (("one person alone", ALONE, STANDARD * PERIOD_W),
                            ("two people sharing", PAIR, STANDARD * PERIOD_W / 2),
-                           ("the split turned off", OFF, STANDARD * PERIOD_W)):
+                           ("the split turned off", OFF, STANDARD * PERIOD_W / 2)):
     got = ref(path).get(("PSN-001", MAR))
     check(got is not None and abs(got - expect) < 1e-9,
           f"{name}: PSN-001 carries {expect:.4f} FTE in Mar 2027", f"got {got}")

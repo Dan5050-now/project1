@@ -106,7 +106,7 @@ with sync_playwright() as pw:
           ", ".join(wb.sheetnames))
 
     readme = " ".join(str(c.value or "") for r in wb["00_ReadMe"].iter_rows() for c in r)
-    check("CANNOT be imported" in readme and "FTE  =  standard_fte" in readme
+    check("CANNOT be imported" in readme and "FTE  =  demand_fte" in readme
           and "V-12" in readme and "V-23" in readme,
           "the ReadMe says it cannot be imported, gives the formula, and names where a "
           "figure can be short of an assumption")
@@ -150,19 +150,37 @@ with sync_playwright() as pw:
     # it is what the assumptions would have said. Checking it this way tests both the
     # arithmetic and the claim the file makes about which rows are which.
     def product(r):
-        # REQ-CAL-19. The standard is the month's demand, the project's period weight
-        # adjusts it, role_share is this person's slice of it - and role_share is itself
-        # checkable: (role_factor_effective / sharers) / the sum over the staffed roles.
-        return (r["standard_fte"] * r["period_weight"] * r["role_share"]
-                * r["person_weight"] * r["month_coverage"])
+        # REQ-CAL-19. The project-month IS its demand - standard x period weight x the
+        # month it ran - and role_share is this person's slice of that. person_weight
+        # and month_coverage are inside role_share now rather than multiplied after it,
+        # which is what makes the shares add to one.
+        return r["demand_fte"] * r["role_share"]
 
     auto = [r for r in detail if r["estimation"] == "automatic"]
     stated = [r for r in detail if r["estimation"] != "automatic"]
     bad = [r for r in detail if abs(product(r) - r["automatic_fte"]) > 5e-4]
     check(not bad,
-          "EVERY DETAIL ROW IS ITS OWN FIVE NUMBERS — a reader can check any figure "
+          "EVERY DETAIL ROW IS ITS OWN TWO NUMBERS — demand x share, and both are on it "
           "without the application",
           f"{len(detail)} rows" + (f"; {len(bad)} do not reconcile" if bad else ""))
+
+    # ---- and the shares of one project-month add to exactly one ---------------------
+    grp = {}
+    for r in detail:
+        grp.setdefault((r["month_iso"], r["project_id"]), []).append(r)
+    auto = [(k, v) for k, v in grp.items()
+            if all(x["estimation"] == "automatic" for x in v)]
+    bad = [k for k, v in auto if abs(sum(x["role_share"] for x in v) - 1) > 5e-4]
+    check(auto and not bad,
+          "THE SHARES OF A PROJECT-MONTH ADD TO EXACTLY ONE — which is what makes the "
+          "month its demand however many people are on it",
+          f"{len(auto)} automatic project-month(s)" + (f"; {len(bad)} differ" if bad else ""))
+    bad = [k for k, v in auto
+           if abs(sum(x["fte"] for x in v) - v[0]["demand_fte"]) > 5e-4]
+    check(not bad,
+          "AND THE PROJECT MONTH IS ITS DEMAND — standard_fte x period weight x month_run, "
+          "not a figure the staffing quietly reduced",
+          f"{len(auto)} checked" + (f"; {len(bad)} differ" if bad else ""))
 
     # ---- and the standard is what gives a figure its size --------------------------
     check(all(r["standard_fte"] is not None and r["standard_fte"] > 0 for r in detail)

@@ -28,8 +28,9 @@ written next to the check rather than read back out of the application.
   * THE PROJECT WEIGHT ADJUSTS, it no longer supplies the magnitude: at 0.50 the same
     month is half. Two different projects on one standard differ by exactly their weights.
   * AN UNSTAFFED ROLE'S WORK LANDS ON THE OTHERS rather than lowering the project.
-  * PERSON WEIGHT SCALES THE SHARE, and the project then falls SHORT of its standard —
-    the reviewer's choice, and the gap is the thing worth seeing.
+  * PERSON WEIGHT MOVES LOAD RATHER THAN LOWERING THE MONTH. A part-time commitment is a
+    smaller CLAIM on the month, so their colleagues pick the rest up; the project is its
+    standard either way. Under-staffing shows on the PEOPLE, never as a cheaper project.
   * A MISSING STANDARD falls back to 1.00 and V-19 says so — deliberately the old
     behaviour, so an incomplete standards sheet degrades to figures its author recognises
     rather than to zero.
@@ -164,13 +165,17 @@ check(abs(per["PSN-1"] - 4.02 * 1.51 / (1.51 + 0.84)) < 5e-4,
       "the two of them carry it between them, in proportion to their own factors",
       f"{per['PSN-1']:.4f} and {per['PSN-2']:.4f}")
 
-# ---- person weight scales the share, and the project falls short ----------------
+# ---- person weight moves the load, it does not lower the month ------------------
+# Claims: PSN-1 = 0.6 x 1.00 = 0.60; PSN-2 = 0.4 x 0.40 = 0.16. Sum 0.76.
+# Shares 0.60/0.76 and 0.16/0.76 of a month that is still 4.02.
 proj, per, _ = figures(fixture("parttime", person_weights={"PSN-2": 0.40}))
-check(abs(per["PSN-1"] - 2.412) < 5e-4 and abs(per["PSN-2"] - 1.608 * 0.40) < 5e-4
-      and abs(proj - (2.412 + 0.6432)) < 5e-4,
-      "PERSON WEIGHT SCALES THAT PERSON'S SHARE, and the project then falls SHORT of its "
-      "standard — the gap is what the plan does not resource",
-      f"project {proj:.4f} against a standard of 4.02, short by {4.02 - proj:.4f} FTE")
+want1, want2 = 4.02 * 0.60 / 0.76, 4.02 * 0.16 / 0.76
+check(abs(proj - 4.02) < 5e-4 and abs(per["PSN-1"] - want1) < 5e-4
+      and abs(per["PSN-2"] - want2) < 5e-4,
+      "PERSON WEIGHT MOVES LOAD ONTO THE OTHERS, it does not lower the month — the "
+      "part-timer's colleague picks the work up, and the project is still its standard",
+      f"project {proj:.4f} (want 4.02); the full-timer goes 2.4120 -> {per['PSN-1']:.4f}, "
+      f"the 0.40 person {per['PSN-2']:.4f}")
 
 # ---- a missing standard degrades to the old behaviour ---------------------------
 proj, _, M = figures(fixture("nostandard", std=None, weight=1.30))

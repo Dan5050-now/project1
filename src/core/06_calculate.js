@@ -134,18 +134,6 @@ function calculate(M){
     M.SPLIT ? ((sharers.get(shareKey(a, k)) || {size:1}).size || 1) : 1;
   const staffed = (pid, role, k) => sharers.has(roleKey(pid, role, k));
 
-  /* Which roles are staffed on a project in a month, so the demand can be divided
-     between them. Built from the same `sharers` pass as the divisor and the absorption
-     test, for the same reason those two share it: three answers about one month must
-     come from one picture of that month. */
-  const rolesOn = new Map();                       // project|month -> Set(role)
-  for (const kk of sharers.keys()){
-    const [pid, role, k] = kk.split("\u0000");
-    const q = pid + "\u0000" + k;
-    if (!rolesOn.has(q)) rolesOn.set(q, new Set());
-    rolesOn.get(q).add(role);
-  }
-
   /** The factor this role carries THIS MONTH: its own, plus the factor of any role
    *  that names it as cover and that nobody is holding (REQ-CAL-16).
    *
@@ -194,25 +182,6 @@ function calculate(M){
     const out = (v === null || v === undefined) ? 1 : v;
     stdCache.set(key, out);
     return out;
-  }
-
-  /** What the staffed roles add up to this month - the denominator the demand is
-   *  divided by, so the shares come to one.
-   *
-   *  Summed over DISTINCT ROLES, not over people: the factor states what the role costs
-   *  the project, and two people holding one role split that role's share rather than
-   *  claiming it twice. Each role is counted at its EFFECTIVE factor, so a role covering
-   *  for an absent one (REQ-CAL-16) is bigger here as well as in the numerator - the
-   *  absorbed work moves to whoever covers it instead of spreading over everybody. */
-  const demandCache = new Map();
-  function roleDemand(proj, periodName, pid, k){
-    const key = pid + "\u0000" + k;
-    if (demandCache.has(key)) return demandCache.get(key);
-    let t = 0;
-    for (const role of (rolesOn.get(pid + "\u0000" + k) || []))
-      t += effectiveFactor(proj, periodName, role, k);
-    demandCache.set(key, t);
-    return t;
   }
 
   /* ---------------------------------------------------- V-23, from the arithmetic
@@ -273,10 +242,12 @@ function calculate(M){
          project month equals the standard however many people are on it. An unstaffed
          role is not in the denominator, so its work lands on the others rather than
          disappearing; REQ-CAL-16 still decides WHERE it lands when a role names cover. */
-      const denom = roleDemand(proj, seg ? seg.period_name : null, a.project_id, k);
       const stdF = stdMonthly(proj, seg ? seg.period_name : null);
-      const frac = denom > 0 ? (rf / share) / denom : 0;
-      const v = stdF * pw * frac * personWeight(a, y, m) * cov;
+      /* The person's CLAIM on the month, not yet their figure. Normalising it against
+         everybody else's happens once the whole project-month is known, in the second
+         pass below - a share cannot be worked out from one line, because it is a
+         proportion of the others. */
+      const claim = (rf / share) * personWeight(a, y, m) * cov;
       lo = Math.min(lo, k); hi = Math.max(hi, k);
 
       const own = seg ? stdFactor(M, proj, seg.period_name, a.role_name) : undefined;
@@ -289,8 +260,7 @@ function calculate(M){
         assignment_id:a.assignment_id, role_name:a.role_name,
         period_name: seg ? seg.period_name : null,
         period_weight: pw, period_weight_source: seg ? "ProjectPeriod" : "none — V-12",
-        standard_fte: stdF, role_share: frac,
-        roles_staffed: (rolesOn.get(a.project_id + "\u0000" + k) || new Set()).size,
+        standard_fte: stdF, claim,
         role_factor: own, role_factor_effective: rf,
         absorbed: M.ABSORB && seg
           ? absorbedInto(M, proj, seg.period_name, a.role_name)
@@ -299,10 +269,11 @@ function calculate(M){
         sharers: share,
         person_weight: personWeight(a, y, m),
         person_weight_source: ppw ? "PersonPeriodWeight override" : "Assignment",
-        coverage: cov, fte: v, auto: v, source: "automatic",
+        coverage: cov, fte: 0, auto: 0, source: "automatic",
       });
     }
   }
+  shareOut(lines);
   applyManual(M, lines);
 
   /* Every map is built HERE, from the lines, rather than accumulated as the lines were
@@ -331,6 +302,58 @@ function calculate(M){
   return {projMonth, persMonth, persProj, projPers, cell, who, sharers, shareCount,
           staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
+}
+
+/* ================================ the demand, shared out (REQ-CAL-19)
+
+   A PROJECT-MONTH IS ITS STANDARD. standard_fte says what a project of this type, phase
+   and work scope takes in this period, ProjectPeriod.weight adjusts it for this
+   particular study, and that product is the month - not a ceiling it might reach, and
+   not a figure the staffing can quietly reduce.
+
+   So the people on it DIVIDE that month rather than each contributing to it. Everything
+   that used to reduce the total now decides a share instead:
+
+     role factor      what this role costs the project, relative to the other roles
+     / sharers        two people holding one role hold it between them
+     x person weight  a half-time commitment is half a claim on the month
+     x coverage       somebody present for ten days has a tenth of a claim
+
+   Those four make a CLAIM; the claim divided by the sum of the claims is the SHARE; the
+   share times the demand is the figure. The shares add to one by construction, so the
+   month always comes to the standard and the two utilisation charts cannot disagree.
+
+   WHAT THIS MEANS, and it is the whole of the trade: a part-time person no longer makes
+   the project cheaper, they push load onto whoever else is there. Under-staffing shows
+   up on the PEOPLE, as months over the ceiling, and never as a project that costs less
+   than the work it contains. That is the reading the reviewer chose; the alternative -
+   where person_weight scales the month down and the shortfall is visible as a gap - is
+   recorded in the plan against R-32 so the choice can be revisited without re-deriving
+   it.
+
+   THE DEMAND IS SCALED BY THE MONTH THE PROJECT ACTUALLY RUNS, taken as the largest
+   coverage any of its people have. A project whose period ends on the 10th draws a third
+   of a month, not a whole one; a project running all month draws all of it however
+   part-time the people on it are. Without this every project would spike to a full
+   standard month in the month it opened and the month it closed. */
+function shareOut(lines){
+  const groups = new Map();
+  for (const L of lines){
+    const k = L.project_id + "\u0000" + L.month;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(L);
+  }
+  for (const group of groups.values()){
+    let claims = 0, ran = 0;
+    for (const L of group){ claims += L.claim; ran = Math.max(ran, L.coverage); }
+    const demand = group[0].standard_fte * group[0].period_weight * ran;
+    for (const L of group){
+      L.role_share = claims > 0 ? L.claim / claims : 0;
+      L.month_run = ran;
+      L.demand_fte = demand;
+      L.fte = L.auto = demand * L.role_share;
+    }
+  }
 }
 
 /** V-31 and V-32: what a manual figure could not do.

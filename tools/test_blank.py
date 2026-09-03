@@ -340,11 +340,13 @@ with sync_playwright() as pw:
         rf = 1.0 if rf is None else rf         # no row for the period -> 1.00, V-23
         std = standards.get(seg[0]) if seg else None
         std = 1.0 if std is None else std      # no standard -> 1.00, V-19
-        # REQ-CAL-19: the standard is the demand and the period weight adjusts it; the
-        # role factors then divide it between the roles STAFFED. Exactly one role is
-        # staffed on this plan, so its share is the whole of it and `rf` cancels out -
-        # which is worth seeing rather than hiding, so it is computed and then divided.
-        return std * pw * (rf / rf) * weight * cov
+        # REQ-CAL-19: the project-month IS its standard x its period weight, scaled by
+        # how much of the month it runs - and the people on it DIVIDE that. Exactly one
+        # person is on this plan, so their share is the whole of it: `rf`, `weight` and
+        # `cov` all cancel out of the total, and only the month it ran remains. Computed
+        # and then divided out rather than dropped, because seeing them cancel is the
+        # point - it is what "the shares add to one" means on a one-person project.
+        return std * pw * cov * ((rf * weight * cov) / (rf * weight * cov))
 
     bad = []
     for k, v in got["pm"].items():

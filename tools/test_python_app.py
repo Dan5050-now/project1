@@ -334,15 +334,14 @@ def main():
             # (REQ-CAL-18) is deliberately not the product of its terms - that is what
             # manual means - and every row carries what the assumptions alone would have
             # produced, so the multiplication is still checkable on all of them.
-            # REQ-CAL-19 added standard_fte and role_share: the standard is the month's
-            # demand, the period weight adjusts it, role_share is this person's slice.
-            fte, std, pw, share, ppw, cov = (hdr.index(c) for c in
-                ("automatic_fte", "standard_fte", "period_weight", "role_share",
-                 "person_weight", "month_coverage"))
-            bad = [r for r in det[1:]
-                   if abs(r[std] * r[pw] * r[share] * r[ppw] * r[cov] - r[fte]) > 5e-4]
+            # REQ-CAL-19: the project-month IS its demand, and role_share is this
+            # person's slice of it. person_weight and coverage are inside the share
+            # rather than multiplied after it, which is what makes the shares add to one.
+            fte, dem, share = (hdr.index(c) for c in
+                               ("automatic_fte", "demand_fte", "role_share"))
+            bad = [r for r in det[1:] if abs(r[dem] * r[share] - r[fte]) > 5e-4]
             check(not bad,
-                  "every row of it reconciles to its own five numbers",
+                  "every row of it is its demand times its share",
                   f"{len(det) - 1:,} rows checked")
 
             check(not errors, "no script error anywhere in the run",

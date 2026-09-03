@@ -72,8 +72,8 @@ function buildResults(M, C, scope){
                       the month's demand for a project of this type, phase and
                       scope; period_weight adjusts it for this study; role_share is
                       this person's slice of it, over the roles actually staffed. */
-                   "standard_fte", "period_weight", "period_weight_from",
-                   "role_share", "roles_staffed",
+                   "standard_fte", "period_weight", "month_run", "demand_fte",
+                   "period_weight_from", "role_share",
                    "person_id", "person_name", "department", "role_name",
                    "role_factor", "role_factor_effective", "absorbed_from",
                    "sharers", "person_weight", "person_weight_from",
@@ -93,8 +93,9 @@ function buildResults(M, C, scope){
     detail.push([
       label(L.month), iso(L.month), L.project_id, p.project_name ?? null,
       p.project_type ?? null, p.clinical_phase ?? null, p.work_scope_type ?? null,
-      L.period_name, r4(L.standard_fte ?? 1), r4(L.period_weight), L.period_weight_source,
-      r4(L.role_share ?? 0), L.roles_staffed ?? null,
+      L.period_name, r4(L.standard_fte ?? 1), r4(L.period_weight),
+      r4(L.month_run ?? 1), r4(L.demand_fte ?? 0), L.period_weight_source,
+      r4(L.role_share ?? 0),
       L.person_id, who.person_name ?? null, who.department ?? null, L.role_name,
       L.role_factor === undefined ? null : r4(L.role_factor),
       r4(L.role_factor_effective),
@@ -258,10 +259,22 @@ function buildResults(M, C, scope){
      + "it round-trips."],
     [],
     ["HOW EVERY FIGURE WAS MADE"],
-    ["FTE  =  standard_fte  ×  period weight  ×  role_share  ×  person weight  ×  month coverage"],
+    ["FTE  =  demand_fte  ×  role_share,   where  demand_fte = standard_fte  ×  period "
+     + "weight  ×  month_run"],
     ["standard_fte", "the month's DEMAND for a project of this type, phase and work scope in this period, from PeriodWeightStandard. A magnitude in FTE: 4.02 means the period takes about four full-time people a month."],
     ["period weight", "this project's own adjustment to that standard, from ProjectPeriod. 1.00 means an ordinary project of its kind."],
-    ["role_share", "this person's slice of the demand: their role's factor, divided by the number of people holding that role, over the sum of the factors of the roles ACTUALLY STAFFED that month (roles_staffed says how many). The shares add to one, so a fully committed project month equals standard_fte x period weight - and an unstaffed role's work lands on the others rather than disappearing."],
+    ["month_run", "how much of the month the project actually ran, taken as the largest "
+     + "coverage any of its people have. A project whose period ends on the 10th draws a "
+     + "third of a month, not a whole one."],
+    ["demand_fte", "the project's whole month: standard_fte x period weight x month_run. "
+     + "EVERY ROW OF ONE PROJECT-MONTH CARRIES THE SAME FIGURE, and the fte column of "
+     + "those rows adds up to exactly it."],
+    ["role_share", "this person's slice of that demand. Their role's factor, divided by "
+     + "the people holding that role, times their person weight, times their own "
+     + "coverage - over the sum of the same product for everybody on the project that "
+     + "month. THE SHARES ADD TO ONE, so the month is the demand however many people "
+     + "are on it: an unstaffed role's work lands on the others, and a part-time person "
+     + "pushes load onto their colleagues rather than making the project cheaper."],
     ["Worked out once per assignment per month. The 'Detail' sheet is one row per "
      + "assignment per month with all four numbers in it; ProjectMonth and PersonMonth "
      + "are those rows summed by project and by person. Nothing else enters the "

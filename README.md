@@ -8,7 +8,7 @@ Excel files kept outside the application; the Excel files are the archive of rec
 
 | Step | Description | State |
 |---|---|---|
-| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.39 records Step 4 progress, schema 10, the standard monthly FTE, manual monthly estimation, the calculated-FTE export, the settings check on import, the fixed Config row set, the must/conditional/incomplete rule classes, the periods-are-the-project window and the absorption of an unstaffed role's factor |
+| 1 | Development plan | **v2.0 APPROVED BASELINE** 2026-08-02 · v2.40 records Step 4 progress, schema 10, the standard monthly FTE as the month itself, manual monthly estimation, the calculated-FTE export, the settings check on import, the fixed Config row set, the must/conditional/incomplete rule classes, the periods-are-the-project window and the absorption of an unstaffed role's factor |
 | 2 | Programming specification | **v1.0 APPROVED** 2026-08-02 |
 | 3 | Prototype UI design | **v1.0 component list APPROVED** 2026-08-02 |
 | 4 | Code generation | **`app/PRAP.html` built and verified** · awaiting your Gate 4 review |
@@ -218,8 +218,9 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.39.xlsx` — **current.** 81 requirements, 31 live
+- `docs/PRAP_Development_Plan_v2.40.xlsx` — **current.** 81 requirements, 31 live
   validation rules (V-25 and V-28 retired), source schema version 10. Carries changes
+  **R-32 — a project-month IS its standard, and the people on it divide it**,
   **R-31 — the standard monthly FTE is where a figure gets its size** (`REQ-CAL-19`,
   schema 10),
   **R-30 — a figure can be stated instead of calculated** (`REQ-CAL-18`, schema 9),
@@ -243,7 +244,7 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.13.xlsx` — **current specification.** Schema 10
+- `docs/PRAP_Programming_Specification_v1.14.xlsx` — **current specification.** Schema 10
   (the load formula, `standard_fte`; the `MonthlyEstimate` sheet, `estimation_type`,
   `V-31` and `V-32`; the two-step
   lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
@@ -1044,25 +1045,33 @@ Requires `openpyxl`.
   takes about four full-time people a month.
 
   ```
-  FTE = standard_fte × period weight × role_share × person weight × month coverage
-
-               this role's effective factor ÷ people holding it
-  role_share = ------------------------------------------------
-               sum of the effective factors of the roles STAFFED that month
+  demand = standard_fte × period weight × month_run          the project's whole month
+  claim  = (role factor ÷ holders) × person weight × coverage    one person's pull on it
+  FTE    = demand × claim ÷ sum of the claims
   ```
 
-  Three consequences, each a decision taken deliberately:
+  **A project-month IS its demand** (R-32). The people on it *divide* that month rather
+  than each adding to it, so every term that used to reduce a figure now decides a share
+  instead. Three consequences, each taken deliberately:
 
-  - **The shares add to one**, so a fully committed project-month *is* `standard_fte ×
-    period weight` — however many roles are on it, and whatever the factors happen to sum
-    to. (The delivered factors sum to between 2.15 and 5.99, never 1.00; normalising is
-    what makes them a split rather than a multiplier.)
+  - **The shares add to one by construction**, so the month is its demand however many
+    people are on it and whatever their weights. Checked on all 1,557 and 203 automatic
+    project-months of the two fixtures — exact, not to rounding.
   - **An unstaffed role's work lands on the others** rather than making the project
     cheaper — `REQ-CAL-16` arriving by construction. `absorbed_by` still matters, but what
     it decides now is *who* picks the work up, not *whether* anybody does.
-  - **`person_weight` scales that person's share**, so a partial commitment leaves the
-    project **short of its standard**. That gap is what the plan does not resource, and it
-    is meant to be visible.
+  - **A part-time person pushes load onto their colleagues** rather than lowering the
+    project. Under-staffing shows on the **people**, as months over the ceiling, never as
+    a project that costs less than the work it contains.
+
+  `month_run` is the largest coverage any of the project's people have, so a project whose
+  period ends on the 10th draws a third of a month rather than a whole one — without it
+  every project would spike to a full standard month in the month it opened and closed.
+
+  One casualty worth naming: `split_shared_role_fte` can no longer inflate a project
+  total, because nothing can. On a single-role project it is now inert; it still decides
+  the split where roles have different numbers of holders, which is the case it was always
+  really about.
 
   A missing standard falls back to 1.00 and `V-19` reports it — deliberately the *old*
   behaviour, so an incomplete standards sheet degrades to figures its author will
@@ -1072,12 +1081,12 @@ Requires `openpyxl`.
   the column is renamed on the way in. `tools/test_standard.py` holds all of it against
   hand-computed fixtures, including the reviewer's own worked example to the digit.
 
-  **One consequence worth knowing before you look at the dummy.** With real magnitudes,
-  the delivered 62-project / 20-person example portfolio is resourced at **17%** of its own
-  standard — 62 concurrent trials at these standards need about 59 people, not 20. That is
-  arithmetic, not a defect, and it is exactly the kind of thing the change makes visible.
-  The fixture keeps the size that was requested; what the staffing assumptions should be is
-  a data decision.
+  **One consequence worth knowing before you look at the dummy.** The 62-project /
+  20-person example now totals **4,334 FTE-months** rather than 731 — that is the demand it
+  always described and never showed. Twenty people cannot supply it, so the fixture is
+  full of over-allocated person-months. That is arithmetic, not a defect: 62 concurrent
+  trials at these standards need about 59 people. The fixture keeps the size that was
+  requested; what the staffing assumptions should be is a data decision.
 - **A figure can be stated instead of calculated** (R-30, `REQ-CAL-18`, schema 9). The
   assumptions are a good default and a poor last word: a trial two years in has a manager
   who knows what the rest of it takes, and a standard period weight times a standard role

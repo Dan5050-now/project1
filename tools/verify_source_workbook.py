@@ -303,10 +303,6 @@ def main(path):
             if coverage(y, m, s, e) > 0:
                 sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
 
-    roles_on = defaultdict(set)
-    for (pid_, role_, y_, m_) in sharers:
-        roles_on[(pid_, y_, m_)].add(role_)
-
     def std_monthly(proj, pn):
         """REQ-CAL-19: the month's demand in FTE, from PeriodWeightStandard."""
         if pn is None:
@@ -357,17 +353,27 @@ def main(path):
                 g[1] += 1
             share = (len(sharers.get((a["project_id"], a["role_name"], y, m), ())) or 1) \
                 if split else 1
-            # REQ-CAL-19: the standard is the demand, the project's period weight
-            # adjusts it, and the role factors divide it between the roles STAFFED.
-            denom = 0.0
-            for r_ in roles_on.get((a["project_id"], y, m), ()):
-                denom += effective_factor(proj, {**a, "role_name": r_}, y, m)
-            frac = (effective_factor(proj, a, y, m) / share) / denom if denom > 0 else 0.0
-            v = (std_monthly(proj, pn) * period_weight(a["project_id"], y, m)
-                 * frac * person_weight(a, y, m) * cov)
+            # REQ-CAL-19: the person's CLAIM on the month. The project-month IS its
+            # standard x period weight, and the claims divide it - worked out below,
+            # once every line of that month is known.
+            claim = (effective_factor(proj, a, y, m) / share) * person_weight(a, y, m) * cov
             lines.append({"aid": a["assignment_id"], "pid": a["project_id"],
-                          "sid": a["person_id"], "y": y, "m": m, "fte": v})
+                          "sid": a["person_id"], "y": y, "m": m, "fte": 0.0,
+                          "claim": claim, "cov": cov,
+                          "std": std_monthly(proj, pn),
+                          "pw": period_weight(a["project_id"], y, m)})
             horizon.add((y, m))
+
+    # ---- REQ-CAL-19: the demand, shared out between the claims on it ----------------
+    grp = defaultdict(list)
+    for L in lines:
+        grp[(L["pid"], L["y"], L["m"])].append(L)
+    for group in grp.values():
+        claims = sum(L["claim"] for L in group)
+        ran = max(L["cov"] for L in group)
+        demand = group[0]["std"] * group[0]["pw"] * ran
+        for L in group:
+            L["fte"] = demand * (L["claim"] / claims) if claims > 0 else 0.0
 
     # ---- REQ-CAL-18: manual figures, assignment first, then the project scaling ----
     EST = {}

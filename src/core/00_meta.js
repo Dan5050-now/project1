@@ -1,4 +1,4 @@
-const APP_VERSION = "1.37";
+const APP_VERSION = "1.38";
 const SCHEMA_EXPECTED = 10;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -7,10 +7,10 @@ const SCHEMA_EXPECTED = 10;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.39.xlsx",          ver:"2.39",
-   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.39 adds schema 10 and REQ-CAL-19 — the standard monthly FTE is where a figure gets its size"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.13.xlsx", ver:"1.13",
-   status:"v1.0 APPROVED by Dan, 2026-08-02; v1.13 replaces the load formula and renames PeriodWeightStandard.weight to standard_fte — this document governs the code"},
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.40.xlsx",          ver:"2.40",
+   status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.14.xlsx", ver:"1.14",
+   status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
   {what:"Source data template",   file:"PRAP_SourceData_Template_v1.13.xlsx",       ver:"1.13",

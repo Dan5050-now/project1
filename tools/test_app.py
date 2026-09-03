@@ -80,11 +80,6 @@ def reference_person_months(path):
             if coverage(y, m, s, e) > 0:
                 sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
 
-    # Which roles are staffed on a project in a month - the denominator's membership.
-    roles_on = defaultdict(set)
-    for (pid_, role_, y_, m_) in sharers:
-        roles_on[(pid_, y_, m_)].add(role_)
-
     def eff(pr, ph, pn, role, y, m):
         """One role's effective factor, absorption included - worked out here rather
         than borrowed, which is the whole point of a reference implementation."""
@@ -111,19 +106,27 @@ def reference_person_months(path):
             pn = sg["period_name"] if sg else None
             rf = eff(pr, ph, pn, a["role_name"], y, m)
             share = len(sharers[(a["project_id"], a["role_name"], y, m)]) or 1
-            # REQ-CAL-19. PeriodWeightStandard is the month's DEMAND in FTE; the
-            # project's own period weight adjusts it; the role factors divide it
-            # between the roles actually staffed, so the shares come to one.
-            denom = sum(eff(pr, ph, pn, r_, y, m)
-                        for r_ in roles_on[(a["project_id"], y, m)])
+            # REQ-CAL-19. A project-month IS its standard x its own period weight,
+            # scaled by the month it actually runs; the people on it DIVIDE that in
+            # proportion to their claims. Worked out below, once the month is whole.
             std = lookup(PWS, (pr["project_type"], pr["clinical_phase"]),
                          scope_of(pr), (pn,)) if pn is not None else None
             std = 1.0 if std is None else float(std)
-            frac = (rf / share) / denom if denom > 0 else 0.0
             lines.append({"aid": a["assignment_id"], "pid": a["project_id"],
-                          "sid": a["person_id"], "y": y, "m": m,
-                          "fte": std * (sg["weight"] if sg else 1.0) * frac
-                                 * weight(a, y, m) * cov})
+                          "sid": a["person_id"], "y": y, "m": m, "fte": 0.0,
+                          "claim": (rf / share) * weight(a, y, m) * cov, "cov": cov,
+                          "std": std, "pw": (sg["weight"] if sg else 1.0)})
+
+    # REQ-CAL-19: the demand, divided between the claims on it.
+    grp0 = defaultdict(list)
+    for L in lines:
+        grp0[(L["pid"], L["y"], L["m"])].append(L)
+    for group in grp0.values():
+        claims = sum(L["claim"] for L in group)
+        ran = max(L["cov"] for L in group)
+        demand = group[0]["std"] * group[0]["pw"] * ran
+        for L in group:
+            L["fte"] = demand * (L["claim"] / claims) if claims > 0 else 0.0
 
     # REQ-CAL-18. A manual assignment takes the figure it was given - and 0.00 where it
     # was given none, which is the only reading of "the user owns every month" that does

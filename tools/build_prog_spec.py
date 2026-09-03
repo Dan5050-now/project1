@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.13"
+DOC_VERSION = "1.14"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.39.xlsx"
+PLAN = "PRAP_Development_Plan_v2.40.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,14 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.14", "2026-09-03", "Claude Code", "Dan",
+         "R-32: REQ-CAL-19 amended. A project-month IS its standard x period weight x "
+         "the month it ran, and the people on it DIVIDE that - person_weight, coverage "
+         "and the role factor all make a CLAIM, and the share is the claim over the sum "
+         "of the claims. Sheet 05 replaces the formula with demand x share and records "
+         "that the shares add to one by construction. Sheet 08 records month_run and "
+         "demand_fte on the results export, and that every row is now two numbers rather "
+         "than five. Written against plan v2.40.", "Issued"],
         ["1.13", "2026-09-02", "Claude Code", "Dan",
          "R-31, REQ-CAL-19, SCHEMA 10: the standard monthly FTE reaches the calculation. "
          "Sheet 05 replaces the formula: standard_fte x period weight x role_share x "

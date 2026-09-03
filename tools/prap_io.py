@@ -908,13 +908,6 @@ def calculate(M):
                 sharers[(a["project_id"], a.get("role_name"),
                          month_key(y, m - 1))].add(a["person_id"])
 
-    # Which roles are staffed on a project in a month, so the demand can be divided
-    # between them (REQ-CAL-19). Built from the same pass as the divisor and the
-    # absorption test: three answers about one month, one picture of that month.
-    roles_on = defaultdict(set)
-    for (pid_, role_, k_) in sharers:
-        roles_on[(pid_, k_)].add(role_)
-
     def effective_factor(proj, period_name, role_name, k):
         """This role's factor plus the factor of any role that names it as cover and
         that nobody is holding this month. One hop: if the absorbing role is itself
@@ -981,21 +974,20 @@ def calculate(M):
             rf = effective_factor(proj, pn, a.get("role_name"), k)
             share = (len(sharers.get((a["project_id"], a.get("role_name"), k), ())) or 1) \
                 if M.SPLIT else 1
-            # REQ-CAL-19. The STANDARD is the month's demand in FTE; the project's own
-            # period weight adjusts it for this study; the role factors then divide that
-            # demand between the roles ACTUALLY STAFFED, so the shares add to one.
-            denom = sum(effective_factor(proj, pn, r_, k)
-                        for r_ in roles_on.get((a["project_id"], k), ()))
+            # REQ-CAL-19. The person's CLAIM on the month; the share it becomes is
+            # worked out once the whole project-month is known - see share_out().
             std_f = std_monthly(proj, pn)
-            frac = (rf / share) / denom if denom > 0 else 0.0
-            v = std_f * pw * frac * person_weight(a, y, m) * cov
+            claim = (rf / share) * person_weight(a, y, m) * cov
             lo = k if lo is None else min(lo, k)
             hi = k if hi is None else max(hi, k)
             lines.append({"month": k, "project_id": a["project_id"],
                           "person_id": a["person_id"],
                           "assignment_id": a.get("assignment_id"),
-                          "role_name": a.get("role_name"), "fte": v})
+                          "role_name": a.get("role_name"), "fte": 0.0,
+                          "claim": claim, "coverage": cov,
+                          "standard_fte": std_f, "period_weight": pw})
 
+    share_out(lines)
     apply_manual(M, lines)
     # Every map built from the lines, so a manual figure moves the totals and the two
     # can never disagree - the same reason the browser engine does it this way.
@@ -1008,6 +1000,28 @@ def calculate(M):
     report_gaps(M, gaps)
     return {"proj_month": proj_month, "pers_month": pers_month, "pers_proj": pers_proj,
             "cell": cell, "gaps": gaps, "lines": lines, "lo": lo or 0, "hi": hi or 0}
+
+
+def share_out(lines):
+    """REQ-CAL-19, exactly as shareOut() in core/06_calculate.js does it.
+
+    A project-month IS its standard times its own period weight, scaled by how much of
+    the month the project actually runs. The people on it DIVIDE that, in proportion to
+    their claims - so a part-time person pushes load onto whoever else is there rather
+    than making the project cheaper.
+    """
+    groups = defaultdict(list)
+    for L in lines:
+        groups[(L["project_id"], L["month"])].append(L)
+    for group in groups.values():
+        claims = sum(L["claim"] for L in group)
+        ran = max(L["coverage"] for L in group)
+        demand = group[0]["standard_fte"] * group[0]["period_weight"] * ran
+        for L in group:
+            L["role_share"] = (L["claim"] / claims) if claims > 0 else 0.0
+            L["month_run"] = ran
+            L["demand_fte"] = demand
+            L["fte"] = demand * L["role_share"]
 
 
 def apply_manual(M, lines):
@@ -1027,6 +1041,11 @@ def apply_manual(M, lines):
         if not M.is_manual("assignment", L["assignment_id"]):
             continue
         v = M.manual.get(f"assignment|{L['assignment_id']}|{iso(L['month'])}")
+        # Flagged as well as replaced, exactly as the browser engine does it. Without
+        # this a caller cannot tell a stated figure from a calculated one, and anything
+        # checking "every project-month is its standard" counts the manual ones as
+        # failures - which is how this gap was found.
+        L["manual_assignment"] = True
         L["fte"] = 0.0 if v is None else v
 
     groups = defaultdict(list)
@@ -1035,6 +1054,8 @@ def apply_manual(M, lines):
             groups[(L["project_id"], L["month"])].append(L)
     for (pid, k), group in groups.items():
         want = M.manual.get(f"project|{pid}|{iso(k)}")
+        for L in group:
+            L["manual_project"] = True
         if want is None:
             for L in group:
                 L["fte"] = 0.0
