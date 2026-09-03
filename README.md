@@ -68,7 +68,7 @@ File API call at all** — Python reads the workbook and hands the bytes to the 
 `127.0.0.1`. `core/` and `ui/` are untouched, so there is still one engine.
 
 ```
-python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.5.zip, 150 KB
+python tools/build_python_app.py --zip   # dist/PM_APP_python_v1.6.zip, 167 KB
 python tools/test_storage_py.py          # 80 checks — kills mid-save, an 8-process race
 python tools/test_python_app.py          # 42 checks — a live server, a real browser
 ```

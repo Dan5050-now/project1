@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.5"
+VERSION = "1.6"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,54 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.6
+
+  * THE STANDARD MONTHLY FTE NOW DECIDES HOW BIG A FIGURE IS. Until this version
+    the 'Standard period weights' table was read by nothing except the period
+    generator. Every figure came from the project's own period weight times the
+    role factors, which is a SHAPE with no size behind it. Your figures will
+    move, and they are meant to.
+
+        FTE = standard_fte x period weight x role_share x person weight x coverage
+
+    standard_fte   the month's DEMAND for a project of this type, phase and work
+                   scope in that period. A quantity, not a multiplier: 4.02 means
+                   the period takes about four full-time people a month. It used
+                   to be called 'weight', which is most of why it went unread -
+                   a weight reads like something to multiply by.
+    period weight  this project's own ADJUSTMENT to that standard. 1.00 means an
+                   ordinary project of its kind. It no longer carries the size.
+    role_share     this person's slice: their role's factor, divided by the
+                   people holding that role, over the sum of the factors of the
+                   roles ACTUALLY STAFFED that month.
+
+  * WHAT FOLLOWS FROM IT. The shares add to one, so a fully committed project
+    month is exactly standard x period weight, however many roles are on it. An
+    unstaffed role's work lands on the others instead of making the project look
+    cheaper. And a part-time commitment leaves the project SHORT of its standard -
+    that gap is what the plan does not resource, and it is worth seeing.
+
+  * YOUR EXISTING FILES STILL OPEN. A workbook from the previous version is read
+    and the renamed column is carried across. But its numbers were written as
+    MULTIPLIERS around 1.00 and are now read as FTE, so check two columns before
+    you trust the figures:
+
+        PeriodWeightStandard.standard_fte   should be a real monthly FTE
+        ProjectPeriod.weight                should be about 1.00, an adjustment
+
+    Where a standard is missing the figure falls back to 1.00 and the findings
+    report says so, which is exactly what the old version did.
+
+  * A NOTE ON THE STANDARDS TABLE. A row with the work scope left EMPTY applies to
+    every scope; a row naming a scope beats it for projects with that scope. So if
+    you edit a standard and a project does not move, check which of the two rows
+    that project is actually using.
+
+  * FIXED: the 'Standard period weights' table showed blank values, and an edit
+    typed into one was accepted, counted as an unsaved change, survived the save
+    prompt and then vanished. The panel was still asking for the old column name.
+
 
 WHAT IS NEW IN 1.5
 
