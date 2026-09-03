@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.6"
+VERSION = "1.7"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -83,6 +83,46 @@ if __name__ == "__main__":
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
 
+WHAT IS NEW IN 1.7
+
+  * A PROJECT-MONTH IS NOW ITS STANDARD, and the people on it DIVIDE that month
+    rather than each adding to it. Your figures will be LARGER than in 1.6, and
+    on a plan staffed by part-timers they will be much larger.
+
+        demand = standard_fte x period weight x month_run
+        claim  = (role factor / people holding that role)
+                     x person weight x month coverage
+        FTE    = demand x claim / (the sum of the claims)
+
+    The shares add to one, so the month comes to its demand however many people
+    are on it and whatever their weights.
+
+  * WHY IT CHANGED. In 1.6 person_weight scaled each person's share AFTER the
+    demand had been divided, so a project staffed by part-time people showed a
+    fraction of what it needs - on the delivered example, about 30% of it. That
+    made the standard look as though it were being ignored. It was not: it was
+    there, and the staffing was cancelling most of it.
+
+  * WHAT THIS MEANS IN PRACTICE. A part-time person now pushes load ONTO their
+    colleagues instead of lowering the project. Under-staffing shows up on the
+    PEOPLE, as months over the 1.50 ceiling, and never as a project that costs
+    less than the work it contains.
+
+  * month_run is how much of the month the project actually ran, taken as the
+    largest coverage any of its people have. A project whose period ends on the
+    10th draws a third of a month, not a whole one.
+
+  * split_shared_role_fte can no longer inflate a project total, because nothing
+    can. On a project with a single role it now does nothing at all; it still
+    decides the split where roles have different numbers of people on them, which
+    is the case it was always really about.
+
+  * CHECKING A FIGURE. File -> Export -> calculated FTE. On the Detail sheet
+    every row of one project-month carries the same demand_fte, and the fte
+    column of those rows adds up to exactly it. Each row is demand_fte x
+    role_share - two numbers, both printed beside it.
+
+
 WHAT IS NEW IN 1.6
 
   * THE STANDARD MONTHLY FTE NOW DECIDES HOW BIG A FIGURE IS. Until this version
@@ -104,11 +144,10 @@ WHAT IS NEW IN 1.6
                    people holding that role, over the sum of the factors of the
                    roles ACTUALLY STAFFED that month.
 
-  * WHAT FOLLOWS FROM IT. The shares add to one, so a fully committed project
-    month is exactly standard x period weight, however many roles are on it. An
-    unstaffed role's work lands on the others instead of making the project look
-    cheaper. And a part-time commitment leaves the project SHORT of its standard -
-    that gap is what the plan does not resource, and it is worth seeing.
+  * WHAT FOLLOWS FROM IT. The shares add to one, so the project month is exactly
+    standard x period weight, however many roles are on it. An unstaffed role's
+    work lands on the others instead of making the project look cheaper.
+    (Version 1.6 shipped a different reading of person_weight - see 1.7 below.)
 
   * YOUR EXISTING FILES STILL OPEN. A workbook from the previous version is read
     and the renamed column is carried across. But its numbers were written as
