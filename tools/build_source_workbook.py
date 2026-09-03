@@ -303,7 +303,7 @@ SHEETS = {
         ("period_seq", "Orders periods along the timeline. Unique within a project.", ""),
         ("period_start", "Inclusive.", ""),
         ("period_end", "Inclusive. Periods must not overlap or leave a gap.", ""),
-        ("weight", "Effort multiplier. Clinical trial types: seeded from PeriodWeightStandard. Others: type it.", ""),
+        ("weight", "THIS PROJECT'S OWN ADJUSTMENT to the standard for its type, phase and scope (REQ-CAL-19). 1.00 means an ordinary project of its kind; 1.20 means this one takes a fifth more. It does NOT carry the magnitude - PeriodWeightStandard.standard_fte does.", ""),
         ("note_1", "Free text. e.g. why a derived date was overridden by hand.", ""),
     ],
     "PeriodWeightStandard": [

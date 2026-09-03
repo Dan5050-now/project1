@@ -1494,7 +1494,7 @@ sheets_tbl = [
     ["Project", "One row per project.", "Master"],
     ["Milestone", "One row per project milestone.", "Child of Project"],
     [f"{MARK_NEW}ProjectPeriod", "The four standard periods per project, with their start/end and weight.", "Child of Project"],
-    [f"{MARK_NEW}PeriodWeightStandard", "Default weight per project category x period. Seeds ProjectPeriod.", "Reference"],
+    [f"{MARK_CHG}PeriodWeightStandard", "THE STANDARD MONTHLY FTE per project type, phase, work scope and period - where every figure gets its size (REQ-CAL-19).", "Reference"],
     [f"{MARK_CHG}RoleFactor", "Role burden factor, per project type, clinical phase and period.", "Reference"],
     ["Person", "One row per person.", "Master"],
     ["Assignment", "One row per person + project + role.", "Link"],

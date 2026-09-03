@@ -559,11 +559,11 @@ function renderGenTab(){
   const pwsRows = M.raw.PeriodWeightStandard, rfRows = M.raw.RoleFactor;
   const pws = S.genView.pws === "rows"
     ? dataTable("PeriodWeightStandard", pwsRows,
-        ["project_type","clinical_phase","work_scope_type","period_name","weight","note_1"])
+        ["project_type","clinical_phase","work_scope_type","period_name","standard_fte","note_1"])
     : `<div class="scrollx tall">${wmatrix(pwsRows,
         r => [r.project_type, r.clinical_phase, scopeLabel(r)],
         k => { const p = k.split(" · "); return [p[1] + " · " + p[2], p[0]]; },
-        "period_name", "weight")}</div>`;
+        "period_name", "standard_fte")}</div>`;
 
   const ct = rfRows.filter(r => CLINICAL_TYPES.has(r.project_type));
   const ot = rfRows.filter(r => !CLINICAL_TYPES.has(r.project_type));

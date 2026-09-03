@@ -314,7 +314,7 @@
      "name": "weight",
      "type": "text",
      "editable": true,
-     "note": "Effort multiplier. Clinical trial types: seeded from PeriodWeightStandard. Others: type it."
+     "note": "THIS PROJECT'S OWN ADJUSTMENT to the standard for its type, phase and scope (REQ-CAL-19). 1.00 means an ordinary project of its kind; 1.20 means this one takes a fifth more. It does NOT carry the magnitude - PeriodWeightStandard.standard_fte does."
     },
     {
      "name": "note_1",
