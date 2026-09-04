@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.41"
+DOC_VERSION = "2.42"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,7 +397,28 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
-    [f"{MARK_NEW}2.41", "2026-09-04", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.42", "2026-09-04", "Claude Code", "Pending",
+     "R-34, THE PROJECT DEMAND CHART SAYS WHAT ITS MONTH CAME TO. 'Monthly demand by "
+     "person' ended its pop-up with a rule and the month's total across everyone in "
+     "view, and gave each band its share of that month; 'Monthly demand by project' "
+     "gave neither, only the band's own figure. A band read on its own cannot say "
+     "whether the month came to five FTE or to fifty, which is the question a stacked "
+     "chart exists to answer - so the reader had to leave the chart and find the "
+     "Overall table to interpret what they were hovering over. Both are added, worded "
+     "to match the person chart. The total is summed over every project IN VIEW rather "
+     "than over the bands actually drawn, for the same reason the person chart sums "
+     "over every person in view: so the two pop-ups report the SAME figure for a given "
+     "month, which is what the panel caption already claims about these two charts. "
+     "Checked on the 10x10 fixture - 24 months, every one identical between the two, "
+     "and the per-band shares summing to 100% (+/-1, rounding to a whole percent) in "
+     "all 24. NO FIGURE CHANGES: the total is the sum the chart was already drawing. "
+     "test_charts.py gains two checks. It already compared the two charts as DRAWN, in "
+     "pixel heights; these compare what they SAY, which is what a reader acts on - that "
+     "every band states a month total, and that the total it states is the one the "
+     "person chart states for that month. Both were verified to fail with the line "
+     "removed from the build.",
+     "Issued for review"],
+    ["2.41", "2026-09-04", "Claude Code", "Pending",
      "R-33, WHAT THE STANDARDS SHEET IS CALLED, and the notes that describe the "
      "calculation. Three things the reviewer reported after using v2.40, none of them "
      "arithmetic - every figure in this revision is unchanged, checked at 4,333.46 "

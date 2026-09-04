@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.41.xlsx"
+PLAN = "PRAP_Development_Plan_v2.42.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -201,7 +201,8 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "Sheet 10 Graph 1 updated. No change to any figure: the total is the sum the "
          "chart was already drawing, and it is the same figure Graph 2 states for that "
          "month summed along the other axis - test_charts.py now holds the two to "
-         "agreeing in WORDS as well as in pixels, month for month.", "Issued"],
+         "agreeing in WORDS as well as in pixels, month for month. Written against plan "
+         "v2.42.", "Issued"],
         ["1.15", "2026-09-04", "Claude Code", "Dan",
          "R-33, SCHEMA 11, and no change to any figure - the 62-project fixture totals "
          "4,333.46 FTE-months before and after. Sheet 03 renames the sheet "
