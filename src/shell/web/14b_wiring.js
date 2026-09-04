@@ -496,6 +496,21 @@ const CAL = (() => {
   };
   const firstOf = d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
 
+  /* Today, as the CLOCK ON THE USER'S COMPUTER reckons it.
+   *
+   * ymd() is toISOString(), which is UTC, and every other date in this application is
+   * built with Date.UTC() - so for those it is exactly right. `new Date()` is not one of
+   * those: it is a real instant, and putting an instant through a UTC formatter asks
+   * what day it is in Greenwich, which is not the question. In Seoul at 08:30 the answer
+   * came back as yesterday; in Los Angeles at 17:00 it comes back as tomorrow.
+   *
+   * So the local getters read the date off the user's own calendar, and Date.UTC puts it
+   * back into the UTC-midnight form the rest of the application stores dates in. */
+  const todayKey = () => {
+    const n = new Date();
+    return ymd(new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())));
+  };
+
   function place(){
     const r = cell.getBoundingClientRect();
     box.style.left = Math.max(8, Math.min(r.left, innerWidth - box.offsetWidth - 8)) + "px";
@@ -503,20 +518,32 @@ const CAL = (() => {
       ? Math.max(8, r.top - box.offsetHeight - 4) : r.bottom + 4) + "px";
   }
 
-  function render(){
+  /* `follow` is who is steering the grid.
+   *
+   * TRUE while the cell is: opening the panel, and every keystroke in it - type 2029 and
+   * the calendar is already there, which is the behaviour the panel was built around.
+   * FALSE when the user is working the arrows, because then the month on display is
+   * THEIRS and the cell must not drag it back.
+   *
+   * Both were once true, and the arrows were unusable for it: every click re-read the
+   * cell, snapped the grid to that month and stepped one from there, so a cell holding
+   * 2026-09-01 went to August and stayed at August however many times it was clicked.
+   * step() had a workaround - blank the cell, render, put the text back - which did not
+   * work either, because step() re-read the cell before rendering. Saying which of the
+   * two is steering is the whole of the fix, and it lets the cell keep its text. */
+  function render(follow){
     const picked = readCell();
-    // What is being typed steers the grid: type 2029 and the calendar is already there.
-    if (picked) shown = firstOf(picked);
+    if (follow && picked) shown = firstOf(picked);
     const y = shown.getUTCFullYear(), m = shown.getUTCMonth();
     const lead = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7;    // weeks start Monday
     const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-    const todayKey = ymd(new Date());
+    const today = todayKey();
     const cells = [];
     for (let i = 0; i < lead; i++) cells.push('<div class="d off"></div>');
     for (let n = 1; n <= days; n++){
       const k = ymd(new Date(Date.UTC(y, m, n)));
       const cls = "d" + (picked && k === ymd(picked) ? " on" : "")
-                      + (k === todayKey ? " today" : "");
+                      + (k === today ? " today" : "");
       cells.push(`<button type="button" class="${cls}" data-d="${k}">${n}</button>`);
     }
     box.innerHTML =
@@ -530,7 +557,7 @@ const CAL = (() => {
       + `<div class="calgrid">${DOW.map(d => `<div class="dow">${d}</div>`).join("")}`
       + cells.join("") + `</div>`
       + `<div class="calfoot">`
-      + `<button type="button" class="btn tiny" data-d="${att(todayKey)}">Today</button>`
+      + `<button type="button" class="btn tiny" data-d="${att(today)}">Today</button>`
       + `<button type="button" class="btn tiny" data-d="">Clear</button>`
       + `<span class="hint">or type it: YYYY-MM-DD</span></div>`;
     box.hidden = false;
@@ -541,8 +568,8 @@ const CAL = (() => {
     if (!isDate(td)){ if (cell !== td) api.close(); return; }
     if (cell === td && !box.hidden) return;
     cell = td;
-    shown = firstOf(readCell() || new Date());
-    render();
+    shown = firstOf(readCell() || parseDate(todayKey()) || new Date());
+    render(true);
   };
   api.close = () => { box.hidden = true; cell = null; api.holding = false; };
   api.owns = td => cell === td && !box.hidden;
@@ -560,15 +587,8 @@ const CAL = (() => {
     return false;
   };
   function step(n){
-    const at = readCell();
-    if (at) shown = firstOf(at);
     shown = new Date(Date.UTC(shown.getUTCFullYear(), shown.getUTCMonth() + n, 1));
-    // Re-rendered from `shown` alone: with a date in the cell, render() would snap the
-    // grid straight back to it and the arrows would appear not to work.
-    const keep = cell.textContent;
-    cell.textContent = "";
-    render();
-    cell.textContent = keep;
+    render(false);
   }
   function choose(v){
     const td = cell;
@@ -591,7 +611,7 @@ const CAL = (() => {
   });
   document.addEventListener("input", e => {
     const td = e.target.closest('td[contenteditable="true"]');
-    if (td && td === cell) render();
+    if (td && td === cell) render(true);
   });
   addEventListener("scroll", e => {
     if (!cell || box.hidden) return;

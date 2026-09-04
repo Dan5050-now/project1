@@ -103,6 +103,23 @@ with sync_playwright() as pw:
           "the month and the year both step",
           f"{before} → {after_m} → {pg.inner_text('.cmon')}")
 
+    # ONE step working proved nothing: the fault reported from the field was that the
+    # SECOND one did not. Every click re-read the cell, snapped the grid back to the
+    # cell's own month and stepped one from there, so a cell holding a date sat one month
+    # off it for ever however many times the arrow was pressed. Walk five and count.
+    start.click()
+    pg.wait_for_timeout(450)
+    walk = [pg.inner_text(".cmon")]
+    for _ in range(5):
+        pg.locator(".cnav[data-step='-1']").click()
+        pg.wait_for_timeout(220)
+        walk.append(pg.inner_text(".cmon"))
+    check(len(set(walk)) == 6,
+          "and the arrows KEEP stepping — five clicks move five months, not one",
+          " → ".join(walk))
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(200)
+
     start.click()
     pg.wait_for_timeout(450)
     pg.locator(".calgrid button.d", has_text="15").first.click()
@@ -420,6 +437,43 @@ with sync_playwright() as pw:
           f"floor {applied['under']}, split {applied['split']}, V-30 {applied['v30']}")
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
+
+    # ---- 8. 'Today' means today WHERE THE USER IS -----------------------------
+    # In its own contexts, with a pinned clock, because this cannot be checked from the
+    # machine running the test: CI keeps UTC, and in UTC the wrong answer and the right
+    # one are the same answer. Two zones on opposite sides of the date line at one
+    # instant - Seoul is already on the 11th, Los Angeles is still on the 10th - so a
+    # UTC reading is wrong for exactly one of them whichever way it errs.
+    print("\n8. 'Today' is today on the USER'S clock, not in Greenwich")
+    INSTANT = "2026,8,11,3,0"                    # 2026-09-11 03:00 UTC
+    for zone, expect in (("Asia/Seoul", "2026-09-11"),         # 12:00, the 11th
+                         ("America/Los_Angeles", "2026-09-10"),  # 20:00 on the 10th
+                         ("Europe/London", "2026-09-11")):       # 04:00, the 11th
+        ctx = browser.new_context(viewport={"width": 1400, "height": 860}, timezone_id=zone)
+        tpg = ctx.new_page()
+        tpg.add_init_script("""(() => {const R = Date, FIX = R.UTC(%s);
+            class D extends R {constructor(...a){ a.length ? super(...a) : super(FIX); }
+              static now(){ return FIX; }}
+            window.Date = D;})();""" % INSTANT)
+        tpg.goto(APP)
+        tpg.set_input_files("#picker", str(SMALL))
+        tpg.wait_for_selector("#tabs:not([hidden])", timeout=30000)
+        tpg.click("text=Source data (project)")
+        tpg.wait_for_timeout(1200)
+        got = tpg.evaluate("""() => {
+            const t = [...document.querySelectorAll('#t-proj td[contenteditable="true"]')]
+              .find(x => x.dataset.col === 'start_date');
+            t.scrollIntoView({block: 'center'}); t.focus(); t.click();
+            const b = [...document.querySelectorAll('#cal .calfoot .btn')]
+              .find(x => x.textContent.trim() === 'Today');
+            b.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, cancelable: true}));
+            return {wrote: t.textContent.trim(),
+                    local: new Date().toLocaleDateString('en-CA')};}""")
+        check(got["wrote"] == expect == got["local"],
+              f"   {zone}: Today writes the date on that clock",
+              f"clock says {got['local']}, Today wrote {got['wrote']}, wanted {expect}")
+        ctx.close()
+
     browser.close()
 
 print("\nFAILURES: " + (f"{len(fails)}" if fails else "none"))

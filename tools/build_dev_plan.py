@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.42"
+DOC_VERSION = "2.43"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,7 +397,32 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
-    [f"{MARK_NEW}2.42", "2026-09-04", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.43", "2026-09-04", "Claude Code", "Pending",
+     "R-35, TWO FAULTS IN THE DATE PICKER, both reported from the field and both "
+     "reproduced before being touched. "
+     "(1) THE MONTH ARROWS MOVED ONE MONTH AND NO FURTHER. step() re-read the cell and "
+     "snapped the grid back to the cell\'s own month before stepping, so a cell holding "
+     "2026-09-01 went to August and stayed at August however many times the arrow was "
+     "pressed - a date several months away could not be reached by navigating at all. "
+     "It had a workaround that did not work: blank the cell, render, put the text back, "
+     "which step() then defeated by re-reading before it rendered. The grid now knows "
+     "WHO IS STEERING - the cell while it is being opened or typed into, the user while "
+     "they are working the arrows - and the cell keeps its text throughout. "
+     "(2) \'TODAY\' WROTE THE DATE IN GREENWICH, not on the user\'s clock. ymd() is "
+     "toISOString(), which is right for every other date in the application because "
+     "those are built with Date.UTC(); `new Date()` is an instant, and putting an "
+     "instant through a UTC formatter asks what day it is in London. In Seoul before "
+     "09:00 that is yesterday; in Los Angeles after 17:00 it is tomorrow. The local "
+     "getters now read the date off the user\'s own calendar and Date.UTC puts it back "
+     "into the form the rest of the application stores. The same figure highlights "
+     "today in the grid and opens an empty cell on the right month. "
+     "NO CALCULATION CHANGES. test_ui.py gains both: five clicks must move five months "
+     "(the old test stepped ONCE, which is why this passed for so long - one step did "
+     "work), and Today is checked in three time zones on a pinned clock, because CI "
+     "keeps UTC and in UTC the wrong answer and the right one are the same answer. Both "
+     "verified to fail against the old code.",
+     "Issued for review"],
+    ["2.42", "2026-09-04", "Claude Code", "Pending",
      "R-34, THE PROJECT DEMAND CHART SAYS WHAT ITS MONTH CAME TO. 'Monthly demand by "
      "person' ended its pop-up with a rule and the month's total across everyone in "
      "view, and gave each band its share of that month; 'Monthly demand by project' "
@@ -417,7 +442,7 @@ rows = [
      "every band states a month total, and that the total it states is the one the "
      "person chart states for that month. Both were verified to fail with the line "
      "removed from the build.",
-     "Issued for review"],
+     "Superseded by v2.43"],
     ["2.41", "2026-09-04", "Claude Code", "Pending",
      "R-33, WHAT THE STANDARDS SHEET IS CALLED, and the notes that describe the "
      "calculation. Three things the reviewer reported after using v2.40, none of them "

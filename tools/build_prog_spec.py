@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.16"
+DOC_VERSION = "1.17"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.42.xlsx"
+PLAN = "PRAP_Development_Plan_v2.43.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,15 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.17", "2026-09-04", "Claude Code", "Dan",
+         "R-35, the date picker. Sheet 10 records two corrections. The month arrows "
+         "stepped once and no further, because step() re-read the cell and snapped the "
+         "grid back before stepping; the panel now distinguishes the cell steering the "
+         "grid (opening, typing) from the user steering it (the arrows), and the cell "
+         "keeps its text while navigating. \'Today\' wrote the UTC date rather than the "
+         "date on the user\'s clock - a day out either way for anyone not near "
+         "Greenwich - and now reads the local calendar date. No calculation changes. "
+         "Written against plan v2.43.", "Issued"],
         ["1.16", "2026-09-04", "Claude Code", "Dan",
          "The 'Monthly demand by project' pop-up now states THE MONTH'S TOTAL across "
          "every project in view, under a rule, and the band's share of it - the two "
@@ -1020,9 +1029,10 @@ r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t3, [24, 90, 20], wrap_co
 
 r = section(ws, r, "Tab 4 - General assumptions   [REQ-DSH-11, added at the component-list review]")
 r = lines(ws, r, [
-    "Every figure on the Overall tab is the product of the standard period weight, the role factor and the",
-    "person's own weight. Two of those three lived only in the workbook, so a reader who wanted to know why",
-    "a number was what it is had to leave the application. This tab is the fix.",
+    "Every figure on the Overall tab starts from the standard monthly FTE for the project's type, phase and",
+    "work scope, adjusted by the project's own period weight, and is then shared out among the people on it",
+    "by the role factors and their own weights. Those standards lived only in the workbook, so a reader who",
+    "wanted to know why a number was what it is had to leave the application. This tab is the fix.",
 ])
 t4 = [
     ["Role factors", "RoleFactor as TWO matrices - clinical trials (type + phase + role down the side, the six periods across) and 'Others' (role down the side, the three periods across). 249 rows flat is unreadable, and reading a role ACROSS the periods is the whole point of keying it that way. Both sit in a bounded scroll region.", "REQ-DSH-11"],
