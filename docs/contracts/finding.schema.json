@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/tea/contracts/finding.schema.json",
+  "title": "TEA-CTR-002 Finding",
+  "description": "One suspected issue produced by the Tumor Evaluation Review Agent for human review. Additive changes only within a MAJOR version.",
+  "type": "object",
+  "required": [
+    "finding_id", "run_id", "rule_id", "rule_version", "dedupe_key",
+    "study_id", "subject_id", "severity", "determination_mode", "confidence",
+    "evidence", "narrative", "query_link_status", "priority_score", "disposition", "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "finding_id": { "type": "string" },
+    "run_id": { "type": "string" },
+    "rule_id": { "type": "string", "pattern": "^TE-[A-Z]{2}-[0-9]{3}$" },
+    "rule_version": { "type": "string" },
+    "rule_family": { "type": "string", "enum": ["ST", "BL", "FU", "RS", "IR", "XD", "QM"] },
+    "dedupe_key": { "type": "string" },
+
+    "study_id": { "type": "string" },
+    "site_id": { "type": ["string", "null"] },
+    "subject_id": { "type": "string" },
+    "assessment_ids": { "type": "array", "items": { "type": "string" } },
+    "visit_labels": { "type": "array", "items": { "type": "string" } },
+    "lesion_ids": { "type": "array", "items": { "type": "string" } },
+
+    "severity": { "type": "string", "enum": ["CRITICAL", "MAJOR", "MINOR", "INFO"] },
+    "original_severity": {
+      "type": ["string", "null"],
+      "enum": ["CRITICAL", "MAJOR", "MINOR", "INFO", null],
+      "description": "Set when the query reconciler escalated the severity; preserves the rule's default."
+    },
+    "determination_mode": { "type": "string", "enum": ["DETERMINISTIC", "LLM_ADJUDICATED", "HYBRID"] },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "audience": {
+      "type": "string",
+      "enum": ["SITE", "STUDY_TEAM"],
+      "default": "SITE",
+      "description": "STUDY_TEAM findings (e.g. BICR discordance, study set-up, site patterns) are not issued as site queries."
+    },
+
+    "evidence": {
+      "type": "object",
+      "description": "Structured facts the narrative is rendered from. Authoritative; the narrative is not.",
+      "required": ["observed", "expected", "records"],
+      "additionalProperties": false,
+      "properties": {
+        "observed": {
+          "type": "object",
+          "description": "Values as collected, keyed by a stable evidence field name.",
+          "additionalProperties": true
+        },
+        "expected": {
+          "type": "object",
+          "description": "Values as derived by the engine under the effective configuration.",
+          "additionalProperties": true
+        },
+        "records": {
+          "type": "array",
+          "description": "Pointers to the exact source records the finding rests on.",
+          "items": {
+            "type": "object",
+            "required": ["entity", "key"],
+            "additionalProperties": false,
+            "properties": {
+              "entity": {
+                "type": "string",
+                "enum": ["Assessment", "Lesion", "LesionMeasurement", "ReportedResponse", "Query", "CrossDomain"]
+              },
+              "key": { "type": "object", "additionalProperties": true },
+              "form": { "type": ["string", "null"] },
+              "field": { "type": ["string", "null"] },
+              "value": {},
+              "unit": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "derivation_trace": {
+          "type": "array",
+          "description": "Ordered derivation steps with their inputs and outputs; drives the UI evidence panel.",
+          "items": {
+            "type": "object",
+            "required": ["step", "output"],
+            "additionalProperties": false,
+            "properties": {
+              "step": { "type": "string" },
+              "inputs": { "type": "object", "additionalProperties": true },
+              "output": {},
+              "note": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "truncated": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when evidence was summarised to fit the prompt budget; never silent."
+        }
+      }
+    },
+
+    "narrative": {
+      "type": "object",
+      "description": "The five reviewer-facing elements required by the review process.",
+      "required": ["review_point_text", "issue_text", "reason_text", "suggested_query_text", "additional_info_text"],
+      "additionalProperties": false,
+      "properties": {
+        "review_point_text": { "type": "string", "description": "What review point was checked." },
+        "issue_text": { "type": "string", "description": "What the issue is and on which data." },
+        "reason_text": { "type": "string", "description": "Why it is an issue: current data versus the data deemed correct." },
+        "suggested_query_text": { "type": "string", "description": "Draft initial query message, editable before issuance." },
+        "additional_info_text": { "type": "string", "description": "Review tips and guideline elaboration." },
+        "rendered_by": { "type": "string", "enum": ["TEMPLATE", "LLM"], "default": "TEMPLATE" },
+        "placeholders_verified": {
+          "type": "boolean",
+          "description": "True when every numeric placeholder was re-injected from evidence after generation."
+        }
+      }
+    },
+
+    "guideline_citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_id", "clause"],
+        "additionalProperties": false,
+        "properties": {
+          "source_id": { "type": "string", "description": "Knowledge base entry id, e.g. KB-02" },
+          "clause": { "type": "string" },
+          "text": { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "query_link_status": {
+      "type": "string",
+      "enum": ["NEW", "DUPLICATE_OPEN", "ANSWERED_RESOLVED", "ANSWERED_UNRESOLVED", "RECURRENT"]
+    },
+    "linked_query_ids": { "type": "array", "items": { "type": "string" } },
+    "match_basis": {
+      "type": ["string", "null"],
+      "enum": ["EXACT", "STRUCTURAL", "SEMANTIC", null],
+      "description": "How the finding was linked to a historical query. SEMANTIC may not suppress MAJOR or CRITICAL findings."
+    },
+
+    "priority_score": { "type": "number" },
+    "priority_components": {
+      "type": "object",
+      "description": "The factors of the score, displayed in the UI so ranking is inspectable.",
+      "additionalProperties": { "type": "number" }
+    },
+    "root_finding_id": { "type": ["string", "null"], "description": "Set when this finding is a downstream consequence of another." },
+    "related_finding_ids": { "type": "array", "items": { "type": "string" } },
+
+    "first_seen_run_id": { "type": ["string", "null"] },
+    "first_seen_date": { "type": ["string", "null"], "format": "date-time" },
+
+    "disposition": {
+      "type": "string",
+      "enum": ["PENDING", "ACCEPTED", "REJECTED", "QUERY_ISSUED", "RESOLVED"]
+    },
+    "disposition_reason_code": {
+      "type": ["string", "null"],
+      "description": "Coded rejection or acceptance reason; the primary tuning signal for false-positive reduction."
+    },
+    "disposition_comment": { "type": ["string", "null"] },
+    "disposition_by": { "type": ["string", "null"] },
+    "disposition_datetime": { "type": ["string", "null"], "format": "date-time" },
+
+    "provenance": {
+      "type": "object",
+      "description": "Everything that could change this finding. Enables reproduction and impact assessment.",
+      "required": ["engine_version", "rulepack_version", "guideline_version", "protocol_config_hash", "dataset_snapshot_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "engine_version": { "type": "string" },
+        "rulepack_version": { "type": "string" },
+        "prompt_bundle_version": { "type": ["string", "null"] },
+        "guideline_version": { "type": "string" },
+        "protocol_config_hash": { "type": "string" },
+        "dataset_snapshot_hash": { "type": "string" },
+        "llm_provider": { "type": ["string", "null"] },
+        "llm_model_id": { "type": ["string", "null"] },
+        "generated_datetime": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
