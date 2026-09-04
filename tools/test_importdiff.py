@@ -82,7 +82,7 @@ def doc(projects, people):
                            "period_seq": 1, "period_start": "2027-01-01",
                            "period_end": p["end_date"], "weight": 1.00}
                           for p in projects],
-        "PeriodWeightStandard": [],
+        "PeriodFTEStandard": [],
         "RoleFactor": [{"project_type": "Others", "clinical_phase": None,
                         "work_scope_type": None, "period_name": "Planning",
                         "role_name": "Main staff", "role_factor": 1.00}],

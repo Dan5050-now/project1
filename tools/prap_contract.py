@@ -35,8 +35,8 @@ CONTRACT_VERSION = "1.0"
 
 # The current issue of each controlled document. check_consistency.py verifies the
 # files exist and that the versions agree with the application's provenance strip.
-PLAN = f"PRAP_Development_Plan_v{'2.40'}.xlsx"
-SPEC = "PRAP_Programming_Specification_v1.14.xlsx"
+PLAN = "PRAP_Development_Plan_v2.41.xlsx"
+SPEC = "PRAP_Programming_Specification_v1.15.xlsx"
 UIL = "PRAP_UI_Component_List_v1.0.xlsx"
 TEMPLATE = f"PRAP_SourceData_Template_v{B.TEMPLATE_VERSION}.xlsx"
 DUMMY = f"PRAP_SourceData_Dummy_v{B.DUMMY_VERSION}.xlsx"
@@ -145,7 +145,7 @@ SHEET_ROLE = {
     # applies to every scope, and a project falls back to it when there is no row for
     # its own - so an outside program reading these tables must do the same, or it will
     # report a missing weight where the application finds one.
-    "PeriodWeightStandard": {"role": "reference",
+    "PeriodFTEStandard": {"role": "reference",
                              "key": ["project_type", "clinical_phase", "work_scope_type",
                                      "period_name"],
                              "fallback": "work_scope_type empty means every scope",
@@ -285,7 +285,7 @@ BLANK_START = {
                    "lists and settings, and opens every tab for typing. It is how someone "
                    "plans from scratch without a workbook.",
     "what_blank_contains": "The Lists and Config sheets of the delivered template, plus a "
-                           "complete PeriodWeightStandard and RoleFactor grid built from "
+                           "complete PeriodFTEStandard and RoleFactor grid built from "
                            "those lists - every (type, phase, period) and (type, phase, "
                            "period, role) combination, so nothing silently falls back to "
                            "1.00 and V-23 never fires.",
@@ -500,7 +500,7 @@ RECIPES = [
                 "one exported from a system of record.",
         "steps": [
             "Check the reference tables FIRST: python tools/prap_io.py to-json <file.xlsx> "
-            "-o plan.prap.json, then look at PeriodWeightStandard and RoleFactor. A plan "
+            "-o plan.prap.json, then look at PeriodFTEStandard and RoleFactor. A plan "
             "started blank seeds every one of them at 1.00 with a note saying so.",
             "If they are still 1.00, say so before quoting any figure. The load formula "
             "then reduces to person_weight x month_coverage, which is a real number but "

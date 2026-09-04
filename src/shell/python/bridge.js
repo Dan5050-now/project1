@@ -594,6 +594,28 @@ Account        ${where.account}</pre>
     if (e.key === "o") { e.preventDefault(); document.querySelector('[data-do="open"]')?.click(); }
   });
 
+  /* ---- how tall the window chrome is -------------------------------------
+     Measured rather than assumed, and re-measured when it changes. Both bars wrap:
+     the status strip has flex-wrap and a long file path pushes it onto a second line,
+     and the menu bar wraps too on a narrow window. Every one of those changes the
+     height the page's sticky band has to clear, so a constant here would be right
+     until the moment it mattered. Written as CSS variables, because the rules that
+     need them are in chrome.css where they can be read next to what they affect. */
+  function fitChrome(){
+    const t = el("pm-title"), s = el("pm-strip");
+    const th = t ? t.offsetHeight : 0;
+    const r = document.documentElement.style;
+    r.setProperty("--pm-title-h", th + "px");
+    r.setProperty("--pm-chrome", (th + (s ? s.offsetHeight : 0)) + "px");
+  }
+  fitChrome();
+  if (window.ResizeObserver){
+    const ro = new ResizeObserver(fitChrome);
+    for (const id of ["pm-title", "pm-strip"]) { const n = el(id); if (n) ro.observe(n); }
+  } else {
+    addEventListener("resize", fitChrome);   // coarser, but never wrong by much
+  }
+
   showFile();
   window.__pm = { call, openPlan, savePlan, importSource, adoptBytes, browseFor,
                   takeClaimOnEdit, state: () => ({ ref, holds, me, caps, where }) };

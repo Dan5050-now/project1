@@ -4,7 +4,7 @@ Reported from the field, on the General assumptions tab: the 'Standard period we
 table showed BLANK values, and an edit typed into one was accepted, counted as an unsaved
 change, survived the save prompt — and then vanished.
 
-One cause. Schema 10 renamed PeriodWeightStandard.weight to standard_fte, and
+One cause. Schema 10 renamed PeriodFTEStandard.weight to standard_fte, and
 renderGenTab still asked for `weight`. Both halves of the symptom follow from that:
 
   * READING  `r.weight` on a row that no longer has one is undefined, so every cell in
@@ -40,7 +40,7 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
-FIX = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.15.xlsx"
+FIX = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.16.xlsx"
 
 fails = []
 
@@ -139,11 +139,11 @@ with sync_playwright() as pw:
                             "es => es.forEach(e => e.dataset.setview.endsWith('rows') "
                             "&& e.click())")
     pg.wait_for_timeout(1000)
-    row = pg.evaluate("""() => (S.model.raw.PeriodWeightStandard.find(x =>
+    row = pg.evaluate("""() => (S.model.raw.PeriodFTEStandard.find(x =>
         x.project_type === 'NewDrug CT' && x.clinical_phase === 'Phase 3'
         && x.period_name === 'Start-up' && x.work_scope_type === 'fully in-housed')
         || {}).__row""")
-    sel = (f"#t-gen table[data-sheet='PeriodWeightStandard'] "
+    sel = (f"#t-gen table[data-sheet='PeriodFTEStandard'] "
            f"td[data-row='{row}'][data-col='standard_fte']")
     shown = pg.eval_on_selector(sel, "e => e.textContent.trim()")
     check(shown not in ("", None) and float(shown) > 0,

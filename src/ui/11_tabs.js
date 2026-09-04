@@ -556,9 +556,9 @@ function viewToggle(id, label){
 
 function renderGenTab(){
   const M = S.model;
-  const pwsRows = M.raw.PeriodWeightStandard, rfRows = M.raw.RoleFactor;
+  const pwsRows = M.raw.PeriodFTEStandard, rfRows = M.raw.RoleFactor;
   const pws = S.genView.pws === "rows"
-    ? dataTable("PeriodWeightStandard", pwsRows,
+    ? dataTable("PeriodFTEStandard", pwsRows,
         ["project_type","clinical_phase","work_scope_type","period_name","standard_fte","note_1"])
     : `<div class="scrollx tall">${wmatrix(pwsRows,
         r => [r.project_type, r.clinical_phase, scopeLabel(r)],
@@ -590,12 +590,15 @@ function renderGenTab(){
 
   el("t-gen").innerHTML =
     `<div class="panel">
-      <div class="phead"><h2>Standard period weights</h2>
-        <span class="scope">PeriodWeightStandard</span>${viewToggle("pws")}</div>
-      <p class="cap">The weight every clinical trial period is multiplied by, selected by the project's
-        type and clinical phase. The matrix is how a standard reads — across, not down. Switch to
+      <div class="phead"><h2>Standard period FTE for project types</h2>
+        <span class="scope">PeriodFTEStandard</span>${viewToggle("pws")}</div>
+      <p class="cap">The monthly FTE a project of this type, clinical phase and work scope takes in
+        each period — a magnitude, not a multiplier: <strong>4.02</strong> means the project draws
+        about four full-time people that month. This is where every figure gets its size; each
+        project's own <strong>period weight</strong> then adjusts it up or down for that particular
+        study. The matrix is how a standard reads — across, not down. Switch to
         <strong>Rows &amp; editing</strong> to add, change or delete individual rows.
-        <strong>Others</strong> projects take hand-entered weights instead.</p>
+        <strong>Others</strong> projects are hand-entered per project instead.</p>
       ${pws}</div>
     <div class="panel">
       <div class="phead"><h2>Role factors</h2>

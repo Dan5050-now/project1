@@ -70,7 +70,7 @@ def doc(role=LEAD, with_periods=True):
                             "period_seq": 1, "period_start": PER_START,
                             "period_end": PER_END, "weight": 1.00}]
                           if with_periods else []),
-        "PeriodWeightStandard": [],
+        "PeriodFTEStandard": [],
         "RoleFactor": [{"project_type": "Others", "clinical_phase": None,
                         "work_scope_type": None, "period_name": "Planning",
                         "role_name": LEAD, "role_factor": 1.00, "absorbed_by": None}],

@@ -1,9 +1,8 @@
 /* ==================================== 12b. manual monthly estimation (REQ-CAL-18)
 
    The assumptions are a good default and a poor last word. A trial two years in has a
-   manager who knows what the next eight months actually take, and a standard period
-   weight multiplied by a standard role factor is a worse answer than the one in their
-   head. So a project, or one person's assignment to a project, can be switched to
+   manager who knows what the next eight months actually take, and a standard monthly FTE
+   shared out by standard role factors is a worse answer than the one in their head. So a project, or one person's assignment to a project, can be switched to
    MANUAL: its monthly figures are then stated rather than worked out.
 
    Three decisions are worth stating here, because the panel below only makes sense once
@@ -55,9 +54,9 @@ function estRows(scope, id){
  *
  *  `now` is the figure ON SCREEN - after any manual figure already in force - and it is
  *  what a switch to manual seeds from, so the figures do not jump at the moment of
- *  switching. `auto` is the untouched multiplication, kept on every line as it was worked
- *  out, and it is what the panel shows beside a stated figure so the difference between
- *  the two is readable rather than implied. */
+ *  switching. `auto` is what the ASSUMPTIONS ALONE said - the demand shared out, kept on
+ *  every line as it was worked out - and it is what the panel shows beside a stated figure
+ *  so the difference between the two is readable rather than implied. */
 function monthlyOf(scope, id){
   const now = new Map(), auto = new Map();
   for (const L of ((S.calc && S.calc.lines) || [])){
@@ -105,11 +104,14 @@ function switchEstimation(scope, id){
            ? "A project figure is the whole month, and the people assigned that month are "
              + "scaled so they still add up to it."
            : "An assignment figure is this person's own contribution to this project, and "
-             + "it replaces the multiplication outright."}</p>`
+             + "it replaces the share they would otherwise have been given."}</p>`
     : `<p class="cap">${name}</p>
        <p><strong>All ${have.length} stated month${have.length === 1 ? "" : "s"} will be
          deleted</strong> and the figures go back to being worked out from the assumptions
-         — period weight × (role factor ÷ sharers) × person weight × month coverage.</p>
+         — ${scope === "project"
+              ? "standard FTE × period weight × the part of the month the project runs"
+              : "the project's month, standard FTE × period weight, shared out by "
+                + "(role factor ÷ sharers) × person weight × month coverage"}.</p>
        <p class="note">There is nothing to come back to afterwards: the stated figures are
          removed, not set aside. This is still provisional like any other change, so
          <strong>Leave without change</strong> puts them back until you press Save — after
@@ -263,8 +265,17 @@ function manualPanel(scope, id){
 
   if (!on)
     return `<div class="panel">${head}
-      <p class="cap">This ${what}'s months are <strong>calculated</strong>: period weight
-        × (role factor ÷ sharers) × person weight × month coverage, month by month —
+      <p class="cap">This ${what}'s months are <strong>calculated</strong>:
+        ${scope === "project"
+          ? "<strong>standard FTE × period weight × the part of the month this project "
+            + "runs</strong>, month by month. The standard is what a project of this type, "
+            + "phase and work scope takes in this period; the period weight is this "
+            + "project's own adjustment to it. Who is assigned decides how the month is "
+            + "<em>divided</em>, not how large it is."
+          : "the project's month — <strong>standard FTE × period weight</strong> — divided "
+            + "among the people on it, and this is this person's share of it. The share is "
+            + "<strong>(role factor ÷ sharers) × person weight × month coverage</strong> "
+            + "measured against everyone else's, so the shares always add to one."}
         ${totalAuto.toFixed(2)} FTE-months across ${now.size} month(s). Change an
         assumption and every one of them follows.</p>
       <p class="note">Switch to <strong>manual</strong> if you have better information
@@ -281,7 +292,7 @@ function manualPanel(scope, id){
         ? "Each one is the whole project for that month, and the people assigned that "
           + "month are scaled so they still add up to it."
         : "Each one is this person's own contribution to this project for that month, "
-          + "and it replaces the multiplication outright."}
+          + "and it replaces the share they would otherwise have been given."}
       <code>automatic_fte</code> beside it is what the assumptions alone would have said,
       so the departure is readable: <strong>${totalNow.toFixed(2)}</strong> stated against
       <strong>${totalAuto.toFixed(2)}</strong> calculated across ${now.size} month(s).</p>

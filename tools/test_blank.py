@@ -312,7 +312,7 @@ with sync_playwright() as pw:
                     by: r.absorbed_by}))""")
     # REQ-CAL-19: the month's DEMAND in FTE, read from the standards sheet the blank
     # start seeded. Worked out from the ROWS here, not through the application's lookup.
-    std_rows = pg.evaluate("""() => S.model.raw.PeriodWeightStandard
+    std_rows = pg.evaluate("""() => S.model.raw.PeriodFTEStandard
         .filter(r => r.project_type === 'NewDrug CT' && r.clinical_phase === 'Phase 2'
                   && !r.work_scope_type)
         .map(r => ({p: r.period_name, s: r.standard_fte}))""")

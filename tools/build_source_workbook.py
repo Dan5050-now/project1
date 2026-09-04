@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 10
-TEMPLATE_VERSION = "1.13"
-DUMMY_VERSION = "1.15"
-DUMMY_SMALL_VERSION = "1.7"
+SCHEMA_VERSION = 11
+TEMPLATE_VERSION = "1.14"
+DUMMY_VERSION = "1.16"
+DUMMY_SMALL_VERSION = "1.8"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -99,7 +99,7 @@ LISTS = [
 # The DEFAULT ASSUMPTIONS - the starting figures for every scenario.
 #
 # Until now these lived inside the dummy-data generator, so the delivered template
-# arrived with PeriodWeightStandard and RoleFactor EMPTY and the application's blank
+# arrived with PeriodFTEStandard and RoleFactor EMPTY and the application's blank
 # start filled them with a placeholder 1.00. Both were honest and both were useless:
 # a weight of 1.00 everywhere means the period weight and the role factor cancel out
 # of the arithmetic entirely, and the first person to open either one had to invent
@@ -189,7 +189,7 @@ DEFAULT_ROLE_SHAPE = {
     "Clinical Database Programmer": [0.70, 1.50, 0.80, 1.00, 0.80, 1.10, 0.40],
     "Data Analyst":                 [0.40, 0.60, 0.90, 1.30, 0.90, 1.50, 0.90],
 }
-# Deliberately mild. Phase already drives PeriodWeightStandard, so a strong phase term
+# Deliberately mild. Phase already drives PeriodFTEStandard, so a strong phase term
 # here would count the same effect twice.
 DEFAULT_PHASE_ROLE_MOD = {"Phase 1": 0.95, "Phase 2": 1.00, "Phase 3": 1.05,
                           "Phase 4": 0.90}
@@ -213,7 +213,7 @@ def clinical_types():
 
 
 def default_period_weights():
-    """The baseline PeriodWeightStandard rows: every trial type, phase and period,
+    """The baseline PeriodFTEStandard rows: every trial type, phase and period,
     with work_scope_type EMPTY so one row covers every scope."""
     out = []
     for ct in clinical_types():
@@ -303,10 +303,10 @@ SHEETS = {
         ("period_seq", "Orders periods along the timeline. Unique within a project.", ""),
         ("period_start", "Inclusive.", ""),
         ("period_end", "Inclusive. Periods must not overlap or leave a gap.", ""),
-        ("weight", "THIS PROJECT'S OWN ADJUSTMENT to the standard for its type, phase and scope (REQ-CAL-19). 1.00 means an ordinary project of its kind; 1.20 means this one takes a fifth more. It does NOT carry the magnitude - PeriodWeightStandard.standard_fte does.", ""),
+        ("weight", "THIS PROJECT'S OWN ADJUSTMENT to the standard for its type, phase and scope (REQ-CAL-19). 1.00 means an ordinary project of its kind; 1.20 means this one takes a fifth more. It does NOT carry the magnitude - PeriodFTEStandard.standard_fte does.", ""),
         ("note_1", "Free text. e.g. why a derived date was overridden by hand.", ""),
     ],
-    "PeriodWeightStandard": [
+    "PeriodFTEStandard": [
         ("project_type", "A clinical trial type. 'Others' projects take manual weights instead.", "key"),
         ("clinical_phase", "The phase this standard applies to.", "key"),
         ("work_scope_type", "The work scope this standard applies to. LEAVE EMPTY for a row that applies to EVERY scope - fill only the scopes that really differ.", "key"),
@@ -393,7 +393,7 @@ DROPDOWNS = {
                 "DataReviewSystem": "DataReviewSystem", "RBQM_system": "RBQM_system",
                 "status": "project_status"},
     "Milestone": {"milestone_name": "milestone_name"},
-    "PeriodWeightStandard": {"project_type": "project_type", "clinical_phase": "clinical_phase",
+    "PeriodFTEStandard": {"project_type": "project_type", "clinical_phase": "clinical_phase",
                              "work_scope_type": "work_scope_type",
                              "period_name": "period_name_clinical"},
     "RoleFactor": {"project_type": "project_type", "clinical_phase": "clinical_phase",
@@ -1130,7 +1130,7 @@ def add_readme(wb, kind, facts=None):
         "   Project               one row per project.",
         "   Milestone             one row per milestone. Eight standard names.",
         "   ProjectPeriod         the periods each project passes through, with their weights.",
-        "   PeriodWeightStandard  default weights per project type, clinical phase, WORK SCOPE and",
+        "   PeriodFTEStandard  default weights per project type, clinical phase, WORK SCOPE and",
         "                         period. Clinical trials only.",
         "   RoleFactor            the relative burden of each role, per project type, clinical phase,",
         "                         WORK SCOPE and period. Leave clinical_phase empty on the 'Others' rows.",
@@ -1145,7 +1145,7 @@ def add_readme(wb, kind, facts=None):
         "      Project               note_1 .. note_5",
         "      Milestone             note_1",
         "      ProjectPeriod         note_1",
-        "      PeriodWeightStandard  note_1",
+        "      PeriodFTEStandard  note_1",
         "      RoleFactor            role_note",
         "      Person                note_1 .. note_5",
         "      Assignment            note_1 .. note_3",
@@ -1210,7 +1210,7 @@ def add_readme(wb, kind, facts=None):
         "   extended this way: the three values supplied are a starting point, not a closed set.",
         "",
         "WORK SCOPE, AND THE EMPTY ROW THAT COVERS EVERY SCOPE",
-        "   PeriodWeightStandard and RoleFactor are keyed on work_scope_type as well as on the project",
+        "   PeriodFTEStandard and RoleFactor are keyed on work_scope_type as well as on the project",
         "   type, the phase and the period. A row with work_scope_type EMPTY applies to EVERY scope.",
         "",
         "   So fill the empty-scope rows first - they are your baseline - and add a scope-specific row",
@@ -1227,7 +1227,7 @@ def add_readme(wb, kind, facts=None):
             "   3. Then, when you have seen the figures: review the DEFAULT ASSUMPTIONS.",
             "",
             "THE DEFAULT ASSUMPTIONS",
-            f"   PeriodWeightStandard ({len(default_period_weights())} rows) and RoleFactor "
+            f"   PeriodFTEStandard ({len(default_period_weights())} rows) and RoleFactor "
             f"({len(default_role_factors())} rows) arrive FILLED IN.",
             "   They are the same figures the application starts a blank plan with, so the two agree",
             "   from the first day, and they are a STARTING POINT rather than a company standard.",
@@ -1363,7 +1363,7 @@ def build(kind):
             # No example row: these two sheets now arrive full of real defaults, and
             # a grey "delete before use" row among them would be the one thing on the
             # sheet that was not a default.
-            "PeriodWeightStandard": None,
+            "PeriodFTEStandard": None,
             "RoleFactor": None,
             "Person": ["PSN-001", "Kim S.", "Data Management", "Lead data manager", 1.00,
                        None, None, "example row - delete before use", None, None, None, None],
@@ -1381,7 +1381,7 @@ def build(kind):
     write_sheet(wb, "Project", proj_rows, examples["Project"], list_ranges)
     write_sheet(wb, "Milestone", mile_rows, examples["Milestone"], list_ranges)
     write_sheet(wb, "ProjectPeriod", period_rows, examples["ProjectPeriod"], list_ranges)
-    write_sheet(wb, "PeriodWeightStandard", pws_rows, examples["PeriodWeightStandard"], list_ranges)
+    write_sheet(wb, "PeriodFTEStandard", pws_rows, examples["PeriodFTEStandard"], list_ranges)
     write_sheet(wb, "RoleFactor", role_rows, examples["RoleFactor"], list_ranges)
     write_sheet(wb, "Person", person_rows, examples["Person"], list_ranges)
     write_sheet(wb, "Assignment", asg_rows, examples["Assignment"], list_ranges)

@@ -74,8 +74,32 @@ def lookup(table, key, scope, tail):
     return table.get((*key, ANY_SCOPE, *tail)) if v is None else v
 
 
+# Sheets the schema renamed, so this cross-check reads an older workbook as readily as
+# the application does - it is run against files of every vintage, which is the point.
+RENAMED_SHEETS = {"PeriodWeightStandard": "PeriodFTEStandard"}
+# ... and the columns, for the same reason. schema 9 -> 10 renamed this one when it
+# became clear the sheet held a magnitude in FTE rather than a multiplier.
+RENAMED_COLS = {"outsourcing_type": "outsourcing_scope_det",   # schema 6 -> 7
+                "weight": "standard_fte"}
+
+
+def sheet(wb, name):
+    """The worksheet answering to a current sheet name, whatever the file calls it."""
+    if name in wb.sheetnames:
+        return wb[name]
+    for was, now in RENAMED_SHEETS.items():
+        if now == name and was in wb.sheetnames:
+            return wb[was]
+    raise KeyError(f"{name}: not in this workbook (sheets: {', '.join(wb.sheetnames)})")
+
+
 def rows(ws):
-    hdr = [c.value for c in ws[1]]
+    # The column rename is applied by SHEET, not globally: ProjectPeriod.weight is a
+    # different column that keeps its name, and translating it would silently move a
+    # project's own adjustment into the standards key.
+    ren = RENAMED_COLS if ws.title in ("PeriodWeightStandard", "PeriodFTEStandard") \
+        else {"outsourcing_type": "outsourcing_scope_det"}
+    hdr = [ren.get(c.value, c.value) for c in ws[1]]
     for r in ws.iter_rows(min_row=2, values_only=True):
         if all(v is None for v in r):
             continue
@@ -104,38 +128,38 @@ def coverage(y, m, s, e):
 
 def main(path):
     wb = load_workbook(path, data_only=False)
-    P = {r["project_id"]: r for r in rows(wb["Project"])}
+    P = {r["project_id"]: r for r in rows(sheet(wb, "Project"))}
     # A milestone name may repeat within a project ('Inspection'), so this maps
     # name -> list of dates rather than name -> date (REQ-PRJ-13).
     MS = defaultdict(lambda: defaultdict(list))
-    for r in rows(wb["Milestone"]):
+    for r in rows(sheet(wb, "Milestone")):
         MS[r["project_id"]][r["milestone_name"]].append(d(r["milestone_date"]))
     PER = defaultdict(list)
-    for r in rows(wb["ProjectPeriod"]):
+    for r in rows(sheet(wb, "ProjectPeriod")):
         PER[r["project_id"]].append(r)
     # R-10: the factor is keyed on type + phase + period + role, so a role's burden can
     # move across the life of a project rather than being one number for the whole run.
     RF = {(r["project_type"], r["clinical_phase"], scope_of(r), r["period_name"],
-           r["role_name"]): r["role_factor"] for r in rows(wb["RoleFactor"])}
+           r["role_name"]): r["role_factor"] for r in rows(sheet(wb, "RoleFactor"))}
     RF_ROLES = defaultdict(set)                 # project_type -> {role_name}
     for k in RF:
         RF_ROLES[k[0]].add(k[4])
     # Indexed by the ABSORBING role (REQ-CAL-16): which absent roles land on this one.
     RF_ABSORB = defaultdict(list)
-    for r in rows(wb["RoleFactor"]):
+    for r in rows(sheet(wb, "RoleFactor")):
         if r.get("absorbed_by"):
             RF_ABSORB[(r["project_type"], r["clinical_phase"], scope_of(r),
                        r["period_name"], r["absorbed_by"])].append(r["role_name"])
     PWS = {(r["project_type"], r["clinical_phase"], scope_of(r), r["period_name"]):
-           r["standard_fte"] for r in rows(wb["PeriodWeightStandard"])}
-    PSN = {r["person_id"]: r for r in rows(wb["Person"])}
-    ASG = list(rows(wb["Assignment"]))
+           r["standard_fte"] for r in rows(sheet(wb, "PeriodFTEStandard"))}
+    PSN = {r["person_id"]: r for r in rows(sheet(wb, "Person"))}
+    ASG = list(rows(sheet(wb, "Assignment")))
     PPW = defaultdict(list)
-    for r in rows(wb["PersonPeriodWeight"]):
+    for r in rows(sheet(wb, "PersonPeriodWeight")):
         PPW[r["assignment_id"]].append(r)
-    CFG = {r["parameter"]: r["value"] for r in rows(wb["Config"])}
+    CFG = {r["parameter"]: r["value"] for r in rows(sheet(wb, "Config"))}
     LISTS = defaultdict(set)
-    for r in rows(wb["Lists"]):
+    for r in rows(sheet(wb, "Lists")):
         LISTS[r["list_name"]].add(r["value"])
 
     errors, warnings = [], []
@@ -304,7 +328,7 @@ def main(path):
                 sharers[(a["project_id"], a["role_name"], y, m)].add(a["person_id"])
 
     def std_monthly(proj, pn):
-        """REQ-CAL-19: the month's demand in FTE, from PeriodWeightStandard."""
+        """REQ-CAL-19: the month's demand in FTE, from PeriodFTEStandard."""
         if pn is None:
             return 1.0
         v = lookup(PWS, (proj["project_type"], proj["clinical_phase"]), scope_of(proj), (pn,))
@@ -377,7 +401,7 @@ def main(path):
 
     # ---- REQ-CAL-18: manual figures, assignment first, then the project scaling ----
     EST = {}
-    for r in rows(wb["MonthlyEstimate"]) if "MonthlyEstimate" in wb.sheetnames else []:
+    for r in rows(sheet(wb, "MonthlyEstimate")) if "MonthlyEstimate" in wb.sheetnames else []:
         if r.get("scope") and r.get("ref_id") and r.get("month"):
             EST[(str(r["scope"]), str(r["ref_id"]), str(r["month"]))] = r.get("fte")
     manual_p = {pid for pid, pr in P.items()

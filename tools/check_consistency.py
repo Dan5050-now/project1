@@ -16,11 +16,11 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.40.xlsx"
-SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.14.xlsx"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.13.xlsx"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.15.xlsx"
-DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.7.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.41.xlsx"
+SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.15.xlsx"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.14.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.16.xlsx"
+DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.8.xlsx"
 
 problems, notes = [], []
 
@@ -301,7 +301,7 @@ if APP.exists():
         # arithmetically the same as no grid at all - the period weight and the role
         # factor cancel out - so a seed that had quietly reverted to placeholders would
         # pass every other check here while making the application say nothing.
-        flat_w = {r[4] for r in seeded["PeriodWeightStandard"]}
+        flat_w = {r[4] for r in seeded["PeriodFTEStandard"]}
         flat_f = {r[5] for r in seeded["RoleFactor"]}
         if len(flat_w) < 2 or flat_w == {1.0}:
             problems.append("the blank-start period weights are all the same value, so "
@@ -311,7 +311,7 @@ if APP.exists():
                             "they are placeholders rather than default assumptions")
         notes.append(f"blank-start seed: {len(seeded['Lists'])} list values, "
                      f"{len(seeded['Config'])} settings, "
-                     f"{len(seeded['PeriodWeightStandard'])} default period weights and "
+                     f"{len(seeded['PeriodFTEStandard'])} default period weights and "
                      f"{len(seeded['RoleFactor'])} default role factors — all matching "
                      f"{TEMPLATE.name}")
 

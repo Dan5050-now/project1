@@ -290,7 +290,7 @@ function sourceLine(s, x, y, w, text) {
     x: 8.45, y: 2.85, w: 3.9, h: 0.32, isTextBox: true, margin: 0,
     fontFace: HEAD, fontSize: 15, bold: true, color: P.teal });
   s.addText(
-    [{ text: "PeriodWeightStandard is not read here.", options: { bold: true } },
+    [{ text: "PeriodFTEStandard is not read here.", options: { bold: true } },
      { text: "\n\nIt is the assumption table the derivation uses to fill in " +
              "ProjectPeriod.weight. Once a period row exists, the calculation reads " +
              "that row.\n\nWhich is why an ‘Others’ project calculates " +
@@ -459,7 +459,7 @@ function sourceLine(s, x, y, w, text) {
              "that project that month, and its person weight comes from a " +
              "PersonPeriodWeight row rather than the assignment.\n" +
              "PRJ-009 is an ‘Others’ project: its 0.80 was typed into " +
-             "ProjectPeriod, and no PeriodWeightStandard row exists for it anywhere.",
+             "ProjectPeriod, and no PeriodFTEStandard row exists for it anywhere.",
        options: { color: P.ink } }],
     { x: M + 0.28, y: 5.12, w: W - 2 * M - 0.56, h: 1.25, isTextBox: true, margin: 0,
       fontFace: BODY, fontSize: 12.5, lineSpacing: 19 });

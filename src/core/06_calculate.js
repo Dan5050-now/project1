@@ -1,6 +1,12 @@
 /* ============================================================ 6. calculation
-   load = project period weight x (role factor / people sharing the role)
-          x person weight x month coverage.
+   A PROJECT-MONTH is    standard FTE x period weight x the part of the month it runs.
+   A PERSON-MONTH  is    that month x this person's share of it, where the share is
+                         (role factor / sharers) x person weight x coverage, measured
+                         against everyone else's on the same project-month.
+
+   The four factors decide a SHARE, not a total: they divide the month between the
+   people on it rather than each adding to it (REQ-CAL-19 as amended by R-32). See
+   shareOut() at the foot of this file for why.
 
    Pure: no DOM, no file access. Spec sheet 05, verified against the worked example. */
 
@@ -161,7 +167,7 @@ function calculate(M){
 
   /** The month's demand in FTE, before this project's own adjustment (REQ-CAL-19).
    *
-   *  PeriodWeightStandard holds it. The column is named `standard_fte` because that is
+   *  PeriodFTEStandard holds it. The column is named `standard_fte` because that is
    *  what it is - a monthly FTE for a project of this type, phase and scope in this
    *  period - and it was called `weight` until schema 10, which is most of why it went
    *  unused for so long: a "weight" reads like something to multiply by, so the

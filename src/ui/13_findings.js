@@ -95,7 +95,7 @@ function renderReport(findings){
 const SECTION = {
   Project:"Projects", Milestone:"Milestones", ProjectPeriod:"Periods",
   Person:"People", Assignment:"Assignments", PersonPeriodWeight:"Weight overrides",
-  PeriodWeightStandard:"Standard period weights", RoleFactor:"Role factors",
+  PeriodFTEStandard:"Standard period FTE for project types", RoleFactor:"Role factors",
   Lists:"Value lists", Config:"Configuration",
   MonthlyEstimate:"Monthly estimation",
   "(cascade)":"Carried through automatically",
@@ -104,7 +104,7 @@ const TAB_OF = {
   Project:"Source data (project)", Milestone:"Source data (project)",
   ProjectPeriod:"Source data (project)", Person:"Source data (person)",
   Assignment:"Source data (person)", PersonPeriodWeight:"Source data (person)",
-  PeriodWeightStandard:"General assumptions", RoleFactor:"General assumptions",
+  PeriodFTEStandard:"General assumptions", RoleFactor:"General assumptions",
   Lists:"General assumptions", Config:"General assumptions",
   // Both, genuinely: a project figure is edited on one tab and an assignment figure on
   // the other. Naming one would send half the log to the wrong place.

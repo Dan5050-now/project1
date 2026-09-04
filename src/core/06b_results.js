@@ -261,7 +261,7 @@ function buildResults(M, C, scope){
     ["HOW EVERY FIGURE WAS MADE"],
     ["FTE  =  demand_fte  ×  role_share,   where  demand_fte = standard_fte  ×  period "
      + "weight  ×  month_run"],
-    ["standard_fte", "the month's DEMAND for a project of this type, phase and work scope in this period, from PeriodWeightStandard. A magnitude in FTE: 4.02 means the period takes about four full-time people a month."],
+    ["standard_fte", "the month's DEMAND for a project of this type, phase and work scope in this period, from PeriodFTEStandard. A magnitude in FTE: 4.02 means the period takes about four full-time people a month."],
     ["period weight", "this project's own adjustment to that standard, from ProjectPeriod. 1.00 means an ordinary project of its kind."],
     ["month_run", "how much of the month the project actually ran, taken as the largest "
      + "coverage any of its people have. A project whose period ends on the 10th draws a "

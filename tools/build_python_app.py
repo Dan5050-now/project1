@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.7"
+VERSION = "1.8"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,40 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.8
+
+  * THE MENU NO LONGER COVERS THE PAGE. The File/Edit/View/Plan/Help bar and the
+    status strip beneath it stay at the top of the window while you scroll, and
+    the page has its own bar that does the same - the tabs and the Save button.
+    Both were pinned to the top of the window and the menu won, so scrolling slid
+    the page's controls underneath it and left them there. The page's bar now
+    stops below the menu, at whatever height the menu actually is: both bars wrap
+    on a narrow window or a long file path, so it is measured rather than assumed.
+
+  * THE STANDARDS SHEET IS RENAMED. 'PeriodWeightStandard' is now
+    'PeriodFTEStandard', and the panel over it reads 'Standard period FTE for
+    project types' instead of 'Standard period weights'. Version 1.6 renamed the
+    COLUMN to standard_fte because the table holds a monthly FTE and not a
+    multiplier; the sheet and the panel went on saying 'weight', which is the
+    misreading that made version 1.7 necessary in the first place.
+
+    YOUR EXISTING FILES STILL OPEN, and no figure changes. A workbook written by
+    1.6 or 1.7 is read as it stands - the old sheet name is translated on the way
+    in and the findings report says so once - and saving writes it back under the
+    new name. Source schema version steps 10 to 11.
+
+  * THE CALCULATION NOTES NOW MATCH THE CALCULATION. The Monthly estimation panel
+    still described the 1.6 formula: four factors multiplied together. Since 1.7
+    that has not been how a figure is arrived at, and the two levels differ:
+
+        a PROJECT month     standard FTE x period weight x month_run
+        an ASSIGNMENT month that month, divided by share - the share being
+                            (role factor / sharers) x person weight x coverage
+                            measured against everyone else's on that month
+
+    Nothing about the arithmetic changed here; only what the screen says about it.
+
 
 WHAT IS NEW IN 1.7
 

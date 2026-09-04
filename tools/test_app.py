@@ -23,8 +23,8 @@ APP = (ROOT / "app" / "PRAP.html").as_uri()
 # Both dummy sizes are checked. The small one is not a lighter version of the same
 # test - it has a different period mix, a different overlap profile and a single-person
 # role pool, so it exercises paths the large set happens not to reach.
-FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.15.xlsx",
-            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.7.xlsx"]
+FIXTURES = [ROOT / "templates" / "PRAP_SourceData_Dummy_v1.16.xlsx",
+            ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.8.xlsx"]
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 sys.path.insert(0, str(ROOT / "tools"))
@@ -44,7 +44,7 @@ def reference_person_months(path):
            r["role_name"]): r["role_factor"] for r in rows(wb["RoleFactor"])}
     # REQ-CAL-19: the month's demand in FTE, keyed exactly as the factors are.
     PWS = {(r["project_type"], r["clinical_phase"], scope_of(r), r["period_name"]):
-           r["standard_fte"] for r in rows(wb["PeriodWeightStandard"])}
+           r["standard_fte"] for r in rows(wb["PeriodFTEStandard"])}
     # REQ-CAL-16, worked out here independently: which absent roles land on this one.
     ABSORB = defaultdict(list)
     for r in rows(wb["RoleFactor"]):

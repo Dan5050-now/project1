@@ -9,7 +9,7 @@ So a blank start begins from the reference content of the delivered template - t
 value lists and the settings - and nothing else. No projects, no people, no
 assignments: those are what the user is there to enter.
 
-Only those two sheets are embedded. The PeriodWeightStandard and RoleFactor grids are
+Only those two sheets are embedded. The PeriodFTEStandard and RoleFactor grids are
 NOT: the application builds them from the value lists it was just seeded with, which
 means a company that adds a role or a phase to `Lists` gets that combination in the
 grid without anybody regenerating anything. Their numbers start at a placeholder 1.00,
@@ -37,18 +37,18 @@ from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "core" / "02_xlsx_write.js"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.13.xlsx"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.14.xlsx"
 BEGIN = "/* SEED-BEGIN"
 END = "/* SEED-END */"
 
 
-SEEDED = ("Lists", "Config", "PeriodWeightStandard", "RoleFactor")
+SEEDED = ("Lists", "Config", "PeriodFTEStandard", "RoleFactor")
 
 
 def seed_rows(path=TEMPLATE):
     """The four sheets a blank plan starts from, in the sheets' own column order.
 
-    Lists and Config are the vocabulary and the thresholds. PeriodWeightStandard and
+    Lists and Config are the vocabulary and the thresholds. PeriodFTEStandard and
     RoleFactor are the DEFAULT ASSUMPTIONS, and they are here for the same reason: a
     blank start used to fill both grids with a placeholder 1.00, which makes the
     period weight and the role factor cancel out of the arithmetic altogether. The
@@ -88,7 +88,7 @@ def js_block(rows, template_name):
         f"   rows supply the figure wherever there is one, and 1.00 where there is not. */\n"
         f"const SEED_LISTS = {arr(rows['Lists'])};\n"
         f"const SEED_CONFIG = {arr(rows['Config'])};\n"
-        f"const SEED_PWS = {arr(rows['PeriodWeightStandard'])};\n"
+        f"const SEED_PWS = {arr(rows['PeriodFTEStandard'])};\n"
         f"const SEED_RF = {arr(rows['RoleFactor'])};\n"
         f"{END}"
     )
@@ -116,7 +116,7 @@ def embedded(src=None):
     src = src or (ROOT / "app" / "PRAP.html").read_text(encoding="utf-8")
     out = {}
     for const, sheet in (("SEED_LISTS", "Lists"), ("SEED_CONFIG", "Config"),
-                         ("SEED_PWS", "PeriodWeightStandard"), ("SEED_RF", "RoleFactor")):
+                         ("SEED_PWS", "PeriodFTEStandard"), ("SEED_RF", "RoleFactor")):
         m = re.search(rf"const {const} = (\[.*?\n\]);", src, re.S)
         if not m:
             return None

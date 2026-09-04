@@ -44,7 +44,7 @@ NUM_COLS = {
     "Project": {"planned_member_count", "total_period_months"},
     "Milestone": {"milestone_seq"},
     "ProjectPeriod": {"period_seq", "weight"},
-    "PeriodWeightStandard": {"standard_fte"},
+    "PeriodFTEStandard": {"standard_fte"},
     "RoleFactor": {"role_factor"},
     "Person": {"capacity_fte"},
     "Assignment": {"person_weight"},
@@ -81,7 +81,12 @@ RETIRED_TYPES = {"Biosimilar CT": "Biosimilar CT (Healthy) or Biosimilar CT (Pat
 # new one comes back empty, and every rule still passes.
 RENAMED_COLS = {"Project": {"outsourcing_type": "outsourcing_scope_det"},   # schema 6 -> 7
                 # schema 9 -> 10: it always held a monthly FTE, not a multiplier.
-                "PeriodWeightStandard": {"weight": "standard_fte"}}
+                "PeriodFTEStandard": {"weight": "standard_fte"}}
+
+# Sheets the schema RENAMED. Same hazard one level up and worse: an unrecognised sheet is
+# a lost TABLE, not a lost value, and the file is then refused for missing a sheet it
+# actually has under its old name. schema 10 -> 11.
+RENAMED_SHEETS = {"PeriodWeightStandard": "PeriodFTEStandard"}
 
 ANY_SCOPE = ""
 
@@ -212,18 +217,30 @@ def read_xlsx(path):
     wb = load_workbook(path, data_only=True)
     # MonthlyEstimate arrived at schema 9; a file written before it simply carries no
     # manual figures, and refusing it would gain nothing. Every other sheet IS the plan.
+    # Which worksheet answers to each current sheet name - itself, or the name it used
+    # to have. Resolved once, so the missing-sheet check below and the read that follows
+    # cannot disagree about whether a sheet is present.
+    actual = {}
+    for s in SHEET_ORDER:
+        if s in wb.sheetnames:
+            actual[s] = s
+        else:
+            was = next((w for w, now in RENAMED_SHEETS.items()
+                        if now == s and w in wb.sheetnames), None)
+            if was:
+                actual[s] = was
     missing = [s for s in SHEET_ORDER
-               if s not in wb.sheetnames and s != "MonthlyEstimate"]
+               if s not in actual and s != "MonthlyEstimate"]
     if missing:
         raise Problem(f"{Path(path).name}: sheet(s) not found: {', '.join(missing)}. "
                       f"Compare the file against templates/PRAP_SourceData_Template_"
                       f"v{B.TEMPLATE_VERSION}.xlsx.")
     sheets = {}
     for s in SHEET_ORDER:
-        if s not in wb.sheetnames:
+        if s not in actual:
             sheets[s] = []
             continue
-        ws = wb[s]
+        ws = wb[actual[s]]
         renamed = RENAMED_COLS.get(s, {})
         hdr = [renamed.get(c.value, c.value) for c in ws[1]]
         rows = []
@@ -244,6 +261,9 @@ def read_json(path):
         raise Problem(f"{Path(path).name}: format_version {doc.get('format_version')!r}; "
                       f"this build writes and reads {FORMAT_VERSION}.")
     src = doc.get("sheets") or {}
+    for was, now in RENAMED_SHEETS.items():
+        if was in src and now not in src:
+            src[now] = src.pop(was)
     # MonthlyEstimate arrived at schema 9, and a file written before it carries no manual
     # figures - a complete plan, not a broken one. The same tolerance read_xlsx extends,
     # for the same reason. Every other sheet has always been there and is still required.
@@ -523,7 +543,7 @@ class Model:
         # row with an EMPTY scope applies to every scope.
         self.pws = {(r.get("project_type"), r.get("clinical_phase"), scope_of(r),
                      r.get("period_name")): _as_num(r.get("standard_fte"))
-                    for r in sheets["PeriodWeightStandard"]}
+                    for r in sheets["PeriodFTEStandard"]}
         self.rf, self.rf_roles = {}, defaultdict(set)
         # Indexed by the ABSORBING role, because that is the question the calculation
         # asks: standing on the lead data manager, which absent roles land on me?
@@ -745,7 +765,7 @@ def validate(M):
             prev_end = s.get("period_end")
             if (proj.get("project_type") in CLINICAL_TYPES and proj.get("clinical_phase")
                     and std_weight(M, proj, s.get("period_name")) is None):
-                M.add("error", "V-19", "PeriodWeightStandard", "",
+                M.add("error", "V-19", "PeriodFTEStandard", "",
                       f"Project {pid}: no standard weight for {proj['project_type']} / "
                       f"{proj['clinical_phase']} / "
                       f"{proj.get('work_scope_type') or 'any scope'} / "
@@ -930,7 +950,7 @@ def calculate(M):
     def std_monthly(proj, period_name):
         """The month's demand in FTE, before this project's own adjustment.
 
-        PeriodWeightStandard holds it - see stdMonthly() in core/06_calculate.js for why
+        PeriodFTEStandard holds it - see stdMonthly() in core/06_calculate.js for why
         it went unused until schema 10. Missing, it falls back to 1.00 and V-19 reports
         it, which is deliberately the OLD behaviour: the project month becomes its own
         period weight, so an incomplete standards sheet degrades to figures its author

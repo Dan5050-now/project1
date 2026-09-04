@@ -105,6 +105,10 @@ function incomplete(f){ return isErr(f) && ruleClass(f.rule) === "incomplete"; }
 
 function buildModel(sheets){
   const F = [];
+  // Old sheet names translated to current ones FIRST, before the required-sheet check
+  // below - otherwise a workbook one schema old is refused as incomplete for a sheet it
+  // does have, under the name it had at the time.
+  sheets = renameSheets(sheets, F);
   for (const s of REQUIRED_SHEETS){
     if (sheets[s]) continue;
     /* A sheet added by a later schema is not a reason to refuse a workbook that predates
@@ -249,13 +253,13 @@ function buildModel(sheets){
 
   /* Schema 6: both standards tables are keyed on the WORK SCOPE as well.
      A row whose work_scope_type is EMPTY applies to EVERY scope. That is what keeps the
-     tables a size a person can actually fill: PeriodWeightStandard would otherwise need
+     tables a size a person can actually fill: PeriodFTEStandard would otherwise need
      one row per scope for every type, phase and period - 252 rows, of which two thirds
      would repeat their neighbour. So a project asks for its own scope first and falls
      back to the empty row, and only the scopes that really change a number need a row.
      The rule lives in stdWeight/stdFactor, once, so the calculation and the two
      validations cannot come to different conclusions about the same project. */
-  for (const r of raw.PeriodWeightStandard)
+  for (const r of raw.PeriodFTEStandard)
     M.pws[[r.project_type, r.clinical_phase, scopeOf(r), r.period_name]] = num(r.standard_fte);
   for (const r of raw.RoleFactor){
     M.rf[[r.project_type, r.clinical_phase, scopeOf(r), r.period_name, r.role_name]]
@@ -365,7 +369,7 @@ function validate(M, F){
       add("error","V-26","Project",p.__row,
         `Project ${pid}: project_type '${p.project_type}' was split in schema 6. Change it to `
         + `${RETIRED_TYPES[p.project_type]} — and change the matching rows on `
-        + `PeriodWeightStandard and RoleFactor too.`);
+        + `PeriodFTEStandard and RoleFactor too.`);
     /* V-25 was here, and is RETIRED at schema 7. It reported a project whose
        outsourcing_type contradicted its work_scope_type - a check that existed only
        because two columns sat on the same axis and just one of them drove the weights.
@@ -462,7 +466,7 @@ function validate(M, F){
       prevEnd = s.period_end;
       if (CLINICAL_TYPES.has(proj.project_type) && proj.clinical_phase &&
           stdWeight(M, proj, s.period_name) === undefined)
-        add("error","V-19","PeriodWeightStandard","",
+        add("error","V-19","PeriodFTEStandard","",
           `Project ${pid}: no standard weight for ${proj.project_type} / ${proj.clinical_phase} / `
           + `${proj.work_scope_type || "any scope"} / ${s.period_name}. Add a row for that scope, `
           + `or one with work_scope_type empty to cover every scope.`);
@@ -573,9 +577,9 @@ function validate(M, F){
     const any = (M.lists.period_name_clinical || CLINICAL_PERIODS)
       .some(pn => stdWeight(M, proj, pn) !== undefined);
     if (!any)
-      add("error","V-27","PeriodWeightStandard",proj.__row,
+      add("error","V-27","PeriodFTEStandard",proj.__row,
         `Project ${pid} is ${proj.project_type} / ${proj.clinical_phase} / `
-        + `${proj.work_scope_type || "any scope"}, and PeriodWeightStandard has NO rows for `
+        + `${proj.work_scope_type || "any scope"}, and PeriodFTEStandard has NO rows for `
         + `that combination at all — not for any period. Every period of this project would `
         + `be weighted 1.00. Add the rows, or add ones with work_scope_type empty to cover `
         + `every scope.`);

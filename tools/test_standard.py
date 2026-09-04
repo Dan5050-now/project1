@@ -1,6 +1,6 @@
 """Where a figure gets its SIZE: the standard monthly FTE (REQ-CAL-19).
 
-Reported from the field, and correct: PeriodWeightStandard never reached the calculation.
+Reported from the field, and correct: PeriodFTEStandard never reached the calculation.
 It seeded a derived period's weight and it fed V-19, and that was all. Every figure the
 application produced came from ProjectPeriod.weight times the role factors — a relative
 SHAPE with no magnitude behind it. Worse, the delivered data seeded the project weight
@@ -55,7 +55,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import prap_io                                                       # noqa: E402
 
 fails = []
-BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.13.xlsx")
+BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.14.xlsx")
 MONTH = date(2026, 9, 1)
 K = 2026 * 12 + 8                      # the month key for 2026-09
 
@@ -87,7 +87,7 @@ def fixture(name, *, std=4.02, weight=1.00, roles=(("Lead data manager", 0.6),
     S["ProjectPeriod"] = [{"project_id": "PRJ-A", "period_name": "Start-up",
                            "period_seq": 1, "period_start": MONTH,
                            "period_end": date(2026, 9, 30), "weight": weight, "__row": 2}]
-    S["PeriodWeightStandard"] = ([] if std is None else
+    S["PeriodFTEStandard"] = ([] if std is None else
         [{"project_type": "NewDrug CT", "clinical_phase": "Phase 3",
           "work_scope_type": None, "period_name": "Start-up",
           "standard_fte": std, "__row": 2}])

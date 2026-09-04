@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.38",
+  "version": "1.39",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -17,19 +17,19 @@
   "ways_in": {
    "load_a_file": "Drop a .xlsx workbook or a .prap.json file on the page. This is the path for anything you produce.",
    "start_blank": "'Start blank' begins a plan with nothing in it but the standard value lists and settings, and opens every tab for typing. It is how someone plans from scratch without a workbook.",
-   "what_blank_contains": "The Lists and Config sheets of the delivered template, plus a complete PeriodWeightStandard and RoleFactor grid built from those lists - every (type, phase, period) and (type, phase, period, role) combination, so nothing silently falls back to 1.00 and V-23 never fires.",
+   "what_blank_contains": "The Lists and Config sheets of the delivered template, plus a complete PeriodFTEStandard and RoleFactor grid built from those lists - every (type, phase, period) and (type, phase, period, role) combination, so nothing silently falls back to 1.00 and V-23 never fires.",
    "placeholders": "Every seeded weight and role factor is 1.00 and says so in its note. They are NOT a company standard. If a user hands you a plan started this way, check whether those figures are still 1.00 before reading the FTE totals as real - until they are set, the load reduces to person_weight x month_coverage.",
    "both_end_the_same": "A plan started blank exports to the same .xlsx and the same .prap.json as any other, so nothing downstream needs to know which way it began."
   }
  },
- "schema_version": 10,
+ "schema_version": 11,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.40.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.14.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.41.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.15.xlsx",
   "ui_component_list": "docs/PRAP_UI_Component_List_v1.0.xlsx",
-  "source_data_template": "templates/PRAP_SourceData_Template_v1.13.xlsx",
-  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.15.xlsx",
-  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.7.xlsx",
+  "source_data_template": "templates/PRAP_SourceData_Template_v1.14.xlsx",
+  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.16.xlsx",
+  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.8.xlsx",
   "agent_guide": "docs/PRAP_AI_Agent_Guide.md"
  },
  "sheets": {
@@ -314,7 +314,7 @@
      "name": "weight",
      "type": "text",
      "editable": true,
-     "note": "THIS PROJECT'S OWN ADJUSTMENT to the standard for its type, phase and scope (REQ-CAL-19). 1.00 means an ordinary project of its kind; 1.20 means this one takes a fifth more. It does NOT carry the magnitude - PeriodWeightStandard.standard_fte does."
+     "note": "THIS PROJECT'S OWN ADJUSTMENT to the standard for its type, phase and scope (REQ-CAL-19). 1.00 means an ordinary project of its kind; 1.20 means this one takes a fifth more. It does NOT carry the magnitude - PeriodFTEStandard.standard_fte does."
     },
     {
      "name": "note_1",
@@ -324,7 +324,7 @@
     }
    ]
   },
-  "PeriodWeightStandard": {
+  "PeriodFTEStandard": {
    "role": "reference",
    "parent_sheet": null,
    "key": [
@@ -784,7 +784,7 @@
   "Project",
   "Milestone",
   "ProjectPeriod",
-  "PeriodWeightStandard",
+  "PeriodFTEStandard",
   "RoleFactor",
   "Person",
   "Assignment",
@@ -904,7 +904,7 @@
  },
  "config": {
   "schema_version": {
-   "default": 10,
+   "default": 11,
    "meaning": "Structure version of this workbook. The application warns on a mismatch."
   },
   "fte_hours_per_month": {
@@ -1158,7 +1158,7 @@
    "enforced_by_application": true
   },
   "V-19": {
-   "statement": "A clinical trial carries a clinical_phase, and PeriodWeightStandard has rows for that phase. Not applied to 'Others' projects, whose weights are entered directly.",
+   "statement": "A clinical trial carries a clinical_phase, and PeriodFTEStandard has rows for that phase. Not applied to 'Others' projects, whose weights are entered directly.",
    "effect": "Error - since Q-26 the phase selects the weights, so a missing phase leaves the project unweighted.",
    "severity_reported_by_app": [
     "error"
@@ -1220,7 +1220,7 @@
    "enforced_by_application": true
   },
   "V-27": {
-   "statement": "Every clinical trial's (project_type, clinical_phase, work_scope_type) has at least one row in PeriodWeightStandard - checked on the PROJECT, not on its periods.",
+   "statement": "Every clinical trial's (project_type, clinical_phase, work_scope_type) has at least one row in PeriodFTEStandard - checked on the PROJECT, not on its periods.",
    "effect": "Error - V-19 is precise but only looks at periods a project actually has, so a project whose milestones are missing is never checked at all, and a combination that was never entered is reported once per period rather than once as the one thing that is wrong. This asks the blunter question first: is there any standard for this project at all. Without one, every period would be weighted 1.00.",
    "severity_reported_by_app": [
     "error"
@@ -1379,7 +1379,7 @@
    "task": "Continue a plan somebody started inside the application",
    "when": "The user hands you a workbook they built by typing into PRAP rather than one exported from a system of record.",
    "steps": [
-    "Check the reference tables FIRST: python tools/prap_io.py to-json <file.xlsx> -o plan.prap.json, then look at PeriodWeightStandard and RoleFactor. A plan started blank seeds every one of them at 1.00 with a note saying so.",
+    "Check the reference tables FIRST: python tools/prap_io.py to-json <file.xlsx> -o plan.prap.json, then look at PeriodFTEStandard and RoleFactor. A plan started blank seeds every one of them at 1.00 with a note saying so.",
     "If they are still 1.00, say so before quoting any figure. The load formula then reduces to person_weight x month_coverage, which is a real number but not a resourced estimate.",
     "Offer to fill them in from whatever the user can tell you about their own standards, one (type, phase, period) at a time. Do not invent them.",
     "Everything else is an ordinary workbook - the same schema, the same rules."

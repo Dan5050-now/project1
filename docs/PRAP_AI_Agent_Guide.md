@@ -6,8 +6,8 @@ This document is written for a language model or an agent, not for a person. It 
 
 |  |  |
 |---|---|
-| Application | `app/PRAP.html` v1.38 |
-| Source schema version | 10 |
+| Application | `app/PRAP.html` v1.39 |
+| Source schema version | 11 |
 | Contract version | 1.0 |
 | Guide version | 1.0 |
 | Generated | 2026-09-04 |
@@ -52,7 +52,7 @@ Seven rules that account for most mistakes:
 - **There are two ways in**, and the second one changes what you may assume about a file you are handed:
   - *load a file* — Drop a .xlsx workbook or a .prap.json file on the page. This is the path for anything you produce.
   - *start blank* — 'Start blank' begins a plan with nothing in it but the standard value lists and settings, and opens every tab for typing. It is how someone plans from scratch without a workbook.
-  - *what blank contains* — The Lists and Config sheets of the delivered template, plus a complete PeriodWeightStandard and RoleFactor grid built from those lists - every (type, phase, period) and (type, phase, period, role) combination, so nothing silently falls back to 1.00 and V-23 never fires.
+  - *what blank contains* — The Lists and Config sheets of the delivered template, plus a complete PeriodFTEStandard and RoleFactor grid built from those lists - every (type, phase, period) and (type, phase, period, role) combination, so nothing silently falls back to 1.00 and V-23 never fires.
   - *placeholders* — Every seeded weight and role factor is 1.00 and says so in its note. They are NOT a company standard. If a user hands you a plan started this way, check whether those figures are still 1.00 before reading the FTE totals as real - until they are set, the load reduces to person_weight x month_coverage.
   - *both end the same* — A plan started blank exports to the same .xlsx and the same .prap.json as any other, so nothing downstream needs to know which way it began.
 - **The workbook is the record.** Edits inside the application are provisional until Save, and are written nowhere until Export — which produces a *new* file stamped with the date (§6).
@@ -64,12 +64,12 @@ The repository keeps every issue of every document, so pick from `docs/PRAP_Mani
 
 | What | Path |
 |---|---|
-| Development plan | `docs/PRAP_Development_Plan_v2.40.xlsx` |
-| Programming specification | `docs/PRAP_Programming_Specification_v1.14.xlsx` |
+| Development plan | `docs/PRAP_Development_Plan_v2.41.xlsx` |
+| Programming specification | `docs/PRAP_Programming_Specification_v1.15.xlsx` |
 | UI component list | `docs/PRAP_UI_Component_List_v1.0.xlsx` |
-| Source data template | `templates/PRAP_SourceData_Template_v1.13.xlsx` |
-| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.15.xlsx` |
-| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.7.xlsx` |
+| Source data template | `templates/PRAP_SourceData_Template_v1.14.xlsx` |
+| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.16.xlsx` |
+| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.8.xlsx` |
 | This guide | `docs/PRAP_AI_Agent_Guide.md` |
 
 ## 2. The eight words you need
@@ -94,7 +94,7 @@ Ten sheets, all required, in this order. A missing sheet is fatal (V-00).
 | `Project` | master | — | `project_id` | 25 |
 | `Milestone` | child | `Project` | `project_id`, `milestone_name`, `milestone_date` | 6 |
 | `ProjectPeriod` | child | `Project` | `project_id`, `period_name` | 7 |
-| `PeriodWeightStandard` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name` | 6 |
+| `PeriodFTEStandard` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name` | 6 |
 | `RoleFactor` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name`, `role_name` | 8 |
 | `Person` | master | — | `person_id` | 12 |
 | `Assignment` | child | `Person` | `assignment_id` | 12 |
@@ -109,7 +109,7 @@ Project ──┬── Milestone
           └── Assignment ── PersonPeriodWeight
 Person  ──────┘
 
-PeriodWeightStandard, RoleFactor   reference tables, keyed on type/phase/period
+PeriodFTEStandard, RoleFactor   reference tables, keyed on type/phase/period
 Lists, Config                      vocabulary and settings
 ```
 
@@ -165,10 +165,10 @@ Lists, Config                      vocabulary and settings
 | `period_seq` | text | Orders periods along the timeline. Unique within a project. |
 | `period_start` | date | Inclusive. |
 | `period_end` | date | Inclusive. Periods must not overlap or leave a gap. |
-| `weight` | text | THIS PROJECT'S OWN ADJUSTMENT to the standard for its type, phase and scope (REQ-CAL-19). 1.00 means an ordinary project of its kind; 1.20 means this one takes a fifth more. It does NOT carry the magnitude - PeriodWeightStandard.standard_fte does. |
+| `weight` | text | THIS PROJECT'S OWN ADJUSTMENT to the standard for its type, phase and scope (REQ-CAL-19). 1.00 means an ordinary project of its kind; 1.20 means this one takes a fifth more. It does NOT carry the magnitude - PeriodFTEStandard.standard_fte does. |
 | `note_1` | text | Free text. e.g. why a derived date was overridden by hand. |
 
-#### `PeriodWeightStandard`
+#### `PeriodFTEStandard`
 
 | Column | Type | Meaning |
 |---|---|---|
@@ -385,7 +385,7 @@ over_allocation_fte and under_allocation_fte are ABSOLUTE FTE figures. They are 
 
 | Parameter | Default | Controls |
 |---|---|---|
-| `schema_version` | 10 | Structure version of this workbook. The application warns on a mismatch. |
+| `schema_version` | 11 | Structure version of this workbook. The application warns on a mismatch. |
 | `fte_hours_per_month` | 160 | Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month. |
 | `over_allocation_fte` | 1.5 | A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01). |
 | `under_allocation_fte` | 0.6 | A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01). |
@@ -438,7 +438,7 @@ Severities: **fatal** nothing loads · **error** the figures would be wrong · *
 | **V-16** | error | A clinical trial carries the milestones the derivation needs: CTA submission, and at least one DB lock. |
 | **V-17** | — | On editing an identifier, every referencing row is updated; on deleting a row, nothing may still reference it. |
 | **V-18** | error | Within a project, period_name is unique, and period_seq is unique. |
-| **V-19** | error | A clinical trial carries a clinical_phase, and PeriodWeightStandard has rows for that phase. Not applied to 'Others' projects, whose weights are entered directly. |
+| **V-19** | error | A clinical trial carries a clinical_phase, and PeriodFTEStandard has rows for that phase. Not applied to 'Others' projects, whose weights are entered directly. |
 | **V-20** | warning | A milestone other than 'Inspection' appears at most once per project. |
 | **V-21** | information | 'Inspection' dates on or before the final DB lock are treated as markers, not as the start of period 7. |
 | **V-22** | warning | No person carries a capacity_fte below the under-allocation floor. |
@@ -446,7 +446,7 @@ Severities: **fatal** nothing loads · **error** the figures would be wrong · *
 | **V-24** | error | Every PersonPeriodWeight.assignment_id exists in Assignment, and (assignment_id, period_start) is unique. |
 | **V-25** | — | RETIRED at schema 7 (R-16). It reported a project whose work_scope_type contradicted its outsourcing_type. |
 | **V-26** | error | No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'. |
-| **V-27** | error | Every clinical trial's (project_type, clinical_phase, work_scope_type) has at least one row in PeriodWeightStandard - checked on the PROJECT, not on its periods. |
+| **V-27** | error | Every clinical trial's (project_type, clinical_phase, work_scope_type) has at least one row in PeriodFTEStandard - checked on the PROJECT, not on its periods. |
 | **V-28** | — | RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all. |
 | **V-29** | information | A role that carries a factor, that nobody holds on the project, and that nothing covers for. |
 | **V-30** | information | Config has no row for a setting the application reads, so its built-in default is in force. Reported for every such setting, naming the value being used. |
@@ -549,7 +549,7 @@ A plain-text form of the source workbook, so a program or an AI agent that canno
 
 *The user hands you a workbook they built by typing into PRAP rather than one exported from a system of record.*
 
-1. Check the reference tables FIRST: python tools/prap_io.py to-json <file.xlsx> -o plan.prap.json, then look at PeriodWeightStandard and RoleFactor. A plan started blank seeds every one of them at 1.00 with a note saying so.
+1. Check the reference tables FIRST: python tools/prap_io.py to-json <file.xlsx> -o plan.prap.json, then look at PeriodFTEStandard and RoleFactor. A plan started blank seeds every one of them at 1.00 with a note saying so.
 2. If they are still 1.00, say so before quoting any figure. The load formula then reduces to person_weight x month_coverage, which is a real number but not a resourced estimate.
 3. Offer to fill them in from whatever the user can tell you about their own standards, one (type, phase, period) at a time. Do not invent them.
 4. Everything else is an ordinary workbook - the same schema, the same rules.
@@ -595,4 +595,4 @@ A plain-text form of the source workbook, so a program or an AI agent that canno
 
 ---
 
-Generated by `tools/build_ai_reference.py` on 2026-09-04 from `app/PRAP.html` v1.38, `PRAP_Development_Plan_v2.40.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.
+Generated by `tools/build_ai_reference.py` on 2026-09-04 from `app/PRAP.html` v1.39, `PRAP_Development_Plan_v2.41.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.

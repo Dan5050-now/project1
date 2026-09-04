@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.14"
+DOC_VERSION = "1.15"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.40.xlsx"
+PLAN = "PRAP_Development_Plan_v2.41.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -123,7 +123,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Governing document", f"{PLAN} - APPROVED BASELINE, Dan 2026-08-02"),
-    ("Schema version specified", "10"),
+    ("Schema version specified", "11"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -193,6 +193,20 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.15", "2026-09-04", "Claude Code", "Dan",
+         "R-33, SCHEMA 11, and no change to any figure - the 62-project fixture totals "
+         "4,333.46 FTE-months before and after. Sheet 03 renames the sheet "
+         "PeriodWeightStandard to PeriodFTEStandard: schema 10 already renamed its column "
+         "to standard_fte on the grounds that it holds a magnitude in FTE, and leaving the "
+         "SHEET called a weight kept the misreading alive that R-32 had to correct. A "
+         "schema 10 workbook still opens - the old sheet name is translated on read and "
+         "reported once, as a renamed column is. Sheet 10 renames the panel to 'Standard "
+         "period FTE for project types'. Sheet 05 corrects the monthly-estimation notes, "
+         "which still described the pre-R-32 product of four factors; they now state the "
+         "project month and the assignment month separately, because under R-32 the two "
+         "are arrived at differently. Sheet 09 records that the Python shell's sticky "
+         "chrome and the page's sticky band no longer overlap. Written against plan "
+         "v2.41.", "Issued"],
         ["1.14", "2026-09-03", "Claude Code", "Dan",
          "R-32: REQ-CAL-19 amended. A project-month IS its standard x period weight x "
          "the month it ran, and the people on it DIVIDE that - person_weight, coverage "
@@ -441,7 +455,7 @@ sheets = [
     ["Project", "project_id", "-", "23", "Master."],
     ["Milestone", "project_id + milestone_name + milestone_date", "Project", "6", "milestone_name is NOT unique alone - 'Inspection' repeats (REQ-PRJ-13)."],
     ["ProjectPeriod", "project_id + period_name", "Project", "7", "Since R-11 no period name repeats in a project, so the name alone identifies the row. period_seq carries order, not identity (V-18)."],
-    ["PeriodWeightStandard", "project_type + clinical_phase + work_scope_type + period_name", "-", "6", "84 baseline rows at schema 6: three trial types keyed separately (R-05, R-12), four phases, seven periods (R-11), with work_scope_type EMPTY. A row per scope as well would be 252. 'Others' take manual weights (Q-28)."],
+    ["PeriodFTEStandard", "project_type + clinical_phase + work_scope_type + period_name", "-", "6", "84 baseline rows at schema 6: three trial types keyed separately (R-05, R-12), four phases, seven periods (R-11), with work_scope_type EMPTY. A row per scope as well would be 252. 'Others' take manual weights (Q-28)."],
     ["RoleFactor", "project_type + clinical_phase + work_scope_type + period_name + role_name", "-", "7", "429 baseline rows at schema 6 - the largest sheet in the workbook, and 1,269 if every scope were spelled out. Keyed on all five so a role's burden can vary across the life of a project (R-10) and with how much of the work is kept (R-12). clinical_phase is EMPTY on the nine 'Others' rows - the lookup must match null to null, not fall through."],
     ["Person", "person_id", "-", "12", "Master."],
     ["Assignment", "assignment_id", "Person, Project, RoleFactor", "11", "One row per person + project + role."],
@@ -506,7 +520,7 @@ r = lines(ws, r, [
 r += 1
 notes_tbl = [
     ["Project", "note_1 .. note_5"], ["Milestone", "note_1"],
-    ["ProjectPeriod", "note_1"], ["PeriodWeightStandard", "note_1"],
+    ["ProjectPeriod", "note_1"], ["PeriodFTEStandard", "note_1"],
     ["RoleFactor", "role_note"], ["Person", "note_1 .. note_5"],
     ["Assignment", "note_1 .. note_3"], ["PersonPeriodWeight", "reason"],
     ["MonthlyEstimate", "note_1"],
@@ -535,7 +549,7 @@ r += 1
 
 r = section(ws, r, "The delivered default assumptions   [R-14]")
 r = lines(ws, r, [
-    "PeriodWeightStandard and RoleFactor are DELIVERED FILLED IN - 84 and 429 rows. They used",
+    "PeriodFTEStandard and RoleFactor are DELIVERED FILLED IN - 84 and 429 rows. They used",
     "to arrive empty, and a plan started inside the application filled both grids with a",
     "placeholder 1.00.",
     "",
@@ -547,7 +561,7 @@ r = lines(ws, r, [
 r += 1
 dflt = [
     ["Defined once", "tools/build_source_workbook.py - DEFAULT_PHASE_PROFILE and the tables beside it.", "One definition"],
-    ["Read by the template", "PeriodWeightStandard and RoleFactor are written from it at build time.", "R-14"],
+    ["Read by the template", "PeriodFTEStandard and RoleFactor are written from it at build time.", "R-14"],
     ["Read by the blank start", "tools/build_app_seed.py lifts the same rows OUT OF THE TEMPLATE into SEED_PWS and SEED_RF. Not restated - lifted, so 'the workbook and the application hold the same assumptions' is a fact rather than a promise.", "R-14"],
     ["Read by the dummy data", "The same baseline, plus illustrative scope-specific rows on top.", "R-12"],
     ["Checked", "check_consistency.py compares the embedded seed with the template row for row, and fails if either grid has reverted to one flat value.", "R-14"],
@@ -560,7 +574,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "10", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "11", "Compared with the version this application expects (sheet 08)."],
     ["absorb_unstaffed_role_factor", "Integer", "1", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (sheet 05). 0 = an unstaffed role costs nothing, the arithmetic of every version before this one."],
     ["split_shared_role_fte", "Integer", "1", "1 = the role factor is divided between the people sharing a role in a month (sheet 05). 0 = each carries the whole factor, the arithmetic of every version before this one. A switch, not a threshold - so the Config reader must distinguish a value of 0 from an absent value, which is the defect this setting exposed."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
@@ -617,7 +631,7 @@ rules = [
     ["V-16", "Error", "A clinical trial lacking CTA submission or any DB lock.", "Project PRJ-007 has no DB lock milestone, so its periods cannot be derived. Enter them manually or add the milestone."],
     ["V-17", "Error", "An edit would orphan a reference (see sheet 07).", "PSN-001 cannot be deleted: 3 assignments still refer to it."],
     ["V-18", "Error", "Within a project, period_name is not unique, or period_seq is duplicated.", "Project PRJ-003: period_name 'Conduct (final)' appears 2 times; (project_id, period_name) must be unique. period_seq must also be unique - it fixes their order."],
-    ["V-19", "Error", "A clinical trial with no clinical_phase, or no PeriodWeightStandard row for its phase AND scope - counting the every-scope row.", "Project PRJ-005: no standard weight for NewDrug CT / Phase 3 / fully in-housed / Start-up. Add a row for that scope, or one with work_scope_type empty to cover every scope."],
+    ["V-19", "Error", "A clinical trial with no clinical_phase, or no PeriodFTEStandard row for its phase AND scope - counting the every-scope row.", "Project PRJ-005: no standard weight for NewDrug CT / Phase 3 / fully in-housed / Start-up. Add a row for that scope, or one with work_scope_type empty to cover every scope."],
     ["V-20", "Warning", "A milestone other than 'Inspection' recorded more than once.", "Project PRJ-002 records 'CTA submission' twice. Only 'Inspection' is expected to repeat."],
     ["V-21", "Information", "An 'Inspection' dated on or before the final DB lock.", "Project PRJ-002: 1 inspection on or before the final DB lock is treated as a marker and does not open the final period."],
     ["V-24", "Error", "PersonPeriodWeight.assignment_id not found in Assignment, or two windows of one assignment share a period_start.", "ASG-999: PersonPeriodWeight refers to an assignment that does not exist; its override is silently ignored."],
@@ -785,7 +799,7 @@ r = code(ws, r, [
 
 r = section(ws, r, "The two weight tables now overlap   [R-10, R-12]")
 r = lines(ws, r, [
-    "PeriodWeightStandard is keyed on (project_type, clinical_phase, work_scope_type, period_name).",
+    "PeriodFTEStandard is keyed on (project_type, clinical_phase, work_scope_type, period_name).",
     "RoleFactor adds role_name to the same key.",
     "The calculation multiplies them, so the pair is mathematically collapsible into one table.",
     "",
@@ -800,14 +814,14 @@ r = lines(ws, r, [
     "sheets must do the same, or it will report a missing weight where the application finds one.",
 ])
 r = table(ws, r, ["Table", "Answers", "Change it when"],
-          [["PeriodWeightStandard", "How busy is the PROJECT in this period?",
+          [["PeriodFTEStandard", "How busy is the PROJECT in this period?",
             "The shape of a project changes - e.g. Phase 3 close-out is heavier than assumed. One edit covers every role."],
            ["RoleFactor", "How much of that falls on THIS role?",
             "The split between roles changes - e.g. the analyst starts earlier than assumed. Five edits, one per role."]],
           [26, 52, 76], wrap_cols=(2, 3))
 r = note(ws, r, "The separation is a maintenance convention, not something the arithmetic enforces. Raising a "
                 "project's Conduct load by editing all five RoleFactor rows produces the right answer today "
-                "and double-counts the next time PeriodWeightStandard moves. The application cannot detect "
+                "and double-counts the next time PeriodFTEStandard moves. The application cannot detect "
                 "this - both tables are legitimate inputs - so it belongs in the workbook README and in "
                 "whatever process maintains the file.")
 r += 1
@@ -1002,7 +1016,7 @@ r = lines(ws, r, [
 ])
 t4 = [
     ["Role factors", "RoleFactor as TWO matrices - clinical trials (type + phase + role down the side, the six periods across) and 'Others' (role down the side, the three periods across). 249 rows flat is unreadable, and reading a role ACROSS the periods is the whole point of keying it that way. Both sit in a bounded scroll region.", "REQ-DSH-11"],
-    ["Standard period weights", "PeriodWeightStandard as a MATRIX - project type and clinical phase down the side, period name across, cells shaded on the same ramp as the Overall tables. It is a standard, and a standard is read across; 48 flat rows read as a list. 'Others' projects are absent by design - their weights are hand-entered per project (Q-28).", "REQ-DSH-11"],
+    ["Standard period FTE for project types", "PeriodFTEStandard as a MATRIX - project type and clinical phase down the side, period name across, cells shaded on the same ramp as the Overall tables. It is a standard, and a standard is read across; 48 flat rows read as a list. 'Others' projects are absent by design - their weights are hand-entered per project (Q-28).", "REQ-DSH-11"],
     ["Configuration", "Config in full, with each parameter's note. The display-unit control sits here, with a line saying why it is not in the filter bar.", "REQ-DSH-11, REQ-CAL-08"],
     ["Value lists", "Lists, one row per list, showing every accepted value and the count. Answers 'what may I type here' without opening the workbook. A value outside its list is kept and reported by V-11, never dropped. READ-ONLY and with no insert control: a value added here with nothing referring to it is noise.", "REQ-DSH-11"],
     ["Editing", "The role-factor and config tables are editable and insertable like any other table, and an edit here recalculates everything - these are the multipliers.", "REQ-IMP-07, REQ-IMP-11"],

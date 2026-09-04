@@ -203,7 +203,7 @@ def guide_markdown(C):
     w("          └── Assignment ── PersonPeriodWeight")
     w("Person  ──────┘")
     w("")
-    w("PeriodWeightStandard, RoleFactor   reference tables, keyed on type/phase/period")
+    w("PeriodFTEStandard, RoleFactor   reference tables, keyed on type/phase/period")
     w("Lists, Config                      vocabulary and settings")
     w("```")
     w("")

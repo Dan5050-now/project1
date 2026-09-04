@@ -78,7 +78,7 @@ def sheets(assignments, split=1):
         "ProjectPeriod": [{"project_id": "PRJ-001", "period_name": "Planning",
                            "period_seq": 1, "period_start": "2027-01-01",
                            "period_end": "2027-12-31", "weight": PERIOD_W}],
-        "PeriodWeightStandard": [{"project_type": "Others", "clinical_phase": None,
+        "PeriodFTEStandard": [{"project_type": "Others", "clinical_phase": None,
                                   "work_scope_type": None, "period_name": "Planning",
                                   "standard_fte": STANDARD}],
         "RoleFactor": [{"project_type": "Others", "clinical_phase": None,

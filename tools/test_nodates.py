@@ -61,7 +61,7 @@ def check(ok, label, detail=""):
         fails.append(label)
 
 
-BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.13.xlsx")
+BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.14.xlsx")
 CTA, LOCK = date(2026, 1, 15), date(2027, 6, 30)
 
 

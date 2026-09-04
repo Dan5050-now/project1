@@ -104,7 +104,7 @@ def doc(assignments, rf=None, absorb=1):
         "ProjectPeriod": [{"project_id": "PRJ-001", "period_name": "Planning",
                            "period_seq": 1, "period_start": P_START,
                            "period_end": P_END, "weight": 1.00}],
-        "PeriodWeightStandard": [{"project_type": "Others", "clinical_phase": None,
+        "PeriodFTEStandard": [{"project_type": "Others", "clinical_phase": None,
                                   "work_scope_type": None, "period_name": "Planning",
                                   "standard_fte": STANDARD}],
         "RoleFactor": rf if rf is not None else factors(),

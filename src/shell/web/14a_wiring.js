@@ -298,9 +298,14 @@ function defaultHorizon(){
  */
 function adopt(sheets, name, opts){
   opts = opts || {};
+  // The headers are read under CURRENT sheet names, so S.headers is keyed the way the
+  // model is. Only a local view is renamed, though: buildModel() is handed the sheets as
+  // the file actually named them, because it is the one that reports the rename to the
+  // reader, and it cannot report what it is never shown.
+  const named = renameSheets(sheets, null);
   S.headers = {};
   for (const s of REQUIRED_SHEETS)
-    S.headers[s] = ((sheets[s] || [])[0] || []).map(h => txt(h)).filter(Boolean);
+    S.headers[s] = ((named[s] || [])[0] || []).map(h => txt(h)).filter(Boolean);
   // What is in force NOW, captured before the model is replaced. Every import path -
   // the web file picker, the Python shell's open, a version restore, the difference
   // report's apply - funnels through here, so this is the one place the question can

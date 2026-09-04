@@ -77,7 +77,7 @@ def snapshot():
     # R-10: keyed on project type + clinical phase + period + role.
     RF = {(r["project_type"], r["clinical_phase"], r["period_name"], r["role_name"]):
           r["role_factor"] for r in RF_ROWS}
-    PWS_ROWS = list(rows(wb["PeriodWeightStandard"]))
+    PWS_ROWS = list(rows(wb["PeriodFTEStandard"]))
     LIST_ROWS = list(rows(wb["Lists"]))
     CT = {"NewDrug CT", "Biosimilar CT"}
     TYPE_RANK = {"NewDrug CT": 0, "Biosimilar CT": 1, "Others": 2}
@@ -855,7 +855,7 @@ def _wmatrix(rows_, row_key, row_label, col_key, val_key, cols=None):
 def general_tab():
     """G-07: the fourth tab - the standards the whole simulation is multiplied by.
 
-    PeriodWeightStandard and RoleFactor were reachable only by opening the workbook,
+    PeriodFTEStandard and RoleFactor were reachable only by opening the workbook,
     yet every figure on the Overall tab is their product. Config sits here too, so
     the thresholds that colour the tables are visible next to what they mean (O-04).
     """
@@ -1331,7 +1331,7 @@ nothing on this page loads, calculates or exports.</div>
 
 <section class="tab" id="t-gen" hidden>
   <div class="panel">
-    <h2>Standard period weights <span class="scope">PeriodWeightStandard</span></h2>
+    <h2>Standard period weights <span class="scope">PeriodFTEStandard</span></h2>
     <p class="cap">The weight every clinical trial period is multiplied by, selected by the
       project's type and clinical phase. Shown as a matrix rather than 48 rows, because it is
       a standard and standards are read across, not down. The shading follows the same ramp as

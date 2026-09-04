@@ -186,7 +186,7 @@ with sync_playwright() as pw:
           [n, stdWeight(S.model, pr, n) ?? null]));}""", pid)
     check(all(want[n] is not None and abs(by[n][2] - want[n]) < 1e-9 for n in names),
           "each period carries the standard weight for this type and phase, from "
-          "PeriodWeightStandard",
+          "PeriodFTEStandard",
           ", ".join(f"{n.split(' ')[0]} {by[n][2]}" for n in names[:4]))
 
     # ---- 4. still ordinary rows ----------------------------------------------

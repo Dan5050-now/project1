@@ -29,7 +29,7 @@ const SHEET_COLS = {
   Project: {date:["start_date","end_date"], num:["planned_member_count","total_period_months"]},
   Milestone: {date:["milestone_date"], num:["milestone_seq"]},
   ProjectPeriod: {date:["period_start","period_end"], num:["period_seq","weight"]},
-  PeriodWeightStandard: {date:[], num:["standard_fte"]},
+  PeriodFTEStandard: {date:[], num:["standard_fte"]},
   RoleFactor: {date:[], num:["role_factor"]},
   Person: {date:["employment_start","employment_end"], num:["capacity_fte"]},
   Assignment: {date:["assign_start_date","assign_end_date"], num:["person_weight"]},
@@ -51,7 +51,7 @@ const SHEET_HEADERS = {
     "end_date","total_period_months","status","estimation_type","note_1","note_2","note_3","note_4","note_5"],
   Milestone:["project_id","project_name","milestone_name","milestone_date","milestone_seq","note_1"],
   ProjectPeriod:["project_id","period_name","period_seq","period_start","period_end","weight","note_1"],
-  PeriodWeightStandard:["project_type","clinical_phase","work_scope_type","period_name",
+  PeriodFTEStandard:["project_type","clinical_phase","work_scope_type","period_name",
     "standard_fte","note_1"],
   RoleFactor:["project_type","clinical_phase","work_scope_type","period_name","role_name",
     "role_factor","absorbed_by","role_note"],
@@ -97,8 +97,47 @@ const RENAMED_COLS = {
      multiply by, so the calculation multiplied by the PROJECT's weight and never
      asked this sheet anything. Renaming it is the smaller half of REQ-CAL-19; the
      values move across on read, so a schema 9 file keeps its figures. */
-  PeriodWeightStandard: {weight: "standard_fte"},
+  PeriodFTEStandard: {weight: "standard_fte"},
 };
+
+/* Sheets that were RENAMED, and what they are now.
+   Same hazard as a renamed column, one level up and worse: an unrecognised SHEET is not
+   a lost value, it is a lost table. Every standard would read as absent, V-27 would
+   report every project as having no rows to cost it by, and a file that is perfectly
+   good would look broken.
+
+   schema 10 -> 11. The sheet holds a monthly FTE and has since schema 10 renamed its
+   column to say so; the sheet name went on saying "weight", which is the reading that
+   made the figures look like multipliers rather than magnitudes. The old name is
+   accepted on the way in - a schema 10 workbook opens with its standards intact - and
+   the current name is what gets written back out. */
+const RENAMED_SHEETS = {
+  PeriodWeightStandard: "PeriodFTEStandard",
+};
+
+/** Sheets keyed by their CURRENT names, whatever the file called them.
+ *
+ *  Applied to the whole object once, before anything reads a sheet by name, so no
+ *  caller has to know the old names existed. Idempotent, so calling it on an already
+ *  normalised object - which happens, because both adopt() and buildModel() do it - is
+ *  free rather than wrong. A file carrying BOTH names keeps the current one: it is the
+ *  one the application wrote, and silently preferring the older table would be the
+ *  surprise here. */
+function renameSheets(sheets, F){
+  if (!sheets) return sheets;
+  const out = {...sheets};
+  for (const [was, now] of Object.entries(RENAMED_SHEETS)){
+    if (!(was in out)) continue;
+    if (!(now in out)){
+      out[now] = out[was];
+      if (F) F.push({sev:"information", rule:"V-09", sheet:now, row:1,
+        msg:`The sheet ${was} was renamed to ${now}. Its rows have been read into the `
+          + `new sheet; save or export to write the workbook out in the current layout.`});
+    }
+    delete out[was];
+  }
+  return out;
+}
 const CLINICAL_PERIODS = ["Before-Start-up","Start-up","Conduct (interim)","Close-out (interim)",
                           "Conduct (final)","Close-out (final)","After Close-out (final)"];
 const OTHER_PERIODS = ["Planning","Develop","Close"];
@@ -122,7 +161,7 @@ const DERIVATION_MILESTONES = new Set(["CTA submission","interim DB lock","final
 const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignment_id",
                  Milestone:"project_id", ProjectPeriod:"project_id",
                  PersonPeriodWeight:"assignment_id", Config:"parameter", Lists:"list_name",
-                 PeriodWeightStandard:"project_type", RoleFactor:"project_type",
+                 PeriodFTEStandard:"project_type", RoleFactor:"project_type",
                  // A manual figure hangs off whatever it is FOR, and that is named by
                  // ref_id - a project_id on a project row, an assignment_id on an
                  // assignment row. Which of the two is said by `scope`.
@@ -142,14 +181,14 @@ const COLUMN_HELP = {
   month:"The month this figure is for, as YYYY-MM.",
   fte:"The monthly FTE, stated rather than calculated. 1.00 is one person working a full month.",
   edited_at:"When this figure was last set, so a reader can tell a figure somebody typed from one the application copied across on switching.",
-  automatic_fte:"What the assumptions ALONE would have produced for this month — period weight × (role factor ÷ sharers) × person weight × month coverage. Shown for comparison only; it is not stored anywhere and changing an assumption moves it, not the stated figure beside it.",
+  automatic_fte:"What the assumptions ALONE would have produced for this month — the project's standard FTE × its period weight, shared out among the people on it by (role factor ÷ sharers) × person weight × month coverage. Shown for comparison only; it is not stored anywhere and changing an assumption moves it, not the stated figure beside it.",
   difference:"The stated figure minus the automatic one. This is the size of the departure the manual estimate is making, month by month.",
   project_id:"Unique identifier for the project. Editing it cascades to every row that references it.",
   project_name:"Display name. Shown wherever the project appears.",
   project_type:"'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Everything but 'Others' is a clinical trial: they share one period set and differ in their weights.",
   project_category:"Product name. Required for either clinical trial type (V-04).",
   clinical_phase:"Phase 1 to 4. With the project type and the work scope it selects the standard period weights and role factors.",
-  work_scope_type:"How much of the work is done in-house. Part of the key into PeriodWeightStandard and RoleFactor: a standards row with this column EMPTY applies to every scope, so only the scopes that really differ need their own row.",
+  work_scope_type:"How much of the work is done in-house. Part of the key into PeriodFTEStandard and RoleFactor: a standards row with this column EMPTY applies to every scope, so only the scopes that really differ need their own row.",
   outsourcing_scope_det:"FREE TEXT. What is outsourced and to whom, in your own words — the detail work_scope_type cannot carry. Read by people, never by the calculation.",
   EDC_setup:"Who sets up EDC — by CRO or by SB.",
   DataReviewSystem_setup:"Who sets up the data review system.",
@@ -168,7 +207,7 @@ const COLUMN_HELP = {
   period_seq:"Orders the periods along the timeline. Carries order, not identity.",
   period_start:"Inclusive. Periods must not overlap or leave a gap (V-06, V-12).",
   period_end:"Inclusive.",
-  weight:"Effort multiplier for this period. Multiplied by the role factor, the person weight and the month coverage.",
+  weight:"This project's own adjustment to the standard. The month's demand is the standard FTE for this type, phase, work scope and period MULTIPLIED by this — 1.00 leaves the standard as it is, 1.20 says this particular study is a fifth heavier in this period.",
   weight_override:"REPLACES person_weight for the months this window covers — it does not multiply it.",
   role_name:"Must exist in RoleFactor for this project's type (V-03).",
   role_factor:"What one person in this role costs the project per month, before their own weight and the period weight. Keyed on type, phase, work scope, period and role.",
@@ -234,8 +273,9 @@ const HELP = {
     + "weight, a role factor or a person's weight will no longer move any of these months. "
     + "The application asks before it does it.",
   estauto:"<b>Switch back to automatic calculation</b><br>DELETES every stated month for this "
-    + "one and goes back to period weight × (role factor ÷ sharers) × person weight × month "
-    + "coverage. There is nothing to come back to afterwards — the figures are removed, not "
+    + "one and goes back to the calculation: standard FTE × period weight for the project's "
+    + "month, shared out among the people on it by (role factor ÷ sharers) × person weight "
+    + "× month coverage. There is nothing to come back to afterwards — the figures are removed, not "
     + "set aside. Provisional until you press Save, like any other change. The application "
     + "asks before it does it.",
   estfill:"<b>Fill the missing months</b><br>Months this covers that carry no stated figure are "
