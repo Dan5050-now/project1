@@ -10,6 +10,9 @@
        month as 'Monthly demand by project' - they are the same person-months summed
        along different axes, so any disagreement is a bug in one of them
     b. each person keeps ONE colour
+    b2. BOTH stacked charts state their month's total in the pop-up, and state the SAME
+       one. (a) compares the two as drawn, in pixels; this compares what they SAY, which
+       is what a reader acts on
 
   Source data (project)
     c. Utilisation is stacked by PERSON, and each month's segments sum to the
@@ -115,6 +118,40 @@ with sync_playwright() as pw:
           "" if not byperson else str(byperson["drift"][:2]))
     check(byperson and not byperson["split"], "each person has one colour",
           "" if not byperson else str(byperson["split"]))
+
+    # A band on its own does not say whether the month came to five FTE or fifty, so both
+    # stacked charts state the month's total under a rule. Compared as TEXT rather than as
+    # pixel heights: the check above already covers the drawing, this covers the claim the
+    # two charts make in words, which is the one a reader actually acts on.
+    stated = probe(pg, r"""() => {
+      const pick = t => [...document.querySelectorAll('#t-overall .panel')]
+        .find(e => (e.querySelector('h2')||{}).textContent === t);
+      const read = (panel, phrase) => {
+        const out = {}, miss = [];
+        for (const r of panel.querySelectorAll('rect.band')){
+          const m = new RegExp('<hr>(.+?) across ' + phrase
+                             + ' in view: <b>([\\d.,]+)').exec(r.dataset.tip || '');
+          if (m) out[m[1]] = m[2]; else miss.push((r.dataset.tip || '').slice(0, 40));
+        }
+        return {out, miss};
+      };
+      const P = read(pick('Monthly demand by project'), 'every project');
+      const Q = read(pick('Monthly demand by person'), 'everyone');
+      const both = Object.keys(P.out).filter(k => k in Q.out);
+      return {projMissing: P.miss.length, persMissing: Q.miss.length,
+              months: both.length,
+              differ: both.filter(k => P.out[k] !== Q.out[k]).map(k => [k, P.out[k], Q.out[k]])};
+    }""")
+    check(stated and stated["projMissing"] == 0 and stated["months"] > 0,
+          "every band of the project chart states its month's total, as the person chart does",
+          "" if not stated else f"{stated['months']} months stated, "
+          f"{stated['projMissing']} band(s) without one")
+    # months > 0 as well as no difference: with neither chart stating anything there is
+    # nothing to disagree about, and a check that passes on an empty set is not a check.
+    check(stated and stated["months"] > 0 and not stated["differ"],
+          "and the total it states is the one the person chart states for that month",
+          "" if not stated else (str(stated["differ"][:2]) if stated["differ"]
+                                 else f"{stated['months']} months, all identical"))
 
     print("app/PRAP.html — Source data (project): project timeline")
     pg.click("text=Source data (project)")

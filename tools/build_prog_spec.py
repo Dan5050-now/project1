@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.15"
+DOC_VERSION = "1.16"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -193,6 +193,15 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.16", "2026-09-04", "Claude Code", "Dan",
+         "The 'Monthly demand by project' pop-up now states THE MONTH'S TOTAL across "
+         "every project in view, under a rule, and the band's share of it - the two "
+         "things 'Monthly demand by person' already carried and this one did not. A band "
+         "read on its own cannot say whether the month came to five FTE or to fifty. "
+         "Sheet 10 Graph 1 updated. No change to any figure: the total is the sum the "
+         "chart was already drawing, and it is the same figure Graph 2 states for that "
+         "month summed along the other axis - test_charts.py now holds the two to "
+         "agreeing in WORDS as well as in pixels, month for month.", "Issued"],
         ["1.15", "2026-09-04", "Claude Code", "Dan",
          "R-33, SCHEMA 11, and no change to any figure - the 62-project fixture totals "
          "4,333.46 FTE-months before and after. Sheet 03 renames the sheet "
@@ -916,7 +925,7 @@ ov = [
     ["Unit toggle", "FTE or hours, seeded from config.capacity_unit. NOT in the filter bar: it changes how every figure is written, not which figures are shown, so it is a setting and lives on the assumptions tab.", "REQ-CAL-08, REQ-DSH-11"],
     ["Table A - by project", "Rows projects, columns months, cells FTE. Row and column totals. A project row expands to its people.", "REQ-DSH-01"],
     ["Table B - by person", "Rows people, columns months, cells FTE summed across projects. Over-allocated cells red, under-allocation runs amber. A person row expands to their projects.", "REQ-DSH-01, REQ-DSH-08"],
-    ["Graph 1", "Stacked bar: total monthly demand, ONE BAND PER PROJECT, ordered by total resource with the largest on the baseline. 'Others' projects are grey; trials take the extended colour set. NO LEGEND - a list of 62 entries cannot be matched against the chart. Identity comes from the hover pop-up, which carries project name and type, that month's FTE and its hour equivalent, the headcount, and every person on the project that month with their role.", "REQ-DSH-02"],
+    ["Graph 1", "Stacked bar: total monthly demand, ONE BAND PER PROJECT, ordered by total resource with the largest on the baseline. 'Others' projects are grey; trials take the extended colour set. NO LEGEND - a list of 62 entries cannot be matched against the chart. Identity comes from the hover pop-up, which carries project name and type, that month's FTE and its hour equivalent, its share of the month, the headcount, every person on the project that month with their role, and - under a rule - THE MONTH'S TOTAL ACROSS EVERY PROJECT IN VIEW. The total is what a band on its own cannot give: 4.02 FTE means nothing until you know whether the month came to five or to fifty. It is the same figure Graph 2 states for that month, summed along the other axis, so the two pop-ups are held to agreeing in words as well as in pixels.", "REQ-DSH-02"],
     ["Graph 2", "Monthly FTE per person, with reference lines at the two thresholds - one pair of lines, since both are absolute. Above the bar budget it shows a ranked subset with the rest rolled into one 'others' band, and says which it is showing.", "REQ-DSH-02, REQ-DSH-08, REQ-DSH-09"],
     ["Graph 3", "Timeline per project - the FIRST panel on the tab, above the summary tiles. Each row carries the project name with its start, end and length beneath. Bands are coloured BY PERIOD NAME (see the colour rule below), with the period weight as a lightness step inside each hue. Milestones are inverted triangles in a lane above the bands; 'Inspection' takes the same marker as every other milestone. The hover pop-up gives the period, its dates, its weight and the FTE per month the project draws across it.", "REQ-DSH-02, REQ-PRJ-05, REQ-DSH-10"],
     ["Summary tiles", "Active projects; people assigned; total FTE in the horizon; over-allocated person-months; under-allocation runs.", "REQ-DSH-08"],

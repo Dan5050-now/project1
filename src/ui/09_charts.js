@@ -244,6 +244,14 @@ function chartStacked(pids){
   }
   G.forEach((k, i) => {
     const x0 = padL + i * bw + 3;
+    // The whole stack for this month, which is the question the chart is drawn to answer
+    // and the one a band on its own cannot: 4.02 FTE means nothing until you know whether
+    // the month came to five or to fifty. Summed over pids rather than over `order` for
+    // the same reason the person chart sums over every person in view - so the two
+    // tooltips report the SAME figure for the same month, which is the claim the panel
+    // caption makes about these two charts.
+    let month = 0;
+    for (const q of pids) month += C.projMonth.get(q+"|"+k) || 0;
     let base = H - padB;
     for (const p of order){
       const v = C.projMonth.get(p+"|"+k) || 0;
@@ -254,10 +262,12 @@ function chartStacked(pids){
         `&#183; ${esc((M.people[ps]||{}).person_name || ps)} <span class="tr">${esc(role)}</span>`).join("<br>");
       const tip = `<b>${esc(M.projects[p].project_name)}</b> `
         + `<span class="tr">${esc(M.projects[p].project_type)}</span><br>`
-        + `${keyToLabel(k)} &#183; <b>${fmt(v)} ${unitLabel()}</b><br>`
+        + `${keyToLabel(k)} &#183; <b>${fmt(v)} ${unitLabel()}</b>`
+        + `<span class="tr"> &#183; ${month > 0 ? (100*v/month).toFixed(0) : 0}% of the month</span><br>`
         + `<span class="tr">${crew.length} ${crew.length===1?"person":"people"} this month</span><br>`
         + (list || "&#183; nobody assigned")
-        + (crew.length > 8 ? `<br>&#183; and ${crew.length-8} more` : "");
+        + (crew.length > 8 ? `<br>&#183; and ${crew.length-8} more` : "")
+        + `<hr>${keyToLabel(k)} across every project in view: <b>${fmt(month)} ${unitLabel()}</b>`;
       o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${(base-h).toFixed(1)}" `
         + `width="${(bw-8).toFixed(1)}" height="${Math.max(0.6,h).toFixed(1)}" fill="${colour[p]}" `
         + `data-tip="${att(tip)}"></rect>`);

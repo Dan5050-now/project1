@@ -937,7 +937,7 @@ dialog.big .dlg-b{max-height:84vh}
 
 <script>
 "use strict";
-const APP_VERSION = "1.39";
+const APP_VERSION = "1.40";
 const SCHEMA_EXPECTED = 11;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -948,7 +948,7 @@ const SCHEMA_EXPECTED = 11;
 const BUILT_AGAINST = [
   {what:"Development plan",       file:"PRAP_Development_Plan_v2.41.xlsx",          ver:"2.41",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.15.xlsx", ver:"1.15",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.16.xlsx", ver:"1.16",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
@@ -4652,6 +4652,14 @@ function chartStacked(pids){
   }
   G.forEach((k, i) => {
     const x0 = padL + i * bw + 3;
+    // The whole stack for this month, which is the question the chart is drawn to answer
+    // and the one a band on its own cannot: 4.02 FTE means nothing until you know whether
+    // the month came to five or to fifty. Summed over pids rather than over `order` for
+    // the same reason the person chart sums over every person in view - so the two
+    // tooltips report the SAME figure for the same month, which is the claim the panel
+    // caption makes about these two charts.
+    let month = 0;
+    for (const q of pids) month += C.projMonth.get(q+"|"+k) || 0;
     let base = H - padB;
     for (const p of order){
       const v = C.projMonth.get(p+"|"+k) || 0;
@@ -4662,10 +4670,12 @@ function chartStacked(pids){
         `&#183; ${esc((M.people[ps]||{}).person_name || ps)} <span class="tr">${esc(role)}</span>`).join("<br>");
       const tip = `<b>${esc(M.projects[p].project_name)}</b> `
         + `<span class="tr">${esc(M.projects[p].project_type)}</span><br>`
-        + `${keyToLabel(k)} &#183; <b>${fmt(v)} ${unitLabel()}</b><br>`
+        + `${keyToLabel(k)} &#183; <b>${fmt(v)} ${unitLabel()}</b>`
+        + `<span class="tr"> &#183; ${month > 0 ? (100*v/month).toFixed(0) : 0}% of the month</span><br>`
         + `<span class="tr">${crew.length} ${crew.length===1?"person":"people"} this month</span><br>`
         + (list || "&#183; nobody assigned")
-        + (crew.length > 8 ? `<br>&#183; and ${crew.length-8} more` : "");
+        + (crew.length > 8 ? `<br>&#183; and ${crew.length-8} more` : "")
+        + `<hr>${keyToLabel(k)} across every project in view: <b>${fmt(month)} ${unitLabel()}</b>`;
       o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${(base-h).toFixed(1)}" `
         + `width="${(bw-8).toFixed(1)}" height="${Math.max(0.6,h).toFixed(1)}" fill="${colour[p]}" `
         + `data-tip="${att(tip)}"></rect>`);
