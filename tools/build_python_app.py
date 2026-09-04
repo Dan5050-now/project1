@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.8"
+VERSION = "1.9"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,51 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.9
+
+  * A CHANGE LOG, WRITTEN TO DISK AT EVERY SAVE. Every change you save is
+    recorded and appended to a CSV file in a new `audit` folder beside your
+    workspaces:
+
+        data/<your account>/audit/PRAP_changes_YYYY-MM.csv
+
+    One file a month. The header is written when the file is created and rows
+    are added under it - nothing is ever rewritten, so the file only grows and
+    an interrupted save cannot damage what is already in it.
+
+    Each line carries the time in UTC, your name, what kind of change it was,
+    the sheet, WHICH RECORD (PRJ-004, or PSN-012 | 2027-03 - the record's own
+    identifier, not a row number, because inserting a row renumbers everything
+    under it), the column, and the value before and after.
+
+    Your name comes from your Windows account. You are not asked.
+
+  * AND WHAT THE APPLICATION REPORTED. A second file, PRAP_findings_YYYY-MM.csv,
+    records the errors and warnings standing at each save - including which of
+    them you were asked about and chose to keep, which is the line in a log that
+    records a DECISION rather than a keystroke.
+
+  * Both open in Excel by double-clicking. They are written with a UTF-8 marker
+    so a Korean name is not mangled.
+
+  * IF THE LOG CANNOT BE WRITTEN, the save still works. The entries are kept and
+    the next save writes them too; the status line says so once.
+
+  * COLUMN FILTERS, like a spreadsheet's, on six tables: Projects and Monthly
+    estimation on the project tab, People and Monthly estimation on the person
+    tab, and Standard period FTE and Role factors on General assumptions. Click
+    the small arrow in a column heading, tick the values to keep.
+
+    Filters on different columns narrow TOGETHER, and the values a column offers
+    are the ones the other columns still leave reachable. A note above the table
+    says how many rows are hidden, with a button to clear them - a filter left
+    on from earlier is otherwise hard to tell from data that is not there.
+
+    IT NARROWS THE TABLE, NOT THE PLAN. The charts and the totals do not move: a
+    row hidden here is still in the plan. The filter bar at the top of the page
+    is still the control that changes what the figures mean.
+
 
 WHAT IS NEW IN 1.8
 

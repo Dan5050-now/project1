@@ -149,7 +149,7 @@ function renderProjTab(){
         <span class="scope k">${rows.length} in the current filter</span></div>
       <p class="cap">Every field is editable — click a cell and type. Clicking a row also selects it,
         which drives the panels below. <strong>+ row</strong> inserts directly below that row.</p>
-      ${dataTable("Project", rows, cols, "project_id", pid)}</div>
+      ${filterTable("Project", rows, cols, "project_id", pid)}</div>
     <div id="projDetail">${projDetail(pid)}</div>`;
 }
 
@@ -391,7 +391,7 @@ function renderPersTab(){
         <span class="scope k">${prows.length} in the current filter</span></div>
       <p class="cap">Editable, same rules as the project table — clicking a row selects it, and
         <strong>+ row</strong> inserts directly below.</p>
-      ${dataTable("Person", prows, cols, "person_id", sid)}</div>
+      ${filterTable("Person", prows, cols, "person_id", sid)}</div>
     <div id="persDetail">${persDetail(sid)}</div>`;
 }
 
@@ -558,7 +558,7 @@ function renderGenTab(){
   const M = S.model;
   const pwsRows = M.raw.PeriodFTEStandard, rfRows = M.raw.RoleFactor;
   const pws = S.genView.pws === "rows"
-    ? dataTable("PeriodFTEStandard", pwsRows,
+    ? filterTable("PeriodFTEStandard", pwsRows,
         ["project_type","clinical_phase","work_scope_type","period_name","standard_fte","note_1"])
     : `<div class="scrollx tall">${wmatrix(pwsRows,
         r => [r.project_type, r.clinical_phase, scopeLabel(r)],
@@ -568,7 +568,7 @@ function renderGenTab(){
   const ct = rfRows.filter(r => CLINICAL_TYPES.has(r.project_type));
   const ot = rfRows.filter(r => !CLINICAL_TYPES.has(r.project_type));
   const rf = S.genView.rf === "rows"
-    ? dataTable("RoleFactor", rfRows,
+    ? filterTable("RoleFactor", rfRows,
         ["project_type","clinical_phase","work_scope_type","period_name","role_name",
          "role_factor","role_note"])
     : `<div class="scrollx tall">${wmatrix(ct,

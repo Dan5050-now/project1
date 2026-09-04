@@ -73,10 +73,18 @@ check(not offenders,
 # ---- 2. the seam is small, and the implementations sit behind it -----------
 web_storage = list((SRC / "storage" / "web").rglob("*.js"))
 web_lines = sum(len(p.read_text(encoding="utf-8").split("\n")) for p in web_storage)
-check(web_storage and web_lines < 150,
-      "the web shell's storage is small enough to be a seam — two functions, one that "
-      "reads a file and one that writes one",
-      f"{len(web_storage)} file(s), {web_lines} lines")
+# The budget was 150 when the seam was two things - read a workbook, write a workbook.
+# It is three since the change log arrived: the desktop shell appends it to a folder and
+# the browser can only hand it over as a download, which is exactly the kind of
+# difference this seam exists to absorb. Re-baselined at 220 rather than removed,
+# because the point of the number is to catch the seam DRIFTING - a fourth
+# responsibility arriving unnoticed - and a limit nobody can cross does not do that.
+# Anything that pushes it past this should be asked the same question again: is this
+# the seam, or is it work that belongs behind the seam?
+check(web_storage and web_lines < 220,
+      "the web shell's storage is small enough to be a seam — read a workbook, write "
+      "a workbook, hand over the change log",
+      f"{len(web_storage)} file(s), {web_lines} lines of a 220 budget")
 
 desk_storage = list((SRC / "storage" / "desktop").rglob("*.js"))
 desk_lines = sum(len(p.read_text(encoding="utf-8").split("\n")) for p in desk_storage)

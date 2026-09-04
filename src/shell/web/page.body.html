@@ -23,6 +23,23 @@
         <i>The figures, not the plan — every project-month and person-month in view,
            with the working behind each one. For a report or a spreadsheet.
            <b>Cannot be imported back.</b></i></button>
+      <hr>
+      <!-- The record of the WORK, as opposed to the plan or the figures. Narrowed by
+           date rather than by the page's filters, because "what happened in March" is
+           the question a log is read to answer. -->
+      <div class="expdates">
+        <div class="ctl"><label for="aFrom">Log from</label>
+          <input id="aFrom" size="9" placeholder="YYYY-MM-DD"></div>
+        <div class="ctl"><label for="aTo">to</label>
+          <input id="aTo" size="9" placeholder="YYYY-MM-DD"></div>
+        <span class="hint" id="aCount"></span>
+      </div>
+      <button class="expitem" id="exportAuditBtn">Change log <b>.csv</b>
+        <i>Every saved change: when in UTC, who, which record, which column, and the
+           value before and after.</i></button>
+      <button class="expitem" id="exportEventsBtn">Errors and warnings <b>.csv</b>
+        <i>What the application reported at each save, and which of them were knowingly
+           kept.</i></button>
     </div>
   </details>
   <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
@@ -78,6 +95,14 @@
 <div id="editbar" hidden>
   <span class="guide" id="guide"></span>
   <span id="editstate"></span>
+  <!-- Who is making the changes. IN THE BAR, not in a dialog: this appears exactly when
+       there are unsaved changes, which is exactly when it is relevant, and it covers
+       nothing. A modal would block the cell being typed into; a floating card would sit
+       on top of the table. A control in a bar that is already there does neither. -->
+  <span id="whobox" hidden><label for="whoName">Logged as</label>
+    <input id="whoName" size="16" placeholder="your name" autocomplete="name">
+    <button class="btn tiny primary" id="whoOk">Save name</button>
+    <button class="btn tiny" id="whoSkip">Not now</button></span>
   <button class="btn" id="chgBtn" disabled
     title="Every change waiting to be saved: what changed, where, and what it was before"
     >Show details</button>
@@ -135,6 +160,10 @@
 <!-- The calendar for date columns. Anchored to its cell like the value list, and
      like it an OFFER rather than a gate: the cell stays typeable throughout. -->
 <div id="cal" class="cal" hidden role="dialog" aria-label="Choose a date"></div>
+<!-- The column filter panel. A singleton on the body, anchored to whichever heading
+     opened it, for the same reason the calendar and the value list are: the tables
+     scroll inside overflow:auto, and a panel drawn inside one would be clipped by it. -->
+<div id="colf" class="colf" hidden role="dialog" aria-label="Filter this column"></div>
 
 <dialog id="report">
   <div class="dlg-h"><strong>Validation findings</strong>

@@ -35,6 +35,7 @@ import json
 import os
 import secrets
 import threading
+import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -341,6 +342,54 @@ def operations(app):
         """The folder listing, for a Python without tkinter and for typing a path."""
         return F.listing(b.get("path"), b.get("suffixes"))
 
+    # ---- the change-log archive -----------------------------------------
+    # Appended to at every save, never rewritten. One file a month, so a year of work
+    # is twelve readable files rather than one that grows without limit or a thousand
+    # that nobody can search; and the header goes in when the file is CREATED, because
+    # a header repeated at every append is a header in the middle of the data.
+    #
+    # Append mode is what makes this safe against the two things that actually happen:
+    # two copies of the application running at once, and the machine being turned off
+    # mid-save. A short line appended with one write() call is not interleaved by the
+    # operating system, and a file that is only ever extended cannot be truncated by a
+    # crash - the worst case is a final line that was never finished.
+    AUDIT_HEADERS = {
+        "changes": "timestamp_utc,who,action,sheet,record,column,previous_value,new_value",
+        "findings": "timestamp_utc,who,event,severity,rule,sheet,row,kept_by_user,message",
+    }
+
+    def audit_append(b):
+        kind = str(b.get("kind") or "changes")
+        if kind not in AUDIT_HEADERS:
+            raise ValueError("kind must be 'changes' or 'findings'")
+        rows = b.get("rows") or []
+        if not rows:
+            return {"ok": True, "written": 0}
+        if not app.data_dir:
+            raise ValueError("no data folder has been settled yet")
+        folder = os.path.join(app.data_dir, "audit")
+        os.makedirs(folder, exist_ok=True)      # launch made it; a save re-checks
+        month = time.strftime("%Y-%m", time.gmtime())      # the file is named in UTC too
+        path = os.path.join(folder, "PRAP_%s_%s.csv" % (kind, month))
+        fresh = not os.path.exists(path) or os.path.getsize(path) == 0
+        # newline="" so csv-shaped text keeps the CRLF the rows already carry, on every
+        # platform; utf-8-sig on a NEW file so Excel opens a Korean name correctly.
+        with open(path, "a", encoding="utf-8-sig" if fresh else "utf-8",
+                  newline="") as fh:
+            if fresh:
+                fh.write(AUDIT_HEADERS[kind] + "\r\n")
+            for r in rows:
+                fh.write(str(r) + "\r\n")
+        return {"ok": True, "written": len(rows), "path": path, "created": fresh}
+
+    def audit_where(_):
+        folder = os.path.join(app.data_dir or "", "audit")
+        try:
+            files = sorted(f for f in os.listdir(folder) if f.endswith(".csv"))
+        except OSError:
+            files = []
+        return {"dir": folder, "files": files}
+
     def app_quit(_):
         threading.Timer(0.2, app.shutdown).start()
         return {"ok": True}
@@ -369,6 +418,8 @@ def operations(app):
         "file/openSource": file_open_source,
         "file/export": file_export,
         "fs/list": fs_list,
+        "audit/append": audit_append,
+        "audit/where": audit_where,
         "quit": app_quit,
     }
 

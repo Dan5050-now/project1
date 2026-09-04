@@ -11,6 +11,9 @@ function snapshotRaw(){
 }
 function beginEditSession(){
   if (!S.snapshot) S.snapshot = snapshotRaw();
+  // The first edit is the first moment there is anything to attribute, and the last
+  // moment before there is. Whoever the shell asks, it asks here.
+  askWho();
 }
 /** A row still being created is held out of validation - it is INCOMPLETE, not invalid,
  *  and reporting "project_id is empty" at every keystroke would be noise. Save is where
@@ -164,10 +167,22 @@ function saveEdits(){
 function commitSave(derived, accepted, soon){
   rebuild(true);
   renderKeepingTab();
+  /* Into the accumulated record BEFORE the pending list is emptied, and after the
+     rebuild, so every entry is stamped with the identifier the row finally has rather
+     than the one it had mid-edit.
+     `accepted` is the list the user was asked about and chose to save anyway - the most
+     useful thing an audit trail of a plan can carry, because it is the only line that
+     records a decision rather than a keystroke. */
+  S.audit.push(...auditEntries(S.pending, S.model, S.who));
+  S.events.push(...findingEntries(
+    (S.model.findings || []).filter(f => f.sev === "error" || f.sev === "warning"
+                                      || f.sev === "fatal"),
+    accepted.map(f => f.rule), "save", S.who));
   S.saved += S.pending.length;
   S.pending = [];
   S.snapshot = null;
   S.baseFindings = (S.model.findings || []).slice();
+  archiveAudit("save");
   renderDirty();
   showBanner(accepted.length ? "warn" : "",
     `Saved ${S.saved} change${S.saved===1?"":"s"} to the working data. `
@@ -277,6 +292,11 @@ function renderDirty(){
   bar.classList.toggle("dirty", n > 0);
   el("saveBtn").disabled = el("discardBtn").disabled = el("chgBtn").disabled = (n === 0);
   if (!n && el("changes").open) el("changes").close();   // nothing left to show
+  // The name request belongs to the same moment as the rest of this bar: something is
+  // unsaved and about to be attributed to somebody. Hidden the instant it is answered,
+  // and never shown in a shell that already knows.
+  const wb = el("whobox");
+  if (wb) wb.hidden = !!S.who || !n;
   el("editstate").textContent = n
     ? `${n} unsaved change${n===1?"":"s"}`
     : (S.saved ? `${S.saved} saved change${S.saved===1?"":"s"} · nothing pending`

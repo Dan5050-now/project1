@@ -87,9 +87,13 @@ with sync_playwright() as pw:
     pg.click("#exportBtn")
     pg.wait_for_timeout(400)
     items = pg.eval_on_selector_all(".expitem", "es => es.map(e => e.innerText)")
-    check(len(items) == 3
-          and any("Calculated monthly FTE" in t for t in items)
-          and any("Cannot be imported back" in t for t in items),
+    # By what each item IS, not by how many there are. The menu gained the two change-log
+    # exports at plan v2.44, and a count would have to be edited every time the menu
+    # grows - which teaches whoever edits it to stop reading the assertion.
+    plan_items = [t for t in items if "Source data" in t]
+    figures = [t for t in items if "Calculated monthly FTE" in t]
+    check(len(plan_items) == 2 and len(figures) == 1
+          and any("Cannot be imported back" in t for t in figures),
           "THE MENU OFFERS BOTH, and says which one comes back and which does not",
           " | ".join(t.split("\n")[0] for t in items))
     pg.keyboard.press("Escape")

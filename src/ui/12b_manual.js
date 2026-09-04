@@ -305,7 +305,7 @@ function manualPanel(scope, id){
       stray.length > 6 ? ", …" : ""}). They are kept but not used${
       scope === "project" ? " — a project month with nobody assigned has nobody to share "
         + "it out to, which V-32 reports" : ""}.</p>` : ""}
-    ${dataTable("MonthlyEstimate", rows,
+    ${filterTable("MonthlyEstimate", rows,
       ["month", "fte", "automatic_fte", "difference", "edited_at", "note_1"],
       null, null,
       {automatic_fte: r => auto.has(r.month) ? auto.get(r.month).toFixed(4) : "",

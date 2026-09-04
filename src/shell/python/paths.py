@@ -114,7 +114,12 @@ def writable(d):
 def ensure(data_dir):
     """Create the folders the resolved location needs. Called once at launch."""
     for d in (data_dir, os.path.join(data_dir, "workspaces"),
-              os.path.join(data_dir, "backups")):
+              os.path.join(data_dir, "backups"),
+              # Where the change log accumulates. Its own folder rather than a file
+              # beside the plans: it is not a plan, it is never opened by the
+              # application, and somebody looking for "the logs" should find a folder
+              # with that name rather than have to know which file to pick out.
+              os.path.join(data_dir, "audit")):
         os.makedirs(d, exist_ok=True)
     return data_dir
 

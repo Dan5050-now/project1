@@ -610,6 +610,42 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
    choose. It exists because the valid vocabulary lives in the workbook, and nobody
    should have to remember it or open the Lists sheet to check. */
 /* --- the calendar on a date cell ----------------------------------------- */
+/* --- the column filter --------------------------------------------------
+   The funnel in a heading. Faint until the column is actually narrowed, because a row
+   of seven dark markers reads as a warning about the data rather than as a control -
+   and then unmistakable once one is on, since a filter left running is the thing most
+   likely to be mistaken for missing data. */
+.data-t thead th .fbtn{margin-left:5px;padding:0 3px;border:0;background:none;
+ color:var(--muted);font-size:9px;line-height:1;cursor:pointer;border-radius:3px;
+ opacity:.55;vertical-align:middle}
+.data-t thead th .fbtn:hover{opacity:1;background:var(--fill);color:var(--ink)}
+.data-t thead th .fbtn.on{opacity:1;color:#fff;background:var(--accent);
+ padding:1px 4px;font-weight:700}
+.fnote{margin:0 0 6px}
+.fnote .btn.tiny{margin-left:6px}
+
+.colf{position:fixed;z-index:62;width:250px;background:var(--raised);
+ border:1px solid var(--hairline);border-radius:var(--r-md);
+ box-shadow:var(--shadow-lift);padding:8px;font-size:var(--t-md)}
+.colf-h{display:flex;align-items:baseline;gap:8px;padding:0 2px 6px}
+.colf-h strong{font-weight:620;color:var(--ink);overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap}
+.colf-h .tr{margin-left:auto;color:var(--muted);font-size:var(--t-xs);white-space:nowrap}
+.colf-q{width:100%;font:inherit;font-size:var(--t-md);padding:5px 8px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}
+.colf-all{display:flex;align-items:center;gap:7px;padding:6px 4px 5px;margin-top:5px;
+ border-bottom:1px solid var(--hairline);cursor:pointer;font-weight:560;min-height:26px}
+.colf-list{max-height:230px;overflow:auto;margin:4px 0;
+ scrollbar-color:var(--base) transparent}
+.colf-list label{display:flex;align-items:center;gap:7px;padding:4px 4px;
+ border-radius:var(--r-xs);cursor:pointer;min-height:26px}
+.colf-list label:hover{background:var(--fill)}
+.colf-list label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.colf-list i{color:var(--muted)}
+.colf-f{display:flex;gap:6px;justify-content:flex-end;padding-top:6px;
+ border-top:1px solid var(--hairline)}
+
 /* Sized so a month never reflows: seven columns of a fixed width, and the header row
    the same width whatever the month is called. It sits beside the cell, not over it -
    the caret stays where it was and typing goes on working. */
@@ -747,6 +783,42 @@ dialog.big .dlg-b{max-height:84vh}
 .cls.must{background:var(--overbg);color:var(--crit)}
 .cls.conditional{background:var(--underbg);color:var(--underink)}
 .cls.incomplete{background:var(--fill);color:var(--ink2)}
+
+/* The log date range, inside the export menu. A row of controls rather than a menu
+   item, because it does not DO anything on click - it narrows what the two items
+   below it will hand over. */
+.expdates{display:flex;gap:var(--sp-2);align-items:flex-end;padding:6px 11px 2px;
+ flex-wrap:wrap}
+.expdates .ctl{flex:0 0 auto}
+.expdates input{font:inherit;font-size:var(--t-md);padding:4px 7px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}
+.expdates .hint{flex:1 1 100%;color:var(--muted);font-size:var(--t-xs);padding-top:2px}
+.msp hr{border:0;border-top:1px solid var(--hairline);margin:6px 4px}
+/* An export with nothing to hand over says so and refuses, rather than delivering a
+   file with a header row and no content - which looks like an answer. */
+.expitem.off{opacity:.42;cursor:not-allowed}
+.expitem.off:hover{background:none}
+
+/* The name request. Shown with show() rather than showModal(), so it never blocks the
+   edit that triggered it - which means it needs its own place to sit, since a non-modal
+   <dialog> otherwise lands in the document flow wherever it was declared. Bottom right,
+   out of the way of the tables and above the sticky band. */
+#whoami[open]{position:fixed;inset:auto 18px 18px auto;margin:0;max-width:390px;
+ z-index:120;border:1px solid var(--hairline);border-radius:var(--r-lg);
+ background:var(--raised);color:var(--ink);padding:0;box-shadow:var(--shadow-lift)}
+#whoami .dlg-b{max-height:none}
+#whoami .ctl input{width:100%;font:inherit;font-size:var(--t-md);padding:6px 9px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}
+
+/* The name request, in the edit bar. A row of small controls rather than a panel: it
+   shares the bar with the guide text and the buttons, and wraps with them. */
+#whobox{display:inline-flex;align-items:center;gap:6px}
+#whobox label{color:var(--muted);font-size:var(--t-xs);font-weight:540}
+#whobox input{font:inherit;font-size:var(--t-md);padding:3px 8px;min-height:24px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}
 </style>
 
 <div class="wrap">
@@ -772,6 +844,23 @@ dialog.big .dlg-b{max-height:84vh}
         <i>The figures, not the plan — every project-month and person-month in view,
            with the working behind each one. For a report or a spreadsheet.
            <b>Cannot be imported back.</b></i></button>
+      <hr>
+      <!-- The record of the WORK, as opposed to the plan or the figures. Narrowed by
+           date rather than by the page's filters, because "what happened in March" is
+           the question a log is read to answer. -->
+      <div class="expdates">
+        <div class="ctl"><label for="aFrom">Log from</label>
+          <input id="aFrom" size="9" placeholder="YYYY-MM-DD"></div>
+        <div class="ctl"><label for="aTo">to</label>
+          <input id="aTo" size="9" placeholder="YYYY-MM-DD"></div>
+        <span class="hint" id="aCount"></span>
+      </div>
+      <button class="expitem" id="exportAuditBtn">Change log <b>.csv</b>
+        <i>Every saved change: when in UTC, who, which record, which column, and the
+           value before and after.</i></button>
+      <button class="expitem" id="exportEventsBtn">Errors and warnings <b>.csv</b>
+        <i>What the application reported at each save, and which of them were knowingly
+           kept.</i></button>
     </div>
   </details>
   <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
@@ -827,6 +916,14 @@ dialog.big .dlg-b{max-height:84vh}
 <div id="editbar" hidden>
   <span class="guide" id="guide"></span>
   <span id="editstate"></span>
+  <!-- Who is making the changes. IN THE BAR, not in a dialog: this appears exactly when
+       there are unsaved changes, which is exactly when it is relevant, and it covers
+       nothing. A modal would block the cell being typed into; a floating card would sit
+       on top of the table. A control in a bar that is already there does neither. -->
+  <span id="whobox" hidden><label for="whoName">Logged as</label>
+    <input id="whoName" size="16" placeholder="your name" autocomplete="name">
+    <button class="btn tiny primary" id="whoOk">Save name</button>
+    <button class="btn tiny" id="whoSkip">Not now</button></span>
   <button class="btn" id="chgBtn" disabled
     title="Every change waiting to be saved: what changed, where, and what it was before"
     >Show details</button>
@@ -884,6 +981,10 @@ dialog.big .dlg-b{max-height:84vh}
 <!-- The calendar for date columns. Anchored to its cell like the value list, and
      like it an OFFER rather than a gate: the cell stays typeable throughout. -->
 <div id="cal" class="cal" hidden role="dialog" aria-label="Choose a date"></div>
+<!-- The column filter panel. A singleton on the body, anchored to whichever heading
+     opened it, for the same reason the calendar and the value list are: the tables
+     scroll inside overflow:auto, and a panel drawn inside one would be clipped by it. -->
+<div id="colf" class="colf" hidden role="dialog" aria-label="Filter this column"></div>
 
 <dialog id="report">
   <div class="dlg-h"><strong>Validation findings</strong>
@@ -937,7 +1038,7 @@ dialog.big .dlg-b{max-height:84vh}
 
 <script>
 "use strict";
-const APP_VERSION = "1.41";
+const APP_VERSION = "1.42";
 const SCHEMA_EXPECTED = 11;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -946,9 +1047,9 @@ const SCHEMA_EXPECTED = 11;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.43.xlsx",          ver:"2.43",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.44.xlsx",          ver:"2.44",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.17.xlsx", ver:"1.17",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.18.xlsx", ver:"1.18",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
@@ -4213,6 +4314,165 @@ function buildResults(M, C, scope){
           PersonMonth: persMonth, Detail: detail, Flags: flags,
           Assumptions: assumptions};
 }
+/* ============================================================ 6c. the audit trail
+
+   WHAT WAS CHANGED, WHEN, BY WHOM, AND WHAT THE APPLICATION SAID ABOUT IT.
+
+   This is not S.pending. The two look alike and answer opposite questions:
+
+     S.pending   what is NOT SAVED YET. Emptied at every save, because that is what
+                 saving means, and shown so 'Leave without change' has something to
+                 put back.
+     S.audit     what HAS HAPPENED. Only ever appended to, for the life of the session.
+                 A save is what writes it out, never what clears it.
+
+   THE IDENTIFIER IS THE RECORD'S OWN, NOT ITS ROW NUMBER. S.pending carries `__row`,
+   which is the spreadsheet row an edit landed on - correct for putting a change back,
+   useless in an archived log a month later, because inserting one row above renumbers
+   everything below it. So every entry is stamped with the row's NATURAL KEY (the same
+   one the import comparison matches on, DIFF_KEY), which is what a reader means by
+   "which project": PRJ-004, or PSN-012 | 2027-03, or the four fields that identify one
+   standard.
+
+   THE TIMESTAMP IS UTC, and said to be. A log read in Seoul that was written in Boston
+   has to be comparable, and the only way to do that without a timezone library is to
+   write one zone and name it. The header column says so.
+
+   WHAT IT IS NOT: tamper-proof. It lives in memory and is written to a file anyone can
+   open. It is a record of what happened, kept so it can be read back and handed on -
+   not an attestation that nothing else did. */
+
+/** The natural key of a row, as text, for the audit trail.
+ *
+ *  Falls back to the row number when the key columns are empty, which happens on a row
+ *  still being typed: "(row 14)" is a poor identifier and an honest one, and it is
+ *  better than an empty cell that looks like a defect in the log. */
+function auditRef(sheet, row){
+  if (!row) return "";
+  const keys = (typeof DIFF_KEY !== "undefined" && DIFF_KEY[sheet]) || [];
+  const parts = keys.map(k => {
+    const v = row[k];
+    return v instanceof Date ? ymd(v) : (v === null || v === undefined ? "" : String(v));
+  }).filter(x => x !== "");
+  return parts.length ? parts.join(" | ") : (row.__row ? `(row ${row.__row})` : "");
+}
+
+/** One pending change, turned into the thing that gets archived.
+ *
+ *  Done at SAVE rather than at the keystroke, because the identifier has to be read off
+ *  the row as it finally stands: rename a project and then edit one of its milestones,
+ *  and the milestone's entry should carry the name the project actually has. */
+function auditFrom(p, model, who){
+  const rows = (model && model.raw && model.raw[p.sheet]) || [];
+  const row = rows.find(r => r.__row === p.row);
+  return {
+    at: p.at instanceof Date ? p.at : new Date(),
+    who: who || "",
+    action: p.col === "(new row)" ? "insert"
+          : p.col === "(deleted row)" ? "delete"
+          : p.sheet === "(cascade)" ? "cascade" : "update",
+    sheet: p.sheet,
+    ref: auditRef(p.sheet, row),
+    row: p.row,
+    col: p.col,
+    from: p.from,
+    to: p.to,
+  };
+}
+
+/** Everything that is about to be saved, as entries for the accumulated record.
+ *  RETURNS them rather than storing them: this layer decides what an entry is, the
+ *  layer above owns the list it goes on. */
+function auditEntries(pending, model, who){
+  return (pending || []).map(p => auditFrom(p, model, who));
+}
+
+/* The other half of the requirement: what the application REPORTED while the data was
+   being changed. Findings are recomputed from scratch on every keystroke, so they have
+   no history of their own - the same missing phase is "raised" thousands of times and
+   was never raised at all. What is worth recording is the state of them at each save:
+   these are the things that were outstanding at the moment somebody said "keep this".
+
+   `kept` marks the ones the user was asked about and chose to save anyway, which is the
+   single most useful line in an audit trail of a plan: not that a problem existed, but
+   that a person saw it and decided. */
+function findingEntries(findings, keptRules, why, who){
+  const at = new Date(), kept = new Set(keptRules || []);
+  return (findings || []).map(f => ({
+    at, who: who || "", event: why,
+    severity: f.sev, rule: f.rule, sheet: f.sheet, row: f.row || "",
+    kept: kept.has(f.rule) ? "yes" : "",
+    message: f.msg,
+  }));
+}
+
+/* ------------------------------------------------------------------------ CSV */
+
+/** One field, quoted the way every spreadsheet expects to read it back.
+ *
+ *  Excel's rules, not JSON's: a field containing a comma, a quote or a newline is
+ *  wrapped in quotes and its own quotes are doubled. A leading =, +, - or @ is prefixed
+ *  with an apostrophe, because a cell beginning with one of those is a FORMULA to Excel
+ *  and this file is opened in Excel by definition - a project note reading "=SUM(A1)"
+ *  should arrive as text, not as something the spreadsheet evaluates. */
+function csvField(v){
+  if (v === null || v === undefined) return "";
+  let s = v instanceof Date ? v.toISOString() : String(v);
+  if (/^[=+\-@]/.test(s)) s = "'" + s;
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+const csvRow = cells => cells.map(csvField).join(",");
+
+/** UTC, to the second, in the shape a spreadsheet sorts correctly as text. */
+const utcStamp = d => (d instanceof Date ? d : new Date(d))
+  .toISOString().replace("T", " ").slice(0, 19);
+
+const AUDIT_HEAD = ["timestamp_utc", "who", "action", "sheet", "record", "column",
+                    "previous_value", "new_value"];
+const EVENT_HEAD = ["timestamp_utc", "who", "event", "severity", "rule", "sheet", "row",
+                    "kept_by_user", "message"];
+
+const auditShow = v => v instanceof Date ? ymd(v)
+  : (v === null || v === undefined ? "" : String(v));
+
+/** Entries between two YYYY-MM-DD days, both inclusive, both optional.
+ *
+ *  Compared on the UTC DAY the entry carries rather than on a parsed local date, so the
+ *  range a reader types means the same thing as the timestamps they are reading. */
+function auditBetween(list, from, to){
+  return list.filter(e => {
+    const day = utcStamp(e.at).slice(0, 10);
+    return (!from || day >= from) && (!to || day <= to);
+  });
+}
+
+function auditCsv(list, from, to){
+  const rows = auditBetween(list || [], from, to);
+  return [csvRow(AUDIT_HEAD)].concat(rows.map(e => csvRow(
+    [utcStamp(e.at), e.who, e.action, e.sheet, e.ref, e.col,
+     auditShow(e.from), auditShow(e.to)]))).join("\r\n") + "\r\n";
+}
+
+function eventsCsv(list, from, to){
+  const rows = auditBetween(list || [], from, to);
+  return [csvRow(EVENT_HEAD)].concat(rows.map(e => csvRow(
+    [utcStamp(e.at), e.who, e.event, e.severity, e.rule, e.sheet, e.row,
+     e.kept, e.message]))).join("\r\n") + "\r\n";
+}
+
+/** The rows a shell appends to an archive file, WITHOUT the header - the header belongs
+ *  to the file, written once when it is created, not to every batch added to it. */
+function auditCsvRows(list){
+  return (list || []).map(e => csvRow(
+    [utcStamp(e.at), e.who, e.action, e.sheet, e.ref, e.col,
+     auditShow(e.from), auditShow(e.to)]));
+}
+function eventsCsvRows(list){
+  return (list || []).map(e => csvRow(
+    [utcStamp(e.at), e.who, e.event, e.severity, e.rule, e.sheet, e.row,
+     e.kept, e.message]));
+}
 /* ============================================================ 7. state + filters */
 
 const S = {
@@ -4237,6 +4497,20 @@ const S = {
   // What the last import changed about the SETTINGS, as opposed to the plan.
   cfgChanges:[],
   genView:{pws:"matrix", rf:"matrix", lists:"matrix"},
+  /* PER-COLUMN filters on the editable tables: sheet -> column -> Set of kept values.
+     Separate from S.f above, which is the horizon-wide filter bar and narrows the whole
+     page. These narrow ONE TABLE, the way a spreadsheet's column filter does, and they
+     do not touch the charts or the figures - a project filtered out of the table below
+     is still in the totals above it, because it is still in the plan. */
+  colf:{},
+  /* The accumulated record of what was changed, and of what the application reported
+     while it was being changed. Unlike S.pending, which is emptied at every save because
+     its job is "what is not saved yet", this is only ever appended to for the life of
+     the session, and a save is what writes it out rather than what clears it. */
+  /* `archived` / `eventsArchived` are how far each list has been written out, so a
+     shell that archives incrementally appends only what is new - and, if a write fails,
+     retries the same entries at the next save instead of losing or duplicating them. */
+  audit:[], events:[], who:null, archived:0, eventsArchived:0,
 };
 
 /** A filter with nothing ticked narrows nothing. */
@@ -5330,19 +5604,84 @@ const FIXED_ROWS_WHY = "These settings are a fixed set — change a value, and i
   + "everywhere. Rows cannot be added or removed: each one is read by name, so a new row "
   + "would do nothing and a missing one would hand the figure to a built-in default.";
 
-function dataTable(sheet, rows, cols, selKey, selVal, derived, lock){
+/* ---------------------------------------------------------------- column filters
+
+   ONE TEXT PER CELL, used by three things that must agree: the cell as drawn, the list
+   of values the filter offers, and the test of whether a row passes. A Date shown as
+   2026-09-01 and matched as a Date object would offer a value nothing could match. */
+function cellText(sheet, r, c, derived){
+  if (derived && derived[c]) return String(derived[c](r) ?? "");
+  const px = proxyFor(sheet, c);
+  if (px) return String(px.show(r) ?? "");
+  const v = r[c];
+  return v instanceof Date ? ymd(v) : (v === null || v === undefined ? "" : String(v));
+}
+
+/** What a column is currently narrowed to, or null for "everything". */
+const colFilterOf = (sheet, col) => ((S.colf[sheet] || {})[col]) || null;
+const anyColFilter = sheet => Object.keys(S.colf[sheet] || {}).length > 0;
+
+/** Rows passing every column filter EXCEPT `skip`.
+ *
+ *  `skip` is what makes the panel behave the way a spreadsheet's does: the values a
+ *  column offers are the ones still reachable given the OTHER columns, so narrowing by
+ *  project type leaves only that type's phases on the phase filter.
+ *
+ *  The column being edited is excluded from ITS OWN filter, which is what lets a choice
+ *  be widened again rather than only narrowed. It is not excluded from the others, so
+ *  after type=Biosimilar AND phase=Phase 1 the type filter offers only the types that
+ *  have a Phase 1 row - the same thing a spreadsheet does, and the same way out of it:
+ *  clear the other column. `Clear the filters on this table` is offered wherever the
+ *  filters have emptied the table, which is when that corner is actually reached. */
+function passColFilters(sheet, rows, cols, derived, skip){
+  const active = cols.filter(c => c !== skip && colFilterOf(sheet, c));
+  if (!active.length) return rows;
+  return rows.filter(r =>
+    active.every(c => colFilterOf(sheet, c).has(cellText(sheet, r, c, derived))));
+}
+
+const BLANK_LABEL = "(blank)";
+
+/* What the filter panel needs and the DOM cannot give it.
+ *
+ * The panel offers the values a column COULD take, which includes values on rows another
+ * column's filter is currently hiding - so reading them back off the rendered <table>
+ * would offer only what is already on screen, and a filter could never be widened. The
+ * renderer therefore leaves the rows it was given here, keyed by sheet.
+ *
+ * One entry per sheet is enough: only one pane is drawn at a time, so the two Monthly
+ * estimation tables (one on each source tab) can never both be live. */
+const FTABLE = {};
+
+function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable){
   derived = derived || {};
+  if (filterable) FTABLE[sheet] = {rows, cols, derived};
+  /* Rows still being typed are never filtered out. A draft has empty cells by
+     definition, so any filter would hide the row the user is working in - and they
+     would have no way to know why it vanished. */
+  const shown = filterable
+    ? rows.filter(r => r.__new || passColFilters(sheet, [r], cols, derived, null).length)
+    : rows;
   const head = `<th class="ins" data-tip="${att(HELP.rowactions)}">Row</th>`
     + cols.map(c => {
         const h = COLUMN_HELP[c], px = proxyFor(sheet, c);
         const d = derived[c] ? " · shown for context, looked up from its master row and not editable"
           : px ? ` · type the name here and ${esc(px.into)} follows. Not stored on this row — `
                + `the master row owns it.` : "";
+        const on = filterable && colFilterOf(sheet, c);
+        const fb = filterable
+          ? `<button type="button" class="fbtn${on ? " on" : ""}" data-fsheet="${att(sheet)}" `
+            + `data-fcol="${att(c)}" tabindex="-1" aria-label="Filter ${att(c)}" `
+            + `data-tip="${att(on ? `<b>${esc(c)}</b><br>narrowed to ${on.size} value(s)`
+                                   + `<br><span class="tr">click to change</span>`
+                                 : `<b>Filter ${esc(c)}</b><br>Pick the values to keep. `
+                                   + `Filters on different columns narrow together.`)}">`
+            + `&#9662;</button>` : "";
         return `<th${h || d ? ` class="hasinfo" data-tip="${att(`<b>${esc(c)}</b><br>${(h||"")}${d}`)}"` : ""}>`
           + `${esc(c)}${derived[c] ? ' <span class="drv">lookup</span>'
-                       : px ? ' <span class="drv ent">sets ' + esc(px.into) + '</span>' : ""}</th>`;
+                       : px ? ' <span class="drv ent">sets ' + esc(px.into) + '</span>' : ""}${fb}</th>`;
       }).join("");
-  const body = rows.map(r => {
+  const body = shown.map(r => {
     const sel = (selKey && r[selKey] === selVal) ? ' class="sel"' : "";
     const tds = cols.map(c => {
       if (derived[c]){
@@ -5380,7 +5719,17 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock){
   // exist yet has nothing to attach to, and would be dropped when the file is read back.
   // Saying so where the button would have been beats offering a button that creates a
   // row nobody can rescue.
-  const empty = rows.length ? "" : FIXED_ROWS.has(sheet)
+  /* A table emptied BY A FILTER is a different situation from a table with nothing in
+     it, and offering '+ row' there would be wrong twice over: the plan is not empty, and
+     a new row would almost certainly fail the filter and vanish as it was created. Say
+     what happened and offer the way out. */
+  const hiddenByFilter = filterable && rows.length && !shown.length;
+  const empty = shown.length ? "" : hiddenByFilter
+    ? `<tr><td class="ins muted">&#8212;</td>`
+      + `<td class="muted" colspan="${cols.length}">All ${rows.length} row(s) are hidden by `
+      + `the column filters. <button class="btn tiny" data-fclear="${att(sheet)}">`
+      + `Clear the filters on this table</button></td></tr>`
+    : FIXED_ROWS.has(sheet)
     ? `<tr><td class="ins muted">&#8212;</td>`
       + `<td class="muted" colspan="${cols.length}">${esc(FIXED_ROWS_WHY)}</td></tr>`
     : lock
@@ -5389,9 +5738,23 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock){
     : `<tr><td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="0" `
       + `data-tip="${att(HELP.insert)}">+ row</button></td>`
       + `<td class="muted" colspan="${cols.length}">No rows. Use <strong>+ row</strong> to add one.</td></tr>`;
-  return `<div class="scrollx tall"><table class="data-t" data-sheet="${att(sheet)}">`
+  /* How many rows the filters are holding back, said above the table rather than only
+     implied by a shorter list - a filter left on from ten minutes ago is otherwise
+     indistinguishable from data that is not there. */
+  const note = filterable && anyColFilter(sheet) && shown.length
+    ? `<p class="note fnote">Showing <strong>${shown.length}</strong> of ${rows.length} row(s) — `
+      + `column filters are on. <button class="btn tiny" data-fclear="${att(sheet)}">`
+      + `Clear them</button></p>` : "";
+  return note + `<div class="scrollx tall"><table class="data-t" data-sheet="${att(sheet)}"`
+    + `${filterable ? ' data-filterable="1"' : ""}>`
     + `<thead><tr>${head}</tr></thead><tbody>${body}${empty}</tbody></table></div>`;
 }
+
+/** dataTable with the per-column filters turned on. The six tables a reviewer asked for
+ *  are wide and long enough to need them; a four-row child sub-table is not, and a funnel
+ *  on every heading in the application would be noise where it is not useful. */
+const filterTable = (sheet, rows, cols, selKey, selVal, derived, lock) =>
+  dataTable(sheet, rows, cols, selKey, selVal, derived, lock, true);
 
 /* ============================================================ 11. tab rendering */
 
@@ -5544,7 +5907,7 @@ function renderProjTab(){
         <span class="scope k">${rows.length} in the current filter</span></div>
       <p class="cap">Every field is editable — click a cell and type. Clicking a row also selects it,
         which drives the panels below. <strong>+ row</strong> inserts directly below that row.</p>
-      ${dataTable("Project", rows, cols, "project_id", pid)}</div>
+      ${filterTable("Project", rows, cols, "project_id", pid)}</div>
     <div id="projDetail">${projDetail(pid)}</div>`;
 }
 
@@ -5786,7 +6149,7 @@ function renderPersTab(){
         <span class="scope k">${prows.length} in the current filter</span></div>
       <p class="cap">Editable, same rules as the project table — clicking a row selects it, and
         <strong>+ row</strong> inserts directly below.</p>
-      ${dataTable("Person", prows, cols, "person_id", sid)}</div>
+      ${filterTable("Person", prows, cols, "person_id", sid)}</div>
     <div id="persDetail">${persDetail(sid)}</div>`;
 }
 
@@ -5953,7 +6316,7 @@ function renderGenTab(){
   const M = S.model;
   const pwsRows = M.raw.PeriodFTEStandard, rfRows = M.raw.RoleFactor;
   const pws = S.genView.pws === "rows"
-    ? dataTable("PeriodFTEStandard", pwsRows,
+    ? filterTable("PeriodFTEStandard", pwsRows,
         ["project_type","clinical_phase","work_scope_type","period_name","standard_fte","note_1"])
     : `<div class="scrollx tall">${wmatrix(pwsRows,
         r => [r.project_type, r.clinical_phase, scopeLabel(r)],
@@ -5963,7 +6326,7 @@ function renderGenTab(){
   const ct = rfRows.filter(r => CLINICAL_TYPES.has(r.project_type));
   const ot = rfRows.filter(r => !CLINICAL_TYPES.has(r.project_type));
   const rf = S.genView.rf === "rows"
-    ? dataTable("RoleFactor", rfRows,
+    ? filterTable("RoleFactor", rfRows,
         ["project_type","clinical_phase","work_scope_type","period_name","role_name",
          "role_factor","role_note"])
     : `<div class="scrollx tall">${wmatrix(ct,
@@ -6075,6 +6438,9 @@ function snapshotRaw(){
 }
 function beginEditSession(){
   if (!S.snapshot) S.snapshot = snapshotRaw();
+  // The first edit is the first moment there is anything to attribute, and the last
+  // moment before there is. Whoever the shell asks, it asks here.
+  askWho();
 }
 /** A row still being created is held out of validation - it is INCOMPLETE, not invalid,
  *  and reporting "project_id is empty" at every keystroke would be noise. Save is where
@@ -6228,10 +6594,22 @@ function saveEdits(){
 function commitSave(derived, accepted, soon){
   rebuild(true);
   renderKeepingTab();
+  /* Into the accumulated record BEFORE the pending list is emptied, and after the
+     rebuild, so every entry is stamped with the identifier the row finally has rather
+     than the one it had mid-edit.
+     `accepted` is the list the user was asked about and chose to save anyway - the most
+     useful thing an audit trail of a plan can carry, because it is the only line that
+     records a decision rather than a keystroke. */
+  S.audit.push(...auditEntries(S.pending, S.model, S.who));
+  S.events.push(...findingEntries(
+    (S.model.findings || []).filter(f => f.sev === "error" || f.sev === "warning"
+                                      || f.sev === "fatal"),
+    accepted.map(f => f.rule), "save", S.who));
   S.saved += S.pending.length;
   S.pending = [];
   S.snapshot = null;
   S.baseFindings = (S.model.findings || []).slice();
+  archiveAudit("save");
   renderDirty();
   showBanner(accepted.length ? "warn" : "",
     `Saved ${S.saved} change${S.saved===1?"":"s"} to the working data. `
@@ -6341,6 +6719,11 @@ function renderDirty(){
   bar.classList.toggle("dirty", n > 0);
   el("saveBtn").disabled = el("discardBtn").disabled = el("chgBtn").disabled = (n === 0);
   if (!n && el("changes").open) el("changes").close();   // nothing left to show
+  // The name request belongs to the same moment as the rest of this bar: something is
+  // unsaved and about to be attributed to somebody. Hidden the instant it is answered,
+  // and never shown in a shell that already knows.
+  const wb = el("whobox");
+  if (wb) wb.hidden = !!S.who || !n;
   el("editstate").textContent = n
     ? `${n} unsaved change${n===1?"":"s"}`
     : (S.saved ? `${S.saved} saved change${S.saved===1?"":"s"} · nothing pending`
@@ -6869,7 +7252,7 @@ function manualPanel(scope, id){
       stray.length > 6 ? ", …" : ""}). They are kept but not used${
       scope === "project" ? " — a project month with nobody assigned has nobody to share "
         + "it out to, which V-32 reports" : ""}.</p>` : ""}
-    ${dataTable("MonthlyEstimate", rows,
+    ${filterTable("MonthlyEstimate", rows,
       ["month", "fte", "automatic_fte", "difference", "edited_at", "note_1"],
       null, null,
       {automatic_fte: r => auto.has(r.month) ? auto.get(r.month).toFixed(4) : "",
@@ -7014,6 +7397,63 @@ function exportResults(){
 /** How each filter is named to a reader who was not looking at the screen. */
 const FILTER_LABEL = {type:"Project type", phase:"Clinical phase", out:"Work scope",
                       proj:"Project", pers:"Person", role:"Role", dept:"Department"};
+/* =============================================== the change log, in the web shell
+
+   THE BROWSER CANNOT WRITE TO A FOLDER. A page opened from a file:// URL has no folder
+   of its own and no way to append to one; the File System Access API exists, but it
+   needs the user to grant a directory on every session and is not available everywhere
+   this application has to run. So the browser keeps the record in memory for the
+   session and hands it over as a file when asked - the same record, arriving by the
+   only route a browser has.
+
+   THE DESKTOP SHELL DOES have a folder, and replaces archiveAudit() with one that
+   appends to it at every save. That is the whole of the seam: the editing code calls
+   archiveAudit() and does not know which shell answered.
+
+   Who is typing is asked for in ui/13b_audit_ui.js - a dialog is not storage. */
+
+/** Called after every save. In the browser there is nowhere to archive TO, so this only
+ *  keeps the count the export offer is drawn from; the desktop shell overrides it with
+ *  one that writes to disk. */
+function archiveAudit(){
+  renderAuditOffer();
+}
+
+/* ------------------------------------------------------- handing the record over */
+
+function auditFileName(kind, from, to){
+  const base = (S.fileName || "PRAP").replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+  const span = from || to ? `_${from || "start"}_to_${to || "end"}` : "";
+  return `${base}_${kind}${span}.csv`;
+}
+
+/** A CSV the way Excel wants it: a UTF-8 BOM, so a column of Korean or an accented name
+ *  is not mangled when the file is opened by double-clicking it on Windows. Without it
+ *  Excel reads the file in the system code page and the log becomes unreadable for
+ *  exactly the users most likely to need it. */
+function downloadCsv(name, text){
+  const blob = new Blob(["﻿" + text], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function exportAudit(from, to){
+  const n = auditBetween(S.audit, from, to).length;
+  downloadCsv(auditFileName("ChangeLog", from, to), auditCsv(S.audit, from, to));
+  return n;
+}
+
+function exportEvents(from, to){
+  const n = auditBetween(S.events, from, to).length;
+  downloadCsv(auditFileName("ErrorsAndWarnings", from, to), eventsCsv(S.events, from, to));
+  return n;
+}
+
 
 /* ============================================================ 13. findings report */
 
@@ -7304,6 +7744,69 @@ function autoPeriods(pid){
     + `They are ordinary rows — edit any of them, then Save.`);
 }
 
+/* ======================================= who is making the changes, and what there is
+   to hand over. Both are UI, kept out of storage/ - that is the seam the desktop shell
+   replaces, and it should hold the file handling and nothing else.
+
+   The desktop shell overrides askWho() with one that answers from the Windows account,
+   so the control below never appears there. */
+
+const WHO_KEY = "prap.who";
+
+/** The name to stamp on entries, asked for once and then remembered.
+ *
+ *  Called at the first edit rather than at load, because somebody who only opens a plan
+ *  to read it should never be asked who they are - there will be nothing to attribute. */
+/* Shown in the edit bar the moment there is something to attribute, and put away as
+   soon as it is answered. Nothing is blocked and nothing is covered: the bar is already
+   on screen whenever there are unsaved changes, which is exactly when the question is
+   worth asking, and it wraps like everything else in it. */
+function askWho(){
+  if (S.who) return S.who;
+  let saved = null;
+  try { saved = localStorage.getItem(WHO_KEY); } catch (e){ /* private mode: ask again */ }
+  if (saved){ S.who = saved; return S.who; }
+  const box = el("whobox");
+  if (box) box.hidden = false;           // renderDirty() keeps it in step from here
+  return S.who;
+}
+
+/** Remember it, or stop asking. Either way the control goes. */
+function setWho(name){
+  S.who = (name || "").trim() || "(not stated)";
+  try { localStorage.setItem(WHO_KEY, S.who); } catch (e){ /* nothing to do */ }
+  const box = el("whobox");
+  if (box) box.hidden = true;
+  renderAuditOffer();
+  renderDirty();
+}
+
+/* --------------------------------------------------------------- the export offer */
+
+/** How much there is to export, said on the menu itself.
+ *
+ *  A menu item that silently hands over an empty file is worse than one that is greyed
+ *  out: the file arrives, it looks like the log, and it says nothing happened. This puts
+ *  the count where the decision is made, and disables the item when there is nothing. */
+function renderAuditOffer(){
+  const c = el("aCount");
+  if (!c) return;
+  const from = (el("aFrom") || {}).value || "", to = (el("aTo") || {}).value || "";
+  const a = auditBetween(S.audit, from, to).length;
+  const e = auditBetween(S.events, from, to).length;
+  const span = from || to ? " in that range" : "";
+  c.textContent = S.audit.length || S.events.length
+    ? `${a} change(s), ${e} finding(s)${span}`
+    : "nothing recorded yet — the log starts at your first save";
+  const setUp = (id, n) => {
+    const b = el(id);
+    if (!b) return;
+    b.disabled = !n;
+    b.classList.toggle("off", !n);
+  };
+  setUp("exportAuditBtn", a);
+  setUp("exportEventsBtn", e);
+}
 /* ============================================================ 14. wiring */
 
 /* Re-rendering a panel replaces its DOM, and a fresh element starts at the top left.
@@ -7632,6 +8135,11 @@ function adopt(sheets, name, opts){
   S.fileName = name; S.loadedAt = new Date(); S.blank = !!opts.blank;
   S.pending = []; S.saved = 0; S.snapshot = null; S.baseFindings = M.findings.slice();
   S.editedCells.clear(); S.expanded.clear();
+  /* Column filters belong to the plan that was on screen, not to the application. Left
+     standing across a load they would hide rows of the NEW file for a reason chosen
+     against the old one - the worst kind of missing data, because nothing on screen
+     connects the two. */
+  S.colf = {};
   S.selProj = null; S.selPers = null; S.selAsg = null;
   defaultHorizon();
   fillFilters();
@@ -7761,6 +8269,35 @@ const expDone = fn => () => { el("expMenu").open = false; fn(); };
 el("exportBtn2").onclick = expDone(() => exportWorkbook(false));
 el("exportJsonBtn").onclick = expDone(() => exportWorkbook(true));
 el("exportCalcBtn").onclick = expDone(exportResults);
+/* The two log exports. The date boxes live INSIDE the menu, so typing in them must not
+   close it - hence the click here rather than the shared expDone() wrapper, and the
+   stopPropagation below that keeps the document-level "click outside closes it" handler
+   off the panel's own controls. */
+const logRange = () => [(el("aFrom").value || "").trim(), (el("aTo").value || "").trim()];
+for (const id of ["aFrom", "aTo"]){
+  el(id).addEventListener("input", renderAuditOffer);
+  el(id).addEventListener("click", e => e.stopPropagation());
+}
+el("exportAuditBtn").onclick = () => {
+  const [f, t] = logRange();
+  const n = exportAudit(f, t);
+  el("expMenu").open = false;
+  showBanner("", `Change log exported — ${n} entr${n === 1 ? "y" : "ies"}`
+    + (f || t ? ` between ${f || "the start"} and ${t || "now"}` : "") + ".");
+};
+el("exportEventsBtn").onclick = () => {
+  const [f, t] = logRange();
+  const n = exportEvents(f, t);
+  el("expMenu").open = false;
+  showBanner("", `Errors and warnings exported — ${n} finding${n === 1 ? "" : "s"}`
+    + (f || t ? ` between ${f || "the start"} and ${t || "now"}` : "") + ".");
+};
+renderAuditOffer();
+el("whoOk").onclick = () => setWho(el("whoName").value);
+el("whoSkip").onclick = () => setWho("");
+el("whoName").addEventListener("keydown", e => {
+  if (e.key === "Enter"){ e.preventDefault(); setWho(el("whoName").value); }
+});
 el("repClose").onclick = () => el("report").close();
 el("cfgClose").onclick = () => el("cfgchg").close();
 el("chgBtn").onclick = () => { renderChanges(); el("changes").showModal(); };
@@ -8151,6 +8688,149 @@ const SUGG = (() => {
     else place();
   }, true);
   return api;
+})();
+
+/* ---- the column filter -----------------------------------------------------
+   A spreadsheet's column filter, on the six tables long enough to want one.
+
+   Tick the values to keep. Filters on different columns narrow TOGETHER, so type =
+   NewDrug CT and phase = Phase 3 leaves the rows that are both. The list offered is
+   what the OTHER columns have already left reachable, which is what makes narrowing
+   feel like a spreadsheet rather than like seven independent switches - A column is excluded from its OWN
+   filter when its list is built, so a choice can be widened and not only narrowed; it
+   is not excluded from the others, so two filters can between them leave a column with
+   one value - exactly as a spreadsheet does, and cleared the same way.
+
+   It narrows the TABLE and nothing else. The charts, the tiles and the totals are the
+   plan, and a row hidden here is still in the plan; the horizon-and-filters bar at the
+   top of the page is the control that changes what the figures mean. Two controls that
+   both said "filter" and both changed the numbers would be one too many. */
+const COLF = (() => {
+  const box = el("colf");
+  let sheet = null, col = null, all = [], picked = null, q = "";
+
+  const close = () => { box.hidden = true; sheet = col = null; };
+
+  function place(from){
+    const r = from.getBoundingClientRect();
+    box.hidden = false;                       // measurable only once it is laid out
+    box.style.left = Math.max(8,
+      Math.min(r.left - 6, innerWidth - box.offsetWidth - 8)) + "px";
+    box.style.top = (r.bottom + box.offsetHeight > innerHeight - 8
+      ? Math.max(8, r.top - box.offsetHeight - 4) : r.bottom + 4) + "px";
+  }
+
+  function draw(from){
+    const hits = q ? all.filter(v => v.toLowerCase().includes(q.toLowerCase())) : all;
+    const allOn = hits.length && hits.every(v => picked.has(v));
+    box.innerHTML =
+      `<div class="colf-h"><strong>${esc(col)}</strong>`
+      + `<span class="tr">${picked.size} of ${all.length}</span></div>`
+      + `<input class="colf-q" type="search" placeholder="Search values"
+           value="${att(q)}" aria-label="Search the values">`
+      + `<label class="colf-all"><input type="checkbox" ${allOn ? "checked" : ""}
+           data-fall="1"><span>${q ? "All matching" : "Select all"}</span></label>`
+      + `<div class="colf-list">`
+      + (hits.length ? hits.map(v =>
+          `<label><input type="checkbox" data-fv="${att(v)}" `
+          + `${picked.has(v) ? "checked" : ""}>`
+          + `<span>${v === "" ? `<i>${BLANK_LABEL}</i>` : esc(v)}</span></label>`).join("")
+        : `<p class="note">Nothing matches “${esc(q)}”.</p>`)
+      + `</div>`
+      + `<div class="colf-f"><button class="btn tiny" data-fclearcol="1">Clear</button>`
+      + `<button class="btn tiny primary" data-fapply="1">Apply</button></div>`;
+    place(from);
+    const s = box.querySelector(".colf-q");
+    if (s){ s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+  }
+
+  /** Open the panel for one column, offering the values the other columns still allow. */
+  function open(btn){
+    sheet = btn.dataset.fsheet; col = btn.dataset.fcol; q = "";
+    box.__from = btn;
+    // Read the values off the ROWS THE RENDERER WAS GIVEN rather than off the DOM, so
+    // values on rows another column's filter is hiding are still offered - otherwise a
+    // filter could be narrowed but never widened again.
+    const src = FTABLE[sheet];
+    if (!src) return;
+    const reachable = passColFilters(sheet, src.rows, src.cols, src.derived, col);
+    all = [...new Set(reachable.map(r => cellText(sheet, r, col, src.derived)))]
+      .sort((a, b) => a === "" ? -1 : b === "" ? 1
+        : a.localeCompare(b, undefined, {numeric:true, sensitivity:"base"}));
+    const on = colFilterOf(sheet, col);
+    picked = new Set(on ? [...on].filter(v => all.includes(v)) : all);
+    draw(btn);
+  }
+
+  function apply(){
+    S.colf[sheet] = S.colf[sheet] || {};
+    // Everything ticked is not a filter, it is the absence of one - and storing it as a
+    // filter would freeze the column against values added later.
+    if (picked.size === all.length) delete S.colf[sheet][col];
+    else S.colf[sheet][col] = new Set(picked);
+    if (!Object.keys(S.colf[sheet]).length) delete S.colf[sheet];
+    close();
+    renderKeepingTab();
+  }
+
+  document.addEventListener("mousedown", e => {
+    const btn = e.target.closest(".fbtn");
+    if (btn){ e.preventDefault();
+              if (sheet === btn.dataset.fsheet && col === btn.dataset.fcol && !box.hidden) close();
+              else open(btn);
+              return; }
+    const clr = e.target.closest("[data-fclear]");
+    if (clr){ e.preventDefault(); delete S.colf[clr.dataset.fclear]; close(); renderKeepingTab(); return; }
+    if (!box.hidden && !box.contains(e.target)) close();
+  });
+  box.addEventListener("change", e => {
+    if (e.target.dataset.fall !== undefined){
+      const hits = q ? all.filter(v => v.toLowerCase().includes(q.toLowerCase())) : all;
+      if (e.target.checked) for (const v of hits) picked.add(v);
+      else for (const v of hits) picked.delete(v);
+      draw(box.__from);
+      return;
+    }
+    const v = e.target.dataset.fv;
+    if (v !== undefined){ e.target.checked ? picked.add(v) : picked.delete(v);
+                          const h = box.querySelector(".colf-h .tr");
+                          if (h) h.textContent = `${picked.size} of ${all.length}`; }
+  });
+  box.addEventListener("input", e => {
+    if (!e.target.classList.contains("colf-q")) return;
+    q = e.target.value;
+    draw(box.__from);
+  });
+  box.addEventListener("mousedown", e => {
+    if (e.target.closest("[data-fapply]")){ e.preventDefault(); apply(); }
+    else if (e.target.closest("[data-fclearcol]")){
+      e.preventDefault(); picked = new Set(all); apply();
+    }
+  });
+  addEventListener("keydown", e => {
+    if (e.key === "Escape" && !box.hidden){ e.preventDefault(); close(); }
+  });
+  /* The panel is anchored to a heading inside a scrolling table, so it has to follow
+     that heading or stop pointing at it. Two things this must NOT do, both found by
+     testing rather than by reading:
+
+     - close when the panel's OWN list is scrolled. The value list scrolls at 62
+       projects, and a capture-phase listener sees that scroll like any other; the first
+       version shut the panel the moment you reached for a value below the fold.
+     - close when the table is scrolled. Re-anchor instead, the way the calendar does,
+       and give up only when the heading has actually left the window. */
+  addEventListener("scroll", e => {
+    if (box.hidden) return;
+    const t = e.target;
+    if (t === box || (t && t.nodeType === 1 && box.contains(t))) return;
+    const from = box.__from;
+    if (!from || !from.isConnected) return close();
+    const r = from.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) close();
+    else place(from);
+  }, true);
+  addEventListener("resize", () => { if (!box.hidden) close(); });
+  return {close, isOpen: () => !box.hidden};
 })();
 
 /* ---- the calendar ----------------------------------------------------------

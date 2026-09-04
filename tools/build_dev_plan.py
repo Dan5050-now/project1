@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.43"
+DOC_VERSION = "2.44"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,7 +397,41 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
-    [f"{MARK_NEW}2.43", "2026-09-04", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.44", "2026-09-04", "Claude Code", "Pending",
+     "R-36, A CHANGE LOG AND COLUMN FILTERS. Two requests; no figure moves for either. "
+     "(1) THE CHANGE LOG. Every saved change is recorded - the time in UTC, who, which "
+     "RECORD (its natural key, not its spreadsheet row: inserting a row renumbers "
+     "everything under it and PRJ-004 does not move), which column, and the value "
+     "before and after - together with the errors and warnings standing at each save "
+     "and which of them the user was asked about and chose to keep. It is NOT "
+     "S.pending: that is emptied at every save because its job is 'what is not saved "
+     "yet', and this is only ever appended to, with a save being what WRITES it rather "
+     "than what clears it. "
+     "Asked for as an in-app tab first and then narrowed by the requester to 'in memory "
+     "while the session runs, archived to a local folder on Save, CSV is enough' - so "
+     "there is no tab and no schema change. THE DESKTOP SHELL archives it: an `audit` "
+     "folder beside the workspaces, one CSV a month, header written when the file is "
+     "created and rows APPENDED at every save. THE BROWSER CANNOT do that - a file:// "
+     "page has no folder and cannot append to one - so it holds the record for the "
+     "session and hands it over from Export, narrowed by a date range, which was the "
+     "other half of the request. A failed archive never fails a save: the entries stay "
+     "and the next save carries them too. "
+     "WHO: the desktop shell takes the Windows account it already signed in with; the "
+     "browser asks once, in the EDIT BAR rather than in a dialog - a modal blocks the "
+     "cell being typed into, and a floating card sits on top of the table. Both were "
+     "built and both were wrong before the bar was tried. "
+     "(2) COLUMN FILTERS on the six tables named: Projects, Monthly estimation (both "
+     "tabs), People, Standard period FTE for project types and Role factors. A "
+     "spreadsheet's filter - tick the values to keep, different columns narrow "
+     "together, and the values offered are what the OTHER columns leave reachable. It "
+     "narrows the TABLE and not the plan: the charts and totals above are unchanged, "
+     "because a row hidden here is still in the plan, and the horizon-and-filters bar "
+     "remains the one control that changes what the figures mean. Two new suites, "
+     "test_audit.py and test_colfilter.py; the storage seam budget in test_layers.py "
+     "re-baselined 150 -> 220 and the reason recorded, since the seam legitimately "
+     "gained a third responsibility.",
+     "Issued for review"],
+    ["2.43", "2026-09-04", "Claude Code", "Pending",
      "R-35, TWO FAULTS IN THE DATE PICKER, both reported from the field and both "
      "reproduced before being touched. "
      "(1) THE MONTH ARROWS MOVED ONE MONTH AND NO FURTHER. step() re-read the cell and "
@@ -421,7 +455,7 @@ rows = [
      "work), and Today is checked in three time zones on a pinned clock, because CI "
      "keeps UTC and in UTC the wrong answer and the right one are the same answer. Both "
      "verified to fail against the old code.",
-     "Issued for review"],
+     "Superseded by v2.44"],
     ["2.42", "2026-09-04", "Claude Code", "Pending",
      "R-34, THE PROJECT DEMAND CHART SAYS WHAT ITS MONTH CAME TO. 'Monthly demand by "
      "person' ended its pop-up with a rule and the month's total across everyone in "

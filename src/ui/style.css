@@ -593,6 +593,42 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
    choose. It exists because the valid vocabulary lives in the workbook, and nobody
    should have to remember it or open the Lists sheet to check. */
 /* --- the calendar on a date cell ----------------------------------------- */
+/* --- the column filter --------------------------------------------------
+   The funnel in a heading. Faint until the column is actually narrowed, because a row
+   of seven dark markers reads as a warning about the data rather than as a control -
+   and then unmistakable once one is on, since a filter left running is the thing most
+   likely to be mistaken for missing data. */
+.data-t thead th .fbtn{margin-left:5px;padding:0 3px;border:0;background:none;
+ color:var(--muted);font-size:9px;line-height:1;cursor:pointer;border-radius:3px;
+ opacity:.55;vertical-align:middle}
+.data-t thead th .fbtn:hover{opacity:1;background:var(--fill);color:var(--ink)}
+.data-t thead th .fbtn.on{opacity:1;color:#fff;background:var(--accent);
+ padding:1px 4px;font-weight:700}
+.fnote{margin:0 0 6px}
+.fnote .btn.tiny{margin-left:6px}
+
+.colf{position:fixed;z-index:62;width:250px;background:var(--raised);
+ border:1px solid var(--hairline);border-radius:var(--r-md);
+ box-shadow:var(--shadow-lift);padding:8px;font-size:var(--t-md)}
+.colf-h{display:flex;align-items:baseline;gap:8px;padding:0 2px 6px}
+.colf-h strong{font-weight:620;color:var(--ink);overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap}
+.colf-h .tr{margin-left:auto;color:var(--muted);font-size:var(--t-xs);white-space:nowrap}
+.colf-q{width:100%;font:inherit;font-size:var(--t-md);padding:5px 8px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}
+.colf-all{display:flex;align-items:center;gap:7px;padding:6px 4px 5px;margin-top:5px;
+ border-bottom:1px solid var(--hairline);cursor:pointer;font-weight:560;min-height:26px}
+.colf-list{max-height:230px;overflow:auto;margin:4px 0;
+ scrollbar-color:var(--base) transparent}
+.colf-list label{display:flex;align-items:center;gap:7px;padding:4px 4px;
+ border-radius:var(--r-xs);cursor:pointer;min-height:26px}
+.colf-list label:hover{background:var(--fill)}
+.colf-list label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.colf-list i{color:var(--muted)}
+.colf-f{display:flex;gap:6px;justify-content:flex-end;padding-top:6px;
+ border-top:1px solid var(--hairline)}
+
 /* Sized so a month never reflows: seven columns of a fixed width, and the header row
    the same width whatever the month is called. It sits beside the cell, not over it -
    the caret stays where it was and typing goes on working. */
@@ -730,3 +766,39 @@ dialog.big .dlg-b{max-height:84vh}
 .cls.must{background:var(--overbg);color:var(--crit)}
 .cls.conditional{background:var(--underbg);color:var(--underink)}
 .cls.incomplete{background:var(--fill);color:var(--ink2)}
+
+/* The log date range, inside the export menu. A row of controls rather than a menu
+   item, because it does not DO anything on click - it narrows what the two items
+   below it will hand over. */
+.expdates{display:flex;gap:var(--sp-2);align-items:flex-end;padding:6px 11px 2px;
+ flex-wrap:wrap}
+.expdates .ctl{flex:0 0 auto}
+.expdates input{font:inherit;font-size:var(--t-md);padding:4px 7px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}
+.expdates .hint{flex:1 1 100%;color:var(--muted);font-size:var(--t-xs);padding-top:2px}
+.msp hr{border:0;border-top:1px solid var(--hairline);margin:6px 4px}
+/* An export with nothing to hand over says so and refuses, rather than delivering a
+   file with a header row and no content - which looks like an answer. */
+.expitem.off{opacity:.42;cursor:not-allowed}
+.expitem.off:hover{background:none}
+
+/* The name request. Shown with show() rather than showModal(), so it never blocks the
+   edit that triggered it - which means it needs its own place to sit, since a non-modal
+   <dialog> otherwise lands in the document flow wherever it was declared. Bottom right,
+   out of the way of the tables and above the sticky band. */
+#whoami[open]{position:fixed;inset:auto 18px 18px auto;margin:0;max-width:390px;
+ z-index:120;border:1px solid var(--hairline);border-radius:var(--r-lg);
+ background:var(--raised);color:var(--ink);padding:0;box-shadow:var(--shadow-lift)}
+#whoami .dlg-b{max-height:none}
+#whoami .ctl input{width:100%;font:inherit;font-size:var(--t-md);padding:6px 9px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}
+
+/* The name request, in the edit bar. A row of small controls rather than a panel: it
+   shares the bar with the guide text and the buttons, and wraps with them. */
+#whobox{display:inline-flex;align-items:center;gap:6px}
+#whobox label{color:var(--muted);font-size:var(--t-xs);font-weight:540}
+#whobox input{font:inherit;font-size:var(--t-md);padding:3px 8px;min-height:24px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}

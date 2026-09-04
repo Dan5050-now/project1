@@ -75,6 +75,35 @@ const expDone = fn => () => { el("expMenu").open = false; fn(); };
 el("exportBtn2").onclick = expDone(() => exportWorkbook(false));
 el("exportJsonBtn").onclick = expDone(() => exportWorkbook(true));
 el("exportCalcBtn").onclick = expDone(exportResults);
+/* The two log exports. The date boxes live INSIDE the menu, so typing in them must not
+   close it - hence the click here rather than the shared expDone() wrapper, and the
+   stopPropagation below that keeps the document-level "click outside closes it" handler
+   off the panel's own controls. */
+const logRange = () => [(el("aFrom").value || "").trim(), (el("aTo").value || "").trim()];
+for (const id of ["aFrom", "aTo"]){
+  el(id).addEventListener("input", renderAuditOffer);
+  el(id).addEventListener("click", e => e.stopPropagation());
+}
+el("exportAuditBtn").onclick = () => {
+  const [f, t] = logRange();
+  const n = exportAudit(f, t);
+  el("expMenu").open = false;
+  showBanner("", `Change log exported — ${n} entr${n === 1 ? "y" : "ies"}`
+    + (f || t ? ` between ${f || "the start"} and ${t || "now"}` : "") + ".");
+};
+el("exportEventsBtn").onclick = () => {
+  const [f, t] = logRange();
+  const n = exportEvents(f, t);
+  el("expMenu").open = false;
+  showBanner("", `Errors and warnings exported — ${n} finding${n === 1 ? "" : "s"}`
+    + (f || t ? ` between ${f || "the start"} and ${t || "now"}` : "") + ".");
+};
+renderAuditOffer();
+el("whoOk").onclick = () => setWho(el("whoName").value);
+el("whoSkip").onclick = () => setWho("");
+el("whoName").addEventListener("keydown", e => {
+  if (e.key === "Enter"){ e.preventDefault(); setWho(el("whoName").value); }
+});
 el("repClose").onclick = () => el("report").close();
 el("cfgClose").onclick = () => el("cfgchg").close();
 el("chgBtn").onclick = () => { renderChanges(); el("changes").showModal(); };
@@ -465,6 +494,149 @@ const SUGG = (() => {
     else place();
   }, true);
   return api;
+})();
+
+/* ---- the column filter -----------------------------------------------------
+   A spreadsheet's column filter, on the six tables long enough to want one.
+
+   Tick the values to keep. Filters on different columns narrow TOGETHER, so type =
+   NewDrug CT and phase = Phase 3 leaves the rows that are both. The list offered is
+   what the OTHER columns have already left reachable, which is what makes narrowing
+   feel like a spreadsheet rather than like seven independent switches - A column is excluded from its OWN
+   filter when its list is built, so a choice can be widened and not only narrowed; it
+   is not excluded from the others, so two filters can between them leave a column with
+   one value - exactly as a spreadsheet does, and cleared the same way.
+
+   It narrows the TABLE and nothing else. The charts, the tiles and the totals are the
+   plan, and a row hidden here is still in the plan; the horizon-and-filters bar at the
+   top of the page is the control that changes what the figures mean. Two controls that
+   both said "filter" and both changed the numbers would be one too many. */
+const COLF = (() => {
+  const box = el("colf");
+  let sheet = null, col = null, all = [], picked = null, q = "";
+
+  const close = () => { box.hidden = true; sheet = col = null; };
+
+  function place(from){
+    const r = from.getBoundingClientRect();
+    box.hidden = false;                       // measurable only once it is laid out
+    box.style.left = Math.max(8,
+      Math.min(r.left - 6, innerWidth - box.offsetWidth - 8)) + "px";
+    box.style.top = (r.bottom + box.offsetHeight > innerHeight - 8
+      ? Math.max(8, r.top - box.offsetHeight - 4) : r.bottom + 4) + "px";
+  }
+
+  function draw(from){
+    const hits = q ? all.filter(v => v.toLowerCase().includes(q.toLowerCase())) : all;
+    const allOn = hits.length && hits.every(v => picked.has(v));
+    box.innerHTML =
+      `<div class="colf-h"><strong>${esc(col)}</strong>`
+      + `<span class="tr">${picked.size} of ${all.length}</span></div>`
+      + `<input class="colf-q" type="search" placeholder="Search values"
+           value="${att(q)}" aria-label="Search the values">`
+      + `<label class="colf-all"><input type="checkbox" ${allOn ? "checked" : ""}
+           data-fall="1"><span>${q ? "All matching" : "Select all"}</span></label>`
+      + `<div class="colf-list">`
+      + (hits.length ? hits.map(v =>
+          `<label><input type="checkbox" data-fv="${att(v)}" `
+          + `${picked.has(v) ? "checked" : ""}>`
+          + `<span>${v === "" ? `<i>${BLANK_LABEL}</i>` : esc(v)}</span></label>`).join("")
+        : `<p class="note">Nothing matches “${esc(q)}”.</p>`)
+      + `</div>`
+      + `<div class="colf-f"><button class="btn tiny" data-fclearcol="1">Clear</button>`
+      + `<button class="btn tiny primary" data-fapply="1">Apply</button></div>`;
+    place(from);
+    const s = box.querySelector(".colf-q");
+    if (s){ s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+  }
+
+  /** Open the panel for one column, offering the values the other columns still allow. */
+  function open(btn){
+    sheet = btn.dataset.fsheet; col = btn.dataset.fcol; q = "";
+    box.__from = btn;
+    // Read the values off the ROWS THE RENDERER WAS GIVEN rather than off the DOM, so
+    // values on rows another column's filter is hiding are still offered - otherwise a
+    // filter could be narrowed but never widened again.
+    const src = FTABLE[sheet];
+    if (!src) return;
+    const reachable = passColFilters(sheet, src.rows, src.cols, src.derived, col);
+    all = [...new Set(reachable.map(r => cellText(sheet, r, col, src.derived)))]
+      .sort((a, b) => a === "" ? -1 : b === "" ? 1
+        : a.localeCompare(b, undefined, {numeric:true, sensitivity:"base"}));
+    const on = colFilterOf(sheet, col);
+    picked = new Set(on ? [...on].filter(v => all.includes(v)) : all);
+    draw(btn);
+  }
+
+  function apply(){
+    S.colf[sheet] = S.colf[sheet] || {};
+    // Everything ticked is not a filter, it is the absence of one - and storing it as a
+    // filter would freeze the column against values added later.
+    if (picked.size === all.length) delete S.colf[sheet][col];
+    else S.colf[sheet][col] = new Set(picked);
+    if (!Object.keys(S.colf[sheet]).length) delete S.colf[sheet];
+    close();
+    renderKeepingTab();
+  }
+
+  document.addEventListener("mousedown", e => {
+    const btn = e.target.closest(".fbtn");
+    if (btn){ e.preventDefault();
+              if (sheet === btn.dataset.fsheet && col === btn.dataset.fcol && !box.hidden) close();
+              else open(btn);
+              return; }
+    const clr = e.target.closest("[data-fclear]");
+    if (clr){ e.preventDefault(); delete S.colf[clr.dataset.fclear]; close(); renderKeepingTab(); return; }
+    if (!box.hidden && !box.contains(e.target)) close();
+  });
+  box.addEventListener("change", e => {
+    if (e.target.dataset.fall !== undefined){
+      const hits = q ? all.filter(v => v.toLowerCase().includes(q.toLowerCase())) : all;
+      if (e.target.checked) for (const v of hits) picked.add(v);
+      else for (const v of hits) picked.delete(v);
+      draw(box.__from);
+      return;
+    }
+    const v = e.target.dataset.fv;
+    if (v !== undefined){ e.target.checked ? picked.add(v) : picked.delete(v);
+                          const h = box.querySelector(".colf-h .tr");
+                          if (h) h.textContent = `${picked.size} of ${all.length}`; }
+  });
+  box.addEventListener("input", e => {
+    if (!e.target.classList.contains("colf-q")) return;
+    q = e.target.value;
+    draw(box.__from);
+  });
+  box.addEventListener("mousedown", e => {
+    if (e.target.closest("[data-fapply]")){ e.preventDefault(); apply(); }
+    else if (e.target.closest("[data-fclearcol]")){
+      e.preventDefault(); picked = new Set(all); apply();
+    }
+  });
+  addEventListener("keydown", e => {
+    if (e.key === "Escape" && !box.hidden){ e.preventDefault(); close(); }
+  });
+  /* The panel is anchored to a heading inside a scrolling table, so it has to follow
+     that heading or stop pointing at it. Two things this must NOT do, both found by
+     testing rather than by reading:
+
+     - close when the panel's OWN list is scrolled. The value list scrolls at 62
+       projects, and a capture-phase listener sees that scroll like any other; the first
+       version shut the panel the moment you reached for a value below the fold.
+     - close when the table is scrolled. Re-anchor instead, the way the calendar does,
+       and give up only when the heading has actually left the window. */
+  addEventListener("scroll", e => {
+    if (box.hidden) return;
+    const t = e.target;
+    if (t === box || (t && t.nodeType === 1 && box.contains(t))) return;
+    const from = box.__from;
+    if (!from || !from.isConnected) return close();
+    const r = from.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) close();
+    else place(from);
+  }, true);
+  addEventListener("resize", () => { if (!box.hidden) close(); });
+  return {close, isOpen: () => !box.hidden};
 })();
 
 /* ---- the calendar ----------------------------------------------------------

@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.17"
+DOC_VERSION = "1.18"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.43.xlsx"
+PLAN = "PRAP_Development_Plan_v2.44.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,18 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.18", "2026-09-04", "Claude Code", "Dan",
+         "R-36. Sheet 10 gains the CHANGE LOG and the COLUMN FILTERS; no schema change "
+         "and no figure moves. The log records each saved change with its UTC time, the "
+         "author, the record\'s natural key, the column and both values, plus the errors "
+         "and warnings standing at each save and which were knowingly kept. It lives in "
+         "memory for the session; the desktop shell APPENDS it to a monthly CSV in an "
+         "audit folder at every save, and the browser - which has no folder to append to "
+         "- hands it over from Export narrowed by a date range. Author comes from the "
+         "Windows account in the desktop shell and is asked for once in the edit bar in "
+         "the browser. The column filters are on the six tables named in the request and "
+         "narrow the table only, never the figures. Written against plan v2.44.",
+         "Issued"],
         ["1.17", "2026-09-04", "Claude Code", "Dan",
          "R-35, the date picker. Sheet 10 records two corrections. The month arrows "
          "stepped once and no further, because step() re-read the cell and snapped the "

@@ -54,6 +54,12 @@ def check(ok, label, detail=""):
 # Every table on screen, and whether each of its columns is a real column of its sheet.
 # A header carrying a .drv badge is a lookup or a proxy the application has declared as
 # such, and is deliberately not stored on the row.
+#
+# The heading's CONTROLS are not part of its name. A filterable column carries a funnel
+# button in its <th>, so reading textContent straight off it asks whether a column called
+# "project_id\u25be" exists - which is a question about the markup, not about the schema
+# this suite is here to check. The button is stripped, the same way .drv headings are
+# skipped, and what is left is what a reader sees as the column's name.
 SWEEP = """() => {
   const out = [];
   for (const t of document.querySelectorAll('table.data-t[data-sheet]')){
@@ -61,7 +67,9 @@ SWEEP = """() => {
     for (const th of t.querySelectorAll('thead th')){
       if (th.classList.contains('ins')) continue;         // the row-actions column
       if (th.querySelector('.drv')) continue;             // declared lookup or proxy
-      const name = th.textContent.trim();
+      const c = th.cloneNode(true);
+      for (const b of c.querySelectorAll('.fbtn')) b.remove();
+      const name = c.textContent.trim();
       if (!known.includes(name)) out.push(sheet + '.' + name);
     }
   }

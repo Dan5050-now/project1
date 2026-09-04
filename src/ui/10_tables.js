@@ -357,19 +357,84 @@ const FIXED_ROWS_WHY = "These settings are a fixed set — change a value, and i
   + "everywhere. Rows cannot be added or removed: each one is read by name, so a new row "
   + "would do nothing and a missing one would hand the figure to a built-in default.";
 
-function dataTable(sheet, rows, cols, selKey, selVal, derived, lock){
+/* ---------------------------------------------------------------- column filters
+
+   ONE TEXT PER CELL, used by three things that must agree: the cell as drawn, the list
+   of values the filter offers, and the test of whether a row passes. A Date shown as
+   2026-09-01 and matched as a Date object would offer a value nothing could match. */
+function cellText(sheet, r, c, derived){
+  if (derived && derived[c]) return String(derived[c](r) ?? "");
+  const px = proxyFor(sheet, c);
+  if (px) return String(px.show(r) ?? "");
+  const v = r[c];
+  return v instanceof Date ? ymd(v) : (v === null || v === undefined ? "" : String(v));
+}
+
+/** What a column is currently narrowed to, or null for "everything". */
+const colFilterOf = (sheet, col) => ((S.colf[sheet] || {})[col]) || null;
+const anyColFilter = sheet => Object.keys(S.colf[sheet] || {}).length > 0;
+
+/** Rows passing every column filter EXCEPT `skip`.
+ *
+ *  `skip` is what makes the panel behave the way a spreadsheet's does: the values a
+ *  column offers are the ones still reachable given the OTHER columns, so narrowing by
+ *  project type leaves only that type's phases on the phase filter.
+ *
+ *  The column being edited is excluded from ITS OWN filter, which is what lets a choice
+ *  be widened again rather than only narrowed. It is not excluded from the others, so
+ *  after type=Biosimilar AND phase=Phase 1 the type filter offers only the types that
+ *  have a Phase 1 row - the same thing a spreadsheet does, and the same way out of it:
+ *  clear the other column. `Clear the filters on this table` is offered wherever the
+ *  filters have emptied the table, which is when that corner is actually reached. */
+function passColFilters(sheet, rows, cols, derived, skip){
+  const active = cols.filter(c => c !== skip && colFilterOf(sheet, c));
+  if (!active.length) return rows;
+  return rows.filter(r =>
+    active.every(c => colFilterOf(sheet, c).has(cellText(sheet, r, c, derived))));
+}
+
+const BLANK_LABEL = "(blank)";
+
+/* What the filter panel needs and the DOM cannot give it.
+ *
+ * The panel offers the values a column COULD take, which includes values on rows another
+ * column's filter is currently hiding - so reading them back off the rendered <table>
+ * would offer only what is already on screen, and a filter could never be widened. The
+ * renderer therefore leaves the rows it was given here, keyed by sheet.
+ *
+ * One entry per sheet is enough: only one pane is drawn at a time, so the two Monthly
+ * estimation tables (one on each source tab) can never both be live. */
+const FTABLE = {};
+
+function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable){
   derived = derived || {};
+  if (filterable) FTABLE[sheet] = {rows, cols, derived};
+  /* Rows still being typed are never filtered out. A draft has empty cells by
+     definition, so any filter would hide the row the user is working in - and they
+     would have no way to know why it vanished. */
+  const shown = filterable
+    ? rows.filter(r => r.__new || passColFilters(sheet, [r], cols, derived, null).length)
+    : rows;
   const head = `<th class="ins" data-tip="${att(HELP.rowactions)}">Row</th>`
     + cols.map(c => {
         const h = COLUMN_HELP[c], px = proxyFor(sheet, c);
         const d = derived[c] ? " · shown for context, looked up from its master row and not editable"
           : px ? ` · type the name here and ${esc(px.into)} follows. Not stored on this row — `
                + `the master row owns it.` : "";
+        const on = filterable && colFilterOf(sheet, c);
+        const fb = filterable
+          ? `<button type="button" class="fbtn${on ? " on" : ""}" data-fsheet="${att(sheet)}" `
+            + `data-fcol="${att(c)}" tabindex="-1" aria-label="Filter ${att(c)}" `
+            + `data-tip="${att(on ? `<b>${esc(c)}</b><br>narrowed to ${on.size} value(s)`
+                                   + `<br><span class="tr">click to change</span>`
+                                 : `<b>Filter ${esc(c)}</b><br>Pick the values to keep. `
+                                   + `Filters on different columns narrow together.`)}">`
+            + `&#9662;</button>` : "";
         return `<th${h || d ? ` class="hasinfo" data-tip="${att(`<b>${esc(c)}</b><br>${(h||"")}${d}`)}"` : ""}>`
           + `${esc(c)}${derived[c] ? ' <span class="drv">lookup</span>'
-                       : px ? ' <span class="drv ent">sets ' + esc(px.into) + '</span>' : ""}</th>`;
+                       : px ? ' <span class="drv ent">sets ' + esc(px.into) + '</span>' : ""}${fb}</th>`;
       }).join("");
-  const body = rows.map(r => {
+  const body = shown.map(r => {
     const sel = (selKey && r[selKey] === selVal) ? ' class="sel"' : "";
     const tds = cols.map(c => {
       if (derived[c]){
@@ -407,7 +472,17 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock){
   // exist yet has nothing to attach to, and would be dropped when the file is read back.
   // Saying so where the button would have been beats offering a button that creates a
   // row nobody can rescue.
-  const empty = rows.length ? "" : FIXED_ROWS.has(sheet)
+  /* A table emptied BY A FILTER is a different situation from a table with nothing in
+     it, and offering '+ row' there would be wrong twice over: the plan is not empty, and
+     a new row would almost certainly fail the filter and vanish as it was created. Say
+     what happened and offer the way out. */
+  const hiddenByFilter = filterable && rows.length && !shown.length;
+  const empty = shown.length ? "" : hiddenByFilter
+    ? `<tr><td class="ins muted">&#8212;</td>`
+      + `<td class="muted" colspan="${cols.length}">All ${rows.length} row(s) are hidden by `
+      + `the column filters. <button class="btn tiny" data-fclear="${att(sheet)}">`
+      + `Clear the filters on this table</button></td></tr>`
+    : FIXED_ROWS.has(sheet)
     ? `<tr><td class="ins muted">&#8212;</td>`
       + `<td class="muted" colspan="${cols.length}">${esc(FIXED_ROWS_WHY)}</td></tr>`
     : lock
@@ -416,7 +491,21 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock){
     : `<tr><td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="0" `
       + `data-tip="${att(HELP.insert)}">+ row</button></td>`
       + `<td class="muted" colspan="${cols.length}">No rows. Use <strong>+ row</strong> to add one.</td></tr>`;
-  return `<div class="scrollx tall"><table class="data-t" data-sheet="${att(sheet)}">`
+  /* How many rows the filters are holding back, said above the table rather than only
+     implied by a shorter list - a filter left on from ten minutes ago is otherwise
+     indistinguishable from data that is not there. */
+  const note = filterable && anyColFilter(sheet) && shown.length
+    ? `<p class="note fnote">Showing <strong>${shown.length}</strong> of ${rows.length} row(s) — `
+      + `column filters are on. <button class="btn tiny" data-fclear="${att(sheet)}">`
+      + `Clear them</button></p>` : "";
+  return note + `<div class="scrollx tall"><table class="data-t" data-sheet="${att(sheet)}"`
+    + `${filterable ? ' data-filterable="1"' : ""}>`
     + `<thead><tr>${head}</tr></thead><tbody>${body}${empty}</tbody></table></div>`;
 }
+
+/** dataTable with the per-column filters turned on. The six tables a reviewer asked for
+ *  are wide and long enough to need them; a four-row child sub-table is not, and a funnel
+ *  on every heading in the application would be noise where it is not useful. */
+const filterTable = (sheet, rows, cols, selKey, selVal, derived, lock) =>
+  dataTable(sheet, rows, cols, selKey, selVal, derived, lock, true);
 

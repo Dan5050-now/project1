@@ -326,6 +326,11 @@ function adopt(sheets, name, opts){
   S.fileName = name; S.loadedAt = new Date(); S.blank = !!opts.blank;
   S.pending = []; S.saved = 0; S.snapshot = null; S.baseFindings = M.findings.slice();
   S.editedCells.clear(); S.expanded.clear();
+  /* Column filters belong to the plan that was on screen, not to the application. Left
+     standing across a load they would hide rows of the NEW file for a reason chosen
+     against the old one - the worst kind of missing data, because nothing on screen
+     connects the two. */
+  S.colf = {};
   S.selProj = null; S.selPers = null; S.selAsg = null;
   defaultHorizon();
   fillFilters();

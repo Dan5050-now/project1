@@ -22,6 +22,20 @@ const S = {
   // What the last import changed about the SETTINGS, as opposed to the plan.
   cfgChanges:[],
   genView:{pws:"matrix", rf:"matrix", lists:"matrix"},
+  /* PER-COLUMN filters on the editable tables: sheet -> column -> Set of kept values.
+     Separate from S.f above, which is the horizon-wide filter bar and narrows the whole
+     page. These narrow ONE TABLE, the way a spreadsheet's column filter does, and they
+     do not touch the charts or the figures - a project filtered out of the table below
+     is still in the totals above it, because it is still in the plan. */
+  colf:{},
+  /* The accumulated record of what was changed, and of what the application reported
+     while it was being changed. Unlike S.pending, which is emptied at every save because
+     its job is "what is not saved yet", this is only ever appended to for the life of
+     the session, and a save is what writes it out rather than what clears it. */
+  /* `archived` / `eventsArchived` are how far each list has been written out, so a
+     shell that archives incrementally appends only what is new - and, if a write fails,
+     retries the same entries at the next save instead of losing or duplicating them. */
+  audit:[], events:[], who:null, archived:0, eventsArchived:0,
 };
 
 /** A filter with nothing ticked narrows nothing. */

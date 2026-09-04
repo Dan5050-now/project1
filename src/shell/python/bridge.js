@@ -594,6 +594,52 @@ Account        ${where.account}</pre>
     if (e.key === "o") { e.preventDefault(); document.querySelector('[data-do="open"]')?.click(); }
   });
 
+  /* ---- the change log, archived ------------------------------------------
+     Both halves of what the browser could only half do.
+
+     WHO: taken from the account this shell already signed in with, so nobody is asked
+     a question the machine can answer. The browser's dialog is never shown here.
+
+     WHERE: an `audit` folder beside the workspaces, appended to at every save. The
+     rows are built by the same core functions the browser's export uses, so the file
+     on disk and the file a browser hands over have identical columns - one of them is
+     just written a save at a time.
+
+     A FAILED ARCHIVE MUST NOT FAIL THE SAVE. The plan is in memory and safe; losing
+     the log entries would be worse than saying so quietly, so the entries stay in
+     S.audit and the next save carries them too. S.archived is how far the file has
+     got, so nothing is written twice and nothing is skipped. */
+  S.who = me && me.name
+    ? (me.department ? `${me.name} (${me.department})` : me.name)
+    : "(not stated)";
+  window.askWho = () => S.who;
+
+  let archiving = false;
+  window.archiveAudit = async function (why) {
+    if (archiving) return;                    // a second save while the first is writing
+    archiving = true;
+    try {
+      const changes = S.audit.slice(S.archived);
+      const findings = S.events.slice(S.eventsArchived || 0);
+      if (changes.length)
+        await call("audit/append", {kind: "changes", rows: auditCsvRows(changes)});
+      S.archived = S.audit.length;
+      if (findings.length)
+        await call("audit/append", {kind: "findings", rows: eventsCsvRows(findings)});
+      S.eventsArchived = S.events.length;
+    } catch (e) {
+      // Said once, on the status strip, rather than in a dialog over the save the user
+      // just completed - the save WORKED, and this is about the record of it.
+      console.error("audit archive failed", e);
+      showBanner("warn", "Saved — but the change log could not be written to the audit "
+        + "folder. The entries are kept and the next save will write them too. "
+        + (e && e.message ? e.message : ""));
+    } finally {
+      archiving = false;
+    }
+    if (typeof renderAuditOffer === "function") renderAuditOffer();
+  };
+
   /* ---- how tall the window chrome is -------------------------------------
      Measured rather than assumed, and re-measured when it changes. Both bars wrap:
      the status strip has flex-wrap and a long file path pushes it onto a second line,
