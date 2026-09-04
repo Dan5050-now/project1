@@ -216,6 +216,48 @@ function askConfirm(items, go, back){
   dlg.onclose = () => finish(false);            // Escape, and the backdrop
   dlg.showModal();
 }
+/** Ask before replacing the plan that is open (REQ-IMP-08).
+ *
+ *  `adopt()` resets S.pending unconditionally, and six paths call it - the file picker,
+ *  a blank start, the Python shell's open, a version restore, the import-difference
+ *  apply. Every one of them used to throw away unsaved work without a word.
+ *
+ *  The application already holds this exact opinion in one place: beforeunload refuses
+ *  to let the TAB close on unsaved changes. Protecting the data from the browser and not
+ *  from our own Load button is the inconsistency, not the prompt.
+ *
+ *  SAVED-BUT-NOT-EXPORTED COUNTS TOO, for the same reason it counts at beforeunload:
+ *  a save keeps changes in memory, and nothing is on disk until Export. Losing those is
+ *  the more expensive mistake of the two, because the user has already been told they
+ *  were saved.
+ *
+ *  Its own dialog rather than confirm(), so it matches the two questions the
+ *  application already asks (conditional save, changing the estimation way) instead of
+ *  introducing a third visual language for the same kind of decision. */
+function mayReplacePlan(what, go){
+  const n = S.pending.length, saved = S.saved;
+  if (!n && !saved){ go(); return; }
+  const bits = [];
+  if (n)     bits.push(`<strong>${n} unsaved change${n === 1 ? "" : "s"}</strong>`);
+  if (saved) bits.push(`<strong>${saved} saved change${saved === 1 ? "" : "s"}</strong> that `
+                       + `${saved === 1 ? "has" : "have"} not been exported`);
+  const dlg = el("replace");
+  el("rpTitle").textContent = `${what} — discard the work in this plan?`;
+  el("rpBody").innerHTML =
+    `<p class="cap">This plan carries ${bits.join(" and ")}. ${what} replaces it, and
+      there is nothing to come back to afterwards.</p>
+     <p class="note"><strong>Nothing is on disk until you Export.</strong> A save keeps
+      your changes in this window; it does not write a file. If you want to keep this
+      work, choose <strong>Keep it</strong>, press <strong>Export → Source data</strong>,
+      and then come back.</p>`;
+  let done = false;
+  const finish = ok => { if (done) return; done = true; dlg.close(); if (ok) go(); };
+  el("rpYes").onclick = () => finish(true);
+  el("rpNo").onclick  = () => finish(false);
+  dlg.onclose = () => finish(false);              // Escape, and the backdrop
+  dlg.showModal();
+}
+
 function discardEdits(){
   if (!S.pending.length) return;
   const n = S.pending.length;

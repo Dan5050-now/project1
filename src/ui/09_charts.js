@@ -1,5 +1,34 @@
 /* ============================================================ 9. charts */
 
+/* Every measurement the charts are drawn to, in one place.
+ *
+ * These used to be five separate lines of bare numbers spread through the file, and two
+ * of them - the project stack and the person stack - carried IDENTICAL geometry that had
+ * to be kept in step by hand. Changing the height of one stacked chart and forgetting
+ * the other is the kind of mistake that looks like a rendering bug.
+ *
+ * They are SVG user units, not pixels. Each chart declares a viewBox of exactly these
+ * dimensions and the browser scales it to whatever width the panel has, so a number here
+ * changes the SHAPE of a chart, never its size on screen. `Wmin`/`Wbase`/`Wper` are for
+ * the charts whose width grows with the horizon: W = max(Wmin, Wbase + months * Wper).
+ * The four `pad` values are the margins around the plotting area - L for the value axis
+ * (and, on the Gantt, the project names), B for the month axis, T for the unit label,
+ * R for the threshold labels that sit outside the plot. */
+const CHART = {
+  // One row per project. The label gutter is what a single-project view does not need,
+  // so it has its own pair: the whole gutter goes to the bands instead.
+  gantt:  {W:1180, padT:34, padR:14, foot:30,
+           rowh:42, rowhSingle:74, padL:220, padLSingle:26},
+  // One line per project or person across the horizon.
+  lines:  {Wmin:720, Wbase:96, Wper:46, H:300, padL:62, padR:16, padT:24, padB:46},
+  // Stacked months - drawn TWICE, by project and by person, to the same geometry.
+  // `headroom` lifts the top of the scale clear of the tallest stack.
+  stack:  {Wmin:700, Wbase:90, Wper:74, H:600, padL:62, padR:14, padT:30, padB:52,
+           headroom:1.08},
+  // One project against the portfolio average, thresholds labelled down the right.
+  single: {W:1080, H:300, padL:62, padR:230, padT:26, padB:44},
+};
+
 /** One row per project: period bands, milestone markers, a year grid.
  *  `opts.single` lays it out for ONE project - the heading already names it, so the row
  *  label gutter shrinks and the row itself gets the space instead. */
@@ -21,8 +50,10 @@ function chartGantt(pids, opts){
   const span = Math.max(1, (hi - lo) / DAY);
   // One project needs no row label - the panel heading already names it, and the dates go
   // in the note - so the whole gutter goes to the bands instead.
-  const W = 1180, rowh = opts.single ? 74 : 42, padL = opts.single ? 26 : 220, padT = 34;
-  const H = padT + rowh * rows.length + 30, inner = W - padL - 14;
+  const K = CHART.gantt, W = K.W, padT = K.padT;
+  const rowh = opts.single ? K.rowhSingle : K.rowh;
+  const padL = opts.single ? K.padLSingle : K.padL;
+  const H = padT + rowh * rows.length + K.foot, inner = W - padL - K.padR;
   const x = t => padL + ((t - lo) / DAY / span) * inner;
   let wmax = 0;
   for (const p of rows) for (const s of (M.periods[p] || [])) wmax = Math.max(wmax, num(s.weight) || 0);
@@ -113,8 +144,8 @@ function chartLines(items, valueAt, opts){
     .filter(x => x[1] > 0.004).sort((a, b) => b[1] - a[1]);
   if (!totals.length) return `<p class="note">${esc(opts.empty || "Nothing draws resource inside this horizon.")}</p>`;
   const shown = totals.slice(0, LINE_LIMIT);
-  const W = Math.max(720, 96 + G.length * 46), H = 300, padL = 62, padR = 16;
-  const padT = 24, padB = 46;
+  const K = CHART.lines, H = K.H, padL = K.padL, padR = K.padR, padT = K.padT, padB = K.padB;
+  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
   const step = (W - padL - padR) / Math.max(1, G.length - 1 || 1);
   const xOf = i => G.length === 1 ? padL + (W - padL - padR) / 2 : padL + i * step;
   let vmax = 0;
@@ -196,17 +227,18 @@ function chartStacked(pids){
   if (!order.length) return `<p class="note">No resource falls inside this horizon.</p>`;
   const colour = {};
   for (const p of order) colour[p] = projColourOf(p);
-  const W = Math.max(700, 90 + G.length * 74), H = 600, padL = 62, padB = 52, padT = 30;
-  const bw = (W - padL - 14) / G.length;
+  const K = CHART.stack, H = K.H, padL = K.padL, padB = K.padB, padT = K.padT;
+  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
+  const bw = (W - padL - K.padR) / G.length;
   let vmax = 0;
   for (const k of G){ let s = 0; for (const p of order) s += C.projMonth.get(p+"|"+k) || 0; vmax = Math.max(vmax, s); }
   vmax = vmax || 1;
-  const scale = (H - padB - padT) / (vmax * 1.08);
+  const scale = (H - padB - padT) / (vmax * K.headroom);
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly resource demand, one stacked band per project">`];
   o.push(`<text class="ax" x="${padL-8}" y="${padT-12}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 4; i++){
-    const v = vmax * 1.08 * i / 4, yy = H - padB - v * scale;
+    const v = vmax * K.headroom * i / 4, yy = H - padB - v * scale;
     o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-8}" y2="${yy.toFixed(1)}"/>`);
     o.push(`<text class="ax" x="${padL-8}" y="${(yy+3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`);
   }
@@ -237,8 +269,6 @@ function chartStacked(pids){
   return o.join("");
 }
 
-const padL0 = 60;
-
 /** The people to draw individually, biggest first, with the tail folded into one band.
  *  A thousand people is inside REQ-NFR-03; a thousand legend entries is not readable, so
  *  the same cap D-14 set for the old bar chart applies to the stack (REQ-DSH-09). */
@@ -264,8 +294,9 @@ function chartPeople(sids){
   if (!any) return `<p class="note">Nobody draws resource inside this horizon.</p>`;
   const restSet = new Set(rest);
 
-  const W = Math.max(700, 90 + G.length * 74), H = 600, padL = 62, padB = 52, padT = 30;
-  const bw = (W - padL - 14) / G.length;
+  const K = CHART.stack, H = K.H, padL = K.padL, padB = K.padB, padT = K.padT;
+  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
+  const bw = (W - padL - K.padR) / G.length;
   let vmax = 0;
   for (const k of G){
     let sum = 0;
@@ -273,12 +304,12 @@ function chartPeople(sids){
     vmax = Math.max(vmax, sum);
   }
   vmax = vmax || 1;
-  const scale = (H - padB - padT) / (vmax * 1.08);
+  const scale = (H - padB - padT) / (vmax * K.headroom);
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly resource demand, one stacked band per person">`];
   o.push(`<text class="ax" x="${padL-8}" y="${padT-12}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 4; i++){
-    const v = vmax * 1.08 * i / 4, yy = H - padB - v * scale;
+    const v = vmax * K.headroom * i / 4, yy = H - padB - v * scale;
     o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-8}" y2="${yy.toFixed(1)}"/>`);
     o.push(`<text class="ax" x="${padL-8}" y="${(yy+3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`);
   }
@@ -343,10 +374,10 @@ function chartProjectUtil(pid){
   for (const [k, v] of C.projMonth) if (k.startsWith(pid + "|") && v > 0.004) own.push(v);
   const ownAvg = own.length ? own.reduce((a,b)=>a+b,0) / own.length : 0;
   const vals = G.map(k => C.projMonth.get(pid+"|"+k) || 0);
-  const W = 1080, H = 300, padL = 62, padR = 230;
+  const K = CHART.single, W = K.W, H = K.H, padL = K.padL, padR = K.padR;
   const vmax = Math.max(Math.max(...vals, upper), 0.01) * 1.18;
   const bw = (W - padL - padR) / Math.max(1, G.length);
-  const base = H - 44, top = 26;
+  const base = H - K.padB, top = K.padT;
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly resource for this project against the portfolio average">`];
   o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);

@@ -13,7 +13,9 @@ function showBanner(kind, text, findings){
     : "";
   const cfgN = (S.cfgChanges || []).length;
   el("banner").innerHTML =
-    `<div class="banner ${kind}"><strong>${esc(text)}</strong>`
+    `<div class="banner ${kind}">`
+    + (kind === "busy" ? `<span class="spin" aria-hidden="true"></span>` : "")
+    + `<strong>${esc(text)}</strong>`
     + (n ? ` ${esc(summary)}.` : "")
     + (cfgN ? `<span class="lk" id="openCfg">Which settings changed</span>` : "")
     + (n ? `<span class="lk" id="openRep">Open full report</span>` : "")

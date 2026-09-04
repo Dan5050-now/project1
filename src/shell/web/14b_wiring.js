@@ -1,6 +1,9 @@
 
 /** Begin a plan with nothing in it but the standard vocabulary and settings. */
 function startBlank(){
+  mayReplacePlan("Starting a new plan", startBlankNow);
+}
+function startBlankNow(){
   try {
     adopt(blankSheets(), "New plan (not yet exported)", {
       blank: true,
@@ -52,7 +55,20 @@ function renderProvenance(){
 renderProvenance();
 el("loadBtn").onclick = el("loadBtn2").onclick = () => el("picker").click();
 el("startBtn").onclick = startBlank;
-el("picker").onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); };
+/* Two defects in one line, both reported from the field.
+
+   THE VALUE IS RESET FIRST. <input type=file> fires `change` only when its value
+   CHANGES, so choosing the same file twice did nothing at all - and "export, edit in
+   Excel, load the same filename back" is the ordinary working loop of this application.
+   Clearing the value makes every pick a change, including a repeat of the last one.
+
+   AND THE PLAN IS NOT REPLACED WITHOUT ASKING. adopt() resets S.pending, so a stray
+   click on Load threw away unsaved work in silence. */
+el("picker").onchange = e => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (f) mayReplacePlan(`Loading ${f.name}`, () => loadFile(f));
+};
 /* The export menu. Each item closes it before acting, so the panel is not left hanging
    open over a banner that is reporting what just happened. */
 const expDone = fn => () => { el("expMenu").open = false; fn(); };
@@ -80,7 +96,12 @@ const drop = el("drop");
   e.preventDefault(); drop.classList.add("on"); }));
 ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => {
   e.preventDefault(); drop.classList.remove("on"); }));
-drop.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+/* Dropping a file replaces the plan exactly as the picker does, so it asks the same
+   question. Easier to do by accident than the picker, if anything. */
+drop.addEventListener("drop", e => {
+  const f = e.dataTransfer.files[0];
+  if (f) mayReplacePlan(`Loading ${f.name}`, () => loadFile(f));
+});
 
 for (const id of Object.keys(FILTER_KEY))
   el(id).addEventListener("change", () => {
@@ -94,6 +115,31 @@ document.addEventListener("click", e => {
   for (const i of d.querySelectorAll("input")) i.checked = false;
   msSummary(d); readFilters(); fitHorizon(); renderKeepingTab();
 });
+/* Keep an open panel inside the window.
+ *
+ * The panels hang from the left edge of their control, which is right until the control
+ * itself is near the right edge of the window: at 1280px the Role filter lands there and
+ * its panel finished 4px past the edge, clipped. The Export menu never had the problem
+ * because it is the rightmost control and was pinned `right:0` from the start - this is
+ * the same pin, applied to whichever panel needs it, decided when it opens rather than
+ * guessed from a breakpoint. The filter bar wraps, so which control sits at the edge
+ * depends on the window width and on how long the labels are; measuring is the only
+ * honest way to know.
+ *
+ * Re-measured on every open because both of those can change under it. */
+function fitPanel(d){
+  const p = d.querySelector(".msp");
+  if (!p) return;
+  p.style.left = p.style.right = "";          // measure it where it wants to be
+  if (p.getBoundingClientRect().right > document.documentElement.clientWidth - 8){
+    p.style.left = "auto"; p.style.right = "0";
+  }
+}
+document.addEventListener("toggle", e => {
+  const d = e.target.closest && e.target.closest("details.ms");
+  if (d && d.open) fitPanel(d);
+}, true);   // capture: `toggle` does not bubble
+
 /* One open at a time, and clicking anywhere else puts them all away - <details> keeps
    itself open otherwise, and seven panels left hanging over the page would bury it. */
 document.addEventListener("click", e => {

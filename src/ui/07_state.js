@@ -8,6 +8,11 @@ const S = {
   f:{type:new Set(), phase:new Set(), out:new Set(), proj:new Set(),
      pers:new Set(), role:new Set(), dept:new Set()},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
+  /* Which tabs no longer match the model. Three of the four panes are hidden at any
+     moment, so renderAll() marks them all stale and draws only the one on screen;
+     showTab() draws a pane the moment it is asked for. See renderAll() in 11_tabs.js
+     for what this is and is not worth. */
+  stale:new Set(),
   pending:[], saved:0, snapshot:null, editedCells:new Set(), headers:{},
   // The findings as of the last point the user said 'keep this' - a load, or a
   // save. What a batch of edits LEAVES unresolved is measured against this, not

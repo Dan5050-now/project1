@@ -147,18 +147,26 @@
    *  and offering a difference report, because this shell has a PLAN open and the web
    *  application never does (NR-IMP-02). */
   async function adoptBytes(name, bytes) {
+    document.body.classList.add("busy");
     try {
-      showBanner("", `Reading ${name}…`);
+      // Same two phases the web shell announces, and for the same reason: both of them
+      // hold the main thread for most of a second on a large workbook.
+      showBanner("busy", `Reading ${name}…`);
+      await paint();
       const sheets = /\.json$/i.test(name)
         ? readPrapJson(enc.decode(bytes))
         : await readWorkbook(bytes.buffer.slice(bytes.byteOffset,
                                                 bytes.byteOffset + bytes.byteLength));
+      showBanner("busy", `Building the plan from ${name}…`);
+      await paint();
       if (typeof window.importSourceOver === "function")
         await window.importSourceOver(name, sheets);
       else adopt(sheets, name);
     } catch (e) {
       showBanner("bad", `Could not read that file: ${e.message}`);
       console.error(e);
+    } finally {
+      document.body.classList.remove("busy");
     }
   }
 

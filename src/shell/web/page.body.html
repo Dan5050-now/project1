@@ -33,30 +33,40 @@
   <div id="provBody"></div>
 </details>
 
-<div id="banner"></div>
+<!-- Announced, because it is the only place a load reports what happened, and a
+     screen-reader user has nothing else to notice it by. Polite, not assertive: it
+     should not interrupt whatever is being read at the time. -->
+<div id="banner" aria-live="polite"></div>
 <div class="panel" id="filterbar" hidden>
   <h2>Horizon and filters <span class="scope">applies to every tab</span></h2>
   <p class="cap">One setting drives the whole page — the charts, both Overall tables and
     the source-data tabs.</p>
   <div class="controls">
-    <div class="ctl"><label>From</label><input id="fFrom" size="8"></div>
-    <div class="ctl"><label>To</label><input id="fTo" size="8"></div>
-    <div class="ctl"><label>&nbsp;</label><button class="btn" id="fAll">Expand to all projects</button></div>
-    <div class="ctl"><label>Project type</label>
-      <details class="ms" id="fType"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Clinical phase</label>
-      <details class="ms" id="fPhase"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Work scope</label>
-      <details class="ms" id="fOut"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Project</label>
-      <details class="ms" id="fProj"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Person</label>
-      <details class="ms" id="fPers"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Role</label>
-      <details class="ms" id="fRole"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Department</label>
-      <details class="ms" id="fDept"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>&nbsp;</label><button class="btn reset" id="fReset">Reset filters</button></div>
+    <div class="ctl"><label for="fFrom">From</label><input id="fFrom" size="8" inputmode="numeric" placeholder="YYYY-MM"></div>
+    <div class="ctl"><label for="fTo">To</label><input id="fTo" size="8" inputmode="numeric" placeholder="YYYY-MM"></div>
+    <div class="ctl"><span class="lbl" aria-hidden="true">&nbsp;</span><button class="btn" id="fAll">Expand to all projects</button></div>
+    <div class="ctl"><span class="lbl" id="lbl-fType">Project type</span>
+      <details class="ms" id="fType"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fType">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fPhase">Clinical phase</span>
+      <details class="ms" id="fPhase"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fPhase">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fOut">Work scope</span>
+      <details class="ms" id="fOut"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fOut">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fProj">Project</span>
+      <details class="ms" id="fProj"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fProj">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fPers">Person</span>
+      <details class="ms" id="fPers"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fPers">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fRole">Role</span>
+      <details class="ms" id="fRole"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fRole">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fDept">Department</span>
+      <details class="ms" id="fDept"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fDept">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" aria-hidden="true">&nbsp;</span><button class="btn reset" id="fReset">Reset filters</button></div>
   </div>
 </div>
 
@@ -140,6 +150,16 @@
     <button class="btn" style="margin-left:auto" id="cfNo">Go back</button>
     <button class="btn primary" id="cfYes">Save anyway</button></div>
   <div class="dlg-b" id="cfBody"></div>
+</dialog>
+
+<!-- Replacing the plan that is open. The browser already refuses to close the tab on
+     unsaved work (beforeunload, REQ-IMP-08); this asks the same question of the
+     application's own Load and New-plan buttons, which used to discard it in silence. -->
+<dialog id="replace">
+  <div class="dlg-h"><strong id="rpTitle">Discard the work in this plan?</strong>
+    <button class="btn" style="margin-left:auto" id="rpNo">Keep it</button>
+    <button class="btn primary danger" id="rpYes">Discard and continue</button></div>
+  <div class="dlg-b" id="rpBody"></div>
 </dialog>
 
 <!-- Changing the way a figure is arrived at. Asked every time, in both directions:

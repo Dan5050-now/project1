@@ -69,6 +69,35 @@
          "Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --f-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
 
+  /* The type scale. This file used to carry FIFTEEN distinct sizes - 9, 9.5, 10,
+     10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 15, 17, 21, 30 - chosen one rule at a
+     time. Half-pixel neighbours cannot be told apart, so the differences were doing
+     no work; they just made every new rule a guess about which near-identical value
+     the neighbouring one used.
+
+     --t-xs is a FLOOR as much as a step. The badges used to run down to 9px, which
+     is below what anybody reads comfortably and well under the 11px minimum Apple
+     sets for any text at all. Nothing in the interface is smaller than this now.
+
+     Chart text is deliberately NOT on this scale: it lives inside an SVG viewBox and
+     is scaled by the browser to the panel width, so its numbers are user units and a
+     "10.5" there is not 10.5px on screen. */
+  --t-xs:11px;      /* badges, column sub-labels, captions - the floor */
+  --t-sm:11.5px;    /* dense table text: the workhorse */
+  --t-md:12.5px;    /* secondary UI, notes, dialog body */
+  --t-lg:13.5px;    /* body */
+  --t-xl:15px;      /* panel headings */
+  --t-2xl:17px;     /* section headings */
+  --t-3xl:21px;     /* page heading */
+  --t-4xl:30px;     /* the empty-state lead */
+
+  /* --- spacing: a 4px step ------------------------------------------------
+     Used for the gaps BETWEEN things - panel padding, control rows, stack gaps.
+     Padding inside small components (a 2px badge inset, a 7px pill) stays literal
+     on purpose: those are optical adjustments to a specific shape at a specific
+     size, not a rhythm, and rounding them to the step makes the shapes worse. */
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;
+
   /* --- motion: Apple's standard timing ----------------------------------- */
   --ease:cubic-bezier(.25,.1,.25,1);--dur:.18s;
 }
@@ -123,10 +152,10 @@
   .btn:active{transform:scale(.97)}
   .panel{transition:box-shadow var(--dur) var(--ease)}}
 body{margin:0;background:var(--page);color:var(--ink);
- font:13.5px/1.55 var(--f-ui);
+ font:var(--t-lg)/1.55 var(--f-ui);
  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
  font-synthesis:none;text-rendering:optimizeLegibility}
-.wrap{max-width:1400px;margin:0 auto;padding:20px 24px 72px}
+.wrap{max-width:1400px;margin:0 auto;padding:20px var(--sp-5) 72px}
 
 /* --- header ------------------------------------------------------------- */
 /* nowrap while there is room, so the controls stay on one line and the file name is
@@ -134,19 +163,19 @@ body{margin:0;background:var(--page);color:var(--ink);
 header{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;padding-bottom:14px}
 @media (max-width:1100px){header{flex-wrap:wrap}}
 header>h1,header>.vers,header>.btn{flex:none;white-space:nowrap}
-h1{font-size:21px;margin:0;letter-spacing:-.021em;font-weight:650;line-height:1.2}
-h2{font-size:15px;margin:0 0 3px;letter-spacing:-.012em;font-weight:620;line-height:1.3}
-.vers{color:var(--ink2);font-size:11.5px;letter-spacing:0}
+h1{font-size:var(--t-3xl);margin:0;letter-spacing:-.021em;font-weight:650;line-height:1.2}
+h2{font-size:var(--t-xl);margin:0 0 3px;letter-spacing:-.012em;font-weight:620;line-height:1.3}
+.vers{color:var(--ink2);font-size:var(--t-sm);letter-spacing:0}
 /* The loaded-file line takes whatever is left and gives it back first: it is the one
    thing in the header that can be truncated without losing a control. Without this the
    header wraps and the buttons drop to a second row. */
-.file{margin-left:auto;color:var(--ink2);font-size:12px;font-variant-numeric:tabular-nums;
+.file{margin-left:auto;color:var(--ink2);font-size:var(--t-md);font-variant-numeric:tabular-nums;
  flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file .tz{color:var(--muted)}
 
 /* --- buttons: filled, tinted, plain ------------------------------------- */
 .btn{border:0;background:var(--fill);color:var(--accent);border-radius:var(--r-sm);
- padding:6px 13px;font-size:12.5px;font-weight:520;cursor:pointer;font-family:inherit;
+ padding:6px 13px;font-size:var(--t-md);font-weight:520;cursor:pointer;font-family:inherit;
  line-height:1.4;letter-spacing:-.005em}
 .btn:hover{background:var(--fill2);color:var(--accent)}
 .btn.primary{background:var(--accent);color:#fff;font-weight:590;
@@ -155,10 +184,23 @@ h2{font-size:15px;margin:0 0 3px;letter-spacing:-.012em;font-weight:620;line-hei
 .btn.primary[disabled],.btn[disabled]{opacity:.38;cursor:not-allowed;transform:none}
 /* Two of these on every row of every table. At rest they are furniture; they take
    colour only on hover, where blue means 'this adds' and red means 'this removes'. */
-.btn.tiny{font-size:10.5px;padding:2px 8px;border-radius:var(--r-xs);font-weight:540;
- color:var(--ink2);background:transparent;box-shadow:inset 0 0 0 1px var(--grid)}
+/* 24px tall, which is WCAG 2.5.8's minimum target and about the smallest thing a
+   mouse can be aimed at without care. It was 19px: the text is 10.5px and the padding
+   was 2px, so the row-action buttons ('+ row', 'Delete', 'Blank list') were the
+   hardest things on the page to hit and they sit in a dense grid of them. The LABEL
+   stays 10.5px - these are secondary controls and should not shout - so the height
+   comes from min-height and centring rather than from padding, and the button does not
+   grow wider or change the table's row rhythm. */
+.btn.tiny{font-size:var(--t-xs);padding:2px 8px;border-radius:var(--r-xs);font-weight:540;
+ color:var(--ink2);background:transparent;box-shadow:inset 0 0 0 1px var(--grid);
+ min-height:24px;display:inline-flex;align-items:center;justify-content:center}
 .btn.tiny:hover{color:var(--accent);background:var(--fill);box-shadow:none}
 .btn.tiny.danger{margin-left:4px}
+/* A filled button that confirms a DESTRUCTIVE choice. Blue would say "this is the
+   safe default"; it is not, and the one place it appears is the dialog that discards
+   unsaved work. */
+.btn.primary.danger{background:var(--crit);color:#fff}
+.btn.primary.danger:hover{background:var(--crit);filter:brightness(1.08)}
 .vtog{margin-left:10px;font-weight:400;display:inline-flex;gap:2px;padding:2px;
  background:var(--fill);border-radius:var(--r-sm)}
 .vtog .btn.tiny{background:none}
@@ -170,21 +212,21 @@ td.ins,th.ins{white-space:nowrap}
 
 /* --- provenance strip ---------------------------------------------------- */
 #prov{margin:12px 0 0;border-radius:var(--r-md);background:var(--surface);
- box-shadow:var(--shadow);font-size:12px}
+ box-shadow:var(--shadow);font-size:var(--t-md)}
 #prov > summary{cursor:pointer;padding:9px 14px;color:var(--ink2);list-style:none;
  display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;border-radius:var(--r-md)}
 #prov > summary::-webkit-details-marker{display:none}
 #prov > summary::after{content:"show detail";margin-left:auto;color:var(--accent);
- font-size:11.5px;font-weight:510}
+ font-size:var(--t-sm);font-weight:510}
 #prov[open] > summary::after{content:"hide detail"}
 #prov > summary:hover{color:var(--ink)}
 #prov .pv{font-weight:620;color:var(--ink);font-variant-numeric:tabular-nums}
 #prov .plabel{color:var(--muted)}
 #prov #provBody{padding:2px 14px 14px}
-#prov table{font-size:11.5px}
+#prov table{font-size:var(--t-sm)}
 #prov td,#prov th{border-bottom:1px solid var(--grid);padding:6px 10px;text-align:left;
  vertical-align:top}
-#prov thead th{color:var(--muted);font-weight:590;font-size:10.5px;
+#prov thead th{color:var(--muted);font-weight:590;font-size:var(--t-xs);
  letter-spacing:.02em;text-transform:uppercase;border-bottom:1px solid var(--hairline)}
 #prov td.ok{color:var(--good);font-weight:590;white-space:nowrap}
 #prov td.warn{color:var(--underink);font-weight:590;white-space:nowrap}
@@ -193,7 +235,7 @@ td.ins,th.ins{white-space:nowrap}
 /* Neutral by default. The banner reports a clean load as often as a problem, and an
    amber strip saying "Loaded cleanly" tells the reader to worry about nothing. */
 .banner{display:flex;align-items:center;gap:10px;margin:14px 0;padding:11px 15px;
- border-radius:var(--r-md);background:var(--surface);font-size:13px;
+ border-radius:var(--r-md);background:var(--surface);font-size:var(--t-lg);
  box-shadow:var(--shadow);border-left:3px solid var(--good)}
 .banner.bad{background:var(--overbg);border-left-color:var(--crit)}
 /* Saved, but with something knowingly left unresolved - neither a clean save nor
@@ -202,28 +244,46 @@ td.ins,th.ins{white-space:nowrap}
 .banner .lk{margin-left:auto;color:var(--accent);cursor:pointer;text-decoration:none;
  font-weight:530}
 .banner .lk:hover{text-decoration:underline}
+/* Reading a file is the one thing here that takes long enough to look broken. A large
+   workbook parses for the best part of a second with the main thread held, so the page
+   stops answering: no hover, no scroll, no caret. A line of text alone does not say
+   "still going" - it is indistinguishable from a line of text that has stopped. The
+   spinner is the part that keeps moving, so it is the part that says the wait is
+   expected. Blue rather than green: this is in progress, not finished. */
+.banner.busy{border-left-color:var(--accent)}
+.spin{width:14px;height:14px;flex:none;border-radius:50%;
+ border:2px solid color-mix(in srgb,var(--accent) 25%,transparent);
+ border-top-color:var(--accent);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Reduced motion removes the rotation, not the indicator: something must still mark
+   this banner as the one that is working. A steady ring does that. */
+@media (prefers-reduced-motion:reduce){.spin{animation:none;border-top-color:var(--accent);
+ opacity:.85}}
+/* The pointer says the same thing the spinner does, for the fraction of a second
+   before anyone looks at the banner. */
+body.busy{cursor:progress}
 
 /* --- panels: white cards on a grey field --------------------------------- */
-.panel{background:var(--surface);border-radius:var(--r-lg);padding:16px 18px;margin:16px 0;
+.panel{background:var(--surface);border-radius:var(--r-lg);padding:var(--sp-4) 18px;margin:var(--sp-4) 0;
  box-shadow:var(--shadow)}
 .phead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px}
 .phead h2{margin:0}
-.subhead{margin:18px 0 6px;font-size:13.5px;color:var(--ink2)}
+.subhead{margin:18px 0 6px;font-size:var(--t-lg);color:var(--ink2)}
 .phead .scope + .scope{margin-left:0}
 .phead > .scope:first-of-type{margin-left:auto}
 .phead .vtog{margin-left:0}
-.cap{color:var(--ink2);font-size:12.5px;margin:0 0 12px;max-width:92ch;line-height:1.5}
-.note{color:var(--muted);font-size:11.5px;margin:10px 0 0;line-height:1.5}
-.scope{font-weight:500;font-size:11px;color:var(--muted);background:var(--fill);
+.cap{color:var(--ink2);font-size:var(--t-md);margin:0 0 12px;max-width:92ch;line-height:1.5}
+.note{color:var(--muted);font-size:var(--t-sm);margin:10px 0 0;line-height:1.5}
+.scope{font-weight:500;font-size:var(--t-xs);color:var(--muted);background:var(--fill);
  border-radius:100px;padding:2px 9px;margin-left:6px;white-space:nowrap}
 .scope.k{color:var(--ink2);font-variant-numeric:tabular-nums}
 
 /* --- filter bar ---------------------------------------------------------- */
-.controls{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end}
+.controls{display:flex;flex-wrap:wrap;gap:var(--sp-3) var(--sp-4);align-items:flex-end}
 .ctl{display:flex;flex-direction:column;gap:4px}
-.ctl label{font-size:11px;color:var(--muted);font-weight:510;letter-spacing:.01em}
+.ctl label,.ctl .lbl{display:block;font-size:var(--t-xs);color:var(--muted);font-weight:510;letter-spacing:.01em}
 .ctl select,.ctl input{border:1px solid var(--base);background:var(--surface);
- color:var(--ink);border-radius:var(--r-sm);padding:5px 9px;font-size:12.5px;
+ color:var(--ink);border-radius:var(--r-sm);padding:5px 9px;font-size:var(--t-md);
  font-family:inherit;line-height:1.4}
 .ctl select:hover,.ctl input:hover{border-color:var(--accent)}
 
@@ -236,7 +296,7 @@ td.ins,th.ins{white-space:nowrap}
 .ms{position:relative}
 .ms>summary{list-style:none;cursor:pointer;border:1px solid var(--base);
  background:var(--surface);color:var(--ink);border-radius:var(--r-sm);
- padding:5px 26px 5px 9px;font-size:12.5px;line-height:1.4;min-width:112px;
+ padding:5px 26px 5px 9px;font-size:var(--t-md);line-height:1.4;min-width:112px;
  max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ms>summary::-webkit-details-marker{display:none}
 .ms>summary::after{content:"";position:absolute;right:9px;top:12px;
@@ -257,14 +317,14 @@ td.ins,th.ins{white-space:nowrap}
 .exp>.msp{width:340px;max-width:min(340px,calc(100vw - 32px));padding:6px;
  max-height:none;left:auto;right:0}
 .expitem{display:block;width:100%;text-align:left;border:0;background:none;
- font-family:inherit;font-size:13px;color:var(--ink);padding:9px 11px;
+ font-family:inherit;font-size:var(--t-lg);color:var(--ink);padding:9px 11px;
  border-radius:var(--r-sm);cursor:pointer}
 .expitem:hover,.expitem:focus-visible{background:var(--fill)}
-.expitem b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+.expitem b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--t-sm);
  color:var(--accent);font-weight:600}
-.expitem i{display:block;font-style:normal;font-size:11.5px;color:var(--ink2);
+.expitem i{display:block;font-style:normal;font-size:var(--t-sm);color:var(--ink2);
  margin-top:3px;line-height:1.45;white-space:normal}
-.expitem i b{color:var(--crit);font-family:inherit;font-size:11.5px}
+.expitem i b{color:var(--crit);font-family:inherit;font-size:var(--t-sm)}
 
 .msp{position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:100%;
  max-height:280px;overflow:auto;background:var(--raised);border:1px solid var(--base);
@@ -274,7 +334,7 @@ td.ins,th.ins{white-space:nowrap}
 .msp::-webkit-scrollbar-track{background:var(--fill);border-radius:8px}
 .msp::-webkit-scrollbar-thumb{background:var(--base);border-radius:8px;
  border:3px solid transparent;background-clip:padding-box}
-.msp label{display:flex;align-items:center;gap:7px;padding:4px 8px;font-size:12.5px;
+.msp label{display:flex;align-items:center;gap:7px;padding:4px 8px;font-size:var(--t-md);
  border-radius:var(--r-xs);cursor:pointer;white-space:nowrap}
 .msp label:hover{background:var(--fill)}
 .msp input{margin:0}
@@ -297,10 +357,10 @@ td.ins,th.ins{white-space:nowrap}
    The blur is kept only for the page BEHIND the band's rounded corners. */
 #stickybar{position:sticky;top:0;z-index:20;background:var(--page);
  padding-bottom:8px;margin-bottom:-8px}
-#editbar{display:flex;flex-wrap:wrap;gap:8px 16px;
+#editbar{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);
  align-items:center;margin:14px 0 0;padding:10px 16px;border-radius:var(--r-md);
  background:var(--surface);
- box-shadow:var(--shadow);font-size:12.5px;color:var(--ink2)}
+ box-shadow:var(--shadow);font-size:var(--t-md);color:var(--ink2)}
 #editbar.dirty{background:color-mix(in srgb,var(--underbg) 95%,transparent);color:var(--ink)}
 #editbar .guide{max-width:min(760px,58%)}
 #editbar .guide strong{color:var(--ink);font-weight:590}
@@ -313,7 +373,7 @@ td.ins,th.ins{white-space:nowrap}
    as wide as its labels would let the page slide past beside them. */
 nav{display:flex;gap:2px;margin:18px 0 0;flex-wrap:wrap;
  padding:5px 4px;border-radius:var(--r-md);background:var(--fill)}
-nav button{border:0;background:none;color:var(--ink2);padding:6px 16px;font-size:13px;
+nav button{border:0;background:none;color:var(--ink2);padding:6px 16px;font-size:var(--t-lg);
  cursor:pointer;font-family:inherit;border-radius:var(--r-sm);font-weight:520;
  letter-spacing:-.006em;white-space:nowrap}
 nav button:hover{color:var(--ink);background:var(--fill)}
@@ -327,12 +387,12 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var
  box-shadow:var(--shadow)}
 .tile.over{background:var(--overbg)}.tile.under{background:var(--underbg)}
 .tile{transition:none}
-.tile .tl{font-size:11px;color:var(--muted);font-weight:590;letter-spacing:.03em;
+.tile .tl{font-size:var(--t-xs);color:var(--muted);font-weight:590;letter-spacing:.03em;
  text-transform:uppercase}
-.tile .tv{font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1.15;
+.tile .tv{font-size:var(--t-4xl);font-weight:600;letter-spacing:-.03em;line-height:1.15;
  margin:5px 0 2px;font-variant-numeric:tabular-nums}
 .tile.over .tv{color:var(--crit)}.tile.under .tv{color:var(--underink)}
-.tile .ts{font-size:11.5px;color:var(--muted);line-height:1.4}
+.tile .ts{font-size:var(--t-sm);color:var(--muted);line-height:1.4}
 
 /* EVERY scroll region scrolls in BOTH directions. A panel bounded on one axis only can
    still hide content on the other, and the reader has no way of telling that it has:
@@ -415,20 +475,20 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var
    Hairline rules, not a drawn grid. A heavy border round every cell competes
    with the numbers it is meant to organise; a light rule is enough to keep the
    eye on a row, and the numbers are what the reader came for. */
-table{border-collapse:collapse;width:100%;font-size:12px}
+table{border-collapse:collapse;width:100%;font-size:var(--t-md)}
 .grid-t th,.grid-t td{border:1px solid var(--grid);padding:5px 8px;text-align:right;
  font-variant-numeric:tabular-nums;white-space:nowrap}
 .grid-t thead th{background:var(--surface);color:var(--muted);font-weight:590;
- font-size:10.5px;text-align:center;letter-spacing:.02em}
+ font-size:var(--t-xs);text-align:center;letter-spacing:.02em}
 .grid-t th.rh{text-align:left;position:sticky;left:0;background:var(--surface);
  min-width:240px;max-width:320px;white-space:normal;
  box-shadow:1px 0 0 var(--grid)}
 .grid-t thead th.rh{background:var(--surface)}
 .grid-t .nm{font-weight:590;margin-right:2px}
 .grid-t th.rh{line-height:1.45;padding-top:7px;padding-bottom:7px}
-.grid-t .sub{display:block;color:var(--muted);font-size:10px;font-weight:400;
+.grid-t .sub{display:block;color:var(--muted);font-size:var(--t-xs);font-weight:400;
  margin-top:1px;font-variant-numeric:tabular-nums}
-.grid-t .role{display:block;color:var(--muted);font-size:10px}
+.grid-t .role{display:block;color:var(--muted);font-size:var(--t-xs)}
 .grid-t tr.parent{cursor:pointer}
 .grid-t tr.parent:hover th.rh{color:var(--accent)}
 .grid-t tr.child th.rh{padding-left:22px;font-weight:400;color:var(--ink2)}
@@ -437,14 +497,23 @@ table{border-collapse:collapse;width:100%;font-size:12px}
 td.over{background:var(--overbg);color:var(--crit);font-weight:590}
 td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .grid-t tr.grand th,.grid-t tr.grand td{font-weight:620;border-top:1.5px solid var(--base)}
-.exp{display:inline-block;width:12px;color:var(--muted)}
+/* SCOPED TO THE ROW HEADING, and it has to be. This is the little disclosure
+   triangle in an expandable table row - but `.exp` is also the class on the export
+   MENU in the header, and an unscoped `width:12px` clamped that <details> to 12px.
+   The menu then measured as 12px wide while the 112px button inside it painted
+   outside its own parent AND outside the viewport, so the header's flex algorithm
+   believed everything fitted and never truncated the file name. The page grew a
+   horizontal scrollbar at every width below about 1500px and the Export button was
+   clipped at 1440. The prototype had this scoped correctly; the scope was lost when
+   the rule moved into the production sheet. */
+.rh .exp{display:inline-block;width:12px;color:var(--muted)}
 .data-t th,.data-t td{border-bottom:1px solid var(--grid);border-right:1px solid var(--grid);
- padding:6px 10px;text-align:left;white-space:nowrap;font-size:11.5px}
+ padding:6px 10px;text-align:left;white-space:nowrap;font-size:var(--t-sm)}
 .data-t th:last-child,.data-t td:last-child{border-right:0}
 .data-t tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--ink) 2%,transparent)}
 .data-t tbody tr:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
 .data-t thead th{background:var(--surface);color:var(--muted);font-weight:590;
- font-size:10.5px;letter-spacing:.02em;border-bottom:1px solid var(--hairline)}
+ font-size:var(--t-xs);letter-spacing:.02em;border-bottom:1px solid var(--hairline)}
 .data-t tr.sel td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .data-t tr{cursor:pointer}
 .data-t td[contenteditable="true"]:focus{outline:2px solid var(--accent);outline-offset:-2px;
@@ -456,14 +525,14 @@ td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 
 /* --- pills ---------------------------------------------------------------- */
-.ty{font-size:9.5px;border-radius:100px;padding:2px 7px;margin-left:6px;
+.ty{font-size:var(--t-xs);border-radius:100px;padding:2px 7px;margin-left:6px;
  white-space:nowrap;font-weight:540}
 .ty.nd{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
 .ty.bs{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
 .ty.ot{background:var(--fill);color:var(--ink2)}
 /* Pills must never break across lines - "Phase" on one line and "4" on the next reads
    as two labels and leaves every row a different height. */
-.ph{font-size:9.5px;font-weight:620;margin-left:5px;white-space:nowrap}
+.ph{font-size:var(--t-xs);font-weight:620;margin-left:5px;white-space:nowrap}
 .ph1{color:#9a5b00}.ph2{color:#0d6b4a}.ph3{color:#0040dd}.ph4{color:#7a3b8f}
 @media (prefers-color-scheme:dark){.ph1{color:#ffb340}.ph2{color:#30d158}
  .ph3{color:#409cff}.ph4{color:#da8fff}}
@@ -513,11 +582,11 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
  stroke:var(--surface);stroke-width:3.5px;stroke-linejoin:round}
 .thlab.th-over{fill:var(--crit)}.thlab.th-under{fill:var(--underink)}
 .thlab.th-own{fill:var(--accent)}
-.barlab{font-size:11.5px;font-weight:650;paint-order:stroke;
+.barlab{font-size:var(--t-sm);font-weight:650;paint-order:stroke;
  stroke:var(--surface);stroke-width:3.5px;stroke-linejoin:round}
 .barlab.over{fill:var(--crit)}.barlab.under{fill:var(--underink)}
 .legend{list-style:none;display:flex;flex-wrap:wrap;gap:7px 18px;margin:12px 0 0;padding:0;
- font-size:11.5px;color:var(--ink2)}
+ font-size:var(--t-sm);color:var(--ink2)}
 .legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block;
  margin-right:7px;vertical-align:-1px}
 .legend .sw.tri{width:0;height:0;border-radius:0;border-left:6px solid transparent;
@@ -532,8 +601,8 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
  -webkit-backdrop-filter:saturate(180%) blur(20px);
  backdrop-filter:saturate(180%) blur(20px);
  color:var(--ink);border-radius:var(--r-md);padding:10px 12px;
- font-size:11.5px;line-height:1.5;box-shadow:var(--shadow-lift)}
-.tip b{font-weight:620}.tip .tr{color:var(--muted);font-size:10.5px}
+ font-size:var(--t-sm);line-height:1.5;box-shadow:var(--shadow-lift)}
+.tip b{font-weight:620}.tip .tr{color:var(--muted);font-size:var(--t-xs)}
 /* Separates the two halves of a pop-up that answers two questions at once - what this
    project drew this month, and what the person drew in total. */
 .tip hr{border:0;border-top:1px solid var(--hairline);margin:7px 0 6px}
@@ -545,61 +614,61 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
    the same width whatever the month is called. It sits beside the cell, not over it -
    the caret stays where it was and typing goes on working. */
 .cal{position:fixed;z-index:60;background:var(--raised);border:1px solid var(--hairline);
- border-radius:var(--r-md);box-shadow:var(--shadow-lift);padding:8px;font-size:12.5px;
+ border-radius:var(--r-md);box-shadow:var(--shadow-lift);padding:8px;font-size:var(--t-md);
  user-select:none}
 .calhead{display:flex;align-items:center;gap:2px;padding:0 2px 6px}
 .calhead .cmon{flex:1;text-align:center;font-weight:620;color:var(--ink);
  letter-spacing:-.01em}
 .cnav{border:0;background:none;color:var(--ink2);cursor:pointer;font-family:inherit;
- font-size:14px;line-height:1;padding:3px 6px;border-radius:var(--r-sm)}
+ font-size:var(--t-xl);line-height:1;padding:3px 6px;border-radius:var(--r-sm)}
 .cnav:hover{background:var(--fill);color:var(--ink)}
 .calgrid{display:grid;grid-template-columns:repeat(7,30px);gap:2px}
-.calgrid .dow{text-align:center;font-size:10.5px;color:var(--muted);padding:2px 0 4px;
+.calgrid .dow{text-align:center;font-size:var(--t-xs);color:var(--muted);padding:2px 0 4px;
  font-weight:600}
 .calgrid .d{height:26px;border:0;border-radius:var(--r-sm);background:none;cursor:pointer;
- font-family:inherit;font-size:12.5px;color:var(--ink);padding:0}
+ font-family:inherit;font-size:var(--t-md);color:var(--ink);padding:0}
 .calgrid .d.off{cursor:default}
 .calgrid button.d:hover{background:var(--fill)}
 .calgrid .d.today{box-shadow:inset 0 0 0 1px var(--base)}
 .calgrid .d.on{background:var(--accent);color:#fff;font-weight:620}
 .calfoot{display:flex;align-items:center;gap:6px;padding-top:8px;margin-top:6px;
  border-top:1px solid var(--hairline)}
-.calfoot .hint{margin-left:auto;color:var(--muted);font-size:11px}
+.calfoot .hint{margin-left:auto;color:var(--muted);font-size:var(--t-xs)}
 
 .sugg{position:fixed;z-index:60;min-width:200px;max-width:340px;max-height:240px;
  overflow:auto;background:color-mix(in srgb,var(--raised) 94%,transparent);
  -webkit-backdrop-filter:saturate(180%) blur(20px);
  backdrop-filter:saturate(180%) blur(20px);
- border-radius:var(--r-md);padding:5px;box-shadow:var(--shadow-lift);font-size:12.5px;
+ border-radius:var(--r-md);padding:5px;box-shadow:var(--shadow-lift);font-size:var(--t-md);
  scrollbar-width:thin}
 .sugg .s{padding:5px 9px;border-radius:var(--r-xs);cursor:pointer;white-space:nowrap;
  overflow:hidden;text-overflow:ellipsis}
 .sugg .s[aria-selected="true"],.sugg .s:hover{background:var(--accent);color:#fff}
 .sugg .s mark{background:none;color:var(--accent);font-weight:650}
 .sugg .s[aria-selected="true"] mark,.sugg .s:hover mark{color:#fff}
-.sugg .hint{padding:6px 9px 2px;color:var(--muted);font-size:10.5px;
+.sugg .hint{padding:6px 9px 2px;color:var(--muted);font-size:var(--t-xs);
  border-top:1px solid var(--hairline);margin-top:4px}
 
 /* --- column badges -------------------------------------------------------- */
-.drv{font-weight:500;font-size:9px;color:var(--muted);background:var(--fill);
+.drv{font-weight:500;font-size:var(--t-xs);color:var(--muted);background:var(--fill);
  border-radius:100px;padding:1px 6px;margin-left:5px}
 td.drvcell{font-style:italic}
 /* The selected assignment, restated above the table it governs, so the overrides are
    never read without knowing which assignment they belong to. */
-.asgline{margin:0 0 8px;padding:8px 11px;border-radius:var(--r-sm);font-size:11.5px;
+.asgline{margin:0 0 8px;padding:8px 11px;border-radius:var(--r-sm);font-size:var(--t-sm);
  line-height:1.5;background:color-mix(in srgb,var(--accent) 8%,transparent);
  color:var(--ink)}
 .asgline.muted{background:var(--fill);color:var(--muted)}
 /* How a figure was arrived at. A badge rather than a word in a sentence: the reader's
    question at the top of this panel is which of the two they are looking at, and a
    stated figure and a calculated one are indistinguishable once they are on the page. */
-.est{font-weight:640;font-size:10px;letter-spacing:.04em;border-radius:100px;
+.est{font-weight:640;font-size:var(--t-xs);letter-spacing:.04em;border-radius:100px;
  padding:2px 9px;margin-left:auto;white-space:nowrap}
 .est.aut{color:var(--muted);background:var(--fill)}
 .est.man{color:#fff;background:var(--warn)}
 .phead .est + .btn,.phead .est ~ .scope{margin-left:6px}
 .note.bad{color:var(--crit)}
-.estlist{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:11.5px;
+.estlist{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:var(--t-sm);
  line-height:1.9}
 .estlist code{color:var(--ink2)}
 .estlist .btn{margin-left:6px}
@@ -608,7 +677,7 @@ td.drvcell{font-style:italic}
 .drv.ent{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
 .tip.pinned{pointer-events:auto;box-shadow:var(--shadow-lift),0 0 0 1px var(--accent)}
 .tip .tipclose{display:block;margin-top:7px;padding-top:6px;
- border-top:1px solid var(--hairline);color:var(--muted);font-size:10px}
+ border-top:1px solid var(--hairline);color:var(--muted);font-size:var(--t-xs)}
 /* Anything carrying an explanation says so, rather than hiding it behind a hover
    nobody discovers. */
 [data-tip]:not(button):not(rect):not(polygon){cursor:help}
@@ -617,22 +686,22 @@ td.drvcell{font-style:italic}
 .tile[data-tip]:hover,.hasinfo:hover{color:var(--accent)}
 
 /* --- the empty state ------------------------------------------------------ */
-.drop{border:1.5px dashed var(--base);border-radius:var(--r-xl);padding:56px 24px;
+.drop{border:1.5px dashed var(--base);border-radius:var(--r-xl);padding:56px var(--sp-5);
  text-align:center;color:var(--ink2);background:var(--surface);box-shadow:var(--shadow)}
 .drop.on{border-color:var(--accent);border-style:solid;
  background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
-.drop h2{font-size:17px;margin-bottom:8px;letter-spacing:-.015em}
+.drop h2{font-size:var(--t-2xl);margin-bottom:8px;letter-spacing:-.015em}
 /* Two ways in, side by side and given equal weight: one is not a fallback for the
    other. The dashed border stays on the file card because it is also a drop target;
    the blank card is solid, because there is nothing to drop on it. */
 #empty .lead{max-width:760px;margin:4px auto 20px;text-align:center;color:var(--ink2);
- font-size:13.5px;line-height:1.55}
+ font-size:var(--t-lg);line-height:1.55}
 .choose{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch}
 @media (max-width:860px){.choose{grid-template-columns:1fr}}
 .choose .drop{padding:34px 26px 28px;display:flex;flex-direction:column;
  align-items:center;justify-content:flex-start}
 .drop.start{border-style:solid;border-color:var(--grid)}
-.drop .tag{display:inline-block;font-size:10.5px;font-weight:640;letter-spacing:.06em;
+.drop .tag{display:inline-block;font-size:var(--t-xs);font-weight:640;letter-spacing:.06em;
  text-transform:uppercase;color:var(--muted);margin-bottom:12px}
 .choose .btn{margin-top:6px}
 .choose .note{margin-top:auto;padding-top:14px}
@@ -664,7 +733,7 @@ dialog.big .dlg-b{max-height:84vh}
 .chg .empty{color:var(--muted);font-style:italic;text-decoration:none}
 .chg .when{color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
 .chg tbody tr:first-child td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
-.sev{font-size:10px;font-weight:650;border-radius:var(--r-xs);padding:2px 7px;
+.sev{font-size:var(--t-xs);font-weight:650;border-radius:var(--r-xs);padding:2px 7px;
  text-transform:uppercase;letter-spacing:.04em}
 .sev.fatal,.sev.error{background:var(--overbg);color:var(--crit)}
 .sev.warning{background:var(--underbg);color:var(--underink)}
@@ -673,7 +742,7 @@ dialog.big .dlg-b{max-height:84vh}
    red says 'this cannot stand' and this one can. */
 .sev.cond{background:var(--underbg);color:var(--underink)}
 /* The class beside the severity in the findings report. */
-.cls{font-size:10px;font-weight:600;border-radius:var(--r-xs);padding:2px 7px;
+.cls{font-size:var(--t-xs);font-weight:600;border-radius:var(--r-xs);padding:2px 7px;
  white-space:nowrap;background:var(--fill);color:var(--ink2)}
 .cls.must{background:var(--overbg);color:var(--crit)}
 .cls.conditional{background:var(--underbg);color:var(--underink)}
@@ -713,30 +782,40 @@ dialog.big .dlg-b{max-height:84vh}
   <div id="provBody"></div>
 </details>
 
-<div id="banner"></div>
+<!-- Announced, because it is the only place a load reports what happened, and a
+     screen-reader user has nothing else to notice it by. Polite, not assertive: it
+     should not interrupt whatever is being read at the time. -->
+<div id="banner" aria-live="polite"></div>
 <div class="panel" id="filterbar" hidden>
   <h2>Horizon and filters <span class="scope">applies to every tab</span></h2>
   <p class="cap">One setting drives the whole page — the charts, both Overall tables and
     the source-data tabs.</p>
   <div class="controls">
-    <div class="ctl"><label>From</label><input id="fFrom" size="8"></div>
-    <div class="ctl"><label>To</label><input id="fTo" size="8"></div>
-    <div class="ctl"><label>&nbsp;</label><button class="btn" id="fAll">Expand to all projects</button></div>
-    <div class="ctl"><label>Project type</label>
-      <details class="ms" id="fType"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Clinical phase</label>
-      <details class="ms" id="fPhase"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Work scope</label>
-      <details class="ms" id="fOut"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Project</label>
-      <details class="ms" id="fProj"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Person</label>
-      <details class="ms" id="fPers"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Role</label>
-      <details class="ms" id="fRole"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>Department</label>
-      <details class="ms" id="fDept"><summary>All</summary><div class="msp"></div></details></div>
-    <div class="ctl"><label>&nbsp;</label><button class="btn reset" id="fReset">Reset filters</button></div>
+    <div class="ctl"><label for="fFrom">From</label><input id="fFrom" size="8" inputmode="numeric" placeholder="YYYY-MM"></div>
+    <div class="ctl"><label for="fTo">To</label><input id="fTo" size="8" inputmode="numeric" placeholder="YYYY-MM"></div>
+    <div class="ctl"><span class="lbl" aria-hidden="true">&nbsp;</span><button class="btn" id="fAll">Expand to all projects</button></div>
+    <div class="ctl"><span class="lbl" id="lbl-fType">Project type</span>
+      <details class="ms" id="fType"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fType">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fPhase">Clinical phase</span>
+      <details class="ms" id="fPhase"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fPhase">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fOut">Work scope</span>
+      <details class="ms" id="fOut"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fOut">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fProj">Project</span>
+      <details class="ms" id="fProj"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fProj">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fPers">Person</span>
+      <details class="ms" id="fPers"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fPers">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fRole">Role</span>
+      <details class="ms" id="fRole"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fRole">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fDept">Department</span>
+      <details class="ms" id="fDept"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fDept">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" aria-hidden="true">&nbsp;</span><button class="btn reset" id="fReset">Reset filters</button></div>
   </div>
 </div>
 
@@ -820,6 +899,16 @@ dialog.big .dlg-b{max-height:84vh}
     <button class="btn" style="margin-left:auto" id="cfNo">Go back</button>
     <button class="btn primary" id="cfYes">Save anyway</button></div>
   <div class="dlg-b" id="cfBody"></div>
+</dialog>
+
+<!-- Replacing the plan that is open. The browser already refuses to close the tab on
+     unsaved work (beforeunload, REQ-IMP-08); this asks the same question of the
+     application's own Load and New-plan buttons, which used to discard it in silence. -->
+<dialog id="replace">
+  <div class="dlg-h"><strong id="rpTitle">Discard the work in this plan?</strong>
+    <button class="btn" style="margin-left:auto" id="rpNo">Keep it</button>
+    <button class="btn primary danger" id="rpYes">Discard and continue</button></div>
+  <div class="dlg-b" id="rpBody"></div>
 </dialog>
 
 <!-- Changing the way a figure is arrived at. Asked every time, in both directions:
@@ -4084,6 +4173,11 @@ const S = {
   f:{type:new Set(), phase:new Set(), out:new Set(), proj:new Set(),
      pers:new Set(), role:new Set(), dept:new Set()},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
+  /* Which tabs no longer match the model. Three of the four panes are hidden at any
+     moment, so renderAll() marks them all stale and draws only the one on screen;
+     showTab() draws a pane the moment it is asked for. See renderAll() in 11_tabs.js
+     for what this is and is not worth. */
+  stale:new Set(),
   pending:[], saved:0, snapshot:null, editedCells:new Set(), headers:{},
   // The findings as of the last point the user said 'keep this' - a load, or a
   // save. What a batch of edits LEAVES unresolved is measured against this, not
@@ -4168,6 +4262,29 @@ const el = id => document.getElementById(id);
 const fmt = v => S.model.UNIT === "hours" ? (v * S.model.HOURS).toFixed(0) : v.toFixed(2);
 const unitLabel = () => S.model.UNIT === "hours" ? "hours" : "FTE";
 
+/* Yield long enough for the browser to actually PAINT.
+ *
+ * A single `await` is not enough. Resolving a promise runs the continuation as a
+ * microtask, which is still inside the current frame - so a "Reading…" banner written
+ * just before a one-second parse is in the DOM the whole time and on screen for none of
+ * it. Two animation frames is the guarantee: the first is scheduled before the next
+ * paint, the second cannot run until that paint has happened.
+ *
+ * The setTimeout is not a belt-and-braces duplicate. In a backgrounded tab rAF does not
+ * fire at all, and a load waiting on it would hang until the tab was looked at again;
+ * whichever lands first wins, and the flag makes the loser a no-op.
+ *
+ * It lives here, in the render helpers, rather than beside the file reader that wanted
+ * it first: the Python shell builds without storage/web/load.js and needs this too. */
+function paint(){
+  return new Promise(done => {
+    let settled = false;
+    const go = () => { if (!settled){ settled = true; done(); } };
+    requestAnimationFrame(() => requestAnimationFrame(go));
+    setTimeout(go, 60);
+  });
+}
+
 function typePill(pid){
   const t = S.model.projects[pid].project_type;
   const k = /^NewDrug CT/.test(t) ? "nd" : /^Biosimilar CT/.test(t) ? "bs" : "ot";
@@ -4241,6 +4358,35 @@ const bandFill = (n, w, wmax) => mix(PERIOD_HUE[n] || "#adaca6",
 
 /* ============================================================ 9. charts */
 
+/* Every measurement the charts are drawn to, in one place.
+ *
+ * These used to be five separate lines of bare numbers spread through the file, and two
+ * of them - the project stack and the person stack - carried IDENTICAL geometry that had
+ * to be kept in step by hand. Changing the height of one stacked chart and forgetting
+ * the other is the kind of mistake that looks like a rendering bug.
+ *
+ * They are SVG user units, not pixels. Each chart declares a viewBox of exactly these
+ * dimensions and the browser scales it to whatever width the panel has, so a number here
+ * changes the SHAPE of a chart, never its size on screen. `Wmin`/`Wbase`/`Wper` are for
+ * the charts whose width grows with the horizon: W = max(Wmin, Wbase + months * Wper).
+ * The four `pad` values are the margins around the plotting area - L for the value axis
+ * (and, on the Gantt, the project names), B for the month axis, T for the unit label,
+ * R for the threshold labels that sit outside the plot. */
+const CHART = {
+  // One row per project. The label gutter is what a single-project view does not need,
+  // so it has its own pair: the whole gutter goes to the bands instead.
+  gantt:  {W:1180, padT:34, padR:14, foot:30,
+           rowh:42, rowhSingle:74, padL:220, padLSingle:26},
+  // One line per project or person across the horizon.
+  lines:  {Wmin:720, Wbase:96, Wper:46, H:300, padL:62, padR:16, padT:24, padB:46},
+  // Stacked months - drawn TWICE, by project and by person, to the same geometry.
+  // `headroom` lifts the top of the scale clear of the tallest stack.
+  stack:  {Wmin:700, Wbase:90, Wper:74, H:600, padL:62, padR:14, padT:30, padB:52,
+           headroom:1.08},
+  // One project against the portfolio average, thresholds labelled down the right.
+  single: {W:1080, H:300, padL:62, padR:230, padT:26, padB:44},
+};
+
 /** One row per project: period bands, milestone markers, a year grid.
  *  `opts.single` lays it out for ONE project - the heading already names it, so the row
  *  label gutter shrinks and the row itself gets the space instead. */
@@ -4262,8 +4408,10 @@ function chartGantt(pids, opts){
   const span = Math.max(1, (hi - lo) / DAY);
   // One project needs no row label - the panel heading already names it, and the dates go
   // in the note - so the whole gutter goes to the bands instead.
-  const W = 1180, rowh = opts.single ? 74 : 42, padL = opts.single ? 26 : 220, padT = 34;
-  const H = padT + rowh * rows.length + 30, inner = W - padL - 14;
+  const K = CHART.gantt, W = K.W, padT = K.padT;
+  const rowh = opts.single ? K.rowhSingle : K.rowh;
+  const padL = opts.single ? K.padLSingle : K.padL;
+  const H = padT + rowh * rows.length + K.foot, inner = W - padL - K.padR;
   const x = t => padL + ((t - lo) / DAY / span) * inner;
   let wmax = 0;
   for (const p of rows) for (const s of (M.periods[p] || [])) wmax = Math.max(wmax, num(s.weight) || 0);
@@ -4354,8 +4502,8 @@ function chartLines(items, valueAt, opts){
     .filter(x => x[1] > 0.004).sort((a, b) => b[1] - a[1]);
   if (!totals.length) return `<p class="note">${esc(opts.empty || "Nothing draws resource inside this horizon.")}</p>`;
   const shown = totals.slice(0, LINE_LIMIT);
-  const W = Math.max(720, 96 + G.length * 46), H = 300, padL = 62, padR = 16;
-  const padT = 24, padB = 46;
+  const K = CHART.lines, H = K.H, padL = K.padL, padR = K.padR, padT = K.padT, padB = K.padB;
+  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
   const step = (W - padL - padR) / Math.max(1, G.length - 1 || 1);
   const xOf = i => G.length === 1 ? padL + (W - padL - padR) / 2 : padL + i * step;
   let vmax = 0;
@@ -4437,17 +4585,18 @@ function chartStacked(pids){
   if (!order.length) return `<p class="note">No resource falls inside this horizon.</p>`;
   const colour = {};
   for (const p of order) colour[p] = projColourOf(p);
-  const W = Math.max(700, 90 + G.length * 74), H = 600, padL = 62, padB = 52, padT = 30;
-  const bw = (W - padL - 14) / G.length;
+  const K = CHART.stack, H = K.H, padL = K.padL, padB = K.padB, padT = K.padT;
+  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
+  const bw = (W - padL - K.padR) / G.length;
   let vmax = 0;
   for (const k of G){ let s = 0; for (const p of order) s += C.projMonth.get(p+"|"+k) || 0; vmax = Math.max(vmax, s); }
   vmax = vmax || 1;
-  const scale = (H - padB - padT) / (vmax * 1.08);
+  const scale = (H - padB - padT) / (vmax * K.headroom);
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly resource demand, one stacked band per project">`];
   o.push(`<text class="ax" x="${padL-8}" y="${padT-12}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 4; i++){
-    const v = vmax * 1.08 * i / 4, yy = H - padB - v * scale;
+    const v = vmax * K.headroom * i / 4, yy = H - padB - v * scale;
     o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-8}" y2="${yy.toFixed(1)}"/>`);
     o.push(`<text class="ax" x="${padL-8}" y="${(yy+3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`);
   }
@@ -4478,8 +4627,6 @@ function chartStacked(pids){
   return o.join("");
 }
 
-const padL0 = 60;
-
 /** The people to draw individually, biggest first, with the tail folded into one band.
  *  A thousand people is inside REQ-NFR-03; a thousand legend entries is not readable, so
  *  the same cap D-14 set for the old bar chart applies to the stack (REQ-DSH-09). */
@@ -4505,8 +4652,9 @@ function chartPeople(sids){
   if (!any) return `<p class="note">Nobody draws resource inside this horizon.</p>`;
   const restSet = new Set(rest);
 
-  const W = Math.max(700, 90 + G.length * 74), H = 600, padL = 62, padB = 52, padT = 30;
-  const bw = (W - padL - 14) / G.length;
+  const K = CHART.stack, H = K.H, padL = K.padL, padB = K.padB, padT = K.padT;
+  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
+  const bw = (W - padL - K.padR) / G.length;
   let vmax = 0;
   for (const k of G){
     let sum = 0;
@@ -4514,12 +4662,12 @@ function chartPeople(sids){
     vmax = Math.max(vmax, sum);
   }
   vmax = vmax || 1;
-  const scale = (H - padB - padT) / (vmax * 1.08);
+  const scale = (H - padB - padT) / (vmax * K.headroom);
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly resource demand, one stacked band per person">`];
   o.push(`<text class="ax" x="${padL-8}" y="${padT-12}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 4; i++){
-    const v = vmax * 1.08 * i / 4, yy = H - padB - v * scale;
+    const v = vmax * K.headroom * i / 4, yy = H - padB - v * scale;
     o.push(`<line class="grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-8}" y2="${yy.toFixed(1)}"/>`);
     o.push(`<text class="ax" x="${padL-8}" y="${(yy+3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`);
   }
@@ -4584,10 +4732,10 @@ function chartProjectUtil(pid){
   for (const [k, v] of C.projMonth) if (k.startsWith(pid + "|") && v > 0.004) own.push(v);
   const ownAvg = own.length ? own.reduce((a,b)=>a+b,0) / own.length : 0;
   const vals = G.map(k => C.projMonth.get(pid+"|"+k) || 0);
-  const W = 1080, H = 300, padL = 62, padR = 230;
+  const K = CHART.single, W = K.W, H = K.H, padL = K.padL, padR = K.padR;
   const vmax = Math.max(Math.max(...vals, upper), 0.01) * 1.18;
   const bw = (W - padL - padR) / Math.max(1, G.length);
-  const base = H - 44, top = 26;
+  const base = H - K.padB, top = K.padT;
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly resource for this project against the portfolio average">`];
   o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
@@ -5814,8 +5962,40 @@ function renderGenTab(){
     </div>`;
 }
 
+const TAB_RENDER = {"t-overall":renderOverall, "t-proj":renderProjTab,
+                    "t-pers":renderPersTab, "t-gen":renderGenTab};
+const ALL_TABS = Object.keys(TAB_RENDER);
+
+/** Draw one pane, and remember that it now matches the model. */
+function renderTab(id){
+  const fn = TAB_RENDER[id];
+  if (!fn) return;
+  fn();
+  S.stale.delete(id);
+}
+
+/* Everything the model feeds, redrawn - but only the pane that is on screen. The other
+ * three are marked STALE and drawn by showTab() when they are asked for. Every
+ * renderAll() in the application is already followed by a showTab(), which is what makes
+ * this safe rather than clever.
+ *
+ * Measured on the 62-project set, one cell edit, at 1440px:
+ *
+ *     visible pane, building its DOM         83 ms
+ *     three hidden panes, building theirs    58 ms   <- what this saves
+ *     laying out the visible pane           104 ms
+ *
+ * So a hidden pane is NOT as expensive as a visible one - `display:none` skips layout,
+ * which is the costly half - and skipping the three is worth about 58ms of a ~500ms
+ * commit, not the bulk of it. A real gain, and a modest one; the rest of that commit is
+ * the parse and the visible pane's own layout, and neither is avoided by being lazy.
+ *
+ * The second reason is not about speed at all, and may matter more: a pane drawn on
+ * demand is laid out while VISIBLE, so its charts and scroll cues measure themselves
+ * against a real width instead of against zero. */
 function renderAll(){
-  renderOverall(); renderProjTab(); renderPersTab(); renderGenTab();
+  for (const id of ALL_TABS) S.stale.add(id);
+  renderTab(S.tab);
   renderDirty();
 }
 
@@ -6037,6 +6217,48 @@ function askConfirm(items, go, back){
   dlg.onclose = () => finish(false);            // Escape, and the backdrop
   dlg.showModal();
 }
+/** Ask before replacing the plan that is open (REQ-IMP-08).
+ *
+ *  `adopt()` resets S.pending unconditionally, and six paths call it - the file picker,
+ *  a blank start, the Python shell's open, a version restore, the import-difference
+ *  apply. Every one of them used to throw away unsaved work without a word.
+ *
+ *  The application already holds this exact opinion in one place: beforeunload refuses
+ *  to let the TAB close on unsaved changes. Protecting the data from the browser and not
+ *  from our own Load button is the inconsistency, not the prompt.
+ *
+ *  SAVED-BUT-NOT-EXPORTED COUNTS TOO, for the same reason it counts at beforeunload:
+ *  a save keeps changes in memory, and nothing is on disk until Export. Losing those is
+ *  the more expensive mistake of the two, because the user has already been told they
+ *  were saved.
+ *
+ *  Its own dialog rather than confirm(), so it matches the two questions the
+ *  application already asks (conditional save, changing the estimation way) instead of
+ *  introducing a third visual language for the same kind of decision. */
+function mayReplacePlan(what, go){
+  const n = S.pending.length, saved = S.saved;
+  if (!n && !saved){ go(); return; }
+  const bits = [];
+  if (n)     bits.push(`<strong>${n} unsaved change${n === 1 ? "" : "s"}</strong>`);
+  if (saved) bits.push(`<strong>${saved} saved change${saved === 1 ? "" : "s"}</strong> that `
+                       + `${saved === 1 ? "has" : "have"} not been exported`);
+  const dlg = el("replace");
+  el("rpTitle").textContent = `${what} — discard the work in this plan?`;
+  el("rpBody").innerHTML =
+    `<p class="cap">This plan carries ${bits.join(" and ")}. ${what} replaces it, and
+      there is nothing to come back to afterwards.</p>
+     <p class="note"><strong>Nothing is on disk until you Export.</strong> A save keeps
+      your changes in this window; it does not write a file. If you want to keep this
+      work, choose <strong>Keep it</strong>, press <strong>Export → Source data</strong>,
+      and then come back.</p>`;
+  let done = false;
+  const finish = ok => { if (done) return; done = true; dlg.close(); if (ok) go(); };
+  el("rpYes").onclick = () => finish(true);
+  el("rpNo").onclick  = () => finish(false);
+  dlg.onclose = () => finish(false);              // Escape, and the backdrop
+  dlg.showModal();
+}
+
 function discardEdits(){
   if (!S.pending.length) return;
   const n = S.pending.length;
@@ -6733,7 +6955,9 @@ function showBanner(kind, text, findings){
     : "";
   const cfgN = (S.cfgChanges || []).length;
   el("banner").innerHTML =
-    `<div class="banner ${kind}"><strong>${esc(text)}</strong>`
+    `<div class="banner ${kind}">`
+    + (kind === "busy" ? `<span class="spin" aria-hidden="true"></span>` : "")
+    + `<strong>${esc(text)}</strong>`
     + (n ? ` ${esc(summary)}.` : "")
     + (cfgN ? `<span class="lk" id="openCfg">Which settings changed</span>` : "")
     + (n ? `<span class="lk" id="openRep">Open full report</span>` : "")
@@ -7181,6 +7405,10 @@ function renderKeepingTab(){
 }
 function showTab(id){
   S.tab = id;
+  // Draw it if it is behind the model. renderAll() only draws the pane that was on
+  // screen, so this is where the other three catch up - and they catch up as they are
+  // revealed, which is also when their charts can measure themselves properly.
+  if (S.stale.has(id)) renderTab(id);
   for (const b of document.querySelectorAll("nav button"))
     b.setAttribute("aria-selected", String(b.dataset.tab === id));
   for (const s of document.querySelectorAll("section.tab")) s.hidden = (s.id !== id);
@@ -7351,21 +7579,38 @@ function adopt(sheets, name, opts){
   return true;
 }
 
+/** Read a dropped or chosen file into the application.
+ *
+ *  Two phases, each announced before it starts rather than after it ends, because both
+ *  of them hold the main thread: parsing a large workbook is most of a second, and
+ *  adopting it - validate, calculate, draw - is most of another. Between them the page
+ *  cannot answer a click, so the least it can do is say what it is busy with.
+ */
 async function loadFile(file){
+  document.body.classList.add("busy");
   try {
-    showBanner("", `Reading ${file.name}…`);
+    showBanner("busy", `Reading ${file.name}…`);
+    await paint();
     const isJson = /\.json$/i.test(file.name);
     const sheets = isJson ? readPrapJson(await file.text())
                           : await readWorkbook(await file.arrayBuffer());
-    adopt(sheets, file.name);
+    // The parse is done; what follows is the expensive half. Say so before it starts.
+    showBanner("busy", `Building the plan from ${file.name}…`);
+    await paint();
+    adopt(sheets, file.name);            // replaces the banner with its own verdict
   } catch (e){
     showBanner("bad", `Could not read that file: ${e.message}`);
     console.error(e);
+  } finally {
+    document.body.classList.remove("busy");
   }
 }
 
 /** Begin a plan with nothing in it but the standard vocabulary and settings. */
 function startBlank(){
+  mayReplacePlan("Starting a new plan", startBlankNow);
+}
+function startBlankNow(){
   try {
     adopt(blankSheets(), "New plan (not yet exported)", {
       blank: true,
@@ -7417,7 +7662,20 @@ function renderProvenance(){
 renderProvenance();
 el("loadBtn").onclick = el("loadBtn2").onclick = () => el("picker").click();
 el("startBtn").onclick = startBlank;
-el("picker").onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); };
+/* Two defects in one line, both reported from the field.
+
+   THE VALUE IS RESET FIRST. <input type=file> fires `change` only when its value
+   CHANGES, so choosing the same file twice did nothing at all - and "export, edit in
+   Excel, load the same filename back" is the ordinary working loop of this application.
+   Clearing the value makes every pick a change, including a repeat of the last one.
+
+   AND THE PLAN IS NOT REPLACED WITHOUT ASKING. adopt() resets S.pending, so a stray
+   click on Load threw away unsaved work in silence. */
+el("picker").onchange = e => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (f) mayReplacePlan(`Loading ${f.name}`, () => loadFile(f));
+};
 /* The export menu. Each item closes it before acting, so the panel is not left hanging
    open over a banner that is reporting what just happened. */
 const expDone = fn => () => { el("expMenu").open = false; fn(); };
@@ -7445,7 +7703,12 @@ const drop = el("drop");
   e.preventDefault(); drop.classList.add("on"); }));
 ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => {
   e.preventDefault(); drop.classList.remove("on"); }));
-drop.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+/* Dropping a file replaces the plan exactly as the picker does, so it asks the same
+   question. Easier to do by accident than the picker, if anything. */
+drop.addEventListener("drop", e => {
+  const f = e.dataTransfer.files[0];
+  if (f) mayReplacePlan(`Loading ${f.name}`, () => loadFile(f));
+});
 
 for (const id of Object.keys(FILTER_KEY))
   el(id).addEventListener("change", () => {
@@ -7459,6 +7722,31 @@ document.addEventListener("click", e => {
   for (const i of d.querySelectorAll("input")) i.checked = false;
   msSummary(d); readFilters(); fitHorizon(); renderKeepingTab();
 });
+/* Keep an open panel inside the window.
+ *
+ * The panels hang from the left edge of their control, which is right until the control
+ * itself is near the right edge of the window: at 1280px the Role filter lands there and
+ * its panel finished 4px past the edge, clipped. The Export menu never had the problem
+ * because it is the rightmost control and was pinned `right:0` from the start - this is
+ * the same pin, applied to whichever panel needs it, decided when it opens rather than
+ * guessed from a breakpoint. The filter bar wraps, so which control sits at the edge
+ * depends on the window width and on how long the labels are; measuring is the only
+ * honest way to know.
+ *
+ * Re-measured on every open because both of those can change under it. */
+function fitPanel(d){
+  const p = d.querySelector(".msp");
+  if (!p) return;
+  p.style.left = p.style.right = "";          // measure it where it wants to be
+  if (p.getBoundingClientRect().right > document.documentElement.clientWidth - 8){
+    p.style.left = "auto"; p.style.right = "0";
+  }
+}
+document.addEventListener("toggle", e => {
+  const d = e.target.closest && e.target.closest("details.ms");
+  if (d && d.open) fitPanel(d);
+}, true);   // capture: `toggle` does not bubble
+
 /* One open at a time, and clicking anywhere else puts them all away - <details> keeps
    itself open otherwise, and seven panels left hanging over the page would bury it. */
 document.addEventListener("click", e => {

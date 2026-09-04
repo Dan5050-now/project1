@@ -6,6 +6,29 @@ const el = id => document.getElementById(id);
 const fmt = v => S.model.UNIT === "hours" ? (v * S.model.HOURS).toFixed(0) : v.toFixed(2);
 const unitLabel = () => S.model.UNIT === "hours" ? "hours" : "FTE";
 
+/* Yield long enough for the browser to actually PAINT.
+ *
+ * A single `await` is not enough. Resolving a promise runs the continuation as a
+ * microtask, which is still inside the current frame - so a "Reading…" banner written
+ * just before a one-second parse is in the DOM the whole time and on screen for none of
+ * it. Two animation frames is the guarantee: the first is scheduled before the next
+ * paint, the second cannot run until that paint has happened.
+ *
+ * The setTimeout is not a belt-and-braces duplicate. In a backgrounded tab rAF does not
+ * fire at all, and a load waiting on it would hang until the tab was looked at again;
+ * whichever lands first wins, and the flag makes the loser a no-op.
+ *
+ * It lives here, in the render helpers, rather than beside the file reader that wanted
+ * it first: the Python shell builds without storage/web/load.js and needs this too. */
+function paint(){
+  return new Promise(done => {
+    let settled = false;
+    const go = () => { if (!settled){ settled = true; done(); } };
+    requestAnimationFrame(() => requestAnimationFrame(go));
+    setTimeout(go, 60);
+  });
+}
+
 function typePill(pid){
   const t = S.model.projects[pid].project_type;
   const k = /^NewDrug CT/.test(t) ? "nd" : /^Biosimilar CT/.test(t) ? "bs" : "ot";

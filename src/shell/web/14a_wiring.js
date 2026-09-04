@@ -173,6 +173,10 @@ function renderKeepingTab(){
 }
 function showTab(id){
   S.tab = id;
+  // Draw it if it is behind the model. renderAll() only draws the pane that was on
+  // screen, so this is where the other three catch up - and they catch up as they are
+  // revealed, which is also when their charts can measure themselves properly.
+  if (S.stale.has(id)) renderTab(id);
   for (const b of document.querySelectorAll("nav button"))
     b.setAttribute("aria-selected", String(b.dataset.tab === id));
   for (const s of document.querySelectorAll("section.tab")) s.hidden = (s.id !== id);
