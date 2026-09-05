@@ -127,13 +127,18 @@ function switchEstimation(scope, id){
 /** The dialog. Its own, rather than the conditional-save one: those two questions are
  *  asked at different moments about different things, and a shared dialog whose heading
  *  changes underneath you is how a confirmation stops being read. */
-function askEstimation(title, bodyHtml, yesLabel, go){
+function askEstimation(title, bodyHtml, yesLabel, go, onNo, noLabel){
   const dlg = el("estchg");
   el("estTitle").textContent = title;
   el("estYes").textContent = yesLabel;
+  el("estNo").textContent = noLabel || "Go back";
   el("estBody").innerHTML = bodyHtml;
   let done = false;
-  const finish = ok => { if (done) return; done = true; dlg.close(); if (ok) go(); };
+  // `onNo` runs on the No button, on Escape and on the backdrop alike: a soft stop whose
+  // "put it back" only worked from one of the three ways out would leave the edit
+  // standing exactly when the user thought they had backed out of it.
+  const finish = ok => { if (done) return; done = true; dlg.close();
+                         if (ok) go(); else if (onNo) onNo(); };
   el("estYes").onclick = () => finish(true);
   el("estNo").onclick = () => finish(false);
   dlg.onclose = () => finish(false);                  // Escape, and the backdrop
@@ -286,7 +291,38 @@ function manualPanel(scope, id){
         ones you know better. The application asks before it does either.</p>
       ${manualElsewhere(scope, id)}</div>`;
 
+  /* THE MONTHS THIS PANEL STATES THAT ITS PROJECT OVERRODE (V-33).
+     Said HERE as well as in the findings report, because this is the table the figures
+     were typed into and the only place the two numbers can be put side by side. The
+     report is where it is recorded; this is where it is noticed. */
+  const clashes = scope === "assignment"
+    ? ((S.calc && S.calc.lines) || []).filter(L =>
+        L.assignment_id === id && L.overridden_by_project)
+    : [];
+  const clashNote = clashes.length
+    ? `<div class="estclash"><strong>${clashes.length} of these month(s) are not the
+         figure this person is given.</strong> ${esc((S.model.projects[
+           (clashes[0] || {}).project_id] || {}).project_name || "The project")} has a
+         MANUAL figure for those months, and a project's month is the whole month — the
+         people on it are scaled so they still add up to it, so the project's figure
+         wins.
+       <table class="data-t" style="margin-top:6px"><thead><tr><th>month</th>
+         <th>stated here</th><th>actually given</th><th>the project's month</th></tr>
+         </thead><tbody>${clashes.slice(0, 8).map(L =>
+           `<tr><td>${esc(monthLabel(isoMonth(L.month)))}</td>`
+           + `<td class="num">${L.stated_assignment_fte.toFixed(2)}</td>`
+           + `<td class="num"><strong>${L.fte.toFixed(2)}</strong></td>`
+           + `<td class="num">${(L.manual_project_total ?? 0).toFixed(2)}</td></tr>`)
+           .join("")}</tbody></table>
+       ${clashes.length > 8 ? `<p class="note">and ${clashes.length - 8} more.</p>` : ""}
+       <p class="note">To make these figures the ones that are used, change the
+         project's month to one that leaves room for them, or switch this assignment
+         back to automatic and let it take its share. <strong>V-33</strong> reports it
+         in the findings and in the change log either way.</p></div>`
+    : "";
+
   return `<div class="panel">${head}
+    ${clashNote}
     <p class="cap">These figures are <strong>stated, not calculated</strong>.
       ${scope === "project"
         ? "Each one is the whole project for that month, and the people assigned that "
@@ -308,11 +344,15 @@ function manualPanel(scope, id){
     ${filterTable("MonthlyEstimate", rows,
       ["month", "fte", "automatic_fte", "difference", "edited_at", "note_1"],
       null, null,
-      {automatic_fte: r => auto.has(r.month) ? auto.get(r.month).toFixed(4) : "",
+      // Two places, like every other figure (REQ-CAL-20). These were the last four-place
+      // numbers on screen, and the difference between a stated 2.41 and an "automatic"
+      // 2.4120 read as a discrepancy the user had caused rather than as four decimals
+      // nothing else in the application uses.
+      {automatic_fte: r => auto.has(r.month) ? auto.get(r.month).toFixed(2) : "",
        difference: r => {
          if (!auto.has(r.month) || r.fte === null || r.fte === undefined) return "";
          const dd = Number(r.fte) - auto.get(r.month);
-         return (dd >= 0 ? "+" : "") + dd.toFixed(4);
+         return (dd >= 0 ? "+" : "") + dd.toFixed(2);
        }})}
     ${manualElsewhere(scope, id)}</div>`;
 }

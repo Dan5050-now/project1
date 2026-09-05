@@ -340,6 +340,94 @@ with sync_playwright() as pw:
           "naming WHICH LEVEL each one came from",
           ", ".join(sorted(lvl)))
 
+    # ---- the project figure is the mother figure, and says so (V-33) ---------
+    print("\n  a person's stated figure that the PROJECT's own figure overrides")
+    setup = pg.evaluate("""() => {
+      // A project-month with two people, made manual at BOTH levels: the project at
+      // 10.00, and one of its people at 1.00.
+      const byk = {};
+      for (const L of S.calc.lines){ const k = L.project_id + '|' + L.month;
+                                     (byk[k] ||= []).push(L); }
+      const k = Object.keys(byk).find(k => byk[k].length >= 2);
+      if (!k) return null;
+      const g = byk[k], pid = g[0].project_id, mo = g[0].month, aid = g[0].assignment_id;
+      const iso = `${Math.floor(mo / 12)}-${String(mo % 12 + 1).padStart(2, '0')}`;
+      S.model.raw.Project.find(r => r.project_id === pid).estimation_type = 'manual';
+      S.model.raw.MonthlyEstimate.push(
+        {__row: 9001, scope: 'project', ref_id: pid, month: iso, fte: 10});
+      S.model.raw.Assignment.find(r => r.assignment_id === aid).estimation_type = 'manual';
+      S.model.raw.MonthlyEstimate.push(
+        {__row: 9002, scope: 'assignment', ref_id: aid, month: iso, fte: 1});
+      rebuild(true);
+      const g2 = S.calc.lines.filter(L => L.project_id === pid && L.month === mo);
+      return {pid, aid, iso,
+              month: +S.calc.projMonth.get(k).toFixed(2),
+              sum: +g2.reduce((a, L) => a + L.fte, 0).toFixed(2),
+              mine: +(g2.find(L => L.assignment_id === aid) || {}).fte.toFixed(2)};}""")
+    check(setup and setup["month"] == 10 and setup["sum"] == 10,
+          "THE PROJECT FIGURE WINS — every person on the month is realigned to it, "
+          "including one whose own figure is manual",
+          "" if not setup else f"month {setup['month']}, people sum {setup['sum']}")
+    check(setup and setup["mine"] != 1,
+          "so a person's own stated figure is NOT what they are given",
+          "" if not setup else f"stated 1.00, given {setup['mine']:.2f}")
+
+    v33 = pg.evaluate("() => (S.model.findings || []).filter(f => f.rule === 'V-33')"
+                      ".map(f => [f.sev, f.msg])")
+    check(len(v33) == 1 and v33[0][0] == "warning"
+          and "stated 1.00" in v33[0][1] and setup["aid"] in v33[0][1],
+          "and V-33 says so in writing, naming both figures",
+          v33[0][1][:120] if v33 else "nothing reported")
+
+    # The soft stop, at the moment of the edit.
+    got = pg.evaluate("""() => {
+      const td = document.createElement('td'); td.className = 'cell';
+      applyEdit('MonthlyEstimate', 9002, 'fte', '99', td);
+      return {open: document.getElementById('estchg').open,
+              title: document.getElementById('estTitle').textContent,
+              body: document.getElementById('estBody').textContent,
+              yes: document.getElementById('estYes').textContent,
+              no: document.getElementById('estNo').textContent,
+              marked: td.classList.contains('clash')};}""")
+    check(got["open"] and got["marked"]
+          and "99.00" in got["body"] and "10.00" in got["body"],
+          "EDITING ONE STOPS TO ASK, at the cell, naming both figures",
+          f"{got['title']!r}; {got['yes']!r} / {got['no']!r}")
+
+    # 'Put it back' really puts it back - the figure, the pending entry and the mark.
+    pg.evaluate("() => document.getElementById('estNo').click()")
+    pg.wait_for_timeout(500)
+    back = pg.evaluate("""() => ({
+        fte: S.model.raw.MonthlyEstimate.find(r => r.__row === 9002).fte,
+        pending: S.pending.filter(p => p.row === 9002).length})""")
+    check(back["fte"] == 1 and back["pending"] == 0,
+          "and 'Put it back' restores the figure AND drops the pending change",
+          f"fte {back['fte']}, {back['pending']} pending")
+
+    # It is written where the figures were typed, not only in the report.
+    pg.evaluate("""() => { const a = S.model.assignments.find(
+        x => x.assignment_id === S.calc.lines.find(L => L.overridden_by_project)
+                                  .assignment_id);
+      S.selPers = a.person_id; S.selAsg = a.assignment_id;
+      showTab('t-pers'); renderKeepingTab(); }""")
+    pg.wait_for_timeout(800)
+    note = pg.evaluate("() => { const n = document.querySelector('#t-pers .estclash'); "
+                       "return n ? n.textContent.replace(/\\s+/g, ' ') : null; }")
+    check(note and "actually given" in note,
+          "and the panel the figures were typed into says it too, with both numbers",
+          (note or "")[:110])
+
+    dec = pg.evaluate("""() => {
+      const t = document.querySelector("#t-pers table[data-sheet='MonthlyEstimate']");
+      const r = t && t.querySelector('tbody tr');
+      if (!r) return null;
+      const c = [...r.querySelectorAll('td')].map(e => e.textContent.trim());
+      return {auto: c[3], diff: c[4]};}""")
+    two = lambda x: x == "" or __import__("re").fullmatch(r"[+-]?\d+\.\d{2}", x)
+    check(dec and two(dec["auto"]) and two(dec["diff"]),
+          "automatic_fte and difference are shown to TWO places, like every other figure",
+          "" if not dec else f"automatic_fte {dec['auto']!r}, difference {dec['diff']!r}")
+
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()
 

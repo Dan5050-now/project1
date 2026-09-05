@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.20"
+DOC_VERSION = "1.21"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.46.xlsx"
+PLAN = "PRAP_Development_Plan_v2.47.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,26 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.21", "2026-09-05", "Claude Code", "Dan",
+         "R-39. Sheet 04 gains V-33, a WARNING: a manual assignment figure that the "
+         "project's own manual figure overrode. No rule changes - REQ-CAL-18 already "
+         "made the project month the mother figure and already scaled every person on "
+         "it, including anyone whose own figure is manual, so that the people still add "
+         "up to the month. What is new is that the two figures are now CONNECTED on "
+         "screen: calculate() keeps stated_assignment_fte, overridden_by_project and "
+         "manual_project_total on any line the project overrode. From those three, V-33 "
+         "names the month, the stated figure and the applied one; the Monthly estimation "
+         "panel tabulates them; and the editor soft-stops at the cell, offering to keep "
+         "or undo. It is a warning and not an error because both figures were "
+         "deliberately typed and which is wrong is not the application's judgement. "
+         "Sheet 05 gains 'Stated figures, and the decimal rule', which writes down the "
+         "two levels of REQ-CAL-18, those three fields, and the largest-remainder "
+         "arithmetic of REQ-CAL-20 the v1.20 entry announced but did not actually set "
+         "out. Sheet 06 records the Monthly estimation panel on both source-data tabs: "
+         "automatic_fte and difference to two decimals like every other FTE on screen - "
+         "they were the last four-place figures left, and read as a discrepancy the user "
+         "had caused - plus the override table and the soft stop. No figure moves. "
+         "Written against plan v2.47.", "Issued"],
         ["1.20", "2026-09-05", "Claude Code", "Dan",
          "R-38. Sheet 05 gains REQ-CAL-20, THE DECIMAL RULE: every FTE figure is a whole "
          "number of hundredths, rounded once where a person-month is decided rather than "
@@ -695,6 +715,7 @@ rules = [
     ["V-22", "Warning", "Person.capacity_fte is below config.under_allocation_fte.", "PSN-018: capacity 0.50 FTE is below the under-allocation floor of 0.60, so this person can never clear it however fully they are booked. Lower the floor or raise the capacity."],
     ["V-31", "Error", "A project or assignment set to estimation_type = 'manual' has months it covers with no MonthlyEstimate row.", "Project PRJ-019 is set to MANUAL but MonthlyEstimate has no figure for 3 of its month(s): 2028-01, 2028-02, 2028-03. Those months are counted as 0.00."],
     ["V-32", "Error", "A manual PROJECT has a figure for a month in which nobody is assigned to it, so there is nobody to share it out to.", "Project PRJ-019 has a manual figure for 2 month(s) in which nobody is assigned to it. It has NOT been applied - the project would otherwise show a total that none of its people account for."],
+    ["V-33", "Warning", "A manual ASSIGNMENT figure that the project's own manual figure overrode. REQ-CAL-18 makes the project month the mother figure, so the stated figure for the person is not what they are given.", "Assignment ASG-001 states a monthly figure that its PROJECT'S own manual figure overrode in 1 month(s) - 2025-03: stated 99.00, applied 9.97. Either change the project's figure to one that leaves room for this person's, or take this assignment off manual and let it take its share."],
 ]
 r = table(ws, r, ["ID", "Severity", "Trigger", "Message shown to the user"],
           rules, [8, 15, 56, 76], wrap_cols=(3, 4))
@@ -884,6 +905,73 @@ r = note(ws, r, "If the distinction ever stops being maintained in practice, the
                 "paper. That would be a schema change, so it is flagged here rather than done.")
 r += 1
 
+r = section(ws, r, "Stated figures, and the decimal rule   [REQ-CAL-18, REQ-CAL-19, REQ-CAL-20]")
+r = lines(ws, r, [
+    "A project's month is its own demand, and the people on it divide that month between them (R-32):",
+])
+r = code(ws, r, [
+    "  demand(project, month) = standard_fte( project, month ) x period_weight x month_run",
+    "  claim(assignment, month) = ( role_factor / sharers ) x person_weight x coverage",
+    "  fte(assignment, month)   = demand x claim / SUM( claims on that project-month )",
+])
+r = lines(ws, r, [
+    "TWO LEVELS OF STATED FIGURE, APPLIED IN THIS ORDER (REQ-CAL-18):",
+    "",
+    "    1. an ASSIGNMENT figure REPLACES that person's share for that month;",
+    "    2. a PROJECT figure is the WHOLE month, and every line on that project-month - including",
+    "       any line stated at level 1 - is SCALED so the people still add up to it.",
+    "",
+    "The project figure is therefore the mother figure and wins. That is not a tie-break invented",
+    "for the edge case: a project total that did not equal the sum of its own people would put the",
+    "two utilisation charts in disagreement and cost the results export its one guarantee.",
+    "",
+    "WHICH MEANS A PERSON CAN TYPE ONE NUMBER AND BE GIVEN ANOTHER. Sheet MonthlyEstimate holds",
+    "99.00 against an assignment; the project's own month is 10.00; the person is given 9.97. Both",
+    "figures were deliberately typed and which of them is wrong is not the application's judgement,",
+    "so this is REPORTED and never refused. calculate() keeps three fields on any line it overrode:",
+])
+r = table(ws, r, ["Field on the line", "Meaning"],
+          [["stated_assignment_fte", "what MonthlyEstimate says for this assignment-month, before the project scaled it"],
+           ["overridden_by_project", "true where the applied figure differs from the stated one by 0.01 or more"],
+           ["manual_project_total", "the project's own stated month - the figure that did the overriding"]],
+          [26, 92], wrap_cols=(2,))
+r = note(ws, r, "From those three, and nothing else: V-33 in the findings, the stated-against-applied table in "
+                "the Monthly estimation panel, and the soft stop the editor raises at the cell. One source, so "
+                "the sheet, the screen and the report cannot name different numbers.")
+r += 1
+r = lines(ws, r, [
+    "THE DECIMAL RULE (REQ-CAL-20). Every FTE figure the application produces IS a whole number of",
+    "hundredths - not a longer figure displayed to two places. The rounding happens ONCE, where a",
+    "person-month is decided (shareOut for a calculated month, applyManual for a stated one).",
+    "",
+    "Rounding each share on its own would not do: three shares of 4.27 rounded separately come to",
+    "4.26 or 4.28, so the detail rows would stop summing to the month (REQ-OUT-06) and the shares",
+    "would stop adding to one (REQ-CAL-19). Measured on the 62-project fixture, that missed on 644",
+    "of 1,629 project-months. So THE MONTH IS ROUNDED FIRST AND ITS HUNDREDTHS ARE HANDED OUT:",
+])
+r = code(ws, r, [
+    "  total_cents = round( demand x 100 )",
+    "  exact[i]    = weight[i] / SUM(weights) x total_cents",
+    "  out[i]      = floor( exact[i] )",
+    "  left        = total_cents - SUM(out)",
+    "  give the remaining hundredths, one each, to the lines with the largest exact[i] - out[i];",
+    "  where two remainders are EQUAL, to the line whose assignment_id sorts first.",
+])
+r = lines(ws, r, [
+    "THE TIE-BREAK IS PART OF THE RULE, not an implementation detail. It is a total order that does",
+    "not depend on array order or on the order rows were read from a sheet; without it two of the",
+    "four independent implementations could differ by 0.01 and both be right.",
+    "",
+    "A detail row therefore sits up to 0.01 - a full hundredth, since largest remainder gives a line",
+    "either its floor or its floor plus one - from the exact product of its own terms; measured worst",
+    "0.0070 on the fixture. The rows of a project-month nonetheless add to that month exactly, with",
+    "nothing left over. The results export says both things in its own words.",
+    "",
+    "Hundredths are counted as INTEGERS throughout, so the arithmetic cannot introduce the error it",
+    "exists to remove.",
+])
+r += 1
+
 r = section(ws, r, "Aggregation   [REQ-CAL-03, REQ-CAL-04, REQ-CAL-07]")
 agg = [
     ["project_month[p][m]", "sum of load over assignments on project p", "Overall tab, table A and the stacked graph"],
@@ -1041,6 +1129,7 @@ t2 = [
     ["Period sub-table", "Derived periods with seq, dates and weight, in seq order. Names are unique within a project since R-11, so project_id + period_name identifies a row. Shows whether each date was derived or hand-set.", "REQ-PRJ-06, REQ-CAL-09, REQ-DSH-10"],
     ["Recompute periods", "Re-derives from current milestones, warning that hand-set dates will be replaced.", "decision C-10"],
     ["Utilisation graph", "The selected project's monthly resource across the horizon, as bars, with THREE reference lines: 2x and 0.5x the average an ACTIVE project-month draws across the portfolio, and the project's own average over its full life. Sits directly under the project table, mirroring the person tab's strip. Months where the project draws nothing are excluded from the portfolio average - averaging them in would drag the norm toward zero and make every running project look heavy.", "REQ-DSH-12"],
+    ["Monthly estimation panel", "Opened by 'Switch to manual'. One row a month: the stated figure, automatic_fte and difference - all three to TWO decimals, like every other FTE on screen (REQ-CAL-20). Where the project's own stated month overrode a person's stated figure, the panel also tabulates month / stated here / actually given / the project's month, and the cell carries a mark. Editing such a figure SOFT-STOPS at the cell: the dialog names both numbers and offers 'Keep what I typed' or 'Put it back'. It never refuses - see V-33.", "REQ-CAL-18, REQ-CAL-20"],
     ["Export", "Visible table to .xlsx.", "REQ-DSH-06"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t2, [24, 90, 20], wrap_cols=(2,))
@@ -1058,6 +1147,7 @@ t3 = [
     ["Assignment sub-table", "The selected person's assignments: project, role, dates, person_weight.", "REQ-PSN-02, REQ-PSN-03"],
     ["Override sub-table", "PersonPeriodWeight windows for the selected assignment.", "REQ-PSN-05"],
     ["Utilisation strip", "The person's monthly FTE across the horizon with both absolute thresholds marked, and capacity_fte shown alongside for context.", "REQ-DSH-08"],
+    ["Monthly estimation panel", "The assignment-level half of the same panel as tab 2, for the selected assignment, with the same two decimals, the same override table and the same soft stop.", "REQ-CAL-18, REQ-CAL-20"],
     ["Export", "Visible table to .xlsx.", "REQ-DSH-06"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t3, [24, 90, 20], wrap_cols=(2,))

@@ -774,3 +774,11 @@ dialog.big .dlg-b{max-height:84vh}
 #whobox input{font:inherit;font-size:var(--t-md);padding:3px 8px;min-height:24px;
  border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
  color:var(--ink)}
+
+/* A stated figure the project's own figure overrode (V-33). Marked as well as said:
+   the dialog is dismissed and forgotten, and the mark is what is still there tomorrow. */
+td.cell.clash{background:var(--overbg);box-shadow:inset 0 0 0 1px var(--crit)}
+td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
+ margin-left:5px;vertical-align:middle}
+.estclash{background:var(--overbg);border-left:3px solid var(--crit);
+ border-radius:var(--r-sm);padding:8px 11px;margin:0 0 8px}

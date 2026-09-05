@@ -66,6 +66,7 @@ function monthsBetween(a, b){
   return out;
 }
 function monthKey(y, m){ return y * 12 + m; }
+const isoOf = k => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
 function keyToLabel(k){
   const y = Math.floor(k / 12), m = k % 12;
   return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m] + " " + y;
@@ -449,7 +450,8 @@ function shareOut(lines){
 function reportManual(M, lines){
   if (!M || !Array.isArray(M.findings)) return;
   for (let i = M.findings.length - 1; i >= 0; i--)
-    if (M.findings[i].rule === "V-31" || M.findings[i].rule === "V-32") M.findings.splice(i, 1);
+    if (M.findings[i].rule === "V-31" || M.findings[i].rule === "V-32"
+        || M.findings[i].rule === "V-33") M.findings.splice(i, 1);
 
   const strays = M.__manualStrays || [];
   if (strays.length){
@@ -492,6 +494,37 @@ function reportManual(M, lines){
         + `it, so there is nobody to give this to and it has NOT been applied — the `
         + `project would otherwise show a total that none of its people account for. `
         + `Assign somebody to those months, or remove the figure.`});
+
+  /* V-33: A PERSON'S STATED FIGURE THAT THE PROJECT'S OWN FIGURE OVERRODE.
+     REQ-CAL-18 makes the project figure the mother figure: it is the whole month, and
+     the people on it are scaled so they still add up to it. That is deliberate and it is
+     what keeps the two utilisation charts agreeing. What it also means is that somebody
+     can type 2.00 against their own name and be given 1.73, because a colleague's figure
+     and theirs together had to come to the project's month - and until now the
+     application did that silently. The figure in the sheet said one thing and the figure
+     on the chart said another, with nothing connecting them.
+     Reported rather than refused: both numbers are things a person deliberately typed,
+     and which of them is wrong is not the application's judgement to make. */
+  const clash = new Map();
+  for (const L of lines || []){
+    if (!L.overridden_by_project) continue;
+    const k = L.assignment_id;
+    if (!clash.has(k)) clash.set(k, []);
+    clash.get(k).push([isoOf(L.month), L.stated_assignment_fte, L.fte,
+                       L.manual_project_total]);
+  }
+  for (const [aid, ms] of clash){
+    const show = ms.slice(0, 4).map(([mo, was, now]) =>
+      `${mo}: stated ${was.toFixed(2)}, applied ${now.toFixed(2)}`).join("; ");
+    M.findings.push({sev:"warning", rule:"V-33", sheet:"MonthlyEstimate", row:"",
+      msg:`Assignment ${aid} states a monthly figure that its PROJECT'S own manual `
+        + `figure overrode in ${ms.length} month(s) — ${show}`
+        + `${ms.length > 4 ? ", …" : ""}. The project figure is the whole month and the `
+        + `people on it are scaled to add up to it, so the stated figure for this person `
+        + `is not what they are given. Either change the project's figure to one that `
+        + `leaves room for this person's, or take this assignment off manual and let it `
+        + `take its share.`});
+  }
 }
 
 /* ================================================ manual figures (REQ-CAL-18)
@@ -581,6 +614,16 @@ function applyManual(M, lines){
     const cents = largestRemainder(
       group.map(L => ({weight: L.fte, key: L.assignment_id || ""})), wantCents);
     group.forEach((L, i) => {
+      /* WHAT THE PERSON ASKED FOR, BEFORE THE PROJECT OVERRODE IT (V-33).
+         A stated assignment figure is applied first and then scaled to the project's
+         stated month, so a person can type 2.00 and be given 1.73 - the project figure
+         is the mother figure and wins, which is REQ-CAL-18 working as specified. What
+         was missing is that nothing SAID so. Kept on the line here, where both numbers
+         are in hand, so the screen and the findings report can both name it. */
+      if (L.manual_assignment && toCents(L.fte) !== cents[i]){
+        L.stated_assignment_fte = L.fte;
+        L.overridden_by_project = true;
+      }
       L.fte = fromCents(cents[i]);
       L.project_scale = scale;
       L.manual_project_total = fromCents(wantCents);

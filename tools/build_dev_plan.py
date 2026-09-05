@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.46"
+DOC_VERSION = "2.47"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,7 +397,32 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
-    [f"{MARK_NEW}2.46", "2026-09-05", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.47", "2026-09-05", "Claude Code", "Pending",
+     "R-39, PROJECT AND PERSON FIGURES KEPT CONSISTENT, AND SAID TO BE. "
+     "(1) THE FIRST REQUEST WAS ALREADY THE BEHAVIOUR, which is worth recording rather "
+     "than quietly re-implementing: a manual PROJECT month has always realigned every "
+     "person on it, including anyone whose own figure is manual, because applyManual "
+     "applies the assignment level first and then scales the whole group to the "
+     "project's stated total. Verified: project set to 10.00 with a person stating "
+     "99.00 gives the person 9.97 and the month 10.00. The project figure is the mother "
+     "figure and wins. "
+     "(2) WHAT WAS MISSING IS THAT NOTHING SAID SO. The sheet held 99.00, the chart "
+     "showed 9.97, and nothing connected them. Now V-33 reports it; the Monthly "
+     "estimation panel carries a table of stated against actually-given against the "
+     "project's month; the cell is marked; and editing such a figure SOFT-STOPS at the "
+     "cell - naming both numbers, offering Keep what I typed or Put it back. It never "
+     "refuses: both numbers were typed deliberately and which is wrong is not the "
+     "application's judgement. The finding reaches the findings report and the archived "
+     "change log, so it is on the record either way. "
+     "(3) automatic_fte and difference in the Monthly estimation tables were the last "
+     "four-place figures on screen and are now two, like everything else (REQ-CAL-20). "
+     "A stated 2.41 beside an automatic 2.4120 read as a discrepancy the user had "
+     "caused rather than as four decimals nothing else uses. "
+     "One defect found by testing the undo rather than by reading it: rebuild() makes "
+     "fresh row objects, so the row reference captured before it was orphaned and 'Put "
+     "it back' silently did nothing. It re-finds the row by number now.",
+     "Issued for review"],
+    ["2.46", "2026-09-05", "Claude Code", "Pending",
      "R-38, THREE REQUESTS. "
      "(1) THE IN-APP EXPORT OF THE CHANGE LOG IS REMOVED. The archive is written at "
      "every save, so a button handing over the same record afterwards was a second "
@@ -423,7 +448,7 @@ rows = [
      "nothing left over, and all 1,557 automatic months still equal standard x weight x "
      "month_run to the hundredth. All four implementations agree line for line - 7,001 "
      "lines and 1,629 project-months identical between the browser and prap_io.",
-     "Issued for review"],
+     "Superseded by v2.47"],
     ["2.45", "2026-09-05", "Claude Code", "Pending",
      "R-37, THE POP-UPS NAME THE PROJECT PERIOD. Every figure in this application is "
      "standard FTE x PERIOD WEIGHT x the month the project ran, so the period is the row "
@@ -1903,7 +1928,8 @@ rules = [
     [f"{MARK_CHG}V-28", "RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all.", "Retired - and deliberately not reinstated at a lower severity. What the rule SAID was true; what it did not account for was WHEN it said it. An error refuses the edit that raised it (REQ-IMP-09), and unlike V-23 this one did not need the project to have any periods - so it fired on a project still being built, which is exactly when assignments are being typed in. A user could not record who was on a project until the standing assumptions carried a factor for their role, which is backwards: the plan is the document being written, the assumptions are maintained separately. The gap is not denied - V-03 still refuses a role invalid for the project type, and V-23 still reports a role with no factor for a period the project spans, which is the same finding at the point where it can be acted on. The id is not reused."],
     [f"{MARK_NEW}V-29", "A role that carries a factor, that nobody holds on the project, and that nothing covers for.", "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct."],
     [f"{MARK_NEW}V-31", "A project or assignment set to MANUAL has months it covers that carry no MonthlyEstimate figure. Named, with the months listed.", "Error - those months are counted as 0.00, and a figure silently dropping to zero is the one outcome this feature must never produce quietly. Not a refusal: it is raised from the CALCULATION, like V-23, because it is something that happened to a number rather than a fact about a sheet, and a finding that exists only after the arithmetic cannot refuse the edit that led to it. Switching to manual copies every month across, so a month with no figure is one that has since been removed or a month the thing has grown into - the application offers to fill them from the calculation."],
-    [f"{MARK_NEW}V-32", "A project set to MANUAL has a figure for a month in which nobody is assigned to it.", "Error - the figure is NOT applied. A project month is shared out among the people on it, so there is nobody to give this to; applying it anyway would give the project a total that none of its people account for, which is exactly the disagreement REQ-CAL-18 scales the people to avoid. Assign somebody to those months, or remove the figure."],
+        [f"{MARK_NEW}V-33", "A manual ASSIGNMENT figure that the project's own manual figure overrode. REQ-CAL-18 makes the project figure the mother figure - it is the whole month, and the people on it are scaled so they still add up to it - so somebody can type 2.00 against their own name and be given 1.73, because their figure and a colleague's together had to come to the project's month. That is the specified behaviour and it is what keeps the two utilisation charts agreeing; what was missing is that the application did it SILENTLY, so the sheet said one thing and the chart another with nothing connecting them. Now: a SOFT STOP at the moment the figure is edited, naming both numbers and offering to keep it or put it back; the cell marked; the Monthly estimation panel carrying a table of stated against given; and this finding, which reaches the findings report and the archived change log. WARNING, not error, and it never refuses: both numbers were typed deliberately and which of them is wrong is not the application's judgement.", "Warning", "R-39", "4"],
+[f"{MARK_NEW}V-32", "A project set to MANUAL has a figure for a month in which nobody is assigned to it.", "Error - the figure is NOT applied. A project month is shared out among the people on it, so there is nobody to give this to; applying it anyway would give the project a total that none of its people account for, which is exactly the disagreement REQ-CAL-18 scales the people to avoid. Assign somebody to those months, or remove the figure."],
     [f"{MARK_NEW}V-30", "Config has no row for a setting the application reads, so its built-in default is in force. Reported for every such setting, naming the value being used.", "Information - the file is not malformed and the application is doing the only sensible thing with it, so this is a note rather than a fault. It exists because the absence is otherwise INVISIBLE: every setting is read through a fallback, and the delivered values equal the defaults, so on a stock file nothing moves. A plan whose under-allocation floor had been set to 0.80, or whose shared-role division had been turned off to compare with last year, would revert the moment its row went missing - every dependent figure changing, and nothing on screen saying why. Since v2.35 the row cannot be DELETED in the application (the Config table offers neither '+ row' nor 'Delete', because each setting is read by name), so this now reports a hand-edited workbook or one from a version that predates the setting."],
     [f"{MARK_CHG}V-25", "RETIRED at schema 7 (R-16). It reported a project whose work_scope_type contradicted its outsourcing_type.", "Retired - the rule existed only because two columns sat on the same axis and one of them drove the weights. outsourcing_scope_det is free text now, so there is nothing left to contradict. A rule that can no longer fire is removed rather than left standing and unexplained; the id is not reused."],
     [f"{MARK_NEW}V-26", "No project carries a project_type that schema 6 retired - at present 'Biosimilar CT', which became 'Biosimilar CT (Healthy)' and 'Biosimilar CT (Patient)'.", "Error - reported as itself rather than as a generic unknown value, because the remedy is a choice the file cannot make on the user's behalf. Only they know whether the trial ran in healthy volunteers or in patients, and guessing would put a wrong weight on real work."],

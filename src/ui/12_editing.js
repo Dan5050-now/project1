@@ -407,6 +407,17 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
   rebuild(true);
   renderKeepingTab();
 
+  /* A SOFT STOP where a person's stated figure will not be the figure they get.
+     The project's own manual figure is the mother figure - it is the whole month, and
+     the people on it are scaled to add up to it (REQ-CAL-18). So a figure typed here can
+     be overridden the instant it is entered, and this is the moment to say so: at the
+     cell, while the person still remembers what they meant, rather than at Save or in a
+     report they may never open.
+     A STOP, NOT A REFUSAL. Both numbers were typed deliberately and which of them is
+     wrong is not the application's judgement; V-33 records it either way. The offer is
+     to keep it or to put it back. */
+  if (sheet === "MonthlyEstimate" && col === "fte") warnIfOverridden(rowNum, tdEl, before);
+
   // Pointing a child row at a parent that already has children is the normal way to add
   // a second override window, not a mistake - so this says what the row now sits beside
   // rather than asking anything. The rules that DO constrain it are V-06 and V-24, and
@@ -517,4 +528,66 @@ function deleteRow(sheet, rowNum){
   renderKeepingTab();
   showBanner("", `Deleted ${val ? `${val} from ${sheet}` : `a blank row from ${sheet}`}. `
     + `This is provisional — 'Leave without change' puts it back.`);
+}
+
+
+/* ---------------------------------------------- the project figure overriding a person
+
+   Called after a MonthlyEstimate figure is committed. Reads the CALCULATION rather than
+   re-deriving anything: shareOut/applyManual already worked out what this person is
+   actually given and left `stated_assignment_fte` on the line where the two differ, so
+   this cannot disagree with the figures on screen. */
+function overriddenLine(row){
+  if (!row || row.scope !== "assignment" || !row.ref_id || !row.month) return null;
+  return ((S.calc && S.calc.lines) || []).find(L =>
+    L.assignment_id === row.ref_id && isoMonth(L.month) === String(row.month)
+    && L.overridden_by_project) || null;
+}
+
+/* `rowNum`, not the row object. rebuild() runs before this is called and buildModel()
+   makes FRESH row objects, so a reference captured in applyEdit is orphaned the moment
+   the model is rebuilt: writing to it changes nothing and the undo silently does nothing.
+   Found by testing the undo rather than by reading the code. */
+function warnIfOverridden(rowNum, tdEl, before){
+  const row = (S.model.raw.MonthlyEstimate || []).find(r => r.__row === rowNum);
+  const L = overriddenLine(row);
+  if (!L) return;
+  const stated = num(row.fte) ?? 0, applied = L.fte;
+  const total = L.manual_project_total;
+  const pid = L.project_id, pname = (S.model.projects[pid] || {}).project_name || pid;
+  const over = stated > total + 0.005;
+  // Marked as well as said. The dialog is dismissed and forgotten; the cell keeps the
+  // mark until the numbers agree, and the panel's own note says the same thing.
+  tdEl.classList.add("clash");
+  askEstimation(
+    over ? "That is more than the project's whole month"
+         : "The project's figure will override this",
+    `<p class="cap">${esc(assignmentLabel(row.ref_id))} — ${esc(monthLabel(row.month))}</p>
+     <p><strong>You typed ${stated.toFixed(2)}. This person will be given
+       ${applied.toFixed(2)}.</strong></p>
+     <p>${esc(pname)} has a MANUAL figure of <strong>${total.toFixed(2)}</strong> for this
+       month. A project's month is the whole month, and the people on it are scaled so
+       they still add up to it${over
+         ? ` — and ${stated.toFixed(2)} is more than the whole month on its own`
+         : ""}. So the project's figure wins and this one is scaled to fit.</p>
+     <p class="note">Nothing is wrong with either number on its own, which is why this
+       asks rather than refuses. To make this figure the one that is used, change
+       <strong>${esc(pname)}</strong>'s figure for ${esc(monthLabel(row.month))} to one
+       that leaves room for it, or take this assignment off manual and let it take its
+       share. Kept either way, <strong>V-33</strong> reports it in the findings and in
+       the change log.</p>`,
+    "Keep what I typed",
+    () => { /* kept: V-33 and the mark carry it from here */ },
+    () => {                                   // put it back
+      tdEl.classList.remove("clash");
+      const live = (S.model.raw.MonthlyEstimate || []).find(r => r.__row === rowNum);
+      if (live) live.fte = before;
+      const i = S.pending.findIndex(p2 => p2.sheet === "MonthlyEstimate"
+        && p2.row === rowNum && p2.col === "fte");
+      if (i >= 0) S.pending.splice(i, 1);
+      S.editedCells.delete(`MonthlyEstimate|${rowNum}|fte`);
+      rebuild(true);
+      renderKeepingTab();
+    },
+    "Put it back");
 }

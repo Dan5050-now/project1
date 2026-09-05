@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.11"
+VERSION = "1.12"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,38 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.12
+
+  * WHEN A PROJECT'S MONTH IS SET BY HAND, EVERYBODY ON IT IS BROUGHT INTO
+    LINE - including anyone whose own monthly figure you had already set by
+    hand. That is not new behaviour; the project figure has always been the
+    whole month and the people on it have always been scaled to add up to it.
+    What is new is that the application now SAYS SO.
+
+    Set a project's March to 10.00 while somebody's own March on that project
+    says 99.00, and they are given 9.97. Until now the sheet said 99.00, the
+    chart said 9.97, and nothing connected the two.
+
+  * SO A FIGURE THE PROJECT OVERRODE IS NOW CALLED OUT, three ways over:
+
+      - the cell is marked, and hovering it says what happened;
+      - the Monthly estimation panel gains a table of the month, what you
+        stated, what was actually given, and the project's own month;
+      - it appears in the findings, and therefore in the archived change log.
+
+  * AND EDITING ONE STOPS TO ASK. Type a figure the project's own month
+    cannot accommodate and a message names both numbers and offers "Keep what
+    I typed" or "Put it back". It never refuses the edit - both figures are
+    ones somebody typed deliberately, and which of them is wrong is not this
+    application's judgement to make. Fix it by changing the project's month,
+    or by taking that person's assignment off manual.
+
+  * THE MONTHLY ESTIMATION TABLES NOW SHOW TWO DECIMALS THROUGHOUT. The
+    automatic FTE and the difference were the last four-place figures left on
+    screen: a stated 2.41 beside an automatic 2.4120 read as a discrepancy you
+    had caused rather than as two decimals nothing else uses.
+
 
 WHAT IS NEW IN 1.11
 

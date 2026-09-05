@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.44",
+  "version": "1.45",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -24,8 +24,8 @@
  },
  "schema_version": 11,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.46.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.20.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.47.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.21.xlsx",
   "ui_component_list": "docs/PRAP_UI_Component_List_v1.0.xlsx",
   "source_data_template": "templates/PRAP_SourceData_Template_v1.14.xlsx",
   "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.16.xlsx",
@@ -1262,6 +1262,14 @@
    "effect": "Error - the figure is NOT applied. A project month is shared out among the people on it, so there is nobody to give this to; applying it anyway would give the project a total that none of its people account for, which is exactly the disagreement REQ-CAL-18 scales the people to avoid. Assign somebody to those months, or remove the figure.",
    "severity_reported_by_app": [
     "error"
+   ],
+   "enforced_by_application": true
+  },
+  "V-33": {
+   "statement": "A manual ASSIGNMENT figure that the project's own manual figure overrode. REQ-CAL-18 makes the project figure the mother figure - it is the whole month, and the people on it are scaled so they still add up to it - so somebody can type 2.00 against their own name and be given 1.73, because their figure and a colleague's together had to come to the project's month. That is the specified behaviour and it is what keeps the two utilisation charts agreeing; what was missing is that the application did it SILENTLY, so the sheet said one thing and the chart another with nothing connecting them. Now: a SOFT STOP at the moment the figure is edited, naming both numbers and offering to keep it or put it back; the cell marked; the Monthly estimation panel carrying a table of stated against given; and this finding, which reaches the findings report and the archived change log. WARNING, not error, and it never refuses: both numbers were typed deliberately and which of them is wrong is not the application's judgement.",
+   "effect": "Warning",
+   "severity_reported_by_app": [
+    "warning"
    ],
    "enforced_by_application": true
   }

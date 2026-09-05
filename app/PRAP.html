@@ -791,6 +791,14 @@ dialog.big .dlg-b{max-height:84vh}
 #whobox input{font:inherit;font-size:var(--t-md);padding:3px 8px;min-height:24px;
  border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
  color:var(--ink)}
+
+/* A stated figure the project's own figure overrode (V-33). Marked as well as said:
+   the dialog is dismissed and forgotten, and the mark is what is still there tomorrow. */
+td.cell.clash{background:var(--overbg);box-shadow:inset 0 0 0 1px var(--crit)}
+td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
+ margin-left:5px;vertical-align:middle}
+.estclash{background:var(--overbg);border-left:3px solid var(--crit);
+ border-radius:var(--r-sm);padding:8px 11px;margin:0 0 8px}
 </style>
 
 <div class="wrap">
@@ -993,7 +1001,7 @@ dialog.big .dlg-b{max-height:84vh}
 
 <script>
 "use strict";
-const APP_VERSION = "1.44";
+const APP_VERSION = "1.45";
 const SCHEMA_EXPECTED = 11;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1002,9 +1010,9 @@ const SCHEMA_EXPECTED = 11;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.46.xlsx",          ver:"2.46",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.47.xlsx",          ver:"2.47",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.20.xlsx", ver:"1.20",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.21.xlsx", ver:"1.21",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
@@ -3241,6 +3249,7 @@ function monthsBetween(a, b){
   return out;
 }
 function monthKey(y, m){ return y * 12 + m; }
+const isoOf = k => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
 function keyToLabel(k){
   const y = Math.floor(k / 12), m = k % 12;
   return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m] + " " + y;
@@ -3624,7 +3633,8 @@ function shareOut(lines){
 function reportManual(M, lines){
   if (!M || !Array.isArray(M.findings)) return;
   for (let i = M.findings.length - 1; i >= 0; i--)
-    if (M.findings[i].rule === "V-31" || M.findings[i].rule === "V-32") M.findings.splice(i, 1);
+    if (M.findings[i].rule === "V-31" || M.findings[i].rule === "V-32"
+        || M.findings[i].rule === "V-33") M.findings.splice(i, 1);
 
   const strays = M.__manualStrays || [];
   if (strays.length){
@@ -3667,6 +3677,37 @@ function reportManual(M, lines){
         + `it, so there is nobody to give this to and it has NOT been applied — the `
         + `project would otherwise show a total that none of its people account for. `
         + `Assign somebody to those months, or remove the figure.`});
+
+  /* V-33: A PERSON'S STATED FIGURE THAT THE PROJECT'S OWN FIGURE OVERRODE.
+     REQ-CAL-18 makes the project figure the mother figure: it is the whole month, and
+     the people on it are scaled so they still add up to it. That is deliberate and it is
+     what keeps the two utilisation charts agreeing. What it also means is that somebody
+     can type 2.00 against their own name and be given 1.73, because a colleague's figure
+     and theirs together had to come to the project's month - and until now the
+     application did that silently. The figure in the sheet said one thing and the figure
+     on the chart said another, with nothing connecting them.
+     Reported rather than refused: both numbers are things a person deliberately typed,
+     and which of them is wrong is not the application's judgement to make. */
+  const clash = new Map();
+  for (const L of lines || []){
+    if (!L.overridden_by_project) continue;
+    const k = L.assignment_id;
+    if (!clash.has(k)) clash.set(k, []);
+    clash.get(k).push([isoOf(L.month), L.stated_assignment_fte, L.fte,
+                       L.manual_project_total]);
+  }
+  for (const [aid, ms] of clash){
+    const show = ms.slice(0, 4).map(([mo, was, now]) =>
+      `${mo}: stated ${was.toFixed(2)}, applied ${now.toFixed(2)}`).join("; ");
+    M.findings.push({sev:"warning", rule:"V-33", sheet:"MonthlyEstimate", row:"",
+      msg:`Assignment ${aid} states a monthly figure that its PROJECT'S own manual `
+        + `figure overrode in ${ms.length} month(s) — ${show}`
+        + `${ms.length > 4 ? ", …" : ""}. The project figure is the whole month and the `
+        + `people on it are scaled to add up to it, so the stated figure for this person `
+        + `is not what they are given. Either change the project's figure to one that `
+        + `leaves room for this person's, or take this assignment off manual and let it `
+        + `take its share.`});
+  }
 }
 
 /* ================================================ manual figures (REQ-CAL-18)
@@ -3756,6 +3797,16 @@ function applyManual(M, lines){
     const cents = largestRemainder(
       group.map(L => ({weight: L.fte, key: L.assignment_id || ""})), wantCents);
     group.forEach((L, i) => {
+      /* WHAT THE PERSON ASKED FOR, BEFORE THE PROJECT OVERRODE IT (V-33).
+         A stated assignment figure is applied first and then scaled to the project's
+         stated month, so a person can type 2.00 and be given 1.73 - the project figure
+         is the mother figure and wins, which is REQ-CAL-18 working as specified. What
+         was missing is that nothing SAID so. Kept on the line here, where both numbers
+         are in hand, so the screen and the findings report can both name it. */
+      if (L.manual_assignment && toCents(L.fte) !== cents[i]){
+        L.stated_assignment_fte = L.fte;
+        L.overridden_by_project = true;
+      }
       L.fte = fromCents(cents[i]);
       L.project_scale = scale;
       L.manual_project_total = fromCents(wantCents);
@@ -6926,6 +6977,17 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
   rebuild(true);
   renderKeepingTab();
 
+  /* A SOFT STOP where a person's stated figure will not be the figure they get.
+     The project's own manual figure is the mother figure - it is the whole month, and
+     the people on it are scaled to add up to it (REQ-CAL-18). So a figure typed here can
+     be overridden the instant it is entered, and this is the moment to say so: at the
+     cell, while the person still remembers what they meant, rather than at Save or in a
+     report they may never open.
+     A STOP, NOT A REFUSAL. Both numbers were typed deliberately and which of them is
+     wrong is not the application's judgement; V-33 records it either way. The offer is
+     to keep it or to put it back. */
+  if (sheet === "MonthlyEstimate" && col === "fte") warnIfOverridden(rowNum, tdEl, before);
+
   // Pointing a child row at a parent that already has children is the normal way to add
   // a second override window, not a mistake - so this says what the row now sits beside
   // rather than asking anything. The rules that DO constrain it are V-06 and V-24, and
@@ -7036,6 +7098,68 @@ function deleteRow(sheet, rowNum){
   renderKeepingTab();
   showBanner("", `Deleted ${val ? `${val} from ${sheet}` : `a blank row from ${sheet}`}. `
     + `This is provisional — 'Leave without change' puts it back.`);
+}
+
+
+/* ---------------------------------------------- the project figure overriding a person
+
+   Called after a MonthlyEstimate figure is committed. Reads the CALCULATION rather than
+   re-deriving anything: shareOut/applyManual already worked out what this person is
+   actually given and left `stated_assignment_fte` on the line where the two differ, so
+   this cannot disagree with the figures on screen. */
+function overriddenLine(row){
+  if (!row || row.scope !== "assignment" || !row.ref_id || !row.month) return null;
+  return ((S.calc && S.calc.lines) || []).find(L =>
+    L.assignment_id === row.ref_id && isoMonth(L.month) === String(row.month)
+    && L.overridden_by_project) || null;
+}
+
+/* `rowNum`, not the row object. rebuild() runs before this is called and buildModel()
+   makes FRESH row objects, so a reference captured in applyEdit is orphaned the moment
+   the model is rebuilt: writing to it changes nothing and the undo silently does nothing.
+   Found by testing the undo rather than by reading the code. */
+function warnIfOverridden(rowNum, tdEl, before){
+  const row = (S.model.raw.MonthlyEstimate || []).find(r => r.__row === rowNum);
+  const L = overriddenLine(row);
+  if (!L) return;
+  const stated = num(row.fte) ?? 0, applied = L.fte;
+  const total = L.manual_project_total;
+  const pid = L.project_id, pname = (S.model.projects[pid] || {}).project_name || pid;
+  const over = stated > total + 0.005;
+  // Marked as well as said. The dialog is dismissed and forgotten; the cell keeps the
+  // mark until the numbers agree, and the panel's own note says the same thing.
+  tdEl.classList.add("clash");
+  askEstimation(
+    over ? "That is more than the project's whole month"
+         : "The project's figure will override this",
+    `<p class="cap">${esc(assignmentLabel(row.ref_id))} — ${esc(monthLabel(row.month))}</p>
+     <p><strong>You typed ${stated.toFixed(2)}. This person will be given
+       ${applied.toFixed(2)}.</strong></p>
+     <p>${esc(pname)} has a MANUAL figure of <strong>${total.toFixed(2)}</strong> for this
+       month. A project's month is the whole month, and the people on it are scaled so
+       they still add up to it${over
+         ? ` — and ${stated.toFixed(2)} is more than the whole month on its own`
+         : ""}. So the project's figure wins and this one is scaled to fit.</p>
+     <p class="note">Nothing is wrong with either number on its own, which is why this
+       asks rather than refuses. To make this figure the one that is used, change
+       <strong>${esc(pname)}</strong>'s figure for ${esc(monthLabel(row.month))} to one
+       that leaves room for it, or take this assignment off manual and let it take its
+       share. Kept either way, <strong>V-33</strong> reports it in the findings and in
+       the change log.</p>`,
+    "Keep what I typed",
+    () => { /* kept: V-33 and the mark carry it from here */ },
+    () => {                                   // put it back
+      tdEl.classList.remove("clash");
+      const live = (S.model.raw.MonthlyEstimate || []).find(r => r.__row === rowNum);
+      if (live) live.fte = before;
+      const i = S.pending.findIndex(p2 => p2.sheet === "MonthlyEstimate"
+        && p2.row === rowNum && p2.col === "fte");
+      if (i >= 0) S.pending.splice(i, 1);
+      S.editedCells.delete(`MonthlyEstimate|${rowNum}|fte`);
+      rebuild(true);
+      renderKeepingTab();
+    },
+    "Put it back");
 }
 /* ==================================== 12b. manual monthly estimation (REQ-CAL-18)
 
@@ -7166,13 +7290,18 @@ function switchEstimation(scope, id){
 /** The dialog. Its own, rather than the conditional-save one: those two questions are
  *  asked at different moments about different things, and a shared dialog whose heading
  *  changes underneath you is how a confirmation stops being read. */
-function askEstimation(title, bodyHtml, yesLabel, go){
+function askEstimation(title, bodyHtml, yesLabel, go, onNo, noLabel){
   const dlg = el("estchg");
   el("estTitle").textContent = title;
   el("estYes").textContent = yesLabel;
+  el("estNo").textContent = noLabel || "Go back";
   el("estBody").innerHTML = bodyHtml;
   let done = false;
-  const finish = ok => { if (done) return; done = true; dlg.close(); if (ok) go(); };
+  // `onNo` runs on the No button, on Escape and on the backdrop alike: a soft stop whose
+  // "put it back" only worked from one of the three ways out would leave the edit
+  // standing exactly when the user thought they had backed out of it.
+  const finish = ok => { if (done) return; done = true; dlg.close();
+                         if (ok) go(); else if (onNo) onNo(); };
   el("estYes").onclick = () => finish(true);
   el("estNo").onclick = () => finish(false);
   dlg.onclose = () => finish(false);                  // Escape, and the backdrop
@@ -7325,7 +7454,38 @@ function manualPanel(scope, id){
         ones you know better. The application asks before it does either.</p>
       ${manualElsewhere(scope, id)}</div>`;
 
+  /* THE MONTHS THIS PANEL STATES THAT ITS PROJECT OVERRODE (V-33).
+     Said HERE as well as in the findings report, because this is the table the figures
+     were typed into and the only place the two numbers can be put side by side. The
+     report is where it is recorded; this is where it is noticed. */
+  const clashes = scope === "assignment"
+    ? ((S.calc && S.calc.lines) || []).filter(L =>
+        L.assignment_id === id && L.overridden_by_project)
+    : [];
+  const clashNote = clashes.length
+    ? `<div class="estclash"><strong>${clashes.length} of these month(s) are not the
+         figure this person is given.</strong> ${esc((S.model.projects[
+           (clashes[0] || {}).project_id] || {}).project_name || "The project")} has a
+         MANUAL figure for those months, and a project's month is the whole month — the
+         people on it are scaled so they still add up to it, so the project's figure
+         wins.
+       <table class="data-t" style="margin-top:6px"><thead><tr><th>month</th>
+         <th>stated here</th><th>actually given</th><th>the project's month</th></tr>
+         </thead><tbody>${clashes.slice(0, 8).map(L =>
+           `<tr><td>${esc(monthLabel(isoMonth(L.month)))}</td>`
+           + `<td class="num">${L.stated_assignment_fte.toFixed(2)}</td>`
+           + `<td class="num"><strong>${L.fte.toFixed(2)}</strong></td>`
+           + `<td class="num">${(L.manual_project_total ?? 0).toFixed(2)}</td></tr>`)
+           .join("")}</tbody></table>
+       ${clashes.length > 8 ? `<p class="note">and ${clashes.length - 8} more.</p>` : ""}
+       <p class="note">To make these figures the ones that are used, change the
+         project's month to one that leaves room for them, or switch this assignment
+         back to automatic and let it take its share. <strong>V-33</strong> reports it
+         in the findings and in the change log either way.</p></div>`
+    : "";
+
   return `<div class="panel">${head}
+    ${clashNote}
     <p class="cap">These figures are <strong>stated, not calculated</strong>.
       ${scope === "project"
         ? "Each one is the whole project for that month, and the people assigned that "
@@ -7347,11 +7507,15 @@ function manualPanel(scope, id){
     ${filterTable("MonthlyEstimate", rows,
       ["month", "fte", "automatic_fte", "difference", "edited_at", "note_1"],
       null, null,
-      {automatic_fte: r => auto.has(r.month) ? auto.get(r.month).toFixed(4) : "",
+      // Two places, like every other figure (REQ-CAL-20). These were the last four-place
+      // numbers on screen, and the difference between a stated 2.41 and an "automatic"
+      // 2.4120 read as a discrepancy the user had caused rather than as four decimals
+      // nothing else in the application uses.
+      {automatic_fte: r => auto.has(r.month) ? auto.get(r.month).toFixed(2) : "",
        difference: r => {
          if (!auto.has(r.month) || r.fte === null || r.fte === undefined) return "";
          const dd = Number(r.fte) - auto.get(r.month);
-         return (dd >= 0 ? "+" : "") + dd.toFixed(4);
+         return (dd >= 0 ? "+" : "") + dd.toFixed(2);
        }})}
     ${manualElsewhere(scope, id)}</div>`;
 }
