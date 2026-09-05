@@ -1,0 +1,804 @@
+/* ============================================================================
+   PRAP visual design.
+
+   The reference is Apple's Human Interface Guidelines, applied to a dense data
+   tool rather than to a consumer app. Four things carry most of the resemblance,
+   and each of them earns its place here:
+
+     TOKENS      one palette, one type scale, one radius scale, one spacing step.
+                 Every value below is drawn from a named token; nothing is picked
+                 by eye at the point of use, which is what keeps a hundred small
+                 decisions consistent.
+     MATERIAL    white cards on a grey field, separated by shadow rather than by
+                 outline. A 1px border round every panel puts a hard edge between
+                 things that are not in conflict; a soft shadow says "this floats
+                 above that" without drawing a line to do it.
+     VIBRANCY    the sticky bars are translucent and blurred, so the content
+                 scrolling beneath them stays legible as context instead of being
+                 hidden behind an opaque strip.
+     RESTRAINT   colour means something. Blue is interactive, red is over the
+                 ceiling, amber is under the floor, and everything else is a grey.
+                 Chart series colours are exempt, because there the colour IS the
+                 data.
+   ========================================================================= */
+
+:root{
+  color-scheme:light dark;
+
+  /* --- colour: Apple's system palette ------------------------------------
+     Light uses the grouped-background convention - a grey field with white
+     cards - because that is what makes a card read as a card without an
+     outline. Dark inverts it: near-black field, lifted grey cards.
+     The accent is apple.com's link blue rather than systemBlue #007AFF: at
+     11-12px on white, #007AFF is 3.6:1 and this page has a great deal of small
+     blue text. #0066CC clears 4.5:1 and is otherwise indistinguishable. */
+  --page:#f2f2f7;--surface:#ffffff;--raised:#ffffff;
+  --ink:#1d1d1f;--ink2:rgba(60,60,67,.78);--muted:rgba(60,60,67,.72);
+  --grid:rgba(60,60,67,.13);--base:rgba(60,60,67,.26);--ring:rgba(60,60,67,.14);
+  --fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.20);
+  --accent:#0066cc;--s1:#0066cc;--other:#aeaeb2;
+  --good:#248a3d;--warn:#ff9500;--crit:#d70015;
+  --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
+  --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
+  --hairline:rgba(60,60,67,.16);
+  --shade:rgba(60,60,67,.30);
+
+  /* --- radius: Apple's continuous-corner scale --------------------------- */
+  --r-xs:5px;--r-sm:7px;--r-md:10px;--r-lg:14px;--r-xl:18px;
+
+  /* --- type -------------------------------------------------------------- */
+  --f-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",
+         "Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --f-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+
+  /* The type scale. This file used to carry FIFTEEN distinct sizes - 9, 9.5, 10,
+     10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 15, 17, 21, 30 - chosen one rule at a
+     time. Half-pixel neighbours cannot be told apart, so the differences were doing
+     no work; they just made every new rule a guess about which near-identical value
+     the neighbouring one used.
+
+     --t-xs is a FLOOR as much as a step. The badges used to run down to 9px, which
+     is below what anybody reads comfortably and well under the 11px minimum Apple
+     sets for any text at all. Nothing in the interface is smaller than this now.
+
+     Chart text is deliberately NOT on this scale: it lives inside an SVG viewBox and
+     is scaled by the browser to the panel width, so its numbers are user units and a
+     "10.5" there is not 10.5px on screen. */
+  --t-xs:11px;      /* badges, column sub-labels, captions - the floor */
+  --t-sm:11.5px;    /* dense table text: the workhorse */
+  --t-md:12.5px;    /* secondary UI, notes, dialog body */
+  --t-lg:13.5px;    /* body */
+  --t-xl:15px;      /* panel headings */
+  --t-2xl:17px;     /* section headings */
+  --t-3xl:21px;     /* page heading */
+  --t-4xl:30px;     /* the empty-state lead */
+
+  /* --- spacing: a 4px step ------------------------------------------------
+     Used for the gaps BETWEEN things - panel padding, control rows, stack gaps.
+     Padding inside small components (a 2px badge inset, a 7px pill) stays literal
+     on purpose: those are optical adjustments to a specific shape at a specific
+     size, not a rhythm, and rounding them to the step makes the shapes worse. */
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;
+
+  /* --- motion: Apple's standard timing ----------------------------------- */
+  --ease:cubic-bezier(.25,.1,.25,1);--dur:.18s;
+}
+@media (prefers-color-scheme:dark){:root{
+  --page:#000000;--surface:#1c1c1e;--raised:#2c2c2e;
+  --ink:#f5f5f7;--ink2:rgba(235,235,245,.70);--muted:rgba(235,235,245,.55);
+  --grid:rgba(235,235,245,.14);--base:rgba(235,235,245,.28);--ring:rgba(235,235,245,.14);
+  --fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.36);
+  --accent:#0a84ff;--s1:#0a84ff;--other:#5a5a5e;
+  --good:#30d158;--warn:#ff9f0a;--crit:#ff6961;
+  --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
+  --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
+  --hairline:rgba(235,235,245,.18);
+  --shade:rgba(0,0,0,.55);}}
+:root[data-theme="dark"]{
+  --page:#000000;--surface:#1c1c1e;--raised:#2c2c2e;
+  --ink:#f5f5f7;--ink2:rgba(235,235,245,.70);--muted:rgba(235,235,245,.55);
+  --grid:rgba(235,235,245,.14);--base:rgba(235,235,245,.28);--ring:rgba(235,235,245,.14);
+  --fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.36);
+  --accent:#0a84ff;--s1:#0a84ff;--other:#5a5a5e;
+  --good:#30d158;--warn:#ff9f0a;--crit:#ff6961;
+  --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
+  --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
+  --hairline:rgba(235,235,245,.18);
+  --shade:rgba(0,0,0,.55);}
+:root[data-theme="light"]{
+  --page:#f2f2f7;--surface:#ffffff;--raised:#ffffff;
+  --ink:#1d1d1f;--ink2:rgba(60,60,67,.78);--muted:rgba(60,60,67,.72);
+  --grid:rgba(60,60,67,.13);--base:rgba(60,60,67,.26);--ring:rgba(60,60,67,.14);
+  --fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.20);
+  --accent:#0066cc;--s1:#0066cc;--other:#aeaeb2;
+  --good:#248a3d;--warn:#ff9500;--crit:#d70015;
+  --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
+  --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
+  --hairline:rgba(60,60,67,.16);
+  --shade:rgba(60,60,67,.30);}
+
+*{box-sizing:border-box}
+/* The `hidden` attribute is only display:none at UA-stylesheet weight, so any rule
+   with an id or a class beats it. #editbar sets display:flex and was therefore
+   showing an empty bar before a workbook was loaded. Say it once, for everything. */
+[hidden]{display:none !important}
+/* Apple's focus ring is a soft halo, not a hard rectangle: it reads as emphasis
+   rather than as an error state. */
+:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 45%,transparent);
+ outline-offset:2px;border-radius:var(--r-xs)}
+@media (prefers-reduced-motion:no-preference){
+  .btn,nav button,#prov > summary{transition:color var(--dur) var(--ease),
+   background var(--dur) var(--ease),box-shadow var(--dur) var(--ease),
+   transform var(--dur) var(--ease)}
+  .btn:active{transform:scale(.97)}
+  .panel{transition:box-shadow var(--dur) var(--ease)}}
+body{margin:0;background:var(--page);color:var(--ink);
+ font:var(--t-lg)/1.55 var(--f-ui);
+ -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+ font-synthesis:none;text-rendering:optimizeLegibility}
+.wrap{max-width:1400px;margin:0 auto;padding:20px var(--sp-5) 72px}
+
+/* --- header ------------------------------------------------------------- */
+/* nowrap while there is room, so the controls stay on one line and the file name is
+   what gives way; wrap only once the viewport is genuinely too narrow for them. */
+header{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;padding-bottom:14px}
+@media (max-width:1100px){header{flex-wrap:wrap}}
+header>h1,header>.vers,header>.btn{flex:none;white-space:nowrap}
+h1{font-size:var(--t-3xl);margin:0;letter-spacing:-.021em;font-weight:650;line-height:1.2}
+h2{font-size:var(--t-xl);margin:0 0 3px;letter-spacing:-.012em;font-weight:620;line-height:1.3}
+.vers{color:var(--ink2);font-size:var(--t-sm);letter-spacing:0}
+/* The loaded-file line takes whatever is left and gives it back first: it is the one
+   thing in the header that can be truncated without losing a control. Without this the
+   header wraps and the buttons drop to a second row. */
+.file{margin-left:auto;color:var(--ink2);font-size:var(--t-md);font-variant-numeric:tabular-nums;
+ flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .tz{color:var(--muted)}
+
+/* --- buttons: filled, tinted, plain ------------------------------------- */
+.btn{border:0;background:var(--fill);color:var(--accent);border-radius:var(--r-sm);
+ padding:6px 13px;font-size:var(--t-md);font-weight:520;cursor:pointer;font-family:inherit;
+ line-height:1.4;letter-spacing:-.005em}
+.btn:hover{background:var(--fill2);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;font-weight:590;
+ box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.btn.primary:hover{background:var(--accent);color:#fff;filter:brightness(1.08)}
+.btn.primary[disabled],.btn[disabled]{opacity:.38;cursor:not-allowed;transform:none}
+/* Two of these on every row of every table. At rest they are furniture; they take
+   colour only on hover, where blue means 'this adds' and red means 'this removes'. */
+/* 24px tall, which is WCAG 2.5.8's minimum target and about the smallest thing a
+   mouse can be aimed at without care. It was 19px: the text is 10.5px and the padding
+   was 2px, so the row-action buttons ('+ row', 'Delete', 'Blank list') were the
+   hardest things on the page to hit and they sit in a dense grid of them. The LABEL
+   stays 10.5px - these are secondary controls and should not shout - so the height
+   comes from min-height and centring rather than from padding, and the button does not
+   grow wider or change the table's row rhythm. */
+.btn.tiny{font-size:var(--t-xs);padding:2px 8px;border-radius:var(--r-xs);font-weight:540;
+ color:var(--ink2);background:transparent;box-shadow:inset 0 0 0 1px var(--grid);
+ min-height:24px;display:inline-flex;align-items:center;justify-content:center}
+.btn.tiny:hover{color:var(--accent);background:var(--fill);box-shadow:none}
+.btn.tiny.danger{margin-left:4px}
+/* A filled button that confirms a DESTRUCTIVE choice. Blue would say "this is the
+   safe default"; it is not, and the one place it appears is the dialog that discards
+   unsaved work. */
+.btn.primary.danger{background:var(--crit);color:#fff}
+.btn.primary.danger:hover{background:var(--crit);filter:brightness(1.08)}
+.vtog{margin-left:10px;font-weight:400;display:inline-flex;gap:2px;padding:2px;
+ background:var(--fill);border-radius:var(--r-sm)}
+.vtog .btn.tiny{background:none}
+.vtog .btn.tiny.on{background:var(--surface);color:var(--ink);
+ box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.btn.tiny.danger:hover{color:var(--crit);background:color-mix(in srgb,var(--crit) 12%,transparent)}
+td.ins,th.ins{white-space:nowrap}
+.btn.reset{color:var(--accent)}
+
+/* --- provenance strip ---------------------------------------------------- */
+#prov{margin:12px 0 0;border-radius:var(--r-md);background:var(--surface);
+ box-shadow:var(--shadow);font-size:var(--t-md)}
+#prov > summary{cursor:pointer;padding:9px 14px;color:var(--ink2);list-style:none;
+ display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;border-radius:var(--r-md)}
+#prov > summary::-webkit-details-marker{display:none}
+#prov > summary::after{content:"show detail";margin-left:auto;color:var(--accent);
+ font-size:var(--t-sm);font-weight:510}
+#prov[open] > summary::after{content:"hide detail"}
+#prov > summary:hover{color:var(--ink)}
+#prov .pv{font-weight:620;color:var(--ink);font-variant-numeric:tabular-nums}
+#prov .plabel{color:var(--muted)}
+#prov #provBody{padding:2px 14px 14px}
+#prov table{font-size:var(--t-sm)}
+#prov td,#prov th{border-bottom:1px solid var(--grid);padding:6px 10px;text-align:left;
+ vertical-align:top}
+#prov thead th{color:var(--muted);font-weight:590;font-size:var(--t-xs);
+ letter-spacing:.02em;text-transform:uppercase;border-bottom:1px solid var(--hairline)}
+#prov td.ok{color:var(--good);font-weight:590;white-space:nowrap}
+#prov td.warn{color:var(--underink);font-weight:590;white-space:nowrap}
+
+/* --- banner -------------------------------------------------------------- */
+/* Neutral by default. The banner reports a clean load as often as a problem, and an
+   amber strip saying "Loaded cleanly" tells the reader to worry about nothing. */
+.banner{display:flex;align-items:center;gap:10px;margin:14px 0;padding:11px 15px;
+ border-radius:var(--r-md);background:var(--surface);font-size:var(--t-lg);
+ box-shadow:var(--shadow);border-left:3px solid var(--good)}
+.banner.bad{background:var(--overbg);border-left-color:var(--crit)}
+/* Saved, but with something knowingly left unresolved - neither a clean save nor
+   a failure, and it should not read as either. */
+.banner.warn{background:var(--underbg);border-left-color:var(--warn)}
+.banner .lk{margin-left:auto;color:var(--accent);cursor:pointer;text-decoration:none;
+ font-weight:530}
+.banner .lk:hover{text-decoration:underline}
+/* Reading a file is the one thing here that takes long enough to look broken. A large
+   workbook parses for the best part of a second with the main thread held, so the page
+   stops answering: no hover, no scroll, no caret. A line of text alone does not say
+   "still going" - it is indistinguishable from a line of text that has stopped. The
+   spinner is the part that keeps moving, so it is the part that says the wait is
+   expected. Blue rather than green: this is in progress, not finished. */
+.banner.busy{border-left-color:var(--accent)}
+.spin{width:14px;height:14px;flex:none;border-radius:50%;
+ border:2px solid color-mix(in srgb,var(--accent) 25%,transparent);
+ border-top-color:var(--accent);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Reduced motion removes the rotation, not the indicator: something must still mark
+   this banner as the one that is working. A steady ring does that. */
+@media (prefers-reduced-motion:reduce){.spin{animation:none;border-top-color:var(--accent);
+ opacity:.85}}
+/* The pointer says the same thing the spinner does, for the fraction of a second
+   before anyone looks at the banner. */
+body.busy{cursor:progress}
+
+/* --- panels: white cards on a grey field --------------------------------- */
+.panel{background:var(--surface);border-radius:var(--r-lg);padding:var(--sp-4) 18px;margin:var(--sp-4) 0;
+ box-shadow:var(--shadow)}
+.phead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px}
+.phead h2{margin:0}
+.subhead{margin:18px 0 6px;font-size:var(--t-lg);color:var(--ink2)}
+.phead .scope + .scope{margin-left:0}
+.phead > .scope:first-of-type{margin-left:auto}
+.phead .vtog{margin-left:0}
+.cap{color:var(--ink2);font-size:var(--t-md);margin:0 0 12px;max-width:92ch;line-height:1.5}
+.note{color:var(--muted);font-size:var(--t-sm);margin:10px 0 0;line-height:1.5}
+.scope{font-weight:500;font-size:var(--t-xs);color:var(--muted);background:var(--fill);
+ border-radius:100px;padding:2px 9px;margin-left:6px;white-space:nowrap}
+.scope.k{color:var(--ink2);font-variant-numeric:tabular-nums}
+
+/* --- filter bar ---------------------------------------------------------- */
+.controls{display:flex;flex-wrap:wrap;gap:var(--sp-3) var(--sp-4);align-items:flex-end}
+.ctl{display:flex;flex-direction:column;gap:4px}
+.ctl label,.ctl .lbl{display:block;font-size:var(--t-xs);color:var(--muted);font-weight:510;letter-spacing:.01em}
+.ctl select,.ctl input{border:1px solid var(--base);background:var(--surface);
+ color:var(--ink);border-radius:var(--r-sm);padding:5px 9px;font-size:var(--t-md);
+ font-family:inherit;line-height:1.4}
+.ctl select:hover,.ctl input:hover{border-color:var(--accent)}
+
+/* --- a filter that takes several values at once --------------------------
+   Built on <details> rather than as a widget: the browser gives open/close,
+   keyboard operation and focus for nothing, and a plain <select multiple> would
+   have cost seven tall boxes across the bar and asked the reader to know that
+   ctrl-click means "and also". Nothing ticked means ALL, which is the state the
+   summary reports, so the bar reads the same as it did with single selects. */
+.ms{position:relative}
+.ms>summary{list-style:none;cursor:pointer;border:1px solid var(--base);
+ background:var(--surface);color:var(--ink);border-radius:var(--r-sm);
+ padding:5px 26px 5px 9px;font-size:var(--t-md);line-height:1.4;min-width:112px;
+ max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms>summary::-webkit-details-marker{display:none}
+.ms>summary::after{content:"";position:absolute;right:9px;top:12px;
+ border:4px solid transparent;border-top-color:var(--ink2)}
+.ms>summary:hover{border-color:var(--accent)}
+.ms[open]>summary{border-color:var(--accent)}
+.ms>summary.on{font-weight:560;color:var(--accent);border-color:var(--accent)}
+/* --- the export menu ----------------------------------------------------- */
+/* A drop-down built on the same <details> as the filter pickers, so it inherits their
+   open/close, focus and Escape behaviour rather than growing a second kind of menu.
+   <summary> cannot be disabled, so 'off' does the work: nothing to click, and the
+   pointer says so. */
+.exp{position:relative}
+.exp>summary{list-style:none;cursor:pointer}
+.exp>summary::-webkit-details-marker{display:none}
+.exp>summary::after{content:"  \25BE";font-size:.85em;opacity:.75}
+.exp.off{pointer-events:none;opacity:.45}
+.exp>.msp{width:340px;max-width:min(340px,calc(100vw - 32px));padding:6px;
+ max-height:none;left:auto;right:0}
+.expitem{display:block;width:100%;text-align:left;border:0;background:none;
+ font-family:inherit;font-size:var(--t-lg);color:var(--ink);padding:9px 11px;
+ border-radius:var(--r-sm);cursor:pointer}
+.expitem:hover,.expitem:focus-visible{background:var(--fill)}
+.expitem b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--t-sm);
+ color:var(--accent);font-weight:600}
+.expitem i{display:block;font-style:normal;font-size:var(--t-sm);color:var(--ink2);
+ margin-top:3px;line-height:1.45;white-space:normal}
+.expitem i b{color:var(--crit);font-family:inherit;font-size:var(--t-sm)}
+
+.msp{position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:100%;
+ max-height:280px;overflow:auto;background:var(--raised);border:1px solid var(--base);
+ border-radius:var(--r-md);box-shadow:var(--shadow-lift);padding:5px;
+ scrollbar-color:var(--base) transparent}
+.msp::-webkit-scrollbar{width:12px}
+.msp::-webkit-scrollbar-track{background:var(--fill);border-radius:8px}
+.msp::-webkit-scrollbar-thumb{background:var(--base);border-radius:8px;
+ border:3px solid transparent;background-clip:padding-box}
+.msp label{display:flex;align-items:center;gap:7px;padding:4px 8px;font-size:var(--t-md);
+ border-radius:var(--r-xs);cursor:pointer;white-space:nowrap}
+.msp label:hover{background:var(--fill)}
+.msp input{margin:0}
+.msp .msclear{width:100%;margin-bottom:3px}
+
+/* --- sticky bars: vibrancy ----------------------------------------------
+   Translucent and blurred rather than opaque, so the content scrolling under
+   them stays readable as context. This is the one place the resemblance is
+   literal, and it is also the place it is most useful. */
+/* ONE sticky band carrying both bars. Two independently sticky bars needed the second
+   to know the height of the first - it was pinned at top:60px against an edit bar that
+   measures 58.75px and wraps to two rows on a narrow window - so between them ran a
+   hairline the page showed through, and on a wrapped bar they overlapped outright.
+   Sticking the CONTAINER removes the question: the bars are laid out normally inside it
+   and travel as one.
+
+   And the band is OPAQUE. Translucency plus a backdrop blur reads beautifully over a
+   chart and reads as a fault over a table: at 92% the rows underneath still ghost
+   through the text, which is what "the header is overlapped with the page" describes.
+   The blur is kept only for the page BEHIND the band's rounded corners. */
+#stickybar{position:sticky;top:0;z-index:20;background:var(--page);
+ padding-bottom:8px;margin-bottom:-8px}
+#editbar{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);
+ align-items:center;margin:14px 0 0;padding:10px 16px;border-radius:var(--r-md);
+ background:var(--surface);
+ box-shadow:var(--shadow);font-size:var(--t-md);color:var(--ink2)}
+#editbar.dirty{background:color-mix(in srgb,var(--underbg) 95%,transparent);color:var(--ink)}
+#editbar .guide{max-width:min(760px,58%)}
+#editbar .guide strong{color:var(--ink);font-weight:590}
+#editbar #editstate{margin-left:auto;font-weight:620;white-space:nowrap}
+#editbar.dirty #editstate{color:var(--underink)}
+#editbar .btn{white-space:nowrap}
+
+/* --- tabs: a segmented control ------------------------------------------- */
+/* A full-width bar, not a floating pill: content scrolls UNDER the band, and a pill only
+   as wide as its labels would let the page slide past beside them. */
+nav{display:flex;gap:2px;margin:18px 0 0;flex-wrap:wrap;
+ padding:5px 4px;border-radius:var(--r-md);background:var(--fill)}
+nav button{border:0;background:none;color:var(--ink2);padding:6px 16px;font-size:var(--t-lg);
+ cursor:pointer;font-family:inherit;border-radius:var(--r-sm);font-weight:520;
+ letter-spacing:-.006em;white-space:nowrap}
+nav button:hover{color:var(--ink);background:var(--fill)}
+nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var(--surface);
+ box-shadow:0 1px 3px rgba(0,0,0,.13),0 0 0 .5px rgba(0,0,0,.05)}
+
+/* --- summary tiles ------------------------------------------------------- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:14px;
+ margin:16px 0}
+.tile{background:var(--surface);border-radius:var(--r-lg);padding:13px 16px;
+ box-shadow:var(--shadow)}
+.tile.over{background:var(--overbg)}.tile.under{background:var(--underbg)}
+.tile{transition:none}
+.tile .tl{font-size:var(--t-xs);color:var(--muted);font-weight:590;letter-spacing:.03em;
+ text-transform:uppercase}
+.tile .tv{font-size:var(--t-4xl);font-weight:600;letter-spacing:-.03em;line-height:1.15;
+ margin:5px 0 2px;font-variant-numeric:tabular-nums}
+.tile.over .tv{color:var(--crit)}.tile.under .tv{color:var(--underink)}
+.tile .ts{font-size:var(--t-sm);color:var(--muted);line-height:1.4}
+
+/* EVERY scroll region scrolls in BOTH directions. A panel bounded on one axis only can
+   still hide content on the other, and the reader has no way of telling that it has:
+   there is no scrollbar to suggest anything is missing. So each one is bounded on both,
+   and the cap is a share of the viewport as well as a fixed figure, so a tall panel
+   still leaves the next one visible on a laptop screen. */
+.scrollx{overflow:auto;max-height:min(560px,66vh);-webkit-overflow-scrolling:touch;
+ border-radius:var(--r-sm)}
+/* The browser's own bar is HIDDEN, and the application draws its own - see makeBar() in
+   the wiring. Twice the browser was asked for a bar that says "there is more this way"
+   and twice it declined: `scrollbar-width:thin` gave an overlay bar occupying no layout
+   space that fades out when idle, and removing it so ::-webkit-scrollbar would apply
+   changed nothing on a build that uses overlay scrollbars - measured, a plain div with
+   an explicit 14px ::-webkit-scrollbar still reports offsetHeight === clientHeight.
+   A region deliberately bounded on both axes is only honest if the reader can see there
+   is more and reach it, so that is drawn rather than asked for. Native scrolling itself
+   is untouched: wheel, shift-wheel, trackpad and keyboard all still work. */
+.scrollx{scrollbar-width:none}
+.scrollx::-webkit-scrollbar{width:0;height:0}
+
+/* The drawn bars. Children of the .cue wrapper, not of the scrolling box, so they stay
+   put while what they describe moves under them. 11px of track with a 3px inset thumb -
+   big enough to grab with a mouse, quiet enough to sit over a table. */
+.sbar{position:absolute;z-index:4;opacity:0;pointer-events:none;
+ background:var(--fill);border-radius:8px;transition:opacity var(--dur) var(--ease)}
+.sbar.on{opacity:1;pointer-events:auto}
+.sbar.h{left:2px;right:2px;bottom:2px;height:11px}
+.sbar.v{top:2px;bottom:2px;right:2px;width:11px}
+.cue.hbar.vbar .sbar.h{right:15px}
+.cue.hbar.vbar .sbar.v{bottom:15px}
+.sbar .thumb{position:absolute;background:var(--base);border-radius:8px;
+ transition:background var(--dur) var(--ease)}
+.sbar.h .thumb{top:2px;bottom:2px}
+.sbar.v .thumb{left:2px;right:2px}
+.sbar:hover .thumb,.sbar.dragging .thumb{background:var(--ink2)}
+/* Room at the edges so the last row and the last column are never under a bar. */
+.cue.hbar>.scrollx{padding-bottom:15px}
+.cue.vbar>.scrollx{padding-right:15px}
+
+/* And a cue that does not depend on the browser drawing a bar at all. Overlay scrollbars
+   - the default on macOS, and on some Chromium builds - stay hidden until you are already
+   scrolling, which is exactly when you no longer need telling. So each scroll region also
+   carries a soft shade on any edge that has content beyond it: four edges, switched
+   independently, drawn in a wrapper OVER the box so that table rows, which have their own
+   background, cannot paint on top of it. The shade goes when you reach that edge, so it
+   always means "more this way" and never decorates a panel that is fully in view. */
+.cue{position:relative;--cl:transparent;--cr:transparent;--cu:transparent;--cd:transparent}
+.cue::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+ border-radius:var(--r-sm);
+ box-shadow:inset 26px 0 18px -20px var(--cl), inset -26px 0 18px -20px var(--cr),
+            inset 0 26px 18px -20px var(--cu), inset 0 -26px 18px -20px var(--cd);
+ transition:box-shadow var(--dur) var(--ease)}
+.cue.l{--cl:var(--shade)}
+.cue.r{--cr:var(--shade)}
+.cue.u{--cu:var(--shade)}
+.cue.d{--cd:var(--shade)}
+.scrollx.tall{max-height:340px}
+/* The three Overall sections the reviewer asked to enlarge, and the timeline. */
+.scrollx.xl{max-height:min(700px,72vh)}
+/* Charts are drawn at a fixed height, so their box only ever needs to grow sideways -
+   but it is still bounded on both axes, and both scrollbars appear when they are needed. */
+.scrollx.fit{max-height:min(620px,70vh)}
+/* Sticky headers in EVERY scroll region, not just the short ones. A month-column
+   heading that scrolls away turns the table into a grid of unlabelled numbers.
+   Three layers, and the order matters: the corner cell has to out-rank both the row
+   header it sits above and the column header it sits beside, or it is overprinted by
+   whichever scrolls under it. */
+.scrollx thead th,.dlg-b thead th{position:sticky;top:0;z-index:3;background:var(--surface)}
+.scrollx thead th::after,.dlg-b thead th::after{content:"";position:absolute;left:0;right:0;
+ bottom:-1px;height:1px;background:var(--hairline)}
+.grid-t th.rh{z-index:2}
+.scrollx .grid-t thead th.rh{z-index:4}
+/* Each card keeps its own height. Stretching the shorter one to match its neighbour
+   fills the page with an empty white rectangle that reads as missing content. */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.two>*{min-width:0}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+
+/* --- tables --------------------------------------------------------------
+   Hairline rules, not a drawn grid. A heavy border round every cell competes
+   with the numbers it is meant to organise; a light rule is enough to keep the
+   eye on a row, and the numbers are what the reader came for. */
+table{border-collapse:collapse;width:100%;font-size:var(--t-md)}
+.grid-t th,.grid-t td{border:1px solid var(--grid);padding:5px 8px;text-align:right;
+ font-variant-numeric:tabular-nums;white-space:nowrap}
+.grid-t thead th{background:var(--surface);color:var(--muted);font-weight:590;
+ font-size:var(--t-xs);text-align:center;letter-spacing:.02em}
+.grid-t th.rh{text-align:left;position:sticky;left:0;background:var(--surface);
+ min-width:240px;max-width:320px;white-space:normal;
+ box-shadow:1px 0 0 var(--grid)}
+.grid-t thead th.rh{background:var(--surface)}
+.grid-t .nm{font-weight:590;margin-right:2px}
+.grid-t th.rh{line-height:1.45;padding-top:7px;padding-bottom:7px}
+.grid-t .sub{display:block;color:var(--muted);font-size:var(--t-xs);font-weight:400;
+ margin-top:1px;font-variant-numeric:tabular-nums}
+.grid-t .role{display:block;color:var(--muted);font-size:var(--t-xs)}
+.grid-t tr.parent{cursor:pointer}
+.grid-t tr.parent:hover th.rh{color:var(--accent)}
+.grid-t tr.child th.rh{padding-left:22px;font-weight:400;color:var(--ink2)}
+.grid-t td.c{color:var(--ink2)}
+.grid-t td.z{color:var(--muted)}
+td.over{background:var(--overbg);color:var(--crit);font-weight:590}
+td.under{background:var(--underbg);color:var(--underink);font-weight:590}
+.grid-t tr.grand th,.grid-t tr.grand td{font-weight:620;border-top:1.5px solid var(--base)}
+/* SCOPED TO THE ROW HEADING, and it has to be. This is the little disclosure
+   triangle in an expandable table row - but `.exp` is also the class on the export
+   MENU in the header, and an unscoped `width:12px` clamped that <details> to 12px.
+   The menu then measured as 12px wide while the 112px button inside it painted
+   outside its own parent AND outside the viewport, so the header's flex algorithm
+   believed everything fitted and never truncated the file name. The page grew a
+   horizontal scrollbar at every width below about 1500px and the Export button was
+   clipped at 1440. The prototype had this scoped correctly; the scope was lost when
+   the rule moved into the production sheet. */
+.rh .exp{display:inline-block;width:12px;color:var(--muted)}
+.data-t th,.data-t td{border-bottom:1px solid var(--grid);border-right:1px solid var(--grid);
+ padding:6px 10px;text-align:left;white-space:nowrap;font-size:var(--t-sm)}
+.data-t th:last-child,.data-t td:last-child{border-right:0}
+.data-t tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--ink) 2%,transparent)}
+.data-t tbody tr:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.data-t thead th{background:var(--surface);color:var(--muted);font-weight:590;
+ font-size:var(--t-xs);letter-spacing:.02em;border-bottom:1px solid var(--hairline)}
+.data-t tr.sel td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.data-t tr{cursor:pointer}
+.data-t td[contenteditable="true"]:focus{outline:2px solid var(--accent);outline-offset:-2px;
+ border-radius:3px;background:var(--surface)}
+.data-t td.edited{background:color-mix(in srgb,var(--warn) 20%,transparent)}
+.data-t td.num{text-align:right;font-variant-numeric:tabular-nums}
+.data-t td.muted{color:var(--muted)}
+.data-t td.vals{white-space:normal;color:var(--ink2)}
+td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
+
+/* --- pills ---------------------------------------------------------------- */
+.ty{font-size:var(--t-xs);border-radius:100px;padding:2px 7px;margin-left:6px;
+ white-space:nowrap;font-weight:540}
+.ty.nd{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.ty.bs{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.ty.ot{background:var(--fill);color:var(--ink2)}
+/* Pills must never break across lines - "Phase" on one line and "4" on the next reads
+   as two labels and leaves every row a different height. */
+.ph{font-size:var(--t-xs);font-weight:620;margin-left:5px;white-space:nowrap}
+.ph1{color:#9a5b00}.ph2{color:#0d6b4a}.ph3{color:#0040dd}.ph4{color:#7a3b8f}
+@media (prefers-color-scheme:dark){.ph1{color:#ffb340}.ph2{color:#30d158}
+ .ph3{color:#409cff}.ph4{color:#da8fff}}
+
+/* --- charts --------------------------------------------------------------- */
+.chart{width:100%;height:auto;display:block}
+.grid{stroke:var(--grid);stroke-width:1}
+.base{stroke:var(--base);stroke-width:1}
+.yrdiv{stroke:var(--base);stroke-width:1;stroke-dasharray:2 3;opacity:.7}
+/* Chart text carries values, not decoration, so it is sized and weighted to be read.
+   The halo is what lets a label sit over a bar without becoming unreadable. */
+.ax{fill:var(--ink2);font-size:11.5px}
+.ax.yr{font-size:11px;fill:var(--muted)}
+.bar{fill:var(--s1)}.bar.over{fill:var(--crit)}.bar.under{fill:var(--warn)}
+.band{cursor:pointer}.band:hover{stroke:var(--ink);stroke-width:1.4}
+/* Line charts. The stroke is thin so twelve of them can share one axis; the hit strip
+   under it is not, because a 2px line cannot be hovered deliberately. */
+/* The visible stroke is not the hit target - it sits ON TOP of the strips and would
+   swallow the pointer, and it carries no tip of its own to fall back to. */
+.ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;pointer-events:none}
+.lnhit{fill:none;stroke:transparent;stroke-width:14;cursor:pointer;
+ pointer-events:stroke}   /* a transparent stroke is not a PAINTED one, so say it explicitly */
+.lnhit:hover + .ln{stroke-width:3.5}
+.lndot{pointer-events:none}
+.legend .sw.ln{width:15px;height:3px;border-radius:2px;vertical-align:4px}
+/* Drawn BEHIND a stack, because being over the ceiling is a property of the month's
+   total and not of any one project in it. */
+.mmark{fill:none;stroke-width:2}
+.mmark.over{stroke:var(--crit)}.mmark.under{stroke:var(--warn)}
+/* A segment whose OWN value breaches a threshold, outlined in place - the flag must not
+   rest on fill colour alone, which here already means "which person" (D-04). */
+.band.brOver{stroke:var(--crit);stroke-width:2}
+.band.brUnder{stroke:var(--warn);stroke-width:2}
+.bandlab{fill:#fff;font-size:10.5px;font-weight:620;pointer-events:none;
+ paint-order:stroke;stroke:rgba(0,0,0,.3);stroke-width:2.4px}
+.bandsub{fill:#fff;font-size:9.5px;font-weight:560;pointer-events:none;opacity:.92;
+ paint-order:stroke;stroke:rgba(0,0,0,.3);stroke-width:2.2px;font-variant-numeric:tabular-nums}
+.rowlab{fill:var(--ink);font-size:11.5px;font-weight:590}
+.rowsub{fill:var(--ink2);font-size:10.5px;font-variant-numeric:tabular-nums}
+.ms{fill:var(--ink);stroke:var(--surface);stroke-width:1.2;cursor:pointer}
+.ms.key{fill:var(--crit);stroke-width:1.4}
+.halo{stroke:var(--surface);stroke-width:4;opacity:.9}
+.th-over{stroke:var(--crit);stroke-width:1.5;stroke-dasharray:5 3}
+.th-under{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:5 3}
+.th-own{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:2 3}
+.thlab{font-size:12px;font-weight:650;paint-order:stroke;
+ stroke:var(--surface);stroke-width:3.5px;stroke-linejoin:round}
+.thlab.th-over{fill:var(--crit)}.thlab.th-under{fill:var(--underink)}
+.thlab.th-own{fill:var(--accent)}
+.barlab{font-size:var(--t-sm);font-weight:650;paint-order:stroke;
+ stroke:var(--surface);stroke-width:3.5px;stroke-linejoin:round}
+.barlab.over{fill:var(--crit)}.barlab.under{fill:var(--underink)}
+.legend{list-style:none;display:flex;flex-wrap:wrap;gap:7px 18px;margin:12px 0 0;padding:0;
+ font-size:var(--t-sm);color:var(--ink2)}
+.legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block;
+ margin-right:7px;vertical-align:-1px}
+.legend .sw.tri{width:0;height:0;border-radius:0;border-left:6px solid transparent;
+ border-right:6px solid transparent;border-top:9px solid var(--ink);background:none}
+.legend .sw.tri.key{border-top-color:var(--crit);border-left-width:7px;
+ border-right-width:7px;border-top-width:11px}
+.legend .hint{color:var(--muted)}
+
+/* --- pop-ups: floating material ------------------------------------------ */
+.tip{position:fixed;z-index:50;max-width:340px;pointer-events:none;
+ background:color-mix(in srgb,var(--raised) 92%,transparent);
+ -webkit-backdrop-filter:saturate(180%) blur(20px);
+ backdrop-filter:saturate(180%) blur(20px);
+ color:var(--ink);border-radius:var(--r-md);padding:10px 12px;
+ font-size:var(--t-sm);line-height:1.5;box-shadow:var(--shadow-lift)}
+.tip b{font-weight:620}.tip .tr{color:var(--muted);font-size:var(--t-xs)}
+/* Separates the two halves of a pop-up that answers two questions at once - what this
+   project drew this month, and what the person drew in total. */
+.tip hr{border:0;border-top:1px solid var(--hairline);margin:7px 0 6px}
+/* Type-ahead. Anchored to the cell, filtered as you type, arrow keys and Enter to
+   choose. It exists because the valid vocabulary lives in the workbook, and nobody
+   should have to remember it or open the Lists sheet to check. */
+/* --- the calendar on a date cell ----------------------------------------- */
+/* --- the column filter --------------------------------------------------
+   The funnel in a heading. Faint until the column is actually narrowed, because a row
+   of seven dark markers reads as a warning about the data rather than as a control -
+   and then unmistakable once one is on, since a filter left running is the thing most
+   likely to be mistaken for missing data. */
+.data-t thead th .fbtn{margin-left:5px;padding:0 3px;border:0;background:none;
+ color:var(--muted);font-size:9px;line-height:1;cursor:pointer;border-radius:3px;
+ opacity:.55;vertical-align:middle}
+.data-t thead th .fbtn:hover{opacity:1;background:var(--fill);color:var(--ink)}
+.data-t thead th .fbtn.on{opacity:1;color:#fff;background:var(--accent);
+ padding:1px 4px;font-weight:700}
+.fnote{margin:0 0 6px}
+.fnote .btn.tiny{margin-left:6px}
+
+.colf{position:fixed;z-index:62;width:250px;background:var(--raised);
+ border:1px solid var(--hairline);border-radius:var(--r-md);
+ box-shadow:var(--shadow-lift);padding:8px;font-size:var(--t-md)}
+.colf-h{display:flex;align-items:baseline;gap:8px;padding:0 2px 6px}
+.colf-h strong{font-weight:620;color:var(--ink);overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap}
+.colf-h .tr{margin-left:auto;color:var(--muted);font-size:var(--t-xs);white-space:nowrap}
+.colf-q{width:100%;font:inherit;font-size:var(--t-md);padding:5px 8px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}
+.colf-all{display:flex;align-items:center;gap:7px;padding:6px 4px 5px;margin-top:5px;
+ border-bottom:1px solid var(--hairline);cursor:pointer;font-weight:560;min-height:26px}
+.colf-list{max-height:230px;overflow:auto;margin:4px 0;
+ scrollbar-color:var(--base) transparent}
+.colf-list label{display:flex;align-items:center;gap:7px;padding:4px 4px;
+ border-radius:var(--r-xs);cursor:pointer;min-height:26px}
+.colf-list label:hover{background:var(--fill)}
+.colf-list label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.colf-list i{color:var(--muted)}
+.colf-f{display:flex;gap:6px;justify-content:flex-end;padding-top:6px;
+ border-top:1px solid var(--hairline)}
+
+/* Sized so a month never reflows: seven columns of a fixed width, and the header row
+   the same width whatever the month is called. It sits beside the cell, not over it -
+   the caret stays where it was and typing goes on working. */
+.cal{position:fixed;z-index:60;background:var(--raised);border:1px solid var(--hairline);
+ border-radius:var(--r-md);box-shadow:var(--shadow-lift);padding:8px;font-size:var(--t-md);
+ user-select:none}
+.calhead{display:flex;align-items:center;gap:2px;padding:0 2px 6px}
+.calhead .cmon{flex:1;text-align:center;font-weight:620;color:var(--ink);
+ letter-spacing:-.01em}
+.cnav{border:0;background:none;color:var(--ink2);cursor:pointer;font-family:inherit;
+ font-size:var(--t-xl);line-height:1;padding:3px 6px;border-radius:var(--r-sm)}
+.cnav:hover{background:var(--fill);color:var(--ink)}
+.calgrid{display:grid;grid-template-columns:repeat(7,30px);gap:2px}
+.calgrid .dow{text-align:center;font-size:var(--t-xs);color:var(--muted);padding:2px 0 4px;
+ font-weight:600}
+.calgrid .d{height:26px;border:0;border-radius:var(--r-sm);background:none;cursor:pointer;
+ font-family:inherit;font-size:var(--t-md);color:var(--ink);padding:0}
+.calgrid .d.off{cursor:default}
+.calgrid button.d:hover{background:var(--fill)}
+.calgrid .d.today{box-shadow:inset 0 0 0 1px var(--base)}
+.calgrid .d.on{background:var(--accent);color:#fff;font-weight:620}
+.calfoot{display:flex;align-items:center;gap:6px;padding-top:8px;margin-top:6px;
+ border-top:1px solid var(--hairline)}
+.calfoot .hint{margin-left:auto;color:var(--muted);font-size:var(--t-xs)}
+
+.sugg{position:fixed;z-index:60;min-width:200px;max-width:340px;max-height:240px;
+ overflow:auto;background:color-mix(in srgb,var(--raised) 94%,transparent);
+ -webkit-backdrop-filter:saturate(180%) blur(20px);
+ backdrop-filter:saturate(180%) blur(20px);
+ border-radius:var(--r-md);padding:5px;box-shadow:var(--shadow-lift);font-size:var(--t-md);
+ scrollbar-width:thin}
+.sugg .s{padding:5px 9px;border-radius:var(--r-xs);cursor:pointer;white-space:nowrap;
+ overflow:hidden;text-overflow:ellipsis}
+.sugg .s[aria-selected="true"],.sugg .s:hover{background:var(--accent);color:#fff}
+.sugg .s mark{background:none;color:var(--accent);font-weight:650}
+.sugg .s[aria-selected="true"] mark,.sugg .s:hover mark{color:#fff}
+.sugg .hint{padding:6px 9px 2px;color:var(--muted);font-size:var(--t-xs);
+ border-top:1px solid var(--hairline);margin-top:4px}
+
+/* --- column badges -------------------------------------------------------- */
+.drv{font-weight:500;font-size:var(--t-xs);color:var(--muted);background:var(--fill);
+ border-radius:100px;padding:1px 6px;margin-left:5px}
+td.drvcell{font-style:italic}
+/* The selected assignment, restated above the table it governs, so the overrides are
+   never read without knowing which assignment they belong to. */
+.asgline{margin:0 0 8px;padding:8px 11px;border-radius:var(--r-sm);font-size:var(--t-sm);
+ line-height:1.5;background:color-mix(in srgb,var(--accent) 8%,transparent);
+ color:var(--ink)}
+.asgline.muted{background:var(--fill);color:var(--muted)}
+/* How a figure was arrived at. A badge rather than a word in a sentence: the reader's
+   question at the top of this panel is which of the two they are looking at, and a
+   stated figure and a calculated one are indistinguishable once they are on the page. */
+.est{font-weight:640;font-size:var(--t-xs);letter-spacing:.04em;border-radius:100px;
+ padding:2px 9px;margin-left:auto;white-space:nowrap}
+.est.aut{color:var(--muted);background:var(--fill)}
+.est.man{color:#fff;background:var(--warn)}
+.phead .est + .btn,.phead .est ~ .scope{margin-left:6px}
+.note.bad{color:var(--crit)}
+.estlist{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:var(--t-sm);
+ line-height:1.9}
+.estlist code{color:var(--ink2)}
+.estlist .btn{margin-left:6px}
+/* An entry column reads the opposite way round to a lookup - it is typed into, and it
+   drives another column - so it is marked in the accent colour, not the muted one. */
+.drv.ent{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.tip.pinned{pointer-events:auto;box-shadow:var(--shadow-lift),0 0 0 1px var(--accent)}
+.tip .tipclose{display:block;margin-top:7px;padding-top:6px;
+ border-top:1px solid var(--hairline);color:var(--muted);font-size:var(--t-xs)}
+/* Anything carrying an explanation says so, rather than hiding it behind a hover
+   nobody discovers. */
+[data-tip]:not(button):not(rect):not(polygon){cursor:help}
+.hasinfo{text-decoration:underline dotted var(--muted);text-underline-offset:3px;
+ text-decoration-thickness:1px}
+.tile[data-tip]:hover,.hasinfo:hover{color:var(--accent)}
+
+/* --- the empty state ------------------------------------------------------ */
+.drop{border:1.5px dashed var(--base);border-radius:var(--r-xl);padding:56px var(--sp-5);
+ text-align:center;color:var(--ink2);background:var(--surface);box-shadow:var(--shadow)}
+.drop.on{border-color:var(--accent);border-style:solid;
+ background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.drop h2{font-size:var(--t-2xl);margin-bottom:8px;letter-spacing:-.015em}
+/* Two ways in, side by side and given equal weight: one is not a fallback for the
+   other. The dashed border stays on the file card because it is also a drop target;
+   the blank card is solid, because there is nothing to drop on it. */
+#empty .lead{max-width:760px;margin:4px auto 20px;text-align:center;color:var(--ink2);
+ font-size:var(--t-lg);line-height:1.55}
+.choose{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch}
+@media (max-width:860px){.choose{grid-template-columns:1fr}}
+.choose .drop{padding:34px 26px 28px;display:flex;flex-direction:column;
+ align-items:center;justify-content:flex-start}
+.drop.start{border-style:solid;border-color:var(--grid)}
+.drop .tag{display:inline-block;font-size:var(--t-xs);font-weight:640;letter-spacing:.06em;
+ text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.choose .btn{margin-top:6px}
+.choose .note{margin-top:auto;padding-top:14px}
+
+/* --- the findings dialog --------------------------------------------------- */
+dialog{border:0;border-radius:var(--r-xl);background:var(--surface);
+ color:var(--ink);max-width:900px;width:92vw;padding:0;box-shadow:var(--shadow-lift)}
+dialog::backdrop{background:rgba(0,0,0,.35);
+ -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.dlg-h{display:flex;align-items:center;gap:10px;padding:14px 18px;
+ border-bottom:1px solid var(--hairline)}
+.dlg-b{padding:14px 18px;max-height:64vh;overflow:auto}
+/* The dialog's own scroll region gets the same visible bar as every other one - a change
+   log is exactly the kind of list that runs off the bottom. */
+.dlg-b{scrollbar-color:var(--base) transparent}
+.dlg-b::-webkit-scrollbar{width:12px;height:12px}
+.dlg-b::-webkit-scrollbar-track{background:var(--fill);border-radius:8px}
+.dlg-b::-webkit-scrollbar-thumb{background:var(--base);border-radius:8px;
+ border:3px solid transparent;background-clip:padding-box}
+.dlg-b::-webkit-scrollbar-thumb:hover{background:var(--ink2)}
+/* Full screen, for a log long enough or wide enough that the ordinary box fights it. */
+dialog.big{max-width:none;width:97vw}
+dialog.big .dlg-b{max-height:84vh}
+/* A change log reads as before -> after, so the two are set apart from each other and
+   from everything else: what it WAS is quiet and struck through, what it IS now is not. */
+.chg td{vertical-align:top}
+.chg .was{color:var(--muted);text-decoration:line-through}
+.chg .now{color:var(--ink);font-weight:560}
+.chg .empty{color:var(--muted);font-style:italic;text-decoration:none}
+.chg .when{color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.chg tbody tr:first-child td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.sev{font-size:var(--t-xs);font-weight:650;border-radius:var(--r-xs);padding:2px 7px;
+ text-transform:uppercase;letter-spacing:.04em}
+.sev.fatal,.sev.error{background:var(--overbg);color:var(--crit)}
+.sev.warning{background:var(--underbg);color:var(--underink)}
+.sev.information{background:var(--fill);color:var(--ink2)}
+/* An error the user may keep, having been told: amber rather than red, because
+   red says 'this cannot stand' and this one can. */
+.sev.cond{background:var(--underbg);color:var(--underink)}
+/* The class beside the severity in the findings report. */
+.cls{font-size:var(--t-xs);font-weight:600;border-radius:var(--r-xs);padding:2px 7px;
+ white-space:nowrap;background:var(--fill);color:var(--ink2)}
+.cls.must{background:var(--overbg);color:var(--crit)}
+.cls.conditional{background:var(--underbg);color:var(--underink)}
+.cls.incomplete{background:var(--fill);color:var(--ink2)}
+
+/* The log date range, inside the export menu. A row of controls rather than a menu
+   item, because it does not DO anything on click - it narrows what the two items
+   below it will hand over. */
+.expdates{display:flex;gap:var(--sp-2);align-items:flex-end;padding:6px 11px 2px;
+ flex-wrap:wrap}
+.expdates .ctl{flex:0 0 auto}
+.expdates input{font:inherit;font-size:var(--t-md);padding:4px 7px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}
+.expdates .hint{flex:1 1 100%;color:var(--muted);font-size:var(--t-xs);padding-top:2px}
+.msp hr{border:0;border-top:1px solid var(--hairline);margin:6px 4px}
+/* An export with nothing to hand over says so and refuses, rather than delivering a
+   file with a header row and no content - which looks like an answer. */
+.expitem.off{opacity:.42;cursor:not-allowed}
+.expitem.off:hover{background:none}
+
+/* The name request. Shown with show() rather than showModal(), so it never blocks the
+   edit that triggered it - which means it needs its own place to sit, since a non-modal
+   <dialog> otherwise lands in the document flow wherever it was declared. Bottom right,
+   out of the way of the tables and above the sticky band. */
+#whoami[open]{position:fixed;inset:auto 18px 18px auto;margin:0;max-width:390px;
+ z-index:120;border:1px solid var(--hairline);border-radius:var(--r-lg);
+ background:var(--raised);color:var(--ink);padding:0;box-shadow:var(--shadow-lift)}
+#whoami .dlg-b{max-height:none}
+#whoami .ctl input{width:100%;font:inherit;font-size:var(--t-md);padding:6px 9px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}
+
+/* The name request, in the edit bar. A row of small controls rather than a panel: it
+   shares the bar with the guide text and the buttons, and wraps with them. */
+#whobox{display:inline-flex;align-items:center;gap:6px}
+#whobox label{color:var(--muted);font-size:var(--t-xs);font-weight:540}
+#whobox input{font:inherit;font-size:var(--t-md);padding:3px 8px;min-height:24px;
+ border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
+ color:var(--ink)}

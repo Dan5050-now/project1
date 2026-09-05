@@ -1,0 +1,126 @@
+/* ===================== PM_APP window chrome (Python shell) =================
+   The window, not the product. Everything below this line styles the frame
+   around the application; nothing in it decides a number.
+
+   There is no Electron menu bar here, so the menu is drawn in the page - the
+   one visible difference from the desktop build, and the reason this file is
+   longer than the Electron shell's chrome. */
+
+#pm-title{position:sticky;top:0;z-index:70;display:flex;gap:14px;align-items:center;
+  padding:7px 14px;font-size:12.5px;color:var(--ink2);background:var(--fill);
+  border-bottom:1px solid var(--grid)}
+#pm-title b{font-weight:600;color:var(--ink)}
+
+/* ---- the menu ---------------------------------------------------------- */
+.pm-menu{position:relative}
+.pm-menu>button{font:inherit;font-size:12.5px;color:var(--ink2);background:none;
+  border:0;padding:3px 9px;border-radius:6px;cursor:pointer}
+.pm-menu>button:hover,.pm-menu.open>button{background:var(--surface);color:var(--ink)}
+.pm-menu>div{display:none;position:absolute;left:0;top:100%;min-width:250px;z-index:80;
+  background:var(--surface);border:1px solid var(--grid);border-radius:10px;
+  box-shadow:0 12px 34px rgba(0,0,0,.22);padding:5px;margin-top:4px}
+.pm-menu.open>div{display:block}
+.pm-menu a{display:flex;justify-content:space-between;gap:20px;padding:6px 10px;
+  font-size:12.5px;color:var(--ink);border-radius:6px;cursor:pointer;text-decoration:none}
+.pm-menu a:hover{background:var(--fill)}
+.pm-menu a[aria-disabled="true"]{color:var(--ink3);pointer-events:none}
+.pm-menu a i{font-style:normal;color:var(--ink3);font-size:11.5px}
+.pm-menu hr{border:0;border-top:1px solid var(--grid);margin:5px 2px}
+
+/* ---- the status strip -------------------------------------------------- */
+/* Stacked under the menu bar, at whatever height the menu bar actually is. It was
+   pinned at a hardcoded 34px, which is right until the title bar wraps on a narrow
+   window; --pm-title-h is measured, and the literal is only the pre-measurement
+   fallback for the first frame. */
+#pm-strip{position:sticky;top:var(--pm-title-h,34px);z-index:65;display:flex;gap:8px;
+  align-items:center;flex-wrap:wrap;padding:8px 14px;background:var(--surface);
+  border-bottom:1px solid var(--grid)}
+
+/* ---- the page underneath ------------------------------------------------
+   THE ONE PLACE THIS SHELL HAS TO REACH INTO THE PAGE.
+
+   The web application has its own sticky band - the edit bar and the four tabs - and
+   it pins itself to top:0, which is correct in a browser where nothing is above it.
+   Here two bars ARE above it, and they carry a higher z-index, so scrolling slid the
+   tabs and the Save button underneath the menu and left them there: the page's own
+   controls hidden behind the window's.
+
+   Raising the page's z-index instead would be the wrong repair - then the tabs would
+   cover the File menu, and the menu is the thing that must stay reachable. The band
+   belongs BELOW the chrome, so that is where it is put, at the chrome's measured
+   height rather than at a guess (see fitChrome() in the shell script: the strip wraps,
+   so the height is not a constant).
+
+   scroll-padding-top is the same fact told to the browser: without it, jumping to an
+   anchor or tabbing to something off-screen scrolls it to the top of the viewport,
+   which is behind the chrome. */
+#stickybar{top:var(--pm-chrome,71px)}
+html{scroll-padding-top:calc(var(--pm-chrome,71px) + 8px)}
+.pm-pill{font-size:11.5px;padding:3px 10px;border-radius:999px;background:var(--fill);
+  color:var(--ink2);white-space:nowrap}
+.pm-pill.hold{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.pm-pill.read{background:var(--underbg);color:var(--underink)}
+.pm-pill.file{font-weight:600;color:var(--ink)}
+.pm-grow{flex:1}
+
+/* ---- the file browser and the sign-in box ------------------------------ */
+.pm-back{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.42);
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.pm-box{background:var(--surface);border:1px solid var(--grid);border-radius:14px;
+  box-shadow:0 24px 70px rgba(0,0,0,.35);width:min(760px,100%);
+  max-height:min(680px,90vh);display:flex;flex-direction:column;overflow:hidden}
+.pm-box h3{margin:0;padding:14px 18px;font-size:14.5px;border-bottom:1px solid var(--grid)}
+.pm-box .body{padding:14px 18px;overflow:auto}
+.pm-box .foot{display:flex;gap:9px;justify-content:flex-end;align-items:center;
+  padding:12px 18px;border-top:1px solid var(--grid);background:var(--fill)}
+.pm-box .foot .pm-grow{flex:1}
+.pm-crumb{display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+  padding:10px 18px;border-bottom:1px solid var(--grid);font-size:12px}
+.pm-crumb button{font:inherit;font-size:12px;background:var(--fill);border:1px solid var(--grid);
+  border-radius:999px;padding:3px 10px;cursor:pointer;color:var(--ink2)}
+.pm-crumb button:hover{color:var(--ink)}
+.pm-list{list-style:none;margin:0;padding:0}
+.pm-list li{display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:8px;
+  cursor:pointer;font-size:13px}
+.pm-list li:hover{background:var(--fill)}
+.pm-list li.sel{background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.pm-list li .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm-list li .m{color:var(--ink3);font-size:11.5px}
+.pm-list li .i{width:18px;text-align:center;color:var(--ink3)}
+.pm-path{width:100%;font:inherit;font-size:12.5px;padding:7px 10px;border-radius:8px;
+  border:1px solid var(--grid);background:var(--bg);color:var(--ink)}
+.pm-note{font-size:12px;color:var(--ink3);margin:10px 0 0}
+
+/* D-N02: the menu replaces these. D-N09: the window follows the system.
+   NR-IMP-09: and the picker is gone entirely - see bridge.js. */
+/* The whole export MENU goes, not just its items: this shell exports through the
+   File menu, where 'to a folder' also lives. Hiding the summary alone would leave
+   an empty <details> stub in the header. */
+#loadBtn,#loadBtn2,#expMenu,#themeBtn,#picker{display:none}
+
+/* ---- the import difference report -------------------------------------- */
+.pm-diff{border:1px solid var(--grid);border-radius:10px;margin-bottom:9px;
+  background:var(--bg)}
+.pm-diff>summary{display:flex;gap:10px;align-items:center;padding:9px 12px;
+  cursor:pointer;font-size:13px;list-style:none}
+.pm-diff>summary::-webkit-details-marker{display:none}
+.pm-diff>summary::after{content:"▸";color:var(--ink3);margin-left:auto;font-size:12px}
+.pm-diff[open]>summary::after{content:"▾"}
+.pm-diff>summary:hover{background:var(--fill)}
+.pm-diff .pm-sub{color:var(--ink3);font-size:12px}
+.pm-tick{display:flex;align-items:center;padding:2px 4px;cursor:pointer}
+.pm-tick input{width:15px;height:15px;cursor:pointer}
+.pm-diff-body{padding:2px 12px 10px 40px}
+.pm-diff-list h4{margin:8px 0 4px;font-size:12px;font-weight:600;color:var(--ink2)}
+.pm-diff-list h4 i{font-style:normal;color:var(--ink3);font-weight:400}
+.pm-diff-list ul{list-style:none;margin:0;padding:0}
+.pm-diff-list li{display:flex;gap:12px;padding:3px 8px;border-radius:6px;font-size:12px;
+  border-left:3px solid transparent}
+.pm-diff-list li:nth-child(odd){background:var(--fill)}
+.pm-diff-list li .n{min-width:220px;color:var(--ink)}
+.pm-diff-list li .d{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.pm-diff-list li.more{color:var(--ink3);font-style:italic}
+.pm-diff-list.add li{border-left-color:var(--good)}
+.pm-diff-list.chg li{border-left-color:var(--accent)}
+.pm-diff-list.keep li{border-left-color:var(--grid);color:var(--ink3)}

@@ -1,0 +1,219 @@
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Project Resource Assignment Program</h1>
+  <span class="vers" id="vers"></span>
+  <span class="file" id="fileline">no workbook loaded</span>
+  <input type="file" id="picker" accept=".xlsx,.json" hidden>
+  <button class="btn" id="loadBtn">Load workbook</button>
+  <!-- One menu, because the two exports answer different questions and picking between
+       them is the decision worth making. Built on <details> like the filter drop-downs,
+       so open, close, Escape and keyboard focus all come for free. -->
+  <details class="ms exp off" id="expMenu">
+    <summary class="btn primary" id="exportBtn" aria-disabled="true">Export</summary>
+    <div class="msp">
+      <button class="expitem" id="exportBtn2">Source data <b>.xlsx</b>
+        <i>The plan itself. Loads straight back into this application — use it to carry
+           on working, or to hand the plan to somebody else.</i></button>
+      <button class="expitem" id="exportJsonBtn">Source data <b>.prap.json</b>
+        <i>The same plan as plain text, for another program or an AI agent to read.
+           Also loads straight back.</i></button>
+      <button class="expitem" id="exportCalcBtn">Calculated monthly FTE <b>.xlsx</b>
+        <i>The figures, not the plan — every project-month and person-month in view,
+           with the working behind each one. For a report or a spreadsheet.
+           <b>Cannot be imported back.</b></i></button>
+      <hr>
+      <!-- The record of the WORK, as opposed to the plan or the figures. Narrowed by
+           date rather than by the page's filters, because "what happened in March" is
+           the question a log is read to answer. -->
+      <div class="expdates">
+        <div class="ctl"><label for="aFrom">Log from</label>
+          <input id="aFrom" size="9" placeholder="YYYY-MM-DD"></div>
+        <div class="ctl"><label for="aTo">to</label>
+          <input id="aTo" size="9" placeholder="YYYY-MM-DD"></div>
+        <span class="hint" id="aCount"></span>
+      </div>
+      <button class="expitem" id="exportAuditBtn">Change log <b>.csv</b>
+        <i>Every saved change: when in UTC, who, which record, which column, and the
+           value before and after.</i></button>
+      <button class="expitem" id="exportEventsBtn">Errors and warnings <b>.csv</b>
+        <i>What the application reported at each save, and which of them were knowingly
+           kept.</i></button>
+    </div>
+  </details>
+  <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
+</header>
+
+<details id="prov">
+  <summary id="provSum"></summary>
+  <div id="provBody"></div>
+</details>
+
+<!-- Announced, because it is the only place a load reports what happened, and a
+     screen-reader user has nothing else to notice it by. Polite, not assertive: it
+     should not interrupt whatever is being read at the time. -->
+<div id="banner" aria-live="polite"></div>
+<div class="panel" id="filterbar" hidden>
+  <h2>Horizon and filters <span class="scope">applies to every tab</span></h2>
+  <p class="cap">One setting drives the whole page — the charts, both Overall tables and
+    the source-data tabs.</p>
+  <div class="controls">
+    <div class="ctl"><label for="fFrom">From</label><input id="fFrom" size="8" inputmode="numeric" placeholder="YYYY-MM"></div>
+    <div class="ctl"><label for="fTo">To</label><input id="fTo" size="8" inputmode="numeric" placeholder="YYYY-MM"></div>
+    <div class="ctl"><span class="lbl" aria-hidden="true">&nbsp;</span><button class="btn" id="fAll">Expand to all projects</button></div>
+    <div class="ctl"><span class="lbl" id="lbl-fType">Project type</span>
+      <details class="ms" id="fType"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fType">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fPhase">Clinical phase</span>
+      <details class="ms" id="fPhase"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fPhase">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fOut">Work scope</span>
+      <details class="ms" id="fOut"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fOut">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fProj">Project</span>
+      <details class="ms" id="fProj"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fProj">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fPers">Person</span>
+      <details class="ms" id="fPers"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fPers">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fRole">Role</span>
+      <details class="ms" id="fRole"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fRole">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fDept">Department</span>
+      <details class="ms" id="fDept"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fDept">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" aria-hidden="true">&nbsp;</span><button class="btn reset" id="fReset">Reset filters</button></div>
+  </div>
+</div>
+
+<!-- One sticky band, not two bars that each guess where the other ends. The edit bar
+     and the tabs travel together, so there is no seam between them for the page to show
+     through and nothing depends on the edit bar being exactly 60px tall - it wraps on a
+     narrow window and its guide text changes length as you work. -->
+<div id="stickybar">
+<div id="editbar" hidden>
+  <span class="guide" id="guide"></span>
+  <span id="editstate"></span>
+  <!-- Who is making the changes. IN THE BAR, not in a dialog: this appears exactly when
+       there are unsaved changes, which is exactly when it is relevant, and it covers
+       nothing. A modal would block the cell being typed into; a floating card would sit
+       on top of the table. A control in a bar that is already there does neither. -->
+  <span id="whobox" hidden><label for="whoName">Logged as</label>
+    <input id="whoName" size="16" placeholder="your name" autocomplete="name">
+    <button class="btn tiny primary" id="whoOk">Save name</button>
+    <button class="btn tiny" id="whoSkip">Not now</button></span>
+  <button class="btn" id="chgBtn" disabled
+    title="Every change waiting to be saved: what changed, where, and what it was before"
+    >Show details</button>
+  <button class="btn primary" id="saveBtn" disabled>Save</button>
+  <button class="btn" id="discardBtn" disabled>Leave without change</button>
+</div>
+
+<nav role="tablist" id="tabs" hidden>
+  <button role="tab" aria-selected="true" data-tab="t-overall">Overall</button>
+  <button role="tab" aria-selected="false" data-tab="t-proj">Source data (project)</button>
+  <button role="tab" aria-selected="false" data-tab="t-pers">Source data (person)</button>
+  <button role="tab" aria-selected="false" data-tab="t-gen">General assumptions</button>
+</nav>
+</div>
+
+<div id="empty">
+  <p class="lead">Two ways in. Either works, and you can move between them — a plan
+    started here exports to the same workbook, and a workbook loaded here can be edited
+    the same way.</p>
+  <div class="choose">
+    <div class="drop" id="drop">
+      <span class="tag">From a file</span>
+      <h2>Load a source workbook</h2>
+      <p class="cap">Choose a <code>.xlsx</code> workbook or a <code>.prap.json</code>
+        interchange file, or drop one here. Nothing leaves this machine — the file is read
+        in the browser and never uploaded.</p>
+      <button class="btn primary" id="loadBtn2">Choose file</button>
+      <p class="note">Need the layout? Build one with
+        <code>python tools/build_source_workbook.py</code>, or start from
+        <code>PRAP_SourceData_Template_v1.12.xlsx</code>.</p>
+    </div>
+    <div class="drop start" id="startCard">
+      <span class="tag">From nothing</span>
+      <h2>Start a new plan here</h2>
+      <p class="cap">Opens every tab empty, ready to type into. The standard value lists
+        and settings are already in place, so each field offers its own choices; the
+        projects and people are yours to enter. Export to <code>.xlsx</code> when you are
+        ready — the plan is a workbook like any other.</p>
+      <button class="btn primary" id="startBtn">Start blank</button>
+      <p class="note">Period weights and role factors start at a placeholder
+        <strong>1.00</strong>. Set them on <strong>General assumptions</strong> before
+        reading the figures as real.</p>
+    </div>
+  </div>
+</div>
+
+<section class="tab" id="t-overall" hidden></section>
+<section class="tab" id="t-proj" hidden></section>
+<section class="tab" id="t-pers" hidden></section>
+<section class="tab" id="t-gen" hidden></section>
+</div>
+
+<div id="tip" class="tip" hidden></div>
+<div id="sugg" class="sugg" hidden role="listbox"></div>
+<!-- The calendar for date columns. Anchored to its cell like the value list, and
+     like it an OFFER rather than a gate: the cell stays typeable throughout. -->
+<div id="cal" class="cal" hidden role="dialog" aria-label="Choose a date"></div>
+<!-- The column filter panel. A singleton on the body, anchored to whichever heading
+     opened it, for the same reason the calendar and the value list are: the tables
+     scroll inside overflow:auto, and a panel drawn inside one would be clipped by it. -->
+<div id="colf" class="colf" hidden role="dialog" aria-label="Filter this column"></div>
+
+<dialog id="report">
+  <div class="dlg-h"><strong>Validation findings</strong>
+    <button class="btn" style="margin-left:auto" id="repClose">Close</button></div>
+  <div class="dlg-b" id="repBody"></div>
+</dialog>
+
+<!-- Save with conditional errors standing. Not a warning dressed as a question: the
+     figures really are short of something, the rows really are worth keeping, and which
+     of the two matters more today is not the application's call to make. -->
+<dialog id="confirm">
+  <div class="dlg-h"><strong>Save with these unresolved?</strong>
+    <button class="btn" style="margin-left:auto" id="cfNo">Go back</button>
+    <button class="btn primary" id="cfYes">Save anyway</button></div>
+  <div class="dlg-b" id="cfBody"></div>
+</dialog>
+
+<!-- Replacing the plan that is open. The browser already refuses to close the tab on
+     unsaved work (beforeunload, REQ-IMP-08); this asks the same question of the
+     application's own Load and New-plan buttons, which used to discard it in silence. -->
+<dialog id="replace">
+  <div class="dlg-h"><strong id="rpTitle">Discard the work in this plan?</strong>
+    <button class="btn" style="margin-left:auto" id="rpNo">Keep it</button>
+    <button class="btn primary danger" id="rpYes">Discard and continue</button></div>
+  <div class="dlg-b" id="rpBody"></div>
+</dialog>
+
+<!-- Changing the way a figure is arrived at. Asked every time, in both directions:
+     switching to manual hands a set of months to the user permanently, and switching
+     back deletes what they wrote. Neither is something to discover afterwards. -->
+<dialog id="estchg">
+  <div class="dlg-h"><strong id="estTitle">Change how this is estimated?</strong>
+    <button class="btn" style="margin-left:auto" id="estNo">Go back</button>
+    <button class="btn primary" id="estYes">Switch</button></div>
+  <div class="dlg-b" id="estBody"></div>
+</dialog>
+
+<!-- What an import changed about how the plan is READ, as opposed to what is in it. -->
+<dialog id="cfgchg">
+  <div class="dlg-h"><strong>Settings this file brought with it</strong>
+    <button class="btn" style="margin-left:auto" id="cfgClose">Close</button></div>
+  <div class="dlg-b" id="cfgBody"></div>
+</dialog>
+
+<dialog id="changes">
+  <div class="dlg-h"><strong id="chgTitle">Unsaved changes</strong>
+    <button class="btn" style="margin-left:auto" id="chgBig">Full screen</button>
+    <button class="btn" id="chgClose">Close</button></div>
+  <div class="dlg-b" id="chgBody"></div>
+</dialog>
+
+<script>
+"use strict";

@@ -1,0 +1,64 @@
+<div id="pm-title">
+  <b>Project Management APP</b>
+  <div class="pm-menu" data-menu>
+    <button type="button">File</button>
+    <div>
+      <a data-do="new">New plan</a>
+      <a data-do="open">Open a plan…</a>
+      <a data-do="recent">Open recent…</a>
+      <hr>
+      <a data-do="save">Save<i>Ctrl+S</i></a>
+      <a data-do="saveAs">Save as…</a>
+      <hr>
+      <a data-do="import">Import source data…</a>
+      <a data-do="importBrowse">Import from a folder…</a>
+      <hr>
+      <a data-do="export">Export the plan to Excel<i>re-importable</i></a>
+      <a data-do="exportJson">Export the plan as an interchange file</a>
+      <a data-do="exportTo">Export the plan to a folder…</a>
+      <hr>
+      <a data-do="exportCalc">Export calculated FTE<i>for reading</i></a>
+      <a data-do="exportCalcTo">Export calculated FTE to a folder…</a>
+      <hr>
+      <a data-do="quit">Stop the application</a>
+    </div>
+  </div>
+  <div class="pm-menu" data-menu>
+    <button type="button">Edit</button>
+    <div>
+      <a data-do="commit">Save changes</a>
+      <a data-do="discard">Leave without change</a>
+      <a data-do="changes">Show unsaved changes</a>
+    </div>
+  </div>
+  <div class="pm-menu" data-menu>
+    <button type="button">View</button>
+    <div>
+      <a data-do="tab:t-overall">Overall</a>
+      <a data-do="tab:t-proj">Source data (project)</a>
+      <a data-do="tab:t-pers">Source data (person)</a>
+      <a data-do="tab:t-gen">General assumptions</a>
+    </div>
+  </div>
+  <div class="pm-menu" data-menu>
+    <button type="button">Plan</button>
+    <div>
+      <a data-do="who">Who is editing…</a>
+      <a data-do="restore">Restore previous version…</a>
+    </div>
+  </div>
+  <div class="pm-menu" data-menu>
+    <button type="button">Help</button>
+    <div>
+      <a data-do="about">About Project Management APP</a>
+      <a data-do="signin">Change who you are…</a>
+    </div>
+  </div>
+</div>
+<div id="pm-strip">
+  <span class="pm-pill file" id="pm-file">no plan open</span>
+  <span class="pm-pill" id="pm-who">not signed in</span>
+  <span class="pm-pill" id="pm-hold" hidden></span>
+  <span class="pm-grow"></span>
+  <span class="pm-pill" id="pm-where"></span>
+</div>

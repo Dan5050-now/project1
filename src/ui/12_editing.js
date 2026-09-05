@@ -1,0 +1,520 @@
+/* ============================================================ 12. editing + IO */
+
+/* An edit is provisional until confirmed. The change is applied to the model straight
+   away - the numbers on screen must never disagree with the data on screen - but a
+   snapshot taken before the FIRST pending edit lets 'Leave without change' put it all
+   back. Nothing provisional can reach an export. */
+function snapshotRaw(){
+  const snap = {};
+  for (const s of REQUIRED_SHEETS) snap[s] = S.model.raw[s].map(r => ({...r}));
+  return snap;
+}
+function beginEditSession(){
+  if (!S.snapshot) S.snapshot = snapshotRaw();
+  // The first edit is the first moment there is anything to attribute, and the last
+  // moment before there is. Whoever the shell asks, it asks here.
+  askWho();
+}
+/** A row still being created is held out of validation - it is INCOMPLETE, not invalid,
+ *  and reporting "project_id is empty" at every keystroke would be noise. Save is where
+ *  that grace ends: a draft that now has content is promoted to an ordinary row and
+ *  checked like one, and if that turns up an error the save is refused rather than
+ *  quietly keeping a bad record. */
+/* Which errors refuse, and which ask.
+
+   The classification itself is in the core - CONDITIONAL_RULES, refuses() and
+   conditional() in 05_model.js - so that the screen and the reference implementations
+   cannot disagree about what a rule is. This is only what the editor DOES with it:
+
+     MUST         refuses the edit, and refuses the save. Something is wrong with the
+                  row in front of you and keeping it would put a record in the file
+                  that the file's own rules say cannot be there.
+     CONDITIONAL  never refuses an edit - a prompt on every keystroke would be
+                  unusable - and at SAVE it asks, once, naming what will be left
+                  unresolved. Going ahead is then the user's decision, taken knowingly.
+     INCOMPLETE   never refuses and never asks. The row is still being built and the
+                  finding will answer itself as the user carries on; the banner names
+                  it as "still to come".
+
+   A cell edit and a save are deliberately different moments. While you are typing, the
+   row is half-written and telling you it is incomplete is noise. Save is when you say
+   you meant it, and that is where the question belongs. */
+const blocking = refuses;
+
+/* What Save recalculates from the rows beneath a project.
+ *
+ *  A project's WINDOW is the span its milestones describe, and its PLANNED TEAM SIZE is
+ *  the number of distinct people assigned to it. Both were typed by hand and could drift
+ *  from the rows that actually say what they are.
+ *
+ *  Done at Save rather than at load, deliberately. Doing it on load would rewrite dates in
+ *  a workbook somebody produced elsewhere, the moment they opened it, without their having
+ *  asked for anything - and the delivered examples set a project start before its first
+ *  milestone quite legitimately. At Save it is a consequence of an edit the user just
+ *  made, and the banner names every value it changed.
+ *
+ *  THE WINDOW COMES FROM THE PERIODS wherever the project has any of its own
+ *  (REQ-CAL-17). Milestones are reference dates: they are what the period derivation
+ *  reads, and they carry markers - an inspection, a first-patient-in - that sit inside
+ *  the run rather than bounding it. The periods ARE the run, one after another, and they
+ *  are what every weight in the calculation is attached to. Deriving the window from the
+ *  milestones put the two out of step in a way that showed: a milestone before the first
+ *  period, or after the last, stretched the project over months that belonged to no
+ *  period at all, and those months were then costed at weight 1.00 - so the utilisation
+ *  chart grew a flat shoulder at each end that no period ever justified.
+ *
+ *  Where a project has no periods OF ITS OWN the milestones still stand in, because then
+ *  they are the only independent statement of when it runs.
+ *
+ *  Two guards, both about not destroying information:
+ *    - a project with neither periods nor milestone dates keeps the window that was
+ *      typed, because there is nothing to derive it from;
+ *    - a project with NO assignments keeps the team size that was typed, because "nobody
+ *      is assigned yet" is not the same statement as "this needs nobody".
+ */
+function deriveFromChildren(){
+  const M = S.model, changed = [], undo = [];
+  const set = (row, col, v, label) => {
+    undo.push([row, col, row[col]]);
+    row[col] = v;
+    changed.push(label);
+  };
+  for (const p of M.raw.Project){
+    const pid = p.project_id;
+    if (!pid) continue;
+    /* The periods the user actually TYPED, and only if there are any. A trial with none
+       has its periods derived - and the derivation opens Before-Start-up at the project's
+       own start_date, so taking the window from those would be reading back the very
+       dates being checked, and a wrong window could never correct itself. There the
+       milestones are the only independent statement of when the project runs, so they
+       still stand in. Typed periods beat them wherever both exist, which is the whole
+       point of REQ-CAL-17. */
+    const typed = M.raw.ProjectPeriod.filter(r => r.project_id === pid);
+    const mdates = M.raw.Milestone
+      .filter(m => m.project_id === pid && m.milestone_date instanceof Date)
+      .map(m => +m.milestone_date);
+    const starts = typed.length
+      ? typed.filter(r => r.period_start instanceof Date).map(r => +r.period_start)
+      : mdates;
+    const ends = typed.length
+      ? typed.filter(r => r.period_end instanceof Date).map(r => +r.period_end)
+      : mdates;
+    if (starts.length && ends.length){
+      const lo = new Date(Math.min(...starts)), hi = new Date(Math.max(...ends));
+      if (!(p.start_date instanceof Date) || +p.start_date !== +lo)
+        set(p, "start_date", lo, `${pid} start ${ymd(lo)}`);
+      if (!(p.end_date instanceof Date) || +p.end_date !== +hi)
+        set(p, "end_date", hi, `${pid} end ${ymd(hi)}`);
+    }
+    const team = new Set(M.raw.Assignment
+      .filter(a => a.project_id === pid && a.person_id).map(a => a.person_id));
+    if (team.size && num(p.planned_member_count) !== team.size)
+      set(p, "planned_member_count", team.size, `${pid} team ${team.size}`);
+  }
+  return {changed, undo};
+}
+
+const fkey = f => f.rule + "\u0000" + f.msg;
+
+function saveEdits(){
+  if (!S.pending.length) return;
+  // Before the check, so that what is validated is what will be kept; put back with the
+  // drafts if the save is refused or the user goes back.
+  const derived = deriveFromChildren();
+  const drafts = [];
+  for (const s of REQUIRED_SHEETS)
+    // isSkeleton, not isBlankRow: an inserted row now arrives with an identifier and a
+    // neutral weight already in it, so "blank" would never be true again and a row the
+    // user has not touched would be promoted and then reported for what it is missing.
+    for (const r of S.model.raw[s]) if (r.__new && !isSkeleton(s, r)) drafts.push(r);
+  for (const r of drafts) delete r.__new;
+  const probe = rebuild();
+  const undo = () => {
+    for (const r of drafts) r.__new = true;
+    for (const [row, col, was] of derived.undo) row[col] = was;
+  };
+
+  const errs = probe.findings.filter(blocking);
+  const was = (S.model.findings || []).filter(blocking);
+  if (errs.length > was.length){
+    undo();
+    showBanner("bad", `Save refused — this would break a rule that must hold: `
+      + `${errs[errs.length-1].msg} Correct it, or leave the change, then save.`);
+    return;
+  }
+
+  /* What this batch of edits LEAVES unresolved, measured against the last save rather
+     than against the model as it stands. A cell edit is applied to the model straight
+     away - the numbers on screen must never disagree with the data on screen - so by
+     the time Save is pressed a conditional error the user has just caused is already
+     in S.model.findings, and comparing against that would find nothing new and ask
+     nothing. The baseline has to be the last point the user said "yes, keep this". */
+  const base = new Set((S.baseFindings || []).map(fkey));
+  // V-23 is raised BY the calculation, so a probe that has only been validated does not
+  // carry it - and a save that leaves a role uncosted would then be confirmed without
+  // that being one of the things named. Run it here and nowhere else: this is the one
+  // moment the full picture is worth the work, where the per-keystroke path would pay
+  // for it on every character typed.
+  calculate(probe);
+  const fresh = probe.findings.filter(f => conditional(f) && !base.has(fkey(f)));
+  const soon = probe.findings.filter(f => incomplete(f) && !base.has(fkey(f)));
+  if (fresh.length){ askConfirm(fresh, () => commitSave(derived, fresh, soon), undo); return; }
+  commitSave(derived, [], soon);
+}
+
+/** The save itself, once it is going ahead. Separated from the decision so that the
+ *  confirmation can call it later without repeating any of the checks. */
+function commitSave(derived, accepted, soon){
+  rebuild(true);
+  renderKeepingTab();
+  /* Into the accumulated record BEFORE the pending list is emptied, and after the
+     rebuild, so every entry is stamped with the identifier the row finally has rather
+     than the one it had mid-edit.
+     `accepted` is the list the user was asked about and chose to save anyway - the most
+     useful thing an audit trail of a plan can carry, because it is the only line that
+     records a decision rather than a keystroke. */
+  S.audit.push(...auditEntries(S.pending, S.model, S.who));
+  S.events.push(...findingEntries(
+    (S.model.findings || []).filter(f => f.sev === "error" || f.sev === "warning"
+                                      || f.sev === "fatal"),
+    accepted.map(f => f.rule), "save", S.who));
+  S.saved += S.pending.length;
+  S.pending = [];
+  S.snapshot = null;
+  S.baseFindings = (S.model.findings || []).slice();
+  archiveAudit("save");
+  renderDirty();
+  showBanner(accepted.length ? "warn" : "",
+    `Saved ${S.saved} change${S.saved===1?"":"s"} to the working data. `
+    + (derived.changed.length
+        ? `Recalculated from the rows beneath: ${derived.changed.slice(0, 6).join(", ")}`
+          + `${derived.changed.length > 6 ? ` and ${derived.changed.length - 6} more` : ""}. `
+        : "")
+    + (accepted.length
+        ? `Kept with ${accepted.length} thing${accepted.length===1?"":"s"} unresolved, `
+          + `at your confirmation — ${accepted[0].msg} `
+        : "")
+    + ((soon && soon.length)
+        ? `Still to come: ${soon[0].msg} `
+        : "")
+    + `They will be written to the file when you press Export. The file on disk is `
+    + `still untouched until then.`);
+}
+
+/** Ask before saving over a conditional error, naming every one of them.
+ *
+ *  A confirm() would fit on one line and would be the wrong shape: these messages are
+ *  long, there can be several, and the whole point is that the user reads what they are
+ *  accepting. Going back is the default action - it is what Escape and the backdrop do -
+ *  because the safe answer should be the easy one. */
+function askConfirm(items, go, back){
+  const dlg = el("confirm");
+  el("cfBody").innerHTML =
+    `<p class="cap">These are <strong>conditional</strong>: the rows themselves are
+      sound and will be kept exactly as you typed them, but something they depend on is
+      not there yet, so the figures that need it are calculated as though the missing
+      piece were neutral. Saving does not make them go away — they stay in the findings
+      report until the missing piece arrives.</p>`
+    + `<table class="data-t"><thead><tr><th>rule</th><th>sheet</th><th>what is missing</th>`
+    + `</tr></thead><tbody>${items.map(f =>
+        `<tr><td><span class="sev cond">${esc(f.rule)}</span></td><td>${esc(f.sheet)}</td>`
+        + `<td style="white-space:normal">${esc(f.msg)}</td></tr>`).join("")}</tbody></table>`;
+  let done = false;
+  const finish = ok => {
+    if (done) return;
+    done = true;
+    dlg.close();
+    if (ok) go(); else { back(); rebuild(true); renderKeepingTab(); }
+  };
+  el("cfYes").onclick = () => finish(true);
+  el("cfNo").onclick = () => finish(false);
+  dlg.onclose = () => finish(false);            // Escape, and the backdrop
+  dlg.showModal();
+}
+/** Ask before replacing the plan that is open (REQ-IMP-08).
+ *
+ *  `adopt()` resets S.pending unconditionally, and six paths call it - the file picker,
+ *  a blank start, the Python shell's open, a version restore, the import-difference
+ *  apply. Every one of them used to throw away unsaved work without a word.
+ *
+ *  The application already holds this exact opinion in one place: beforeunload refuses
+ *  to let the TAB close on unsaved changes. Protecting the data from the browser and not
+ *  from our own Load button is the inconsistency, not the prompt.
+ *
+ *  SAVED-BUT-NOT-EXPORTED COUNTS TOO, for the same reason it counts at beforeunload:
+ *  a save keeps changes in memory, and nothing is on disk until Export. Losing those is
+ *  the more expensive mistake of the two, because the user has already been told they
+ *  were saved.
+ *
+ *  Its own dialog rather than confirm(), so it matches the two questions the
+ *  application already asks (conditional save, changing the estimation way) instead of
+ *  introducing a third visual language for the same kind of decision. */
+function mayReplacePlan(what, go){
+  const n = S.pending.length, saved = S.saved;
+  if (!n && !saved){ go(); return; }
+  const bits = [];
+  if (n)     bits.push(`<strong>${n} unsaved change${n === 1 ? "" : "s"}</strong>`);
+  if (saved) bits.push(`<strong>${saved} saved change${saved === 1 ? "" : "s"}</strong> that `
+                       + `${saved === 1 ? "has" : "have"} not been exported`);
+  const dlg = el("replace");
+  el("rpTitle").textContent = `${what} — discard the work in this plan?`;
+  el("rpBody").innerHTML =
+    `<p class="cap">This plan carries ${bits.join(" and ")}. ${what} replaces it, and
+      there is nothing to come back to afterwards.</p>
+     <p class="note"><strong>Nothing is on disk until you Export.</strong> A save keeps
+      your changes in this window; it does not write a file. If you want to keep this
+      work, choose <strong>Keep it</strong>, press <strong>Export → Source data</strong>,
+      and then come back.</p>`;
+  let done = false;
+  const finish = ok => { if (done) return; done = true; dlg.close(); if (ok) go(); };
+  el("rpYes").onclick = () => finish(true);
+  el("rpNo").onclick  = () => finish(false);
+  dlg.onclose = () => finish(false);              // Escape, and the backdrop
+  dlg.showModal();
+}
+
+function discardEdits(){
+  if (!S.pending.length) return;
+  const n = S.pending.length;
+  for (const s of REQUIRED_SHEETS) S.model.raw[s] = S.snapshot[s].map(r => ({...r}));
+  S.snapshot = null;
+  S.pending = [];
+  S.editedCells.clear();
+  rebuild(true);
+  renderKeepingTab();
+  showBanner("", `${n} change${n===1?" was":"s were"} discarded. The data is back to how it was `
+    + `${S.saved ? "after your last save" : "when the workbook was loaded"}.`);
+}
+
+function renderDirty(){
+  const n = S.pending.length, bar = el("editbar");
+  bar.hidden = !S.model;
+  bar.classList.toggle("dirty", n > 0);
+  el("saveBtn").disabled = el("discardBtn").disabled = el("chgBtn").disabled = (n === 0);
+  if (!n && el("changes").open) el("changes").close();   // nothing left to show
+  // The name request belongs to the same moment as the rest of this bar: something is
+  // unsaved and about to be attributed to somebody. Hidden the instant it is answered,
+  // and never shown in a shell that already knows.
+  const wb = el("whobox");
+  if (wb) wb.hidden = !!S.who || !n;
+  el("editstate").textContent = n
+    ? `${n} unsaved change${n===1?"":"s"}`
+    : (S.saved ? `${S.saved} saved change${S.saved===1?"":"s"} · nothing pending`
+               : "no changes");
+  el("guide").innerHTML = n
+    ? `<strong>${n} change${n===1?"":"s"} not yet saved.</strong> They are applied on screen so you can
+       see their effect, but they are <em>not final</em>. All ${n} pass validation — an edit that fails a
+       rule is rejected at entry, so nothing invalid can be saved. <strong>Export is held</strong> until
+       you choose.`
+    : `<strong>Changes are temporary.</strong> Edits are applied on screen so you can see their effect,
+       but they are <em>not final</em> until you choose. Click <strong>Save</strong> to keep them — only
+       saved changes go into the exported file.`;
+}
+
+/** Apply one cell edit: coerce, validate, write to the model, recalculate. */
+function applyEdit(sheet, rowNum, col, raw, tdEl){
+  const M = S.model;
+  const target = M.raw[sheet].find(r => r.__row === rowNum);
+  if (!target) return;
+
+  /* estimation_type has ONE way in, and it is not this cell (REQ-CAL-18).
+     Typing 'manual' here would set the flag without copying a single month across, so
+     every month would read as missing and the thing would drop to 0.00 - the one change
+     in the application that silently zeroes a figure. The button does the switch AND the
+     copy, and asks first. Refusing here rather than accepting-and-then-seeding keeps one
+     path instead of two that have to stay in step. */
+  if (col === "estimation_type"){
+    const scope = sheet === "Project" ? "project" : "assignment";
+    flashBad(tdEl, `Use the Switch button in the Monthly estimation panel below. `
+      + `Switching to manual has to COPY the calculated months across first, or every `
+      + `month would be counted as 0.00 — typing here would do the flag without the `
+      + `figures.`);
+    tdEl.textContent = target[col] ?? "";
+    if (target[KEY_COL[sheet]]) switchEstimation(scope, target[KEY_COL[sheet]]);
+    return;
+  }
+
+  // A proxy column is resolved to the identifier it names, and the identifier is what
+  // is written. Everything after this point sees an ordinary edit to an ordinary column.
+  const px = proxyFor(sheet, col);
+  if (px){
+    if (raw.trim() === ""){ col = px.into; raw = ""; }
+    else {
+      const got = px.resolve(raw);
+      if (got.error){ flashBad(tdEl, got.error); return; }
+      if (got.value === target[px.into]){ tdEl.textContent = px.show(target) ?? ""; return; }
+      col = px.into; raw = String(got.value);
+    }
+  }
+
+  const spec = SHEET_COLS[sheet];
+  let v = raw.trim() === "" ? null : raw.trim();
+  if (v !== null && spec.date.includes(col)){
+    const d = parseDate(v);
+    if (d === undefined){ flashBad(tdEl, `'${raw}' is not a date. Use yyyy-mm-dd.`); return; }
+    v = d;
+  } else if (v !== null && spec.num.includes(col)){
+    const n = num(v);
+    if (n === undefined){ flashBad(tdEl, `'${raw}' is not a number.`); return; }
+    v = n;
+  }
+  const before = target[col];
+  beginEditSession();
+
+  // REQ-IMP-10: changing an identifier that other sheets reference cascades to every
+  // referencing row, after saying how many will change. Blocking the edit instead would
+  // make the field read-only in all but name.
+  //
+  // Only on the sheet that OWNS the identifier. KEY_COL names the key column of every
+  // sheet, but on a CHILD sheet that column is a FOREIGN key: PersonPeriodWeight
+  // .assignment_id points at an assignment, it does not define one. Editing it re-points
+  // this one row, and cascading would drag every other row that happens to share the old
+  // value along with it - which on the overrides table means the sibling windows of the
+  // assignment you just moved away from. OWNER is the same map deleteRow already uses
+  // for the same reason.
+  if (KEY_COL[sheet] === col && OWNER[col] === sheet && REFS[col]
+      && before !== null && v !== null && v !== before){
+    const hits = [];
+    for (const [s2, c2] of REFS[col])
+      for (const r of M.raw[s2]) if (r[c2] === before) hits.push([r, c2]);
+    if (hits.length && !confirm(
+        `${before} is referenced by ${hits.length} row(s) across `
+        + `${[...new Set(REFS[col].map(x => x[0]))].join(", ")}.\n\n`
+        + `Change it to ${v} and update them all?`)){
+      tdEl.textContent = String(before);
+      return;
+    }
+    for (const [r, c2] of hits) r[c2] = v;               // one atomic step
+    if (hits.length) S.pending.push({at:new Date(), sheet:"(cascade)", row:"", col,
+                                     from:before, to:v, n:hits.length});
+  }
+  target[col] = v;
+
+  // Re-validate the whole model with the same rules as an import (REQ-IMP-09). An edit
+  // that introduces an ERROR is rejected outright rather than left to surface later.
+  const probe = rebuild();
+  const newErrors = probe.findings.filter(blocking);
+  const oldErrors = (S.model.findings || []).filter(blocking);
+  if (newErrors.length > oldErrors.length){
+    target[col] = before;
+    rebuild(true);
+    flashBad(tdEl, newErrors[newErrors.length - 1].msg);
+    return;
+  }
+  S.pending.push({at:new Date(), sheet, row:rowNum, col, from:before, to:v});
+  S.editedCells.add(`${sheet}|${rowNum}|${col}`);
+  tdEl.classList.add("edited");
+  rebuild(true);
+  renderKeepingTab();
+
+  // Pointing a child row at a parent that already has children is the normal way to add
+  // a second override window, not a mistake - so this says what the row now sits beside
+  // rather than asking anything. The rules that DO constrain it are V-06 and V-24, and
+  // they are checked when the row is complete, so name them here while there is still
+  // something to do about it.
+  if (KEY_COL[sheet] === col && OWNER[col] && OWNER[col] !== sheet && v !== null && v !== before){
+    const sibs = M.raw[sheet].filter(r => r[col] === v && r.__row !== rowNum).length;
+    if (sibs) showBanner("", `${v} now carries ${sibs + 1} rows in ${sheet}`
+      + (sheet === "PersonPeriodWeight"
+          ? ` — that is allowed, and is how one assignment carries several windows. They must not
+              overlap and no two may start on the same date (V-06, V-24); both are checked when you
+              press Save.`
+          : `. The other ${sibs} ${sibs === 1 ? "is" : "are"} untouched.`));
+  }
+}
+
+function flashBad(tdEl, msg){
+  const prev = tdEl.dataset.orig ?? "";
+  tdEl.textContent = prev;
+  showBanner("bad", `Edit rejected — ${msg}`);
+}
+
+/** True when the parser would discard this row: every mapped column empty. */
+function isBlankRow(sheet, r){
+  return (S.headers[sheet] || []).every(h => {
+    const v = r[h];
+    return v === null || v === undefined || String(v).trim() === "";
+  });
+}
+
+/** Rebuild model+calc from the current raw rows. `commit` writes it back to state.
+ *
+ *  Two things make this more than a re-parse.
+ *
+ *  The parser SKIPS blank rows - right for an imported file, where a blank line is not a
+ *  record, and wrong for a row the user just created and has not filled in yet. Such a
+ *  row is held out of the parse and put back at its own position afterwards, so an edit
+ *  or a delete elsewhere cannot destroy it.
+ *
+ *  The parser also NUMBERS rows by position (__row = spreadsheet line). Deleting a row
+ *  shifts every row below it, so re-parsing would hand those rows new identities while
+ *  S.pending, S.editedCells and the rendered cells still name the old ones. Identity is
+ *  therefore restored from the rows that were fed in, position by position - which is
+ *  exact, because exactly the non-held rows were emitted, in order. */
+function rebuild(commit){
+  const kept = {}, held = {}, sheets = {};
+  for (const s of REQUIRED_SHEETS){
+    const rows = S.model.raw[s] || [];
+    kept[s] = []; held[s] = [];
+    rows.forEach((r, i) => {
+      if (r.__new || isBlankRow(s, r)) held[s].push([i, r]); else kept[s].push(r);
+    });
+    sheets[s] = rawToRows(s, kept[s]);
+  }
+  const m = buildModel(sheets);
+  for (const s of REQUIRED_SHEETS){
+    m.raw[s].forEach((r, i) => { if (kept[s][i]) r.__row = kept[s][i].__row; });
+    for (const [i, r] of held[s]) m.raw[s].splice(i, 0, r);
+  }
+  if (commit){ S.model = m; S.calc = calculate(m); }
+  return m;
+}
+
+/** Model rows -> the row-array shape readWorkbook produces, so rebuild and export share
+ *  one path. Export passes nothing and gets every row; rebuild passes the rows it wants
+ *  the parser to see. */
+function rawToRows(sheet, rows){
+  const hdr = S.headers[sheet] || [];
+  const out = [hdr.slice()];
+  for (const r of (rows || S.model.raw[sheet])) out.push(hdr.map(h => r[h] ?? null));
+  return out;
+}
+
+/** V-17: a row that is still referenced cannot be deleted, and a delete NEVER cascades.
+ *  Losing fourteen assignments to one keystroke is unrecoverable in a way that a
+ *  cascaded rename is not - which is why editing an identifier cascades and this does
+ *  the opposite. The deletion itself is provisional like any other change. */
+function deleteRow(sheet, rowNum){
+  const M = S.model;
+  const rows = M.raw[sheet];
+  const i = rows.findIndex(r => r.__row === rowNum);
+  if (i < 0) return;
+  const r = rows[i];
+  const key = KEY_COL[sheet], val = r[key];
+
+  if (OWNER[key] === sheet && val && REFS[key]){
+    const by = {};
+    for (const [s2, c2] of REFS[key]){
+      const n = M.raw[s2].filter(x => x[c2] === val).length;
+      if (n) by[s2] = n;
+    }
+    const total = Object.values(by).reduce((a, b) => a + b, 0);
+    if (total){
+      showBanner("bad", `${val} cannot be deleted — ${total} row(s) still refer to it: `
+        + `${Object.entries(by).map(([s2, n]) => `${n} in ${s2}`).join(", ")}. `
+        + `Delete or re-point those first. A delete is never cascaded, because losing them to `
+        + `one keystroke could not be undone.`);
+      return;
+    }
+  }
+
+  beginEditSession();
+  rows.splice(i, 1);
+  for (const k of [...S.editedCells]) if (k.startsWith(`${sheet}|${rowNum}|`)) S.editedCells.delete(k);
+  S.pending.push({at:new Date(), sheet, row:rowNum, col:"(deleted row)",
+                  from:val ?? "(blank row)", to:null});
+  rebuild(true);
+  renderKeepingTab();
+  showBanner("", `Deleted ${val ? `${val} from ${sheet}` : `a blank row from ${sheet}`}. `
+    + `This is provisional — 'Leave without change' puts it back.`);
+}
