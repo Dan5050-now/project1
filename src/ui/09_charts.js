@@ -29,6 +29,40 @@ const CHART = {
   single: {W:1080, H:300, padL:62, padR:230, padT:26, padB:44},
 };
 
+/* WHICH PERIOD OF THE PROJECT A MONTH FALLS IN, for the pop-ups.
+ *
+ * Every figure on this page is standard FTE x PERIOD WEIGHT x the month the project ran,
+ * so the period is the row of the plan that decided the size of what is being hovered
+ * over - and it was the one thing the pop-ups did not say. A reader who thought a month
+ * looked heavy had to leave the chart, find the project, and read its periods to learn
+ * that the month was mid-Conduct.
+ *
+ * Read from S.calc, which built it from the same lines the figures came from, so the
+ * period named here cannot be a different one from the period the number used. A month
+ * belonging to no period says so: that is V-12, a real state of a half-entered plan, and
+ * "weight 1.00 by default" is worth knowing rather than hiding. */
+function periodOf(pid, k){
+  return (S.calc.projPeriod && S.calc.projPeriod.get(pid + "|" + k)) || null;
+}
+
+/** The period as a short trailing phrase, for a line that already names a figure. */
+function periodTag(pid, k){
+  const p = periodOf(pid, k);
+  return p
+    ? `<span class="tr"> &#183; ${esc(p.name)} &#215;${(num(p.weight) ?? 1).toFixed(2)}</span>`
+    : `<span class="tr"> &#183; no period &#215;1.00</span>`;
+}
+
+/** The period as its own labelled line, for a pop-up with room for one. */
+function periodLine(pid, k){
+  const p = periodOf(pid, k);
+  return p
+    ? `Project period: <b>${esc(p.name)}</b>`
+      + `<span class="tr"> &#183; weight &#215;${(num(p.weight) ?? 1).toFixed(2)}</span><br>`
+    : `Project period: <span class="tr">none covers this month — weighted &#215;1.00 `
+      + `by default (V-12)</span><br>`;
+}
+
 /** One row per project: period bands, milestone markers, a year grid.
  *  `opts.single` lays it out for ONE project - the heading already names it, so the row
  *  label gutter shrinks and the row itself gets the space instead. */
@@ -264,6 +298,7 @@ function chartStacked(pids){
         + `<span class="tr">${esc(M.projects[p].project_type)}</span><br>`
         + `${keyToLabel(k)} &#183; <b>${fmt(v)} ${unitLabel()}</b>`
         + `<span class="tr"> &#183; ${month > 0 ? (100*v/month).toFixed(0) : 0}% of the month</span><br>`
+        + periodLine(p, k)
         + `<span class="tr">${crew.length} ${crew.length===1?"person":"people"} this month</span><br>`
         + (list || "&#183; nobody assigned")
         + (crew.length > 8 ? `<br>&#183; and ${crew.length-8} more` : "")
@@ -348,7 +383,8 @@ function chartPeople(sids){
           + (v > M.OVER ? `<br><span class="tr">above the ${M.OVER.toFixed(2)} ceiling</span>`
              : v < M.UNDER ? `<br><span class="tr">below the ${M.UNDER.toFixed(2)} floor</span>` : "")
           + `<br>${projs.slice(0,6).map(([q, qv]) =>
-                `&#183; ${esc(M.projects[q].project_name)} <span class="tr">${fmt(qv)}</span>`).join("<br>")}`
+                `&#183; ${esc(M.projects[q].project_name)} <span class="tr">${fmt(qv)}</span>`
+                + periodTag(q, k)).join("<br>")}`
           + (projs.length > 6 ? `<br>&#183; and ${projs.length-6} more` : "")
           + `<hr>${keyToLabel(k)} across everyone in view: <b>${fmt(month)} ${unitLabel()}</b>`;
       // A person over the ceiling is outlined, so the flag never rests on colour alone (D-04).
@@ -434,6 +470,7 @@ function chartProjectUtil(pid){
           + `<br>${keyToLabel(k)} &#183; <b>${fmt(v)} ${unitLabel()}</b> on this project`
           + `<span class="tr"> &#183; ${total > 0 ? (100*v/total).toFixed(0) : 0}% of the month</span>`
           + `<hr><b>${esc(M.projects[pid].project_name)}</b><br>`
+          + periodLine(pid, k)
           + `Total this month: <b>${fmt(total)} ${unitLabel()}</b>`
           + `<span class="tr"> across ${bys.size} ${bys.size === 1 ? "person" : "people"} `
           + `&#183; this project averages ${ownAvg.toFixed(2)}, an active project ${portAvg.toFixed(2)}</span>`;
@@ -526,6 +563,7 @@ function chartPersonStrip(sid){
       const tip = `<b>${esc(M.projects[p].project_name)}</b> `
         + `<span class="tr">${esc(M.projects[p].project_type)}</span><br>`
         + `${keyToLabel(k)}<br>`
+        + periodLine(p, k)
         + `Project milestone: ${ms.length
             ? ms.map(([nm, d]) => `${esc(nm)} <span class="tr">${ymd(d)}</span>`).join("<br>"
               + "&nbsp;".repeat(10))

@@ -13,6 +13,12 @@
     b2. BOTH stacked charts state their month's total in the pop-up, and state the SAME
        one. (a) compares the two as drawn, in pixels; this compares what they SAY, which
        is what a reader acts on
+    b3. EVERY POP-UP NAMES THE PROJECT PERIOD the month falls in, and its weight. Every
+       figure is standard FTE x period weight x the month the project ran, so the period
+       is the row of the plan that decided the size of what is being hovered over.
+       Checked against S.calc.lines, not against ProjectPeriod: it must be the period the
+       FIGURE came from, not merely one the project has. All four charts the request
+       named - both Overall stacks and both Utilisation charts - carry it.
 
   Source data (project)
     c. Utilisation is stacked by PERSON, and each month's segments sum to the
@@ -152,6 +158,72 @@ with sync_playwright() as pw:
           "and the total it states is the one the person chart states for that month",
           "" if not stated else (str(stated["differ"][:2]) if stated["differ"]
                                  else f"{stated['months']} months, all identical"))
+
+    # WHICH PERIOD OF THE PROJECT a month falls in. Every figure here is standard FTE x
+    # PERIOD WEIGHT x the month the project ran, so the period is the row of the plan
+    # that decided the size of what is being hovered over. Checked against S.calc.lines
+    # rather than against ProjectPeriod: the tooltip must name the period the FIGURE was
+    # calculated from, not merely a period the project happens to have.
+    named = probe(pg, r"""() => {
+      const pn = [...document.querySelectorAll('#t-overall .panel')]
+        .find(e => (e.querySelector('h2')||{}).textContent.includes('Monthly demand by project'));
+      const bands = [...pn.querySelectorAll('rect.band')];
+      let checked = 0, missing = 0; const wrong = [];
+      for (const el of bands){
+        const tip = el.dataset.tip || '';
+        const per = /Project period: <b>([^<]+)<\/b>/.exec(tip);
+        const nm  = /^<b>([^<]+)<\/b>/.exec(tip);
+        const mo  = /([A-Z][a-z]{2} \d{4}) &#183;/.exec(tip);
+        if (!per){ missing++; continue; }
+        if (!nm || !mo) continue;
+        const want = nm[1].replace(/&amp;/g, '&');
+        const pid = Object.keys(S.model.projects)
+                      .find(q => S.model.projects[q].project_name === want);
+        const k = grid().find(x => keyToLabel(x) === mo[1]);
+        if (!pid || k === undefined) continue;
+        const used = [...new Set(S.calc.lines
+          .filter(L => L.project_id === pid && L.month === k)
+          .map(L => L.period_name || '(none)'))];
+        checked++;
+        if (used.length !== 1 || used[0] !== per[1].replace(/&amp;/g, '&'))
+          wrong.push([pid, mo[1], per[1], used]);
+      }
+      return {bands: bands.length, missing, checked, wrong: wrong.slice(0, 3),
+              nwrong: wrong.length};}""")
+    check(named and named["bands"] > 0 and named["missing"] == 0,
+          "every band names the project period the month falls in",
+          "" if not named else f"{named['bands'] - named['missing']}/{named['bands']} bands")
+    check(named and named["checked"] > 0 and named["nwrong"] == 0,
+          "and it is the period the FIGURE was calculated from, not just one the "
+          "project has",
+          "" if not named else (str(named["wrong"]) if named["nwrong"]
+                                else f"{named['checked']} project-months, all matching"))
+
+    # The same fact everywhere it was asked for. The person charts tag each PROJECT in
+    # the pop-up rather than the band, because one person-month spans several projects
+    # and they need not be in the same period as each other.
+    where = probe(pg, """() => {
+      const has = (sc, title, needle) => {
+        const pn = [...document.querySelectorAll(sc + ' .panel')]
+          .find(e => (e.querySelector('h2')||{}).textContent.includes(title));
+        if (!pn) return null;
+        const t = [...pn.querySelectorAll('rect.band')].map(e => e.dataset.tip || '');
+        return t.length ? t.filter(x => needle.test(x)).length + '/' + t.length : '0/0';
+      };
+      const out = {};
+      out.overallProject = has('#t-overall', 'Monthly demand by project', /Project period:/);
+      out.overallPerson  = has('#t-overall', 'Monthly demand by person', /&#215;\d/);
+      showTab('t-proj');
+      out.projectUtil = has('#t-proj', 'Utilisation', /Project period:/);
+      showTab('t-pers');
+      out.personUtil = has('#t-pers', 'Utilisation', /Project period:/);
+      showTab('t-overall');
+      return out;}""")
+    ok = where and all(v and v.split('/')[0] != '0' and v.split('/')[0] == v.split('/')[1]
+                       for v in where.values())
+    check(ok, "all four charts asked for carry it — both Overall stacks and both "
+              "Utilisation charts",
+          "" if not where else ", ".join(f"{k} {v}" for k, v in where.items()))
 
     print("app/PRAP.html — Source data (project): project timeline")
     pg.click("text=Source data (project)")

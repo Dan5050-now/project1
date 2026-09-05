@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.9"
+VERSION = "1.10"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,33 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.10
+
+  * THE POP-UPS NOW SAY WHICH PROJECT PERIOD A MONTH IS IN. Every figure in
+    this application is
+
+        standard FTE  x  period weight  x  the part of the month the project ran
+
+    so the period is the row of your plan that decided how big the number is -
+    and it was the one thing the pop-ups did not tell you. Hover any month now
+    and it says, for example:
+
+        Project period: Conduct (final) - weight x1.23
+
+    On four charts: 'Monthly demand by project' and 'Monthly demand by person'
+    on Overall, and 'Utilisation' on each of the two source-data tabs.
+
+  * WHERE ONE BAR COVERS SEVERAL PROJECTS - a person's month is made of all the
+    projects they are on - the period is shown against EACH PROJECT rather than
+    once for the bar, because they need not be in the same period as each other.
+
+  * A month in no period says so, and names V-12. Those months are weighted 1.00
+    by default, which is worth knowing rather than hiding.
+
+  * No figure changes. The period shown is read from the calculation itself, so
+    it is always the period the number beside it was worked out from.
+
 
 WHAT IS NEW IN 1.9
 

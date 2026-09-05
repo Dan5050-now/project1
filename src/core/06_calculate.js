@@ -83,6 +83,17 @@ function calculate(M){
   // which is what the person utilisation chart draws and what its pop-up reads.
   const persProj = new Map();          // person|month -> Map(project_id -> FTE)
   const projPers = new Map();          // project|month -> Map(person_id -> FTE)
+  /* project|month -> the period that month falls in. Built from the LINES like every
+     other map here, not looked up again with periodAt(): the period is what selected the
+     standard FTE and the weight behind the figure, so reading it from anywhere else
+     would let a tooltip name one period while the number beside it came from another.
+     The WEIGHT comes with the name because the two are one fact: the period is which
+     row of the plan applied, and the weight is what that row did to the figure. Naming
+     the period without it answers half the question a reader is asking.
+
+     Null where the month belongs to no period - V-12 reports that, and the charts say
+     so rather than leaving a gap that reads as a defect in the chart. */
+  const projPeriod = new Map();
   const add = (map, k, v) => map.set(k, (map.get(k) || 0) + v);
 
   const periodAt = (pid, y, m) => {
@@ -301,12 +312,14 @@ function calculate(M){
     projPers.get(qk).set(L.person_id, (projPers.get(qk).get(L.person_id) || 0) + v);
     if (!who.has(qk)) who.set(qk, []);
     who.get(qk).push([L.person_id, L.role_name]);
+    if (!projPeriod.has(qk))
+      projPeriod.set(qk, L.period_name ? {name:L.period_name, weight:L.period_weight} : null);
   }
 
   reportGaps(M, gaps);
   reportManual(M, lines);
-  return {projMonth, persMonth, persProj, projPers, cell, who, sharers, shareCount,
-          staffed, effectiveFactor, gaps, lines,
+  return {projMonth, persMonth, persProj, projPers, cell, who, projPeriod, sharers,
+          shareCount, staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }
 

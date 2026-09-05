@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.18"
+DOC_VERSION = "1.19"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.44.xlsx"
+PLAN = "PRAP_Development_Plan_v2.45.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,15 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.19", "2026-09-05", "Claude Code", "Dan",
+         "R-37. Sheet 10: the chart pop-ups name the PROJECT PERIOD the month falls in, "
+         "with its weight - the row of the plan that decided the size of the figure "
+         "being hovered over. Graphs 1 and 2 on Overall and the Utilisation chart on "
+         "each source-data tab. Sheet 08 records that calculate() returns projPeriod, "
+         "built from the same lines as every other map so the period named cannot differ "
+         "from the one the figure used. Where a band spans several projects the tag sits "
+         "against each project, not the band. No calculation change and no figure moves. "
+         "Written against plan v2.45.", "Issued"],
         ["1.18", "2026-09-04", "Claude Code", "Dan",
          "R-36. Sheet 10 gains the CHANGE LOG and the COLUMN FILTERS; no schema change "
          "and no figure moves. The log records each saved change with its UTC time, the "

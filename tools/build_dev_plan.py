@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.44"
+DOC_VERSION = "2.45"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,7 +397,30 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
-    [f"{MARK_NEW}2.44", "2026-09-04", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.45", "2026-09-05", "Claude Code", "Pending",
+     "R-37, THE POP-UPS NAME THE PROJECT PERIOD. Every figure in this application is "
+     "standard FTE x PERIOD WEIGHT x the month the project ran, so the period is the row "
+     "of the plan that decided the size of whatever is being hovered over - and it was "
+     "the one thing the pop-ups did not say. A reader who thought a month looked heavy "
+     "had to leave the chart, find the project and read its periods to learn the month "
+     "was mid-Conduct. All four charts named in the request now carry it: both Overall "
+     "stacks, and Utilisation on each source-data tab. The WEIGHT goes with the name, "
+     "because the two are one fact - which row applied, and what it did to the figure. "
+     "READ FROM THE CALCULATION, not looked up again. calculate() already stamped "
+     "period_name on every line, so it now also returns projPeriod (project|month -> "
+     "name and weight) built from those same lines, exactly as projMonth and persMonth "
+     "are. A second lookup could name one period while the number beside it came from "
+     "another; this cannot. Checked on 154 project-months against S.calc.lines, all "
+     "matching, and the check fails if the tooltip line is removed. "
+     "WHERE ONE BAND SPANS SEVERAL PROJECTS - the person stack and the person "
+     "Utilisation chart - the period is tagged against EACH PROJECT rather than against "
+     "the band, because a person's month is made of projects that need not be in the "
+     "same period as each other; the delivered fixture has a person in Conduct (final) "
+     "on one project and Conduct (interim) on another in the same month. A month "
+     "belonging to no period says so and names V-12, rather than leaving a blank that "
+     "reads as a defect in the chart. No figure moves.",
+     "Issued for review"],
+    ["2.44", "2026-09-04", "Claude Code", "Pending",
      "R-36, A CHANGE LOG AND COLUMN FILTERS. Two requests; no figure moves for either. "
      "(1) THE CHANGE LOG. Every saved change is recorded - the time in UTC, who, which "
      "RECORD (its natural key, not its spreadsheet row: inserting a row renumbers "
@@ -430,7 +453,7 @@ rows = [
      "test_audit.py and test_colfilter.py; the storage seam budget in test_layers.py "
      "re-baselined 150 -> 220 and the reason recorded, since the seam legitimately "
      "gained a third responsibility.",
-     "Issued for review"],
+     "Superseded by v2.45"],
     ["2.43", "2026-09-04", "Claude Code", "Pending",
      "R-35, TWO FAULTS IN THE DATE PICKER, both reported from the field and both "
      "reproduced before being touched. "
