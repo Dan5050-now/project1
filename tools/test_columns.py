@@ -179,7 +179,12 @@ with sync_playwright() as pw:
           "AN EDIT TO ONE TAKES — the cell keeps what was typed, and the assumption "
           "behind it moves with it",
           f"cell {on_screen!r}, stdWeight {before['std']} -> {after['std']}")
-    check(abs(after["fte"] / before["fte"] - 9.24 / before["std"]) < 1e-6,
+    # Compared as a FIGURE, not as a ratio. Since REQ-CAL-20 the month is rounded to a
+    # whole number of hundredths, so doubling a standard doubles the figure to within one
+    # hundredth and not to fifteen decimal places - and a ratio test would be asserting
+    # that the rounding does not exist.
+    want = before["fte"] * (9.24 / before["std"])
+    check(abs(after["fte"] - want) <= 0.01 + 1e-9 and after["fte"] != before["fte"],
           "AND IT MOVES A FIGURE, in exactly the ratio of the change — the edit reaches "
           "the calculation rather than only the sheet",
           f"PRJ-003's Start-up month {before['fte']:.4f} -> {after['fte']:.4f}, "

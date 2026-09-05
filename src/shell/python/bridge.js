@@ -637,7 +637,6 @@ Account        ${where.account}</pre>
     } finally {
       archiving = false;
     }
-    if (typeof renderAuditOffer === "function") renderAuditOffer();
   };
 
   /* ---- how tall the window chrome is -------------------------------------

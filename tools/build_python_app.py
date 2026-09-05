@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.10"
+VERSION = "1.11"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,46 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.11
+
+  * EVERY FIGURE IS NOW A WHOLE NUMBER OF HUNDREDTHS. Not shown to two
+    places - IS two places. A figure on screen as 4.27 was 4.27 when it was
+    worked out, and the same 4.27 appears in the exported workbook, which
+    used to carry 4.2683.
+
+    YOUR FIGURES WILL MOVE SLIGHTLY. On the delivered example the total goes
+    from 4,333.46 to 4,333.77 FTE-months. That is the rounding and nothing
+    else - no assumption and no rule has changed.
+
+    Two places because that is what the plan is written in: at 160 hours to
+    the FTE, 0.01 is 1.6 hours, and a manual estimate is already typed at two
+    places.
+
+  * AND THE DETAIL STILL ADDS UP. The month is rounded first and its
+    hundredths are then shared out, rather than each person's slice being
+    rounded on its own - so on the Detail sheet the rows of one project-month
+    still add to that month exactly, with nothing left over. Rounding each
+    slice separately would have broken that on 40% of months.
+
+    One consequence worth knowing: a single row can sit up to 0.01 away from
+    its own demand x share, because it holds a whole number of hundredths.
+    The exported workbook says so on its first sheet.
+
+  * THE CHANGE LOG IS NO LONGER EXPORTED FROM INSIDE THE APPLICATION. It is
+    written to the audit folder every time you save, so the file is already
+    there - and a button handing you the same record afterwards was a second
+    answer to one question, always the staler of the two.
+
+  * THE AUDIT FOLDER IS NOW SHARED. It sits beside `users`, not inside your
+    own folder:
+
+        data/audit/PRAP_changes_YYYY-MM.csv
+
+    So on a shared drive everybody's entries are in one file, in order, each
+    naming who made the change. That is the log that answers "what happened
+    to this plan", which is the question it is kept for.
+
 
 WHAT IS NEW IN 1.10
 

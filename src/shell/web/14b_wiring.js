@@ -75,30 +75,6 @@ const expDone = fn => () => { el("expMenu").open = false; fn(); };
 el("exportBtn2").onclick = expDone(() => exportWorkbook(false));
 el("exportJsonBtn").onclick = expDone(() => exportWorkbook(true));
 el("exportCalcBtn").onclick = expDone(exportResults);
-/* The two log exports. The date boxes live INSIDE the menu, so typing in them must not
-   close it - hence the click here rather than the shared expDone() wrapper, and the
-   stopPropagation below that keeps the document-level "click outside closes it" handler
-   off the panel's own controls. */
-const logRange = () => [(el("aFrom").value || "").trim(), (el("aTo").value || "").trim()];
-for (const id of ["aFrom", "aTo"]){
-  el(id).addEventListener("input", renderAuditOffer);
-  el(id).addEventListener("click", e => e.stopPropagation());
-}
-el("exportAuditBtn").onclick = () => {
-  const [f, t] = logRange();
-  const n = exportAudit(f, t);
-  el("expMenu").open = false;
-  showBanner("", `Change log exported — ${n} entr${n === 1 ? "y" : "ies"}`
-    + (f || t ? ` between ${f || "the start"} and ${t || "now"}` : "") + ".");
-};
-el("exportEventsBtn").onclick = () => {
-  const [f, t] = logRange();
-  const n = exportEvents(f, t);
-  el("expMenu").open = false;
-  showBanner("", `Errors and warnings exported — ${n} finding${n === 1 ? "" : "s"}`
-    + (f || t ? ` between ${f || "the start"} and ${t || "now"}` : "") + ".");
-};
-renderAuditOffer();
 el("whoOk").onclick = () => setWho(el("whoName").value);
 el("whoSkip").onclick = () => setWho("");
 el("whoName").addEventListener("keydown", e => {

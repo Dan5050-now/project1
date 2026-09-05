@@ -25,6 +25,7 @@ Checked in the browser and in tools/prap_io.py, which arrived at the rule separa
 import json
 import pathlib
 import subprocess
+import math
 import sys
 import tempfile
 
@@ -182,6 +183,13 @@ def ref(path):
     return prap_io.calculate(M)["pers_month"]
 
 
+# REQ-CAL-20: every figure is a whole number of hundredths, so an expectation written as
+# an exact third or two-thirds has to be rounded the same way. What stays exact - and is
+# asserted alongside - is that the parts still add to the month.
+def _r2(v):
+    return math.floor(v * 100 + 0.5) / 100
+
+
 with sync_playwright() as pw:
     browser = pw.chromium.launch(executable_path=CHROME)
     pg = browser.new_page(viewport={"width": 1400, "height": 900})
@@ -230,7 +238,9 @@ with sync_playwright() as pw:
     # two thirds and one third of a month that is still exactly the standard.
     r = load(pg, ROLES)
     lead, main_ = r["pers"][f"PSN-002|{MAR}"], r["pers"][f"PSN-001|{MAR}"]
-    check(abs(main_ - solo * 2 / 3) < 1e-9 and abs(lead - solo / 3) < 1e-9,
+    check(abs(main_ - _r2(solo * 2 / 3)) <= 0.01 + 1e-9
+          and abs(lead - _r2(solo / 3)) <= 0.01 + 1e-9
+          and abs(main_ + lead - solo) < 1e-9,
           "TWO PEOPLE ON DIFFERENT ROLES SHARE NO FACTOR, but they do divide the month "
           "between them in proportion to their factors — 2.00 against 1.00",
           f"{main_:.4f} and {lead:.4f} of a {solo:.4f} month")
@@ -241,8 +251,9 @@ with sync_playwright() as pw:
     # Claims of 1.00 and 0.50 against a month that is still the standard: two thirds and
     # one third. The weight decides the SPLIT, not the size (REQ-CAL-19).
     w = load(pg, WEIGHTED)
-    check(abs(w["pers"][f"PSN-001|{MAR}"] - solo * 2 / 3) < 1e-9
-          and abs(w["pers"][f"PSN-002|{MAR}"] - solo / 3) < 1e-9,
+    check(abs(w["pers"][f"PSN-001|{MAR}"] - _r2(solo * 2 / 3)) <= 0.01 + 1e-9
+          and abs(w["pers"][f"PSN-002|{MAR}"] - _r2(solo / 3)) <= 0.01 + 1e-9
+          and abs(w["pers"][f"PSN-001|{MAR}"] + w["pers"][f"PSN-002|{MAR}"] - solo) < 1e-9,
           "A PART-TIME SHARER GIVES THEIR COLLEAGUE MORE, not the project less — the two "
           "of them still carry the whole month between them",
           f"{w['pers'][f'PSN-001|{MAR}']:.4f} at weight 1.00, "
@@ -270,7 +281,8 @@ with sync_playwright() as pw:
     two_off = load(pg, MIXED_OFF)
     lead_on = two_on["pers"][f"PSN-003|{MAR}"]
     lead_off = two_off["pers"][f"PSN-003|{MAR}"]
-    check(abs(lead_on - solo * 1 / 3) < 1e-9 and abs(lead_off - solo * 1 / 5) < 1e-9,
+    check(abs(lead_on - _r2(solo * 1 / 3)) <= 0.01 + 1e-9
+          and abs(lead_off - _r2(solo * 1 / 5)) <= 0.01 + 1e-9,
           "but with a SECOND role beside it the setting still decides the split — two "
           "sharers claiming 2.00 between them, or 2.00 each, changes what is left for "
           "the lead",

@@ -784,34 +784,6 @@ dialog.big .dlg-b{max-height:84vh}
 .cls.conditional{background:var(--underbg);color:var(--underink)}
 .cls.incomplete{background:var(--fill);color:var(--ink2)}
 
-/* The log date range, inside the export menu. A row of controls rather than a menu
-   item, because it does not DO anything on click - it narrows what the two items
-   below it will hand over. */
-.expdates{display:flex;gap:var(--sp-2);align-items:flex-end;padding:6px 11px 2px;
- flex-wrap:wrap}
-.expdates .ctl{flex:0 0 auto}
-.expdates input{font:inherit;font-size:var(--t-md);padding:4px 7px;
- border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
- color:var(--ink)}
-.expdates .hint{flex:1 1 100%;color:var(--muted);font-size:var(--t-xs);padding-top:2px}
-.msp hr{border:0;border-top:1px solid var(--hairline);margin:6px 4px}
-/* An export with nothing to hand over says so and refuses, rather than delivering a
-   file with a header row and no content - which looks like an answer. */
-.expitem.off{opacity:.42;cursor:not-allowed}
-.expitem.off:hover{background:none}
-
-/* The name request. Shown with show() rather than showModal(), so it never blocks the
-   edit that triggered it - which means it needs its own place to sit, since a non-modal
-   <dialog> otherwise lands in the document flow wherever it was declared. Bottom right,
-   out of the way of the tables and above the sticky band. */
-#whoami[open]{position:fixed;inset:auto 18px 18px auto;margin:0;max-width:390px;
- z-index:120;border:1px solid var(--hairline);border-radius:var(--r-lg);
- background:var(--raised);color:var(--ink);padding:0;box-shadow:var(--shadow-lift)}
-#whoami .dlg-b{max-height:none}
-#whoami .ctl input{width:100%;font:inherit;font-size:var(--t-md);padding:6px 9px;
- border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
- color:var(--ink)}
-
 /* The name request, in the edit bar. A row of small controls rather than a panel: it
    shares the bar with the guide text and the buttons, and wraps with them. */
 #whobox{display:inline-flex;align-items:center;gap:6px}
@@ -844,23 +816,6 @@ dialog.big .dlg-b{max-height:84vh}
         <i>The figures, not the plan — every project-month and person-month in view,
            with the working behind each one. For a report or a spreadsheet.
            <b>Cannot be imported back.</b></i></button>
-      <hr>
-      <!-- The record of the WORK, as opposed to the plan or the figures. Narrowed by
-           date rather than by the page's filters, because "what happened in March" is
-           the question a log is read to answer. -->
-      <div class="expdates">
-        <div class="ctl"><label for="aFrom">Log from</label>
-          <input id="aFrom" size="9" placeholder="YYYY-MM-DD"></div>
-        <div class="ctl"><label for="aTo">to</label>
-          <input id="aTo" size="9" placeholder="YYYY-MM-DD"></div>
-        <span class="hint" id="aCount"></span>
-      </div>
-      <button class="expitem" id="exportAuditBtn">Change log <b>.csv</b>
-        <i>Every saved change: when in UTC, who, which record, which column, and the
-           value before and after.</i></button>
-      <button class="expitem" id="exportEventsBtn">Errors and warnings <b>.csv</b>
-        <i>What the application reported at each save, and which of them were knowingly
-           kept.</i></button>
     </div>
   </details>
   <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
@@ -1038,7 +993,7 @@ dialog.big .dlg-b{max-height:84vh}
 
 <script>
 "use strict";
-const APP_VERSION = "1.43";
+const APP_VERSION = "1.44";
 const SCHEMA_EXPECTED = 11;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1047,9 +1002,9 @@ const SCHEMA_EXPECTED = 11;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.45.xlsx",          ver:"2.45",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.46.xlsx",          ver:"2.46",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.19.xlsx", ver:"1.19",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.20.xlsx", ver:"1.20",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
@@ -3575,6 +3530,65 @@ function calculate(M){
    of a month, not a whole one; a project running all month draws all of it however
    part-time the people on it are. Without this every project would spike to a full
    standard month in the month it opened and the month it closed. */
+/* ================================ THE DECIMAL RULE (REQ-CAL-20)
+
+   EVERY FTE FIGURE THIS APPLICATION PRODUCES IS A WHOLE NUMBER OF HUNDREDTHS.
+
+   Not "displayed to two places" - IS. The rounding happens once, here, at the moment a
+   person-month is decided, and every later reader sees the same number: the screen, the
+   results export, the change log, the four independent implementations. A figure shown
+   as 4.27 was 4.27 when it was worked out, not 4.2683 dressed up for the table.
+
+   Two places because that is the granularity the plan is written in. At 160 hours to the
+   FTE, 0.01 is 1.6 hours - the smallest edit that means anything to somebody staffing a
+   study, and already the granularity a manual estimate is typed at (REQ-CAL-18). Keeping
+   four places in the file was keeping precision the inputs never had.
+
+   ROUNDING EACH SHARE INDEPENDENTLY WOULD NOT DO. Round 4.27/3 three times and the parts
+   come to 4.26 or 4.29, never reliably to 4.27 - so the detail rows would stop summing to
+   the month above them (REQ-OUT-06) and the shares would stop adding to one (REQ-CAL-19).
+   On the 62-project fixture that missed on 644 of 1,629 project-months.
+
+   So the month is rounded FIRST and its hundredths are then handed out: each line takes
+   its floor, and the hundredths left over go to the lines with the largest remainders,
+   one each. That is the largest-remainder method, and it makes both guarantees exact by
+   construction rather than by tolerance.
+
+   THE TIE-BREAK IS PART OF THE RULE, not an implementation detail. Four programs compute
+   these figures and they must agree to the hundredth, so where two remainders are equal
+   the extra hundredth goes to the line whose assignment_id sorts first - a total order
+   that does not depend on array order, hash order, or the order rows happened to be read
+   from a sheet. Without it two implementations could differ by 0.01 and both be "right".
+
+   Integers throughout: hundredths are counted, never accumulated as fractions, so the
+   arithmetic here cannot itself introduce the error it exists to remove. */
+const CENTS = 100;
+const toCents = v => Math.round((v || 0) * CENTS);
+const fromCents = c => c / CENTS;
+
+/** Share `totalCents` hundredths among `items` in proportion to `weight`, exactly.
+ *  Returns cents per item, summing to totalCents with no residue. */
+function largestRemainder(items, totalCents){
+  const n = items.length;
+  if (!n) return [];
+  if (totalCents <= 0) return items.map(() => 0);
+  const sum = items.reduce((t, it) => t + (it.weight > 0 ? it.weight : 0), 0);
+  if (!(sum > 0)) return items.map(() => 0);
+  const exact = items.map(it => (it.weight > 0 ? it.weight : 0) / sum * totalCents);
+  const out = exact.map(v => Math.floor(v));
+  let left = totalCents - out.reduce((a, b) => a + b, 0);
+  // Biggest remainder first; ties by the caller's key, which is a total order.
+  const order = items.map((it, i) => i).sort((a, b) => {
+    const ra = exact[a] - out[a], rb = exact[b] - out[b];
+    if (rb !== ra) return rb - ra;
+    return items[a].key < items[b].key ? -1 : items[a].key > items[b].key ? 1 : 0;
+  });
+  // `left` can exceed the number of lines only if the weights are degenerate; going
+  // round again rather than stopping keeps the total exact in that case too.
+  for (let i = 0; left > 0; i++, left--) out[order[i % n]]++;
+  return out;
+}
+
 function shareOut(lines){
   const groups = new Map();
   for (const L of lines){
@@ -3585,13 +3599,19 @@ function shareOut(lines){
   for (const group of groups.values()){
     let claims = 0, ran = 0;
     for (const L of group){ claims += L.claim; ran = Math.max(ran, L.coverage); }
-    const demand = group[0].standard_fte * group[0].period_weight * ran;
-    for (const L of group){
+    // The month, rounded once. Everything below divides THIS, so the parts cannot come
+    // to anything else.
+    const demandCents = toCents(group[0].standard_fte * group[0].period_weight * ran);
+    const demand = fromCents(demandCents);
+    const cents = largestRemainder(
+      group.map(L => ({weight: claims > 0 ? L.claim : 0, key: L.assignment_id || ""})),
+      demandCents);
+    group.forEach((L, i) => {
       L.role_share = claims > 0 ? L.claim / claims : 0;
       L.month_run = ran;
       L.demand_fte = demand;
-      L.fte = L.auto = demand * L.role_share;
-    }
+      L.fte = L.auto = fromCents(cents[i]);
+    });
   }
 }
 
@@ -3694,7 +3714,9 @@ function applyManual(M, lines){
       L.fte = 0;
       L.source = "manual (assignment) — NO FIGURE GIVEN";
     } else {
-      L.fte = v;
+      // Rounded like everything else (REQ-CAL-20). The panel types these at two places,
+      // but the sheet is a spreadsheet and a hand-edited cell can hold 0.123456.
+      L.fte = fromCents(toCents(v));
       L.source = "manual (assignment)";
       L.manual_at = M.manualAt[key] ?? null;
     }
@@ -3724,15 +3746,23 @@ function applyManual(M, lines){
       // alternative is a project total no person on the project accounts for.
       continue;
     }
+    /* The stated month, shared out to the hundredth (REQ-CAL-20). Scaling each line and
+       leaving it there would put the people a fraction off the figure the user typed -
+       and a project total that its own people do not add up to is precisely what
+       REQ-CAL-18 exists to prevent. Same rule as shareOut(): round the month once, hand
+       out its hundredths by largest remainder. */
     const scale = want / have;
-    for (const L of group){
-      L.fte *= scale;
+    const wantCents = toCents(want);
+    const cents = largestRemainder(
+      group.map(L => ({weight: L.fte, key: L.assignment_id || ""})), wantCents);
+    group.forEach((L, i) => {
+      L.fte = fromCents(cents[i]);
       L.project_scale = scale;
-      L.manual_project_total = want;
+      L.manual_project_total = fromCents(wantCents);
       L.source = L.manual_assignment ? "manual (assignment, scaled to the project figure)"
                                      : "manual (project, shared out)";
       L.manual_at = M.manualAt[key] ?? L.manual_at ?? null;
-    }
+    });
   }
   M.__manualStrays = strays;
 }
@@ -4255,8 +4285,19 @@ function buildResults(M, C, scope){
      + "it round-trips."],
     [],
     ["HOW EVERY FIGURE WAS MADE"],
-    ["FTE  =  demand_fte  ×  role_share,   where  demand_fte = standard_fte  ×  period "
-     + "weight  ×  month_run"],
+    ["FTE  =  demand_fte  ×  role_share,  ROUNDED TO A WHOLE NUMBER OF HUNDREDTHS,  "
+     + "where  demand_fte = standard_fte  ×  period weight  ×  month_run"],
+    ["The rounding is part of the rule and not a presentation choice (REQ-CAL-20). Every "
+     + "figure this application produces is a whole number of hundredths, because at 160 "
+     + "hours to the FTE 0.01 is 1.6 hours and the plan is not written finer than that. "
+     + "So a row's fte is its demand times its share IN WHOLE HUNDREDTHS: each row takes "
+     + "its floor, and the hundredths left over go to the rows with the largest "
+     + "remainders. A row can therefore sit up to 0.01 from the exact product."],
+    ["What is exact, and what this sheet is for: THE ROWS OF ONE PROJECT-MONTH ADD UP TO "
+     + "demand_fte EXACTLY, to the hundredth, with nothing left over. The month's "
+     + "hundredths are handed out by largest remainder rather than each row being "
+     + "rounded on its own - round three shares of 4.27 separately and they come to 4.26 "
+     + "or 4.28, and the sheet would not reconcile."],
     ["standard_fte", "the month's DEMAND for a project of this type, phase and work scope in this period, from PeriodFTEStandard. A magnitude in FTE: 4.02 means the period takes about four full-time people a month."],
     ["period weight", "this project's own adjustment to that standard, from ProjectPeriod. 1.00 means an ordinary project of its kind."],
     ["month_run", "how much of the month the project actually ran, taken as the largest "
@@ -7450,61 +7491,22 @@ const FILTER_LABEL = {type:"Project type", phase:"Clinical phase", out:"Work sco
                       proj:"Project", pers:"Person", role:"Role", dept:"Department"};
 /* =============================================== the change log, in the web shell
 
-   THE BROWSER CANNOT WRITE TO A FOLDER. A page opened from a file:// URL has no folder
-   of its own and no way to append to one; the File System Access API exists, but it
-   needs the user to grant a directory on every session and is not available everywhere
-   this application has to run. So the browser keeps the record in memory for the
-   session and hands it over as a file when asked - the same record, arriving by the
-   only route a browser has.
+   THE ARCHIVE IS THE ONLY ROUTE OUT. Every saved change is appended to a CSV in the
+   application's audit folder at the moment of saving, so there is nothing for the page
+   to hand over afterwards - and an export button beside an archive that already has the
+   file is two answers to one question, of which one is always the staler.
 
-   THE DESKTOP SHELL DOES have a folder, and replaces archiveAudit() with one that
-   appends to it at every save. That is the whole of the seam: the editing code calls
-   archiveAudit() and does not know which shell answered.
+   That leaves this file as one function and a seam. archiveAudit() is called after every
+   save; the shell with a folder writes to it, and a shell without one does nothing here
+   but is still called, so the editing code above has a single name to call and does not
+   know which shell answered. */
 
-   Who is typing is asked for in ui/13b_audit_ui.js - a dialog is not storage. */
-
-/** Called after every save. In the browser there is nowhere to archive TO, so this only
- *  keeps the count the export offer is drawn from; the desktop shell overrides it with
- *  one that writes to disk. */
+/** Called after every save. The desktop shell replaces this with one that appends to
+ *  the shared audit folder. A shell with nowhere to write keeps the record in memory for
+ *  the session and says so on the status line rather than silently dropping it. */
 function archiveAudit(){
-  renderAuditOffer();
+  /* nothing to do in a page that has no folder of its own */
 }
-
-/* ------------------------------------------------------- handing the record over */
-
-function auditFileName(kind, from, to){
-  const base = (S.fileName || "PRAP").replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
-  const span = from || to ? `_${from || "start"}_to_${to || "end"}` : "";
-  return `${base}_${kind}${span}.csv`;
-}
-
-/** A CSV the way Excel wants it: a UTF-8 BOM, so a column of Korean or an accented name
- *  is not mangled when the file is opened by double-clicking it on Windows. Without it
- *  Excel reads the file in the system code page and the log becomes unreadable for
- *  exactly the users most likely to need it. */
-function downloadCsv(name, text){
-  const blob = new Blob(["﻿" + text], {type:"text/csv;charset=utf-8"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-
-function exportAudit(from, to){
-  const n = auditBetween(S.audit, from, to).length;
-  downloadCsv(auditFileName("ChangeLog", from, to), auditCsv(S.audit, from, to));
-  return n;
-}
-
-function exportEvents(from, to){
-  const n = auditBetween(S.events, from, to).length;
-  downloadCsv(auditFileName("ErrorsAndWarnings", from, to), eventsCsv(S.events, from, to));
-  return n;
-}
-
 
 /* ============================================================ 13. findings report */
 
@@ -7795,12 +7797,14 @@ function autoPeriods(pid){
     + `They are ordinary rows — edit any of them, then Save.`);
 }
 
-/* ======================================= who is making the changes, and what there is
-   to hand over. Both are UI, kept out of storage/ - that is the seam the desktop shell
-   replaces, and it should hold the file handling and nothing else.
+/* ============================================================ who is making the changes
 
-   The desktop shell overrides askWho() with one that answers from the Windows account,
-   so the control below never appears there. */
+   The name every entry in the change log is stamped with. UI, kept out of storage/ -
+   that is the seam the desktop shell replaces, and it should hold the file handling and
+   nothing else.
+
+   The desktop shell overrides askWho() with one that answers from the account it signed
+   in with, so the control below never appears there. */
 
 const WHO_KEY = "prap.who";
 
@@ -7828,35 +7832,7 @@ function setWho(name){
   try { localStorage.setItem(WHO_KEY, S.who); } catch (e){ /* nothing to do */ }
   const box = el("whobox");
   if (box) box.hidden = true;
-  renderAuditOffer();
   renderDirty();
-}
-
-/* --------------------------------------------------------------- the export offer */
-
-/** How much there is to export, said on the menu itself.
- *
- *  A menu item that silently hands over an empty file is worse than one that is greyed
- *  out: the file arrives, it looks like the log, and it says nothing happened. This puts
- *  the count where the decision is made, and disables the item when there is nothing. */
-function renderAuditOffer(){
-  const c = el("aCount");
-  if (!c) return;
-  const from = (el("aFrom") || {}).value || "", to = (el("aTo") || {}).value || "";
-  const a = auditBetween(S.audit, from, to).length;
-  const e = auditBetween(S.events, from, to).length;
-  const span = from || to ? " in that range" : "";
-  c.textContent = S.audit.length || S.events.length
-    ? `${a} change(s), ${e} finding(s)${span}`
-    : "nothing recorded yet — the log starts at your first save";
-  const setUp = (id, n) => {
-    const b = el(id);
-    if (!b) return;
-    b.disabled = !n;
-    b.classList.toggle("off", !n);
-  };
-  setUp("exportAuditBtn", a);
-  setUp("exportEventsBtn", e);
 }
 /* ============================================================ 14. wiring */
 
@@ -8320,30 +8296,6 @@ const expDone = fn => () => { el("expMenu").open = false; fn(); };
 el("exportBtn2").onclick = expDone(() => exportWorkbook(false));
 el("exportJsonBtn").onclick = expDone(() => exportWorkbook(true));
 el("exportCalcBtn").onclick = expDone(exportResults);
-/* The two log exports. The date boxes live INSIDE the menu, so typing in them must not
-   close it - hence the click here rather than the shared expDone() wrapper, and the
-   stopPropagation below that keeps the document-level "click outside closes it" handler
-   off the panel's own controls. */
-const logRange = () => [(el("aFrom").value || "").trim(), (el("aTo").value || "").trim()];
-for (const id of ["aFrom", "aTo"]){
-  el(id).addEventListener("input", renderAuditOffer);
-  el(id).addEventListener("click", e => e.stopPropagation());
-}
-el("exportAuditBtn").onclick = () => {
-  const [f, t] = logRange();
-  const n = exportAudit(f, t);
-  el("expMenu").open = false;
-  showBanner("", `Change log exported — ${n} entr${n === 1 ? "y" : "ies"}`
-    + (f || t ? ` between ${f || "the start"} and ${t || "now"}` : "") + ".");
-};
-el("exportEventsBtn").onclick = () => {
-  const [f, t] = logRange();
-  const n = exportEvents(f, t);
-  el("expMenu").open = false;
-  showBanner("", `Errors and warnings exported — ${n} finding${n === 1 ? "" : "s"}`
-    + (f || t ? ` between ${f || "the start"} and ${t || "now"}` : "") + ".");
-};
-renderAuditOffer();
 el("whoOk").onclick = () => setWho(el("whoName").value);
 el("whoSkip").onclick = () => setWho("");
 el("whoName").addEventListener("keydown", e => {

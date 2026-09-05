@@ -355,6 +355,65 @@ function calculate(M){
    of a month, not a whole one; a project running all month draws all of it however
    part-time the people on it are. Without this every project would spike to a full
    standard month in the month it opened and the month it closed. */
+/* ================================ THE DECIMAL RULE (REQ-CAL-20)
+
+   EVERY FTE FIGURE THIS APPLICATION PRODUCES IS A WHOLE NUMBER OF HUNDREDTHS.
+
+   Not "displayed to two places" - IS. The rounding happens once, here, at the moment a
+   person-month is decided, and every later reader sees the same number: the screen, the
+   results export, the change log, the four independent implementations. A figure shown
+   as 4.27 was 4.27 when it was worked out, not 4.2683 dressed up for the table.
+
+   Two places because that is the granularity the plan is written in. At 160 hours to the
+   FTE, 0.01 is 1.6 hours - the smallest edit that means anything to somebody staffing a
+   study, and already the granularity a manual estimate is typed at (REQ-CAL-18). Keeping
+   four places in the file was keeping precision the inputs never had.
+
+   ROUNDING EACH SHARE INDEPENDENTLY WOULD NOT DO. Round 4.27/3 three times and the parts
+   come to 4.26 or 4.29, never reliably to 4.27 - so the detail rows would stop summing to
+   the month above them (REQ-OUT-06) and the shares would stop adding to one (REQ-CAL-19).
+   On the 62-project fixture that missed on 644 of 1,629 project-months.
+
+   So the month is rounded FIRST and its hundredths are then handed out: each line takes
+   its floor, and the hundredths left over go to the lines with the largest remainders,
+   one each. That is the largest-remainder method, and it makes both guarantees exact by
+   construction rather than by tolerance.
+
+   THE TIE-BREAK IS PART OF THE RULE, not an implementation detail. Four programs compute
+   these figures and they must agree to the hundredth, so where two remainders are equal
+   the extra hundredth goes to the line whose assignment_id sorts first - a total order
+   that does not depend on array order, hash order, or the order rows happened to be read
+   from a sheet. Without it two implementations could differ by 0.01 and both be "right".
+
+   Integers throughout: hundredths are counted, never accumulated as fractions, so the
+   arithmetic here cannot itself introduce the error it exists to remove. */
+const CENTS = 100;
+const toCents = v => Math.round((v || 0) * CENTS);
+const fromCents = c => c / CENTS;
+
+/** Share `totalCents` hundredths among `items` in proportion to `weight`, exactly.
+ *  Returns cents per item, summing to totalCents with no residue. */
+function largestRemainder(items, totalCents){
+  const n = items.length;
+  if (!n) return [];
+  if (totalCents <= 0) return items.map(() => 0);
+  const sum = items.reduce((t, it) => t + (it.weight > 0 ? it.weight : 0), 0);
+  if (!(sum > 0)) return items.map(() => 0);
+  const exact = items.map(it => (it.weight > 0 ? it.weight : 0) / sum * totalCents);
+  const out = exact.map(v => Math.floor(v));
+  let left = totalCents - out.reduce((a, b) => a + b, 0);
+  // Biggest remainder first; ties by the caller's key, which is a total order.
+  const order = items.map((it, i) => i).sort((a, b) => {
+    const ra = exact[a] - out[a], rb = exact[b] - out[b];
+    if (rb !== ra) return rb - ra;
+    return items[a].key < items[b].key ? -1 : items[a].key > items[b].key ? 1 : 0;
+  });
+  // `left` can exceed the number of lines only if the weights are degenerate; going
+  // round again rather than stopping keeps the total exact in that case too.
+  for (let i = 0; left > 0; i++, left--) out[order[i % n]]++;
+  return out;
+}
+
 function shareOut(lines){
   const groups = new Map();
   for (const L of lines){
@@ -365,13 +424,19 @@ function shareOut(lines){
   for (const group of groups.values()){
     let claims = 0, ran = 0;
     for (const L of group){ claims += L.claim; ran = Math.max(ran, L.coverage); }
-    const demand = group[0].standard_fte * group[0].period_weight * ran;
-    for (const L of group){
+    // The month, rounded once. Everything below divides THIS, so the parts cannot come
+    // to anything else.
+    const demandCents = toCents(group[0].standard_fte * group[0].period_weight * ran);
+    const demand = fromCents(demandCents);
+    const cents = largestRemainder(
+      group.map(L => ({weight: claims > 0 ? L.claim : 0, key: L.assignment_id || ""})),
+      demandCents);
+    group.forEach((L, i) => {
       L.role_share = claims > 0 ? L.claim / claims : 0;
       L.month_run = ran;
       L.demand_fte = demand;
-      L.fte = L.auto = demand * L.role_share;
-    }
+      L.fte = L.auto = fromCents(cents[i]);
+    });
   }
 }
 
@@ -474,7 +539,9 @@ function applyManual(M, lines){
       L.fte = 0;
       L.source = "manual (assignment) — NO FIGURE GIVEN";
     } else {
-      L.fte = v;
+      // Rounded like everything else (REQ-CAL-20). The panel types these at two places,
+      // but the sheet is a spreadsheet and a hand-edited cell can hold 0.123456.
+      L.fte = fromCents(toCents(v));
       L.source = "manual (assignment)";
       L.manual_at = M.manualAt[key] ?? null;
     }
@@ -504,15 +571,23 @@ function applyManual(M, lines){
       // alternative is a project total no person on the project accounts for.
       continue;
     }
+    /* The stated month, shared out to the hundredth (REQ-CAL-20). Scaling each line and
+       leaving it there would put the people a fraction off the figure the user typed -
+       and a project total that its own people do not add up to is precisely what
+       REQ-CAL-18 exists to prevent. Same rule as shareOut(): round the month once, hand
+       out its hundredths by largest remainder. */
     const scale = want / have;
-    for (const L of group){
-      L.fte *= scale;
+    const wantCents = toCents(want);
+    const cents = largestRemainder(
+      group.map(L => ({weight: L.fte, key: L.assignment_id || ""})), wantCents);
+    group.forEach((L, i) => {
+      L.fte = fromCents(cents[i]);
       L.project_scale = scale;
-      L.manual_project_total = want;
+      L.manual_project_total = fromCents(wantCents);
       L.source = L.manual_assignment ? "manual (assignment, scaled to the project figure)"
                                      : "manual (project, shared out)";
       L.manual_at = M.manualAt[key] ?? L.manual_at ?? null;
-    }
+    });
   }
   M.__manualStrays = strays;
 }

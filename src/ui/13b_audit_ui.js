@@ -1,9 +1,11 @@
-/* ======================================= who is making the changes, and what there is
-   to hand over. Both are UI, kept out of storage/ - that is the seam the desktop shell
-   replaces, and it should hold the file handling and nothing else.
+/* ============================================================ who is making the changes
 
-   The desktop shell overrides askWho() with one that answers from the Windows account,
-   so the control below never appears there. */
+   The name every entry in the change log is stamped with. UI, kept out of storage/ -
+   that is the seam the desktop shell replaces, and it should hold the file handling and
+   nothing else.
+
+   The desktop shell overrides askWho() with one that answers from the account it signed
+   in with, so the control below never appears there. */
 
 const WHO_KEY = "prap.who";
 
@@ -31,33 +33,5 @@ function setWho(name){
   try { localStorage.setItem(WHO_KEY, S.who); } catch (e){ /* nothing to do */ }
   const box = el("whobox");
   if (box) box.hidden = true;
-  renderAuditOffer();
   renderDirty();
-}
-
-/* --------------------------------------------------------------- the export offer */
-
-/** How much there is to export, said on the menu itself.
- *
- *  A menu item that silently hands over an empty file is worse than one that is greyed
- *  out: the file arrives, it looks like the log, and it says nothing happened. This puts
- *  the count where the decision is made, and disables the item when there is nothing. */
-function renderAuditOffer(){
-  const c = el("aCount");
-  if (!c) return;
-  const from = (el("aFrom") || {}).value || "", to = (el("aTo") || {}).value || "";
-  const a = auditBetween(S.audit, from, to).length;
-  const e = auditBetween(S.events, from, to).length;
-  const span = from || to ? " in that range" : "";
-  c.textContent = S.audit.length || S.events.length
-    ? `${a} change(s), ${e} finding(s)${span}`
-    : "nothing recorded yet — the log starts at your first save";
-  const setUp = (id, n) => {
-    const b = el(id);
-    if (!b) return;
-    b.disabled = !n;
-    b.classList.toggle("off", !n);
-  };
-  setUp("exportAuditBtn", a);
-  setUp("exportEventsBtn", e);
 }

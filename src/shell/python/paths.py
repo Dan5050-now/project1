@@ -63,13 +63,18 @@ def resolve_data_dir(argv=None, env=None, app_dir=None, account=None,
                        app_dir, per_user)
 
     # 4. Ask. The caller shows the dialog; this only reports that it must.
-    return {"dir": None, "rule": "4 - ask the user", "account": account,
+    return {"dir": None, "root": None, "rule": "4 - ask the user", "account": account,
             "mustAsk": True, "appDir": app_dir}
 
 
 def _settle(root, rule, account, app_dir, per_user):
     d = root if not per_user else os.path.join(root, "users", account)
-    return {"dir": d, "rule": rule, "account": account, "mustAsk": False,
+    # `root` as well as `dir`. Each person works in their own folder under it, but some
+    # things belong to the INSTALLATION rather than to a person - the change log is one,
+    # because a record of who changed what is only worth reading if everyone's entries
+    # are in it. Returning the root is what lets the caller put those beside `users/`
+    # rather than inside one person's copy.
+    return {"dir": d, "root": root, "rule": rule, "account": account, "mustAsk": False,
             "appDir": app_dir}
 
 
@@ -114,14 +119,26 @@ def writable(d):
 def ensure(data_dir):
     """Create the folders the resolved location needs. Called once at launch."""
     for d in (data_dir, os.path.join(data_dir, "workspaces"),
-              os.path.join(data_dir, "backups"),
-              # Where the change log accumulates. Its own folder rather than a file
-              # beside the plans: it is not a plan, it is never opened by the
-              # application, and somebody looking for "the logs" should find a folder
-              # with that name rather than have to know which file to pick out.
-              os.path.join(data_dir, "audit")):
+              os.path.join(data_dir, "backups")):
         os.makedirs(d, exist_ok=True)
     return data_dir
+
+
+def audit_dir(root):
+    """Where the change log accumulates: ONE folder for the installation.
+
+    Beside users/, not inside it. A change log split into one file per person answers
+    "what did I do" and not "what happened to this plan", which is the question it is
+    kept for - and on a shared deployment the second question is the only one worth
+    asking. Every row already names who made the change, so nothing is lost by putting
+    them together and the ordering across people is gained.
+
+    Its own folder rather than files beside the plans: it is not a plan, the application
+    never reads it back, and somebody looking for "the logs" should find a folder called
+    that rather than have to know which file to pick out."""
+    d = os.path.join(root, "audit")
+    os.makedirs(d, exist_ok=True)
+    return d
 
 
 def settings_path(data_dir):

@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.19"
+DOC_VERSION = "1.20"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.45.xlsx"
+PLAN = "PRAP_Development_Plan_v2.46.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,20 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.20", "2026-09-05", "Claude Code", "Dan",
+         "R-38. Sheet 05 gains REQ-CAL-20, THE DECIMAL RULE: every FTE figure is a whole "
+         "number of hundredths, rounded once where a person-month is decided rather than "
+         "at each place it is shown, and a project-month's hundredths handed out by "
+         "largest remainder with assignment_id breaking ties. That is what keeps "
+         "REQ-OUT-06 (rows sum to the month) and REQ-CAL-19 (shares add to one) exact "
+         "instead of approximate - rounding each share separately missed on 644 of 1,629 "
+         "project-months. Sheet 08 records that a detail row can sit up to 0.01 from the "
+         "exact product of its own terms, and that the rows of a project-month "
+         "nonetheless add to it with nothing left over. Every figure moves slightly. "
+         "Sheet 09: the in-app change-log export is removed - the archive at save is the "
+         "only route out - and the archive is one folder for the installation rather "
+         "than one per person. A central server with real logins is NOT built and is "
+         "recorded as specified-but-unbuilt. Written against plan v2.46.", "Issued"],
         ["1.19", "2026-09-05", "Claude Code", "Dan",
          "R-37. Sheet 10: the chart pop-ups name the PROJECT PERIOD the month falls in, "
          "with its weight - the row of the plan that decided the size of the figure "

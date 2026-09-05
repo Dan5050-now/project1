@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.45"
+DOC_VERSION = "2.46"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,7 +397,34 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
-    [f"{MARK_NEW}2.45", "2026-09-05", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.46", "2026-09-05", "Claude Code", "Pending",
+     "R-38, THREE REQUESTS. "
+     "(1) THE IN-APP EXPORT OF THE CHANGE LOG IS REMOVED. The archive is written at "
+     "every save, so a button handing over the same record afterwards was a second "
+     "answer to one question and always the staler of the two. The menu items, the date "
+     "range, the CSV download and the code behind them are gone rather than hidden. "
+     "(2) THE ARCHIVE IS ONE FOLDER FOR THE INSTALLATION, beside users/ rather than "
+     "inside any one person's copy of it - the layout PRAP_DATA and the shared-drive "
+     "deployment already assume (NR-DEP-15). A log split per person answers 'what did I "
+     "do' and not 'what happened to this plan', and on a shared deployment only the "
+     "second question is worth asking; every row already names who made the change. "
+     "NOT YET BUILT, and stated so the gap is not mistaken for done: a CENTRAL SERVER "
+     "needs network binding, real authentication and sessions, per-user authorisation "
+     "and concurrent-write handling. The shell today binds to 127.0.0.1 and refuses "
+     "non-loopback Host headers BY DESIGN - that refusal is what makes an open socket "
+     "on a company laptop defensible - and 'login' is the Windows account name, a label "
+     "rather than an authentication. Replacing that is a security-sensitive piece of "
+     "work to be specified before it is started. "
+     "(3) REQ-CAL-20, THE DECIMAL RULE - see the requirement for the whole of it. EVERY "
+     "FIGURE IN EVERY PLAN MOVES slightly: the 62-project fixture goes 4,333.46 to "
+     "4,333.77 FTE-months and the 10x10 fixture 713.94 to 713.78, which is the rounding "
+     "and nothing else. Checked on the 62-project fixture: all 7,001 lines are whole "
+     "hundredths, all 1,629 project-months have their lines summing to the month with "
+     "nothing left over, and all 1,557 automatic months still equal standard x weight x "
+     "month_run to the hundredth. All four implementations agree line for line - 7,001 "
+     "lines and 1,629 project-months identical between the browser and prap_io.",
+     "Issued for review"],
+    ["2.45", "2026-09-05", "Claude Code", "Pending",
      "R-37, THE POP-UPS NAME THE PROJECT PERIOD. Every figure in this application is "
      "standard FTE x PERIOD WEIGHT x the month the project ran, so the period is the row "
      "of the plan that decided the size of whatever is being hovered over - and it was "
@@ -419,7 +446,7 @@ rows = [
      "on one project and Conduct (interim) on another in the same month. A month "
      "belonging to no period says so and names V-12, rather than leaving a blank that "
      "reads as a defect in the chart. No figure moves.",
-     "Issued for review"],
+     "Superseded by v2.46"],
     ["2.44", "2026-09-04", "Claude Code", "Pending",
      "R-36, A CHANGE LOG AND COLUMN FILTERS. Two requests; no figure moves for either. "
      "(1) THE CHANGE LOG. Every saved change is recorded - the time in UTC, who, which "
@@ -1562,6 +1589,7 @@ reqs = [
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
     [f"{MARK_NEW}REQ-DSH-13", "Dashboard", "Every bounded scroll region draws its own scrollbars rather than relying on the browser's. A region deliberately capped on both axes is only honest if the reader can see there is more and reach it, and the browser's bar does not do that on a build that uses overlay scrollbars: it occupies no layout space and fades out when idle, so a table with eleven columns off to the right looks exactly like one with none. The drawn bar is present whenever there is anywhere to scroll to, can be dragged, and pages when its track is clicked. Native scrolling - wheel, shift-wheel, trackpad, keyboard - is untouched.", "Must", "R-23", "4"],
+    [f"{MARK_NEW}REQ-CAL-20", "Calculation", "EVERY FTE FIGURE THE APPLICATION PRODUCES IS A WHOLE NUMBER OF HUNDREDTHS - not displayed to two places, but IS two places. The rounding happens once, where a person-month is decided, so the screen, the results export, the change log and all four independent implementations report the same number: a figure shown as 4.27 was 4.27 when it was worked out, not 4.2683 dressed up for a table. Two places because that is the granularity the plan is written in: at 160 hours to the FTE, 0.01 is 1.6 hours, the smallest edit that means anything to somebody staffing a study, and already what a manual estimate is typed at (REQ-CAL-18). ROUNDING EACH SHARE ON ITS OWN WOULD NOT DO - round three shares of 4.27 separately and they come to 4.26 or 4.28, so the detail rows would stop summing to the month (REQ-OUT-06) and the shares would stop adding to one (REQ-CAL-19); measured on the 62-project fixture that missed on 644 of 1,629 project-months. So THE MONTH IS ROUNDED FIRST AND ITS HUNDREDTHS ARE HANDED OUT: each line takes its floor and the hundredths left over go to the lines with the largest remainders, one each - the largest-remainder method, which makes both guarantees exact by construction rather than by tolerance. THE TIE-BREAK IS PART OF THE RULE: where two remainders are equal the hundredth goes to the line whose assignment_id sorts first, a total order that does not depend on array order or on the order rows were read from a sheet. Without it two implementations could differ by 0.01 and both be right. A row therefore sits up to 0.01 from the exact product of its own terms - measured worst 0.0070 - and the results export says so. Hundredths are counted as integers throughout, so the arithmetic cannot introduce the error it exists to remove.", "Must", "R-38", "4"],
     [f"{MARK_NEW}REQ-CAL-19", "Calculation", "A PROJECT-MONTH IS ITS STANDARD. PeriodFTEStandard.standard_fte is the DEMAND in FTE for a project of this type, clinical phase and work scope in this period; ProjectPeriod.weight ADJUSTS it for the particular study (1.00 = an ordinary project of its kind); and the product, scaled by how much of the month the project actually ran, IS the month. The people on it DIVIDE that month rather than each adding to it. Every term that used to reduce a figure now decides a share: role factor / people holding that role, times person_weight, times that person's own month coverage, makes a CLAIM; the claim over the sum of the claims is the SHARE; the share times the demand is the figure. THE SHARES ADD TO ONE BY CONSTRUCTION, so the month is its demand however many people are on it and whatever their weights - an unstaffed role's work lands on the others (REQ-CAL-16 decides on WHOM), and a part-time commitment pushes load onto colleagues rather than making the project cheaper. Under-staffing is therefore visible on the PEOPLE, as months over the ceiling, and never as a project that costs less than the work it contains. The month a project ran is taken as the largest coverage any of its people have, so a project whose period ends on the 10th draws a third of a month rather than a whole one. A missing standard falls back to 1.00 and V-19 reports it.", "Must", "R-31, R-32", "4"],
     [f"{MARK_NEW}REQ-CAL-18", "Calculation", "A PROJECT, OR ONE ASSIGNMENT, MAY HAVE ITS MONTHLY FTE STATED RATHER THAN CALCULATED. estimation_type on Project and on Assignment selects which; MonthlyEstimate carries the stated figures. TWO LEVELS, applied in that order: an ASSIGNMENT figure IS that person's contribution to that project and replaces the share R-32 would otherwise have given them; a PROJECT figure is the whole month, and every person on it that month is SCALED so they still add up to it - because a project total that did not equal the sum of its people would put the two utilisation charts in disagreement and cost the results export its one guarantee. The scaling factor is recorded on every line, so a person whose figure moved with nothing of their own changing can find out why. MANUAL IS ALL OR NOTHING for the thing it is set on: switching copies every month across from the figures currently on screen, so nothing jumps, and switching back discards them all. The copy is written to TWO DECIMAL PLACES: a stated figure lands in a cell somebody reads and edits, and two places is the finest edit that means anything in the unit people think in - at 160 hours to the FTE, 0.01 is 1.6 hours. A month can therefore move by up to 0.005 FTE, about 48 minutes, at the moment of switching. Per-month marking was considered and rejected - once a figure has been edited, months still calculated would keep moving under a signed-off plan whenever an assumption changed, and 'which months are mine' has no useful answer. Every change of calculation way is CONFIRMED, in both directions. A project figure in a month nobody is assigned to cannot be shared out and is NOT applied (V-32); a manual thing with a month carrying no figure counts that month as 0.00 and V-31 says so.", "Must", "R-30", "4"],
     [f"{MARK_NEW}REQ-CAL-17", "Calculation", "A PROJECT'S WINDOW, wherever the calculation needs one, is the span of its ProjectPeriod rows: the earliest period_start to the latest period_end. Milestones are reference dates - the period derivation reads them, and several of them mark moments inside the run rather than its edges - so they describe the periods, they do not bound the project. Taking the window from them stretched a project over months belonging to no period, and a month in no period is weighted 1.00, so the project drew resource its own plan did not cover. A project with NO periods keeps its own typed dates, because there is nothing to take a window from and V-12 already reports that. This is what a blank assign_start_date or assign_end_date means (REQ-CAL-15). Save writes the same window back into Project.start_date and Project.end_date, with ONE difference: it reads the periods the user TYPED, and falls back to the milestone span where there are none. A trial whose periods are derived has them opened at its own start_date, so taking the saved window from those would read back the very dates being checked and a wrong window could never correct itself; there the milestones are the only independent statement of when the project runs. Typed periods beat them wherever both exist.", "Must", "R-20", "4"],

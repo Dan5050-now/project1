@@ -11,6 +11,7 @@ through the same verifier.
 import json
 import pathlib
 import subprocess
+import math
 import sys
 from collections import defaultdict
 from datetime import date
@@ -30,6 +31,44 @@ CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 sys.path.insert(0, str(ROOT / "tools"))
 _ref = (ROOT / "tools" / "verify_source_workbook.py").read_text().split("def main")[0]
 exec(_ref)                                    # rows, d, months_between, coverage, CLINICAL_TYPES
+
+
+# REQ-CAL-20: every FTE figure is a whole number of hundredths, and a project-month's
+# hundredths are handed out by largest remainder so the parts sum to the month exactly.
+# Written out here rather than imported, because the point of this file is to be an
+# INDEPENDENT check - importing the thing under test would only prove it agrees with
+# itself. The tie-break is part of the rule: two programs breaking ties differently
+# would differ by 0.01 and both believe themselves right.
+CENTS = 100
+
+
+def to_cents(v):
+    """Half away from zero, matching JavaScript's Math.round for positive values.
+    Python's round() is half-to-even and would disagree on exact halves."""
+    v = (v or 0.0) * CENTS
+    return int(math.floor(v + 0.5)) if v >= 0 else -int(math.floor(-v + 0.5))
+
+
+def largest_remainder(items, total_cents):
+    """items: [(weight, tie_break_key)] -> cents each, summing to total_cents."""
+    n = len(items)
+    if not n:
+        return []
+    if total_cents <= 0:
+        return [0] * n
+    tot = sum(w for w, _ in items if w > 0)
+    if not tot > 0:
+        return [0] * n
+    exact = [(w if w > 0 else 0.0) / tot * total_cents for w, _ in items]
+    out = [int(math.floor(v)) for v in exact]
+    left = total_cents - sum(out)
+    order = sorted(range(n), key=lambda i: (-(exact[i] - out[i]), items[i][1]))
+    i = 0
+    while left > 0:
+        out[order[i % n]] += 1
+        i += 1
+        left -= 1
+    return out
 
 
 def reference_person_months(path):
@@ -124,9 +163,12 @@ def reference_person_months(path):
     for group in grp0.values():
         claims = sum(L["claim"] for L in group)
         ran = max(L["cov"] for L in group)
-        demand = group[0]["std"] * group[0]["pw"] * ran
-        for L in group:
-            L["fte"] = demand * (L["claim"] / claims) if claims > 0 else 0.0
+        demand_cents = to_cents(group[0]["std"] * group[0]["pw"] * ran)
+        cents = largest_remainder(
+            [((L["claim"] if claims > 0 else 0.0), L.get("aid") or "") for L in group],
+            demand_cents)
+        for L, c in zip(group, cents):
+            L["fte"] = c / CENTS
 
     # REQ-CAL-18. A manual assignment takes the figure it was given - and 0.00 where it
     # was given none, which is the only reading of "the user owns every month" that does
@@ -144,7 +186,7 @@ def reference_person_months(path):
     for L in lines:
         if L["aid"] in man_a:
             v = EST.get(("assignment", L["aid"], f"{L['y']}-{L['m']:02d}"))
-            L["fte"] = 0.0 if v is None else float(v)
+            L["fte"] = 0.0 if v is None else to_cents(float(v)) / CENTS
     grp = defaultdict(list)
     for L in lines:
         if L["pid"] in man_p:
@@ -158,8 +200,11 @@ def reference_person_months(path):
         have = sum(L["fte"] for L in g)
         if abs(have) < 1e-9:            # nobody to carry it - left alone, and reported
             continue
-        for L in g:
-            L["fte"] *= float(want) / have
+        # The stated month shared to the hundredth, the same rule as above (REQ-CAL-20).
+        cents = largest_remainder(
+            [(L["fte"], L.get("aid") or "") for L in g], to_cents(float(want)))
+        for L, c in zip(g, cents):
+            L["fte"] = c / CENTS
 
     out = defaultdict(float)
     for L in lines:

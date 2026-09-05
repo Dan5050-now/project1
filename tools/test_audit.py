@@ -18,9 +18,9 @@
   5. THE CSV IS ONE EXCEL WILL OPEN. A UTF-8 BOM so a Korean name is not mangled, CRLF
      line endings, doubled quotes, and a leading apostrophe on anything starting with
      = + - or @ so a note reading "=SUM(A1)" arrives as text and not as a formula.
-  6. THE EXPORT CAN BE NARROWED BY DATE, and says how much it is about to hand over -
-     an export that silently produces a header row and nothing else looks like an
-     answer.
+  6. THERE IS NO EXPORT. The archive is written at every save, so a button handing over
+     the same record afterwards is a second answer to one question, and always the
+     staler of the two. The file on disk is it.
 
     python tools/test_audit.py
 """
@@ -139,42 +139,23 @@ with sync_playwright() as pw:
           "findings are logged with the ones the user chose to keep marked",
           f"{r['n']} logged, {r['kept']} marked kept")
 
-    print("\n4. the export is narrowed by date and says what it will hand over")
-    pg.evaluate("() => { el('expMenu').open = true; renderAuditOffer(); }")
+    print("\n4. there is no export — the archive is the only route out")
+    pg.evaluate("() => { el('expMenu').open = true; }")
     pg.wait_for_timeout(250)
-    full = pg.inner_text("#aCount")
-    pg.fill("#aFrom", "2099-01-01")
-    pg.wait_for_timeout(300)
-    empty = pg.inner_text("#aCount")
-    check("2 change(s)" in full and "0 change(s)" in empty
-          and pg.evaluate("() => el('exportAuditBtn').disabled"),
-          "the count follows the range, and an empty range cannot be exported",
-          f"{full!r} → {empty!r}")
-    pg.fill("#aFrom", "")
-    pg.wait_for_timeout(300)
+    offered = pg.eval_on_selector_all(".expitem", "es => es.map(e => e.innerText)")
+    check(not any("Change log" in t or "Errors and warnings" in t for t in offered),
+          "the Export menu no longer offers the change log or the findings",
+          " | ".join(t.split("\n")[0] for t in offered))
+    check(pg.evaluate("() => ['exportAudit', 'exportEvents', 'renderAuditOffer', "
+                      "'downloadCsv'].every(n => typeof window[n] === 'undefined')"),
+          "and the code behind it is gone, not merely unreachable from a menu")
+    check(pg.evaluate("() => !document.getElementById('aFrom') "
+                      "&& !document.getElementById('aCount')"),
+          "with no orphaned controls left in the page")
+    pg.evaluate("() => { el('expMenu').open = false; }")
 
-    print("\n5. a CSV that Excel opens correctly")
-    with pg.expect_download() as dl:
-        pg.click("#exportEventsBtn")
-    path = pathlib.Path(dl.value.path())
-    raw = path.read_bytes()
-    text = path.read_text(encoding="utf-8-sig")
-    rows = list(csv.reader(io.StringIO(text)))
-    check(raw[:3] == b"\xef\xbb\xbf", "a UTF-8 BOM, so a non-ASCII name is not mangled")
-    check(raw.count(b"\r\n") == len(rows), "CRLF line endings",
-          f"{raw.count(chr(13).encode() + chr(10).encode())} of {len(rows)} lines")
-    check(rows[0] == ["timestamp_utc", "who", "event", "severity", "rule", "sheet",
-                      "row", "kept_by_user", "message"],
-          "the header names every column asked for", str(rows[0]))
-    quoted = [r for r in rows if r and 'a quote " and a comma, together' in r[-1]]
-    check(len(quoted) == 1,
-          "a message containing a quote AND a comma survives the round trip",
-          quoted[0][-1] if quoted else "not found")
-
-    inj = pg.evaluate("""() => csvField('=SUM(A1)') + '|' + csvField('+1') """
-                      """+ '|' + csvField('-2') + '|' + csvField('@x')""")
-    check(all(p.startswith("'") for p in inj.split("|")),
-          "a value beginning = + - or @ is escaped, so Excel reads it as text", inj)
+    # The CSV itself is still checked - on the file the ARCHIVE writes, in section 6,
+    # which is now the only place one is produced.
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()
@@ -240,6 +221,15 @@ else:
             check(len(files) == 1 and "changes" in files[0].name,
                   "one file, named for the month, in an audit folder",
                   files[0].name if files else "none written")
+            # SHARED, not per-person: the folder sits beside users/, not inside one
+            # person's copy of it. A change log split per person answers "what did I
+            # do" and not "what happened to this plan", and on a shared deployment
+            # only the second question is worth asking.
+            if files:
+                rel = files[0].relative_to(home).as_posix()
+                check("/users/" not in rel and "/audit/" in rel,
+                      "in ONE folder for the installation, not under a user",
+                      rel)
             if files:
                 body = files[0].read_text(encoding="utf-8-sig").strip().splitlines()
                 check(files[0].read_bytes()[:3] == b"\xef\xbb\xbf", "with a BOM")

@@ -259,8 +259,19 @@ function buildResults(M, C, scope){
      + "it round-trips."],
     [],
     ["HOW EVERY FIGURE WAS MADE"],
-    ["FTE  =  demand_fte  ×  role_share,   where  demand_fte = standard_fte  ×  period "
-     + "weight  ×  month_run"],
+    ["FTE  =  demand_fte  ×  role_share,  ROUNDED TO A WHOLE NUMBER OF HUNDREDTHS,  "
+     + "where  demand_fte = standard_fte  ×  period weight  ×  month_run"],
+    ["The rounding is part of the rule and not a presentation choice (REQ-CAL-20). Every "
+     + "figure this application produces is a whole number of hundredths, because at 160 "
+     + "hours to the FTE 0.01 is 1.6 hours and the plan is not written finer than that. "
+     + "So a row's fte is its demand times its share IN WHOLE HUNDREDTHS: each row takes "
+     + "its floor, and the hundredths left over go to the rows with the largest "
+     + "remainders. A row can therefore sit up to 0.01 from the exact product."],
+    ["What is exact, and what this sheet is for: THE ROWS OF ONE PROJECT-MONTH ADD UP TO "
+     + "demand_fte EXACTLY, to the hundredth, with nothing left over. The month's "
+     + "hundredths are handed out by largest remainder rather than each row being "
+     + "rounded on its own - round three shares of 4.27 separately and they come to 4.26 "
+     + "or 4.28, and the sheet would not reconcile."],
     ["standard_fte", "the month's DEMAND for a project of this type, phase and work scope in this period, from PeriodFTEStandard. A magnitude in FTE: 4.02 means the period takes about four full-time people a month."],
     ["period weight", "this project's own adjustment to that standard, from ProjectPeriod. 1.00 means an ordinary project of its kind."],
     ["month_run", "how much of the month the project actually ran, taken as the largest "

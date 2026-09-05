@@ -33,6 +33,7 @@ Four things that could each be got wrong:
 
 import json
 import pathlib
+import math
 import sys
 import tempfile
 
@@ -181,7 +182,11 @@ with sync_playwright() as pw:
     # Every figure below is STANDARD x (this role's effective factor) / (the sum of the
     # effective factors of the roles STAFFED that month). Written out rather than
     # abbreviated, so a reader can check each one against the sentence above it.
-    share = lambda eff, den: STANDARD * eff / den                        # noqa: E731
+    # REQ-CAL-20 rounds every figure to a whole number of hundredths, so the expectation
+    # does too. The month's hundredths are handed out by largest remainder, which here
+    # agrees with rounding each share on its own - checked, below, by requiring the three
+    # to sum to the standard exactly.
+    share = lambda eff, den: math.floor(STANDARD * eff / den * 100 + 0.5) / 100  # noqa: E731
     ALL3 = F_LEAD + F_OTHER + F_MAIN                                     # 2.40
 
     both = load(pg, BOTH)
@@ -259,12 +264,14 @@ with sync_playwright() as pw:
 print("\ntools/prap_io.py — the same plans, worked out separately")
 _ALL3 = F_LEAD + F_OTHER + F_MAIN
 _two = F_LEAD + F_MAIN
+# Rounded to hundredths, as REQ-CAL-20 has the application do.
+_r2 = lambda v: math.floor(v * 100 + 0.5) / 100                          # noqa: E731
 for name, path, expect in (
-        ("all three roles held", BOTH, STANDARD * F_LEAD / _ALL3),
-        ("nobody in Other staff", ALONE, STANDARD * (F_LEAD + F_OTHER) / _ALL3),
-        ("the mapping cleared", NOMAP, STANDARD * F_LEAD / _two),
-        ("one hop only", CHAIN, STANDARD * (F_LEAD + F_OTHER) / _ALL3),
-        ("absorption off", OFF, STANDARD * F_LEAD / _two)):
+        ("all three roles held", BOTH, _r2(STANDARD * F_LEAD / _ALL3)),
+        ("nobody in Other staff", ALONE, _r2(STANDARD * (F_LEAD + F_OTHER) / _ALL3)),
+        ("the mapping cleared", NOMAP, _r2(STANDARD * F_LEAD / _two)),
+        ("one hop only", CHAIN, _r2(STANDARD * (F_LEAD + F_OTHER) / _ALL3)),
+        ("absorption off", OFF, _r2(STANDARD * F_LEAD / _two))):
     M = prap_io.Model(prap_io.read_json(path))
     got = prap_io.calculate(M)["pers_month"].get(("PSN-001", JAN))
     check(got is not None and abs(got - expect) < 1e-9,

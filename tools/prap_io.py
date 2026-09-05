@@ -24,6 +24,7 @@ name, with dates as yyyy-mm-dd strings.
 import argparse
 import calendar
 import json
+import math
 import sys
 from collections import defaultdict
 from datetime import date, datetime, timedelta
@@ -1022,6 +1023,45 @@ def calculate(M):
             "cell": cell, "gaps": gaps, "lines": lines, "lo": lo or 0, "hi": hi or 0}
 
 
+# REQ-CAL-20, the decimal rule, exactly as core/06_calculate.js states it. Every FTE
+# figure is a whole number of hundredths, and a project-month's hundredths are handed
+# out by largest remainder so the parts sum to the month EXACTLY - not to a tolerance.
+# The tie-break is part of the rule and not an implementation choice: two programs that
+# broke ties differently would differ by 0.01 and both believe themselves right.
+CENTS = 100
+
+
+def to_cents(v):
+    """Round half away from zero, which is what JavaScript's Math.round does for the
+    positive values this application deals in - Python's round() is half-to-even and
+    would put 0.125 and 0.135 on opposite sides of the same rule."""
+    v = (v or 0.0) * CENTS
+    return int(math.floor(v + 0.5)) if v >= 0 else -int(math.floor(-v + 0.5))
+
+
+def largest_remainder(items, total_cents):
+    """`items` is a list of (weight, key). Returns cents per item summing to
+    total_cents."""
+    n = len(items)
+    if not n:
+        return []
+    if total_cents <= 0:
+        return [0] * n
+    tot = sum(w for w, _ in items if w > 0)
+    if not tot > 0:
+        return [0] * n
+    exact = [(w if w > 0 else 0.0) / tot * total_cents for w, _ in items]
+    out = [int(math.floor(v)) for v in exact]
+    left = total_cents - sum(out)
+    order = sorted(range(n), key=lambda i: (-(exact[i] - out[i]), items[i][1]))
+    i = 0
+    while left > 0:
+        out[order[i % n]] += 1
+        i += 1
+        left -= 1
+    return out
+
+
 def share_out(lines):
     """REQ-CAL-19, exactly as shareOut() in core/06_calculate.js does it.
 
@@ -1036,12 +1076,16 @@ def share_out(lines):
     for group in groups.values():
         claims = sum(L["claim"] for L in group)
         ran = max(L["coverage"] for L in group)
-        demand = group[0]["standard_fte"] * group[0]["period_weight"] * ran
-        for L in group:
+        demand_cents = to_cents(group[0]["standard_fte"] * group[0]["period_weight"] * ran)
+        demand = demand_cents / CENTS
+        cents = largest_remainder(
+            [((L["claim"] if claims > 0 else 0.0), L.get("assignment_id") or "")
+             for L in group], demand_cents)
+        for L, c in zip(group, cents):
             L["role_share"] = (L["claim"] / claims) if claims > 0 else 0.0
             L["month_run"] = ran
             L["demand_fte"] = demand
-            L["fte"] = demand * L["role_share"]
+            L["fte"] = c / CENTS
 
 
 def apply_manual(M, lines):
@@ -1066,7 +1110,8 @@ def apply_manual(M, lines):
         # checking "every project-month is its standard" counts the manual ones as
         # failures - which is how this gap was found.
         L["manual_assignment"] = True
-        L["fte"] = 0.0 if v is None else v
+        # Rounded like everything else (REQ-CAL-20): a hand-edited cell can hold 0.123456.
+        L["fte"] = 0.0 if v is None else to_cents(v) / CENTS
 
     groups = defaultdict(list)
     for L in lines:
@@ -1083,9 +1128,14 @@ def apply_manual(M, lines):
         have = sum(L["fte"] for L in group)
         if abs(have) < 1e-9:
             continue                       # nobody to share it out to - V-32
-        scale = want / have
-        for L in group:
-            L["fte"] *= scale
+        # The stated month shared out to the hundredth, by the same rule shareOut uses:
+        # scaling each line and leaving it there would put the people a fraction off the
+        # figure the user typed.
+        want_cents = to_cents(want)
+        cents = largest_remainder(
+            [(L["fte"], L.get("assignment_id") or "") for L in group], want_cents)
+        for L, c in zip(group, cents):
+            L["fte"] = c / CENTS
 
 
 def report_gaps(M, gaps):

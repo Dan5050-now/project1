@@ -57,6 +57,10 @@ class App:
         self.page = page                      # the built index.html, as text
         self.key = secrets.token_urlsafe(32)
         self.data_dir = data_dir
+        # Settled with data_dir; declared here so the audit operations can ask for it
+        # before the folder has been resolved, which happens when resolution has to
+        # stop and ask the user where to put it.
+        self.data_root = None
         self.resolved = {}
         self.settings = dict(PA.DEFAULT_SETTINGS)
         self.open_ref = None
@@ -80,6 +84,9 @@ class App:
                 return r
         self.data_dir = PA.ensure(r["dir"])
         r["dir"] = self.data_dir
+        # The installation root, one level above this person's folder. The change log
+        # lives there so everyone's entries are in one file.
+        self.data_root = r.get("root") or os.path.dirname(os.path.dirname(self.data_dir))
         self.resolved = r
         WS.sweep_temp(self.data_dir)          # an interrupted save left a .tmp
         WS.sweep_temp(os.path.join(self.data_dir, "workspaces"))
@@ -343,6 +350,12 @@ def operations(app):
         return F.listing(b.get("path"), b.get("suffixes"))
 
     # ---- the change-log archive -----------------------------------------
+    # ONE FOLDER FOR THE INSTALLATION, beside users/ rather than inside any one person's
+    # folder: a change log split per person answers "what did I do" and not "what
+    # happened to this plan", and on a shared deployment only the second question is
+    # worth asking. Every row names who made the change, so putting them together loses
+    # nothing and gains the ordering between people.
+    #
     # Appended to at every save, never rewritten. One file a month, so a year of work
     # is twelve readable files rather than one that grows without limit or a thousand
     # that nobody can search; and the header goes in when the file is CREATED, because
@@ -367,8 +380,7 @@ def operations(app):
             return {"ok": True, "written": 0}
         if not app.data_dir:
             raise ValueError("no data folder has been settled yet")
-        folder = os.path.join(app.data_dir, "audit")
-        os.makedirs(folder, exist_ok=True)      # launch made it; a save re-checks
+        folder = PA.audit_dir(app.data_root)
         month = time.strftime("%Y-%m", time.gmtime())      # the file is named in UTC too
         path = os.path.join(folder, "PRAP_%s_%s.csv" % (kind, month))
         fresh = not os.path.exists(path) or os.path.getsize(path) == 0
@@ -383,7 +395,7 @@ def operations(app):
         return {"ok": True, "written": len(rows), "path": path, "created": fresh}
 
     def audit_where(_):
-        folder = os.path.join(app.data_dir or "", "audit")
+        folder = PA.audit_dir(app.data_root) if app.data_root else ""
         try:
             files = sorted(f for f in os.listdir(folder) if f.endswith(".csv"))
         except OSError:

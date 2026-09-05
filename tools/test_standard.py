@@ -40,6 +40,7 @@ written next to the check rather than read back out of the application.
 """
 
 import pathlib
+import math
 import sys
 import tempfile
 from datetime import date
@@ -125,12 +126,23 @@ print("the standard monthly FTE — where a figure gets its size")
 # ---- the reviewer's own example -------------------------------------------------
 p = fixture("reviewer")
 proj, per, _ = figures(p)
-check(abs(proj - 4.02) < 5e-4 and abs(per["PSN-1"] - 2.412) < 5e-4
-      and abs(per["PSN-2"] - 1.608) < 5e-4,
+# 2.412 and 1.608 exactly; 2.41 and 1.61 once REQ-CAL-20 rounds them to hundredths and
+# hands the odd hundredth to the larger remainder (1.608 -> .61 beats 2.412 -> .41). They
+# still add to 4.02, which is the property the example was written to show.
+# REQ-CAL-20: every figure is a whole number of hundredths. An expectation written as an
+# exact product has to be rounded the same way, or it is asserting that the rule does not
+# exist. `_r2` is that rounding, half away from zero, matching the application.
+def _r2(v):
+    return math.floor(v * 100 + 0.5) / 100
+
+
+check(abs(proj - 4.02) < 5e-9 and abs(per["PSN-1"] - 2.41) < 5e-9
+      and abs(per["PSN-2"] - 1.61) < 5e-9
+      and abs(per["PSN-1"] + per["PSN-2"] - proj) < 5e-9,
       "THE REVIEWER'S EXAMPLE, to the digit — standard 4.02, project weight 1.00, role "
-      "factors 0.6 and 0.4",
-      f"project {proj:.4f} (want 4.02); {per['PSN-1']:.4f} (want 2.412) and "
-      f"{per['PSN-2']:.4f} (want 1.608)")
+      "factors 0.6 and 0.4, rounded to hundredths that still add to the month",
+      f"project {proj:.4f}; {per['PSN-1']:.4f} (2.412 exact) and "
+      f"{per['PSN-2']:.4f} (1.608 exact), together {per['PSN-1'] + per['PSN-2']:.4f}")
 
 # ---- the shares add to one, whatever the factors are ----------------------------
 odd = (("Project oversight", 0.84), ("Lead data manager", 1.51),
@@ -142,17 +154,19 @@ check(abs(proj - 4.02) < 5e-4 and abs(sum(per.values()) - 4.02) < 5e-4,
       "the standard, not the standard times the factors",
       f"project {proj:.4f} over {len(per)} people, summing to {sum(per.values()):.4f}")
 big, top = max(per.values()), max(f for _, f in odd)     # 1.73, the programmer
-check(abs(big - 4.02 * top / 5.49) < 5e-4,
+check(abs(big - _r2(4.02 * top / 5.49)) <= 0.01 + 1e-9,
       "and the largest factor takes the largest slice, in proportion",
       f"largest share {big:.4f}, want {4.02 * top / 5.49:.4f} (factor {top} of 5.49)")
 
 # ---- the project weight adjusts, it does not supply the magnitude ---------------
 half, _, _ = figures(fixture("half", weight=0.50))
 onefifth, _, _ = figures(fixture("heavy", weight=1.20))
-check(abs(half - 2.01) < 5e-4 and abs(onefifth - 4.824) < 5e-4,
+# 4.824 exact, 4.82 in hundredths (REQ-CAL-20).
+check(abs(half - 2.01) < 5e-9 and abs(onefifth - 4.82) < 5e-9,
       "THE PROJECT'S OWN WEIGHT ADJUSTS THE STANDARD — 0.50 halves the month, 1.20 "
       "raises it by a fifth",
-      f"weight 0.50 -> {half:.4f} (want 2.01); weight 1.20 -> {onefifth:.4f} (want 4.824)")
+      f"weight 0.50 -> {half:.4f} (want 2.01); weight 1.20 -> {onefifth:.4f} "
+      f"(want 4.82, exactly 4.824)")
 
 # ---- an unstaffed role's work lands on the others -------------------------------
 proj, per, _ = figures(fixture("understaffed", roles=odd,
@@ -161,7 +175,7 @@ check(abs(proj - 4.02) < 5e-4,
       "AN UNSTAFFED ROLE DOES NOT MAKE THE PROJECT CHEAPER — two of five roles held, and "
       "the month is still the standard",
       f"project {proj:.4f} over 2 people (want 4.02)")
-check(abs(per["PSN-1"] - 4.02 * 1.51 / (1.51 + 0.84)) < 5e-4,
+check(abs(per["PSN-1"] - _r2(4.02 * 1.51 / (1.51 + 0.84))) <= 0.01 + 1e-9,
       "the two of them carry it between them, in proportion to their own factors",
       f"{per['PSN-1']:.4f} and {per['PSN-2']:.4f}")
 
@@ -170,8 +184,9 @@ check(abs(per["PSN-1"] - 4.02 * 1.51 / (1.51 + 0.84)) < 5e-4,
 # Shares 0.60/0.76 and 0.16/0.76 of a month that is still 4.02.
 proj, per, _ = figures(fixture("parttime", person_weights={"PSN-2": 0.40}))
 want1, want2 = 4.02 * 0.60 / 0.76, 4.02 * 0.16 / 0.76
-check(abs(proj - 4.02) < 5e-4 and abs(per["PSN-1"] - want1) < 5e-4
-      and abs(per["PSN-2"] - want2) < 5e-4,
+check(abs(proj - 4.02) < 5e-9 and abs(per["PSN-1"] - _r2(want1)) <= 0.01 + 1e-9
+      and abs(per["PSN-2"] - _r2(want2)) <= 0.01 + 1e-9
+      and abs(per["PSN-1"] + per["PSN-2"] - proj) < 5e-9,
       "PERSON WEIGHT MOVES LOAD ONTO THE OTHERS, it does not lower the month — the "
       "part-timer's colleague picks the work up, and the project is still its standard",
       f"project {proj:.4f} (want 4.02); the full-timer goes 2.4120 -> {per['PSN-1']:.4f}, "

@@ -162,10 +162,17 @@ with sync_playwright() as pw:
 
     auto = [r for r in detail if r["estimation"] == "automatic"]
     stated = [r for r in detail if r["estimation"] != "automatic"]
-    bad = [r for r in detail if abs(product(r) - r["automatic_fte"]) > 5e-4]
+    # To the HUNDREDTH, not to fifteen places. Since REQ-CAL-20 a row's figure is its
+    # demand times its share ROUNDED, and the month's hundredths are handed out by
+    # largest remainder rather than each row rounding on its own - so a row takes either
+    # its floor or its floor plus a hundredth, and sits up to a FULL hundredth off the
+    # exact product. (Measured on the 62-project fixture: worst 0.0070.) What is exact is checked
+    # immediately below: the rows of a project-month add to the demand with nothing
+    # left over, which is the property the sheet is actually read for.
+    bad = [r for r in detail if abs(product(r) - r["automatic_fte"]) > 0.01 + 1e-9]
     check(not bad,
-          "EVERY DETAIL ROW IS ITS OWN TWO NUMBERS — demand x share, and both are on it "
-          "without the application",
+          "EVERY DETAIL ROW IS ITS OWN TWO NUMBERS — demand x share to the hundredth, "
+          "and both are on it without the application",
           f"{len(detail)} rows" + (f"; {len(bad)} do not reconcile" if bad else ""))
 
     # ---- and the shares of one project-month add to exactly one ---------------------

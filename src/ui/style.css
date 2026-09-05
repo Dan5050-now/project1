@@ -767,34 +767,6 @@ dialog.big .dlg-b{max-height:84vh}
 .cls.conditional{background:var(--underbg);color:var(--underink)}
 .cls.incomplete{background:var(--fill);color:var(--ink2)}
 
-/* The log date range, inside the export menu. A row of controls rather than a menu
-   item, because it does not DO anything on click - it narrows what the two items
-   below it will hand over. */
-.expdates{display:flex;gap:var(--sp-2);align-items:flex-end;padding:6px 11px 2px;
- flex-wrap:wrap}
-.expdates .ctl{flex:0 0 auto}
-.expdates input{font:inherit;font-size:var(--t-md);padding:4px 7px;
- border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
- color:var(--ink)}
-.expdates .hint{flex:1 1 100%;color:var(--muted);font-size:var(--t-xs);padding-top:2px}
-.msp hr{border:0;border-top:1px solid var(--hairline);margin:6px 4px}
-/* An export with nothing to hand over says so and refuses, rather than delivering a
-   file with a header row and no content - which looks like an answer. */
-.expitem.off{opacity:.42;cursor:not-allowed}
-.expitem.off:hover{background:none}
-
-/* The name request. Shown with show() rather than showModal(), so it never blocks the
-   edit that triggered it - which means it needs its own place to sit, since a non-modal
-   <dialog> otherwise lands in the document flow wherever it was declared. Bottom right,
-   out of the way of the tables and above the sticky band. */
-#whoami[open]{position:fixed;inset:auto 18px 18px auto;margin:0;max-width:390px;
- z-index:120;border:1px solid var(--hairline);border-radius:var(--r-lg);
- background:var(--raised);color:var(--ink);padding:0;box-shadow:var(--shadow-lift)}
-#whoami .dlg-b{max-height:none}
-#whoami .ctl input{width:100%;font:inherit;font-size:var(--t-md);padding:6px 9px;
- border:1px solid var(--grid);border-radius:var(--r-sm);background:var(--surface);
- color:var(--ink)}
-
 /* The name request, in the edit bar. A row of small controls rather than a panel: it
    shares the bar with the guide text and the buttons, and wraps with them. */
 #whobox{display:inline-flex;align-items:center;gap:6px}

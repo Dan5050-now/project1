@@ -339,9 +339,12 @@ def main():
             # rather than multiplied after it, which is what makes the shares add to one.
             fte, dem, share = (hdr.index(c) for c in
                                ("automatic_fte", "demand_fte", "role_share"))
-            bad = [r for r in det[1:] if abs(r[dem] * r[share] - r[fte]) > 5e-4]
+            # To the hundredth (REQ-CAL-20): the month's hundredths go out by largest
+            # remainder, so a row takes its floor or its floor plus one and sits within a
+            # full hundredth of the exact product by design.
+            bad = [r for r in det[1:] if abs(r[dem] * r[share] - r[fte]) > 0.01 + 1e-9]
             check(not bad,
-                  "every row of it is its demand times its share",
+                  "every row of it is its demand times its share, to the hundredth",
                   f"{len(det) - 1:,} rows checked")
 
             check(not errors, "no script error anywhere in the run",

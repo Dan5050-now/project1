@@ -27,6 +27,7 @@ would do, in the order they would do it:
 
 import calendar
 import pathlib
+import math
 import sys
 import tempfile
 from datetime import date
@@ -346,7 +347,12 @@ with sync_playwright() as pw:
         # `cov` all cancel out of the total, and only the month it ran remains. Computed
         # and then divided out rather than dropped, because seeing them cancel is the
         # point - it is what "the shares add to one" means on a one-person project.
-        return std * pw * cov * ((rf * weight * cov) / (rf * weight * cov))
+        exact = std * pw * cov * ((rf * weight * cov) / (rf * weight * cov))
+        # REQ-CAL-20: the month is rounded to a whole number of hundredths, and its
+        # hundredths are then shared out. One person holds the whole month here, so
+        # they take all of them - which makes this the plainest possible statement of
+        # the rule. Half away from zero, matching Math.round in the application.
+        return math.floor(exact * 100 + 0.5) / 100
 
     bad = []
     for k, v in got["pm"].items():
