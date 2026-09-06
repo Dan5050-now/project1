@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.22"
+DOC_VERSION = "1.23"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.48.xlsx"
+PLAN = "PRAP_Development_Plan_v2.49.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,24 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.23", "2026-09-06", "Claude Code", "Dan",
+         "R-41. Sheet 06 records that the derivation column carries the WHOLE expression "
+         "term by term rather than the period alone, and sheet 05 writes down the shape "
+         "it must take. Two halves on a person's, and the split is a correctness "
+         "requirement rather than a layout choice: since R-32 the terms make a CLAIM "
+         "normalised against the other claims on that project-month, so their product is "
+         "not the figure and a single product would assert an arithmetic the application "
+         "does not do. The demand closes with '=', the person's terms close with a "
+         "PERCENTAGE of it. A PersonPeriodWeight override is ONE TERM WITH TWO SOURCES, "
+         "never a second factor - it replaces person_weight rather than multiplying it "
+         "(REQ-PSN-05) - and every fallback names its rule, V-19, V-23 or V-12, because a "
+         "bare 1.00 cannot be told from a standard that really is 1.00. Absorbed cover "
+         "names the roles it came from (REQ-CAL-16). The sharer count keeps its own short "
+         "column: a sentence cannot be sorted or filtered. dataTable now tags a derived "
+         "cell with data-drv (never data-col, which is what makes a cell editable) so one "
+         "derivation can be given width without widening every lookup column, and "
+         "derived text may carry a newline. No rule changes and no figure moves. Written "
+         "against plan v2.49.", "Issued"],
         ["1.22", "2026-09-06", "Claude Code", "Dan",
          "R-40, REQ-DSH-14. Sheet 06 records three LOOKUP columns - read-only, marked as "
          "such, and belonging to no sheet. The Periods table on tab 2 names the standard "
@@ -974,6 +992,32 @@ r = table(ws, r, ["Returned by calculate()", "Answers"],
             "to it (V-32) has a stated figure and no line to read a period off. The same function the "
             "calculation itself used, so the two answers cannot drift apart."]],
           [46, 72], wrap_cols=(2,))
+r = lines(ws, r, [
+    "THE SHAPE THE DERIVATION MUST TAKE, which is a correctness requirement and not a layout choice:",
+    "",
+    "  project month   Start-up (standard 4.00) x period weight (1.00) x month run (1.00) = 4.00",
+    "",
+    "  person month    ...the same line, then, separately:",
+    "                  role factor (0.60) / sharers (1) x person weight (1.00, no override)",
+    "                                                   x coverage (1.00) = 60.0% of it -> 2.40",
+    "",
+    "TWO HALVES, NOT ONE PRODUCT. Since R-32 a person's figure is the project's month TIMES a share,",
+    "and the share is their claim over the sum of the claims. The terms above multiply to 0.60 and the",
+    "figure is 2.40. Written as a single product the cell would assert an arithmetic this program does",
+    "not perform, and would be wrong by whatever the other claims on that project-month came to. So",
+    "the demand closes with '=', and the person's terms close with a PERCENTAGE of it.",
+    "",
+    "AN OVERRIDE IS ONE TERM WITH TWO SOURCES. PersonPeriodWeight REPLACES person_weight for the",
+    "months it covers - it does not multiply it (REQ-PSN-05) - so the two are never shown as two",
+    "factors, however naturally that reads. The cell names both and says which was used:",
+    "'weight override (0.50, replacing person weight 1.00)'.",
+    "",
+    "A FALLBACK SAYS IT IS ONE, and names its rule: V-19 where no PeriodFTEStandard row matched,",
+    "V-23 where no RoleFactor row did, V-12 where no period covers the month. A bare 1.00 cannot be",
+    "told from a standard that really is 1.00, which is why those rules exist at all. Absorbed cover",
+    "is named with the roles it came from (REQ-CAL-16).",
+])
+r += 1
 r = note(ws, r, "These feed READ-ONLY lookup columns. None of them is a column of the sheet it is shown "
                 "beside, and none is written on save: a standard copied onto a ProjectPeriod row would "
                 "survive the standards being edited afterwards, which is the failure the lookup exists to "
@@ -1170,7 +1214,7 @@ t2 = [
     ["Period sub-table", "Derived periods with seq, dates and weight, in seq order. Names are unique within a project since R-11, so project_id + period_name identifies a row. Shows whether each date was derived or hand-set. A LOOKUP column beside the weight names the standard monthly FTE this period selects for a project of this type, phase and work scope, and multiplies the two - so the row carries the month's demand rather than one term of the expression for it. Missing, it reads 'none - V-19' rather than the 1.00 the calculation falls back to.", "REQ-PRJ-06, REQ-CAL-09, REQ-DSH-10, REQ-DSH-14"],
     ["Recompute periods", "Re-derives from current milestones, warning that hand-set dates will be replaced.", "decision C-10"],
     ["Utilisation graph", "The selected project's monthly resource across the horizon, as bars, with THREE reference lines: 2x and 0.5x the average an ACTIVE project-month draws across the portfolio, and the project's own average over its full life. Sits directly under the project table, mirroring the person tab's strip. Months where the project draws nothing are excluded from the portfolio average - averaging them in would drag the norm toward zero and make every running project look heavy.", "REQ-DSH-12"],
-    ["Monthly estimation panel", "Opened by 'Switch to manual'. One row a month: the stated figure, automatic_fte and difference - all three to TWO decimals, like every other FTE on screen (REQ-CAL-20) - then a LOOKUP column naming the period the month falls in and its weight. Where the project's own stated month overrode a person's stated figure, the panel also tabulates month / stated here / actually given / the project's month, and the cell carries a mark. Editing such a figure SOFT-STOPS at the cell: the dialog names both numbers and offers 'Keep what I typed' or 'Put it back'. It never refuses - see V-33.", "REQ-CAL-18, REQ-CAL-20, REQ-DSH-14"],
+    ["Monthly estimation panel", "Opened by 'Switch to manual'. One row a month: the stated figure, automatic_fte and difference - all three to TWO decimals, like every other FTE on screen (REQ-CAL-20) - then a LOOKUP column carrying the whole derivation of that month, term by term: the period, the standard it selects, the project's weight, the part of the month it ran, and their product. Where the project's own stated month overrode a person's stated figure, the panel also tabulates month / stated here / actually given / the project's month, and the cell carries a mark. Editing such a figure SOFT-STOPS at the cell: the dialog names both numbers and offers 'Keep what I typed' or 'Put it back'. It never refuses - see V-33.", "REQ-CAL-18, REQ-CAL-20, REQ-DSH-14"],
     ["Export", "Visible table to .xlsx.", "REQ-DSH-06"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t2, [24, 90, 20], wrap_cols=(2,))
@@ -1188,7 +1232,7 @@ t3 = [
     ["Assignment sub-table", "The selected person's assignments: project, role, dates, person_weight.", "REQ-PSN-02, REQ-PSN-03"],
     ["Override sub-table", "PersonPeriodWeight windows for the selected assignment.", "REQ-PSN-05"],
     ["Utilisation strip", "The person's monthly FTE across the horizon with both absolute thresholds marked, and capacity_fte shown alongside for context.", "REQ-DSH-08"],
-    ["Monthly estimation panel", "The assignment-level half of the same panel as tab 2, for the selected assignment, with the same two decimals, the same period lookup, the same override table and the same soft stop. It carries ONE column tab 2's does not: how many people held this role on this project in that month - the divisor in (role factor / sharers), and the usual explanation for a share that halved with nothing of the person's own changing. Tab 2's panel deliberately omits it: a project month is divided between several roles, each with its own count, so one number there would average things that do not compare.", "REQ-CAL-18, REQ-CAL-20, REQ-DSH-14"],
+    ["Monthly estimation panel", "The assignment-level half of the same panel as tab 2, for the selected assignment, with the same two decimals, the same override table and the same soft stop. Its derivation column adds a SECOND LINE - this person's claim on the month: role factor / sharers x person weight x month coverage, ending in the percentage of the month it won (see sheet 05 for why the two halves are closed off separately). It also carries ONE column tab 2's does not: the sharer count on its own, where it can be sorted and filtered - the divisor in (role factor / sharers), and the usual explanation for a share that halved with nothing of the person's own changing. Tab 2's panel deliberately omits it: a project month is divided between several roles, each with its own count, so one number there would average things that do not compare.", "REQ-CAL-18, REQ-CAL-20, REQ-DSH-14"],
     ["Export", "Visible table to .xlsx.", "REQ-DSH-06"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t3, [24, 90, 20], wrap_cols=(2,))

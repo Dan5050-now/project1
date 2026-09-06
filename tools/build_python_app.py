@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.13"
+VERSION = "1.14"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,47 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.14
+
+  * THE MONTHLY ESTIMATION COLUMN NOW SHOWS THE WHOLE SUM, not just the
+    period. On a project:
+
+        Before-Start-up (standard 2.02) x period weight (1.12)
+                                        x month run (1.00) = 2.26
+
+    On a person, a second line follows with their share of that month:
+
+        role factor (0.72) / sharers (1) x person weight (0.25, no override)
+                                         x coverage (1.00) = 18.3% of it -> 0.41
+
+    Naming the period answered one of six inputs. If you disagree with a
+    figure, you can now see WHICH of the six you disagree with.
+
+  * WHY THE PERSON'S IS SHOWN AS A PERCENTAGE and not as one long
+    multiplication: those terms make a CLAIM on the month, and every claim on
+    a project-month is measured against the others, so the shares always add
+    to one. Multiply the terms above and you get 0.18; the figure is 0.41.
+    Writing it as one product would be showing you arithmetic the application
+    does not do.
+
+  * A WEIGHT OVERRIDE IS SHOWN AS ONE TERM, not two. An override REPLACES the
+    person's weight for the months it covers - it does not multiply it - so
+    the cell names both and says which was used:
+
+        x weight override (0.50, replacing person weight 1.00)
+
+  * ANYTHING MISSING SAYS SO AND NAMES ITS CHECK. "standard 1.00 by default -
+    no row for this period, V-19" rather than a bare 1.00, which you could
+    not tell from a standard that really is 1.00. Same for a missing role
+    factor (V-23) and a month in no period (V-12). Where a role is covering
+    for an unstaffed one, the cover is named with the role it came from.
+
+  * The sharer count also keeps its own short column, because a sentence
+    cannot be sorted or filtered and "2 share this role" can.
+
+  * No figure has changed anywhere.
+
 
 WHAT IS NEW IN 1.13
 

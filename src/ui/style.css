@@ -671,7 +671,19 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 /* --- column badges -------------------------------------------------------- */
 .drv{font-weight:500;font-size:var(--t-xs);color:var(--muted);background:var(--fill);
  border-radius:100px;padding:1px 6px;margin-left:5px}
-td.drvcell{font-style:italic}
+/* pre-line, not pre: a derived cell may carry a NEWLINE where its value has two halves
+   that must not run together - the project's month and one person's claim on it are two
+   different quantities, and reading them as one sentence is exactly the misreading the
+   split exists to prevent. Ordinary runs of spaces still collapse, so every other
+   derived cell is unaffected, and long lines still wrap. */
+td.drvcell{font-style:italic;white-space:pre-line}
+/* The derivation is a sentence of arithmetic and needs room to be read as one. Without a
+   floor the table hands it whatever is left over after the columns beside it, which was a
+   four-word strip wrapping to twelve lines and making every row the height of a
+   paragraph. Given a floor it takes real width and the table scrolls sideways, which this
+   panel already does. Named rather than applied to every lookup column: the short ones
+   (standard_fte, sharers) would only be padded out by it. */
+td.drvcell[data-drv="period"]{min-width:36em;font-style:normal}
 /* The selected assignment, restated above the table it governs, so the overrides are
    never read without knowing which assignment they belong to. */
 .asgline{margin:0 0 8px;padding:8px 11px;border-radius:var(--r-sm);font-size:var(--t-sm);

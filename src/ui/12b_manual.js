@@ -68,30 +68,43 @@ function monthlyOf(scope, id){
   return {now, auto};
 }
 
-/** WHERE A MONTH'S AUTOMATIC FIGURE CAME FROM, month by month.
+/** WHERE A MONTH'S AUTOMATIC FIGURE CAME FROM - the whole expression, term by term.
  *
- *  automatic_fte answers "what would the assumptions have said" and stops there. The
- *  next two questions a reader has are always the same, and neither had an answer on
- *  this screen: WHICH PERIOD is this month in - the row of the plan that selected the
- *  standard and the weight - and, for one person's assignment, HOW MANY PEOPLE was the
- *  role divided between that month. A stated figure that looks half what was expected
- *  usually has one of those two as its explanation, and hunting for it meant leaving the
- *  tab for the timeline and then for the assignments list.
+ *  automatic_fte answers "what would the assumptions have said" and stops there, and a
+ *  reader who disagrees with it has no way to find out which of six inputs they actually
+ *  disagree with. Naming only the period answered one of the six. So the column now
+ *  carries the arithmetic itself, with every term and its value:
  *
- *  Read off the LINES, which is where the figure itself came from, so what is named here
- *  cannot be a different period or a different divisor from the one the arithmetic used.
- *  One line per assignment-month, so the first is the only one. */
+ *    project:  Before-Start-up (standard 1.02) × period weight (0.84)
+ *                                              × month run (1.00) = 0.86
+ *    person:   ...the same first line, then
+ *              role factor (0.68) ÷ sharers (1) × person weight (0.31, no override)
+ *                                 × month coverage (1.00) = 21.1% of it, 0.18
+ *
+ *  TWO HALVES ON THE PERSON'S, AND THE SPLIT IS NOT COSMETIC. Since R-32 a person's
+ *  figure is NOT the product of those terms: the project's month is the demand, and the
+ *  terms make a CLAIM which is normalised against everybody else's on that project-month
+ *  to give a SHARE (REQ-CAL-19). Writing them as one product would read as an arithmetic
+ *  the application does not do, and would be wrong by whatever the other claims came to.
+ *  So the demand is closed off with its own '=', and the person's terms are shown ending
+ *  in the PERCENTAGE of it they won.
+ *
+ *  Read off the LINES, which is where the figure itself came from, so no term named here
+ *  can be a different one from the term the arithmetic used. One line per
+ *  assignment-month, so the first is the only one; for a project-month the first line
+ *  carries the standard, weight, month run and demand, which shareOut() writes onto every
+ *  line of the group alike. */
 function monthFacts(scope, id){
   const facts = new Map();
   for (const L of ((S.calc && S.calc.lines) || [])){
     if (scope === "project" ? L.project_id !== id : L.assignment_id !== id) continue;
     const k = isoMonth(L.month);
-    if (!facts.has(k))
-      facts.set(k, {name:L.period_name, weight:L.period_weight, sharers:L.sharers,
-                    project_id:L.project_id});
+    if (!facts.has(k)) facts.set(k, L);
   }
   return facts;
 }
+
+const f2 = v => (num(v) ?? 0).toFixed(2);
 
 /** The period a month falls in when NO line carries it.
  *
@@ -107,12 +120,68 @@ function periodOfMonth(pid, mm){
   return seg ? {name:seg.period_name, weight:num(seg.weight) ?? 1} : null;
 }
 
-/** The period as one readable cell: which row of the plan, and what it did to the figure. */
-function periodCell(facts, pid, mm){
-  const f = facts.get(mm);
-  const p = f && f.name ? f : periodOfMonth(f ? f.project_id : pid, mm);
-  return p && p.name ? `${p.name} ×${(num(p.weight) ?? 1).toFixed(2)}`
-                     : "no period — ×1.00 (V-12)";
+/* Each term names what it IS as well as what it was worth, and says when the value is a
+   fallback rather than something the workbook supplied. A bare '1.00' where a row is
+   missing is indistinguishable from a genuine 1.00, which is the whole reason V-19 and
+   V-23 exist - so the fallbacks say so and name their rule. */
+function standardTerm(proj, periodName){
+  const v = (proj && periodName) ? num(stdWeight(S.model, proj, periodName)) : null;
+  return (v === null || v === undefined)
+    ? "standard 1.00 by default — no row for this period, V-19"
+    : `standard ${v.toFixed(2)}`;
+}
+
+/** The role factor, and the cover it is carrying if any (REQ-CAL-16). */
+function roleTerm(L){
+  const eff = num(L.role_factor_effective) ?? 1;
+  const own = num(L.role_factor);
+  if (own === null || own === undefined)
+    return `role factor (${eff.toFixed(2)} by default — no row for this role, V-23)`;
+  const extra = eff - own;
+  return (extra > 0.0049 && (L.absorbed || []).length)
+    ? `role factor (${own.toFixed(2)} + ${extra.toFixed(2)} absorbed from `
+      + `${L.absorbed.join(", ")} = ${eff.toFixed(2)})`
+    : `role factor (${own.toFixed(2)})`;
+}
+
+/** The person's weight, and the override if a window covered this month.
+ *
+ *  An override REPLACES person_weight for the months it covers - it does not multiply it
+ *  (REQ-PSN-05). So the two are never shown as two factors of one product, however
+ *  natural that reads: they are one term with two possible sources, and the cell says
+ *  which source it took and what the other one said. */
+function weightTerm(L){
+  const eff = num(L.person_weight) ?? 0;
+  if (L.person_weight_source !== "PersonPeriodWeight override")
+    return `person weight (${eff.toFixed(2)}, no override)`;
+  const a = (S.model.raw.Assignment || []).find(x => x.assignment_id === L.assignment_id);
+  const own = a ? num(a.person_weight) : null;
+  return `weight override (${eff.toFixed(2)}`
+    + (own === null || own === undefined ? "" : `, replacing person weight ${own.toFixed(2)}`)
+    + ")";
+}
+
+/** The whole derivation of one month, as one cell. */
+function periodCell(scope, facts, proj, mm){
+  const L = facts.get(mm);
+  const pid = proj ? proj.project_id : null;
+  if (!L){
+    const p = periodOfMonth(pid, mm);
+    if (!p || !p.name)
+      return "no period covers this month — weighted ×1.00 by default (V-12)";
+    return `${p.name} (${standardTerm(proj, p.name)}) × period weight (${f2(p.weight)})`
+      + " — nobody is assigned this month, so there is nothing to share it out to (V-32)";
+  }
+  const head = L.period_name
+    ? `${L.period_name} (${standardTerm(proj, L.period_name)})`
+    : `no period, V-12 (standard ${f2(L.standard_fte)} by default)`;
+  const demand = `${head} × period weight (${f2(L.period_weight)})`
+    + ` × month run (${f2(L.month_run)}) = ${f2(L.demand_fte)}`;
+  if (scope === "project") return demand;
+  return `${demand} — the project's month\n`
+    + `this person's claim: ${roleTerm(L)} ÷ sharers (${L.sharers}) `
+    + `× ${weightTerm(L)} × coverage (${f2(L.coverage)}) `
+    + `= ${(100 * (num(L.role_share) ?? 0)).toFixed(1)}% of it → ${f2(L.auto)}`;
 }
 
 /* ------------------------------------------------------------------ the switch */
@@ -303,6 +372,10 @@ function manualPanel(scope, id){
   const ownPid = scope === "project" ? id
     : (((S.model.raw.Assignment || []).find(a => a.assignment_id === id) || {}).project_id
        || null);
+  // The project RECORD, not just its identifier: standardTerm re-asks PeriodFTEStandard
+  // to tell a genuine 1.00 from the 1.00 a missing row falls back to, and that lookup is
+  // keyed on the project's type, phase and work scope.
+  const ownProj = ownPid ? (S.model.projects[ownPid] || null) : null;
   const totalNow = [...now.values()].reduce((a, b) => a + b, 0);
   const totalAuto = [...auto.values()].reduce((a, b) => a + b, 0);
 
@@ -383,11 +456,15 @@ function manualPanel(scope, id){
       <code>automatic_fte</code> beside it is what the assumptions alone would have said,
       so the departure is readable: <strong>${totalNow.toFixed(2)}</strong> stated against
       <strong>${totalAuto.toFixed(2)}</strong> calculated across ${now.size} month(s).
-      <code>period</code> says which row of this project's plan the automatic figure came
-      from and what its weight did to it${scope === "project" ? "" :
-        ", and <code>sharers</code> how many people this role was divided between that "
-        + "month — the two things that most often explain a figure that is not the size "
-        + "it was expected to be"}. Both are looked up, not stored.</p>
+      <code>period</code> carries the <strong>whole derivation of that month, term by
+      term</strong> — the period it falls in, the standard that period selects, this
+      project's weight and how much of the month it ran${scope === "project" ? "" :
+        ", then this person's claim on it: role factor ÷ sharers × person weight × month "
+        + "coverage, ending in the percentage of the project's month it won. Those terms "
+        + "make a CLAIM, not a figure: the shares are measured against each other, so the "
+        + "product is a proportion of the month rather than the month itself. "
+        + "<code>sharers</code> repeats the divisor on its own, where it can be sorted "
+        + "and filtered"}. Looked up, not stored.</p>
     ${missing.length ? `<p class="note bad">${missing.length} month(s) this ${what} covers
       have <strong>no stated figure</strong> (${esc(missing.slice(0, 6).join(", "))}${
       missing.length > 6 ? ", …" : ""}) and are counted as <strong>0.00</strong> — V-31.
@@ -413,7 +490,7 @@ function manualPanel(scope, id){
          const dd = Number(r.fte) - auto.get(r.month);
          return (dd >= 0 ? "+" : "") + dd.toFixed(2);
        },
-       period: r => r.month ? periodCell(facts, ownPid, r.month) : "",
+       period: r => r.month ? periodCell(scope, facts, ownProj, r.month) : "",
        // Only on the assignment panel. A project's month is divided between SEVERAL
        // roles, each with its own count, so one number against the project's month
        // would be an average of things that are not comparable - and the divisor is a

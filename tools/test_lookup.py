@@ -14,18 +14,26 @@ not the size somebody expected.
 
   1. THE PERIODS TABLE NAMES THE STANDARD BESIDE THE WEIGHT, and multiplies the two, so
      the row carries the month's demand rather than half of the expression for it.
-  2. BOTH MONTHLY ESTIMATION PANELS NAME THE PERIOD. The project's, and the person's.
-  3. THE PERSON'S ALSO NAMES THE DIVISOR — how many people held that role that month. The
-     project's does NOT: a project month is divided between several roles, each with its
-     own count, so one number there would be an average of things that are not comparable.
-  4. ALL THREE ARE LOOKUPS. Read-only, marked as such, and absent from the sheet's own
+  2. BOTH MONTHLY ESTIMATION PANELS CARRY THE WHOLE DERIVATION, TERM BY TERM — the period,
+     the standard it selects, the project's weight, how much of the month it ran, and
+     their product. A reader who disagrees with an automatic figure can see WHICH of the
+     inputs they disagree with, which naming only the period did not answer.
+  3. THE PERSON'S ADDS THEIR CLAIM ON THAT MONTH: role factor ÷ sharers × person weight ×
+     coverage, ending in the PERCENTAGE of the month it won — never as a product equal to
+     the figure, because since R-32 it is not one. The claim is normalised against every
+     other claim on that project-month (REQ-CAL-19), so 0.60 × 1.00 × 1.00 is 0.60 and the
+     figure is 2.40. The two halves are therefore closed off separately.
+     An OVERRIDE is one term with two sources, not two multiplied terms: it REPLACES
+     person_weight for the months it covers (REQ-PSN-05), and the cell says so.
+     `sharers` stays as a short column of its own, where it can be sorted and filtered.
+  4. ALL OF THEM ARE LOOKUPS. Read-only, marked as such, and absent from the sheet's own
      columns — so no amount of editing or saving can write a stale copy of a standard into
      a file and have it survive the standards being changed afterwards.
   5. THEY NAME WHAT THE ARITHMETIC USED. Every figure shown is compared against the
      calculation's own line, not merely against a plausible number.
-  6. A MISSING STANDARD SAYS SO and names V-19, rather than printing the 1.00 the
-     calculation falls back to. That fallback is a degradation; showing it as though it
-     were a standard would hide the very thing V-19 exists to report.
+  6. A FALLBACK SAYS IT IS ONE and names its rule — V-19 for a missing standard, V-23 for
+     a missing role factor, V-12 for a month in no period. A bare 1.00 is indistinguishable
+     from a standard that really is 1.00, which is the whole reason those rules exist.
 
     python tools/test_lookup.py
 """
@@ -112,7 +120,12 @@ def fixture():
         {"assignment_id": "ASG-3", "person_id": "PSN-3", "project_id": "PRJ-A",
          "role_name": "Data Analyst", "person_weight": 1.0, "__row": 4},
     ]
-    S["PersonPeriodWeight"] = []
+    # November only, so the override term has a month to itself and September and
+    # October stay hand-checkable without it.
+    S["PersonPeriodWeight"] = [
+        {"assignment_id": "ASG-1", "period_start": date(2026, 11, 1),
+         "period_end": date(2026, 11, 30), "weight_override": 0.5,
+         "reason": "half time", "__row": 2}]
     S["MonthlyEstimate"] = []
     out = TMP / "lookup.xlsx"
     prap_io.write_xlsx(S, out)
@@ -206,12 +219,21 @@ with sync_playwright() as pw:
     erows = {r[0]: r for r in pg.evaluate(ROWS, est)}
     check(ehead.index("period lookup▾") == ehead.index("difference lookup▾") + 1,
           "period sits immediately after difference", " | ".join(ehead))
-    check(erows["2026-09"][4] == "Start-up ×1.00"
-          and erows["2026-10"][4] == "Conduct (interim) ×1.50",
-          "each month names its period AND the weight that period carried",
-          f"Sep {erows['2026-09'][4]} · Oct {erows['2026-10'][4]}")
+    check(erows["2026-09"][4] ==
+          "Start-up (standard 4.00) × period weight (1.00) × month run (1.00) = 4.00"
+          and erows["2026-10"][4] ==
+          "Conduct (interim) (standard 6.00) × period weight (1.50) × month run (1.00) "
+          "= 9.00",
+          "every term of the month's demand, named and valued, and their product",
+          erows["2026-10"][4])
     check(erows["2026-10"][2] == "9.00",
-          "beside the automatic figure that period produced", erows["2026-10"][2])
+          "which is the automatic figure two columns to its left", erows["2026-10"][2])
+    check(erows["2026-11"][4] ==
+          "Conduct (final) (standard 1.00 by default — no row for this period, V-19) "
+          "× period weight (2.00) × month run (1.00) = 2.00",
+          "a fallback term says it is one and names its rule — a bare 1.00 there is "
+          "indistinguishable from a standard that really is 1.00",
+          erows["2026-11"][4])
     check(not any(h.startswith("sharers") for h in ehead),
           "and NOT the divisor: a project month is split between several roles, each "
           "with its own count, so one number here would average things that do not "
@@ -244,8 +266,44 @@ with sync_playwright() as pw:
               if (L.assignment_id === 'ASG-1') want[L.month % 12] = L.sharers;
             return want[8] === 1 && want[9] === 2;}"""),
           "which is the divisor the calculation actually used, not a second count")
-    check(prows["2026-09"][4] == "Start-up ×1.00", "the period is named here too",
-          prows["2026-09"][4])
+
+    print("\n6b. and on the person's table the derivation has TWO halves")
+    sep = prows["2026-09"][4].split("\n")
+    check(len(sep) == 2 and sep[0] ==
+          "Start-up (standard 4.00) × period weight (1.00) × month run (1.00) "
+          "= 4.00 — the project's month",
+          "the project's whole month, closed off with its own product", sep[0])
+    check(sep[1] == "this person's claim: role factor (0.60) ÷ sharers (1) "
+                    "× person weight (1.00, no override) × coverage (1.00) "
+                    "= 60.0% of it → 2.40",
+          "then this person's claim, ending in the PERCENTAGE of that month it won",
+          sep[1])
+    # The split is the whole point. Since R-32 a person's figure is the month TIMES a
+    # normalised share, not the product of their own five terms - 0.60 x 1.00 x 1.00 is
+    # 0.60, and the figure is 2.40. Written as one product the cell would assert an
+    # arithmetic the application does not do.
+    check("% of it" in sep[1] and "= 60.0%" in sep[1],
+          "said as a proportion, never as a product that equals the figure — the claim "
+          "is measured against the others on that project-month (REQ-CAL-19)")
+    oct_ = prows["2026-10"][4].split("\n")[1]
+    check("÷ sharers (2)" in oct_ and "= 30.0% of it → 2.70" in oct_,
+          "a second holder halves the claim and the percentage follows", oct_)
+
+    print("\n6c. an override REPLACES the person's weight, and is not shown as a factor")
+    nov = prows["2026-11"][4].split("\n")[1]
+    check("× weight override (0.50, replacing person weight 1.00) ×" in nov,
+          "so the cell names both and says which one was used", nov)
+    check("person weight (1.00, no override) ×" not in nov
+          and "× weight override" in nov and nov.count("weight") == 2,
+          "one term with two possible sources, never two multiplied terms — an override "
+          "does not multiply person_weight (REQ-PSN-05)")
+    check(abs(pg.evaluate("""() => {
+            const L = S.calc.lines.find(l => l.assignment_id === 'ASG-1'
+                                          && l.month === 2026 * 12 + 10);
+            return 100 * L.role_share;}""")
+              - float(nov.split("= ")[1].split("%")[0])) < 0.06,
+          "and the percentage shown is the share the calculation worked out",
+          nov.split("= ")[1])
     check(pg.evaluate("() => !(S.headers.MonthlyEstimate || []).includes('period')")
           and pg.evaluate("() => !(S.headers.MonthlyEstimate || []).includes('sharers')"),
           "neither is a MonthlyEstimate column, so neither is ever written to the file")
@@ -253,7 +311,7 @@ with sync_playwright() as pw:
     # ---------------------------------------------- 7. they behave like columns
     print("\n7. and they behave like every other column of the table")
     got = pg.evaluate("""() => {
-        S.colf.MonthlyEstimate = {period: new Set(['Start-up \\u00d71.00'])};
+        S.colf.MonthlyEstimate = {sharers: new Set(['1 (only holder)'])};
         renderKeepingTab();
         const t = [...document.querySelectorAll('#t-pers table.data-t')]
           .find(t => [...t.querySelectorAll('thead th')]
@@ -262,7 +320,9 @@ with sync_playwright() as pw:
           r => (r.querySelectorAll('td')[1] || {}).innerText.trim());
         delete S.colf.MonthlyEstimate; renderKeepingTab();
         return rows;}""")
-    check(got == ["2026-09"], "a derived column filters like a stored one", str(got))
+    check(got == ["2026-09", "2026-11"],
+          "a derived column filters like a stored one — the two months this person held "
+          "the role alone", str(got))
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()

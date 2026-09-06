@@ -439,7 +439,12 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
     const tds = cols.map(c => {
       if (derived[c]){
         const dv = derived[c](r) ?? "";
-        return `<td class="muted drvcell" data-tip="${att(`<b>${esc(c)}</b><br>${esc(dv) || "&mdash;"}`
+        /* NAMED, so the stylesheet can give one derivation the width it needs without
+           widening every lookup column in the application. data-drv rather than data-col:
+           data-col is what makes a cell editable and what the editing code writes back
+           through, and a read-only cell must not carry it. */
+        return `<td class="muted drvcell" data-drv="${att(c)}" data-tip="${att(
+            `<b>${esc(c)}</b><br>${esc(dv).replace(/\n/g, "<br>") || "&mdash;"}`
           + `<br><span class="tr">looked up, not stored on this row</span>`)}">${esc(dv)}</td>`;
       }
       const px = proxyFor(sheet, c);
