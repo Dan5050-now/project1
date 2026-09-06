@@ -1,4 +1,4 @@
-const APP_VERSION = "1.45";
+const APP_VERSION = "1.46";
 const SCHEMA_EXPECTED = 11;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -7,9 +7,9 @@ const SCHEMA_EXPECTED = 11;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.47.xlsx",          ver:"2.47",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.48.xlsx",          ver:"2.48",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.21.xlsx", ver:"1.21",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.22.xlsx", ver:"1.22",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},

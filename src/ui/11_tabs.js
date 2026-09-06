@@ -180,6 +180,39 @@ function periodGenButton(pr, pid){
     + (can ? "" : `<span class="scope k">needs a CTA submission date and a DB lock</span>`);
 }
 
+/** The Periods table's columns, with the STANDARD the period selects shown beside the
+ *  project's own adjustment to it.
+ *
+ *  weight has always been half an answer. A row reading 'Start-up · 1.20' says this study
+ *  is a fifth heavier than usual through start-up and does not say heavier than WHAT -
+ *  and the what is a lookup into PeriodFTEStandard on four columns (type, phase, work
+ *  scope, period name), which meant leaving the tab and reading a 48-row matrix to find
+ *  the one figure that decided the size of this project's month. The two belong side by
+ *  side: standard_fte x weight IS the month's demand (REQ-CAL-19).
+ *
+ *  LOOKED UP, NOT STORED. It is not a ProjectPeriod column and must not become one -
+ *  copying the standard onto every period row would let a project keep a stale figure
+ *  after the standards were edited, which is exactly the failure the lookup exists to
+ *  prevent. dataTable draws a derived column read-only and marks it 'lookup'.
+ *
+ *  The SAME function the calculation uses, so the figure named here cannot be a different
+ *  one from the figure behind the bar. Missing, it says so and names V-19 rather than
+ *  showing the 1.00 the calculation falls back to - that fallback is a degradation, and
+ *  printing it as though it were a standard would hide the very thing V-19 reports. */
+const PERIOD_COLS = ["project_id","period_name","period_seq","period_start","period_end",
+                     "weight","standard_fte","note_1"];
+
+function periodStandardCol(proj){
+  return {standard_fte: r => {
+    if (!proj || !r.period_name) return "";
+    const v = num(stdWeight(S.model, proj, r.period_name));
+    if (v === null || v === undefined) return "none — V-19";
+    const w = num(r.weight);
+    return `${v.toFixed(2)}`
+      + (w === null || w === undefined ? "" : ` → ${(v * w).toFixed(2)} a month`);
+  }};
+}
+
 function projDetail(pid){
   const M = S.model, pr = M.projects[pid];
   /* Clicking a row that has not been saved yet makes its identifier the selection, and
@@ -234,14 +267,17 @@ function projDetail(pid){
           ${periodGenButton(pr, pid)}
           <span class="scope k">${per.length} row(s)${derived ? " &#183; derived" : ""}</span></div>
         <p class="cap">${derived ? "Derived from the milestones above." : "As entered in the workbook."}
-          Names are unique within a project, so <code>project_id + period_name</code> identifies a row.</p>
+          Names are unique within a project, so <code>project_id + period_name</code> identifies a row.
+          <code>standard_fte</code> beside the weight is the <strong>standard monthly FTE</strong>
+          this period selects for a project of this type, phase and work scope — looked up, not
+          stored here — and the two multiplied are the month's demand.</p>
         ${derived
           ? `<p class="note">These periods were DERIVED from the milestones above because the workbook
              carries none for this project. Adding a row here starts a hand-entered set, which the
              application will then use as given.</p>`
           : ""}
         ${dataTable("ProjectPeriod", childrenOf(M.raw.ProjectPeriod, "project_id", pid),
-          ["project_id","period_name","period_seq","period_start","period_end","weight","note_1"])}
+          PERIOD_COLS, null, null, periodStandardCol(pr))}
         </div>
     </div>`;
 }
@@ -290,9 +326,8 @@ function scratchProject(draft){
         <p class="cap">Leave this empty for a clinical trial and let the milestones derive it.
           An <code>Others</code> project is not derived — enter Planning / Develop / Close
           here yourself, with no gap and no overlap.</p>
-        ${dataTable("ProjectPeriod", per,
-          ["project_id","period_name","period_seq","period_start","period_end","weight","note_1"],
-          null, null, null, lock)}</div>
+        ${dataTable("ProjectPeriod", per, PERIOD_COLS, null, null,
+          periodStandardCol(draft), lock)}</div>
     </div>`;
 }
 

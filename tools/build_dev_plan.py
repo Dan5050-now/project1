@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.47"
+DOC_VERSION = "2.48"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,7 +397,37 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
-    [f"{MARK_NEW}2.47", "2026-09-05", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.48", "2026-09-06", "Claude Code", "Pending",
+     "R-40, REQ-DSH-14: THREE LOOKUP COLUMNS, SO A TABLE SHOWING A FIGURE CAN SAY WHAT "
+     "DECIDED ITS SIZE. Every figure in this application is standard FTE x period weight "
+     "x (role factor / sharers) x person weight x month coverage, and three tables each "
+     "showed one term of that and left the rest in another tab. "
+     "(1) THE PERIODS TABLE now names the STANDARD MONTHLY FTE its period selects, beside "
+     "the weight, and multiplies the two: 'Start-up 1.12 | 2.02 -> 2.26 a month'. A row "
+     "reading 'x1.12' said this study is an eighth heavier than usual and did not say "
+     "heavier than WHAT - answerable only by leaving the tab and reading a 48-row matrix "
+     "on General assumptions for one figure. "
+     "(2) BOTH MONTHLY ESTIMATION PANELS name the PERIOD the month falls in and its "
+     "weight, and (3) THE PERSON'S ALSO NAMES THE DIVISOR - how many people held that "
+     "role that month. Those are the two usual explanations for a figure that is not the "
+     "size somebody expected: the month moved into a heavier period, or a second holder "
+     "arrived and halved the share. The project's panel deliberately does NOT carry the "
+     "divisor: a project month is divided between several roles, each with its own count, "
+     "so one number there would average things that do not compare. "
+     "LOOKED UP, NEVER STORED. None of the three is a column of the sheet it sits beside, "
+     "and the tests hold them to that - a standard copied onto a ProjectPeriod row would "
+     "survive the standards being edited afterwards, which is the whole failure the "
+     "lookup avoids. Read off the calculation's own lines, so a screen cannot name one "
+     "period while the figure beside it came from another; calculate() now hands out "
+     "periodAt for the one case the lines cannot answer, a manual project month with "
+     "nobody assigned to it (V-32). A missing standard says 'none - V-19' rather than "
+     "printing the 1.00 the calculation falls back to; that fallback is a degradation and "
+     "showing it as a standard would hide exactly what V-19 reports. "
+     "No calculation change and no figure moves. tools/test_lookup.py is new: a "
+     "three-month fixture whose every figure is workable by hand, checking each column "
+     "against the calculation's own line rather than against a plausible number.",
+     "Issued for review"],
+    ["2.47", "2026-09-05", "Claude Code", "Pending",
      "R-39, PROJECT AND PERSON FIGURES KEPT CONSISTENT, AND SAID TO BE. "
      "(1) THE FIRST REQUEST WAS ALREADY THE BEHAVIOUR, which is worth recording rather "
      "than quietly re-implementing: a manual PROJECT month has always realigned every "
@@ -421,7 +451,7 @@ rows = [
      "One defect found by testing the undo rather than by reading it: rebuild() makes "
      "fresh row objects, so the row reference captured before it was orphaned and 'Put "
      "it back' silently did nothing. It re-finds the row by number now.",
-     "Issued for review"],
+     "Superseded by v2.48"],
     ["2.46", "2026-09-05", "Claude Code", "Pending",
      "R-38, THREE REQUESTS. "
      "(1) THE IN-APP EXPORT OF THE CHANGE LOG IS REMOVED. The archive is written at "
@@ -1613,6 +1643,7 @@ reqs = [
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-DSH-14", "Dashboard", "WHERE A FIGURE'S SIZE WAS DECIDED SOMEWHERE ELSE, THE TABLE SHOWING THE FIGURE NAMES WHAT DECIDED IT, in a column that is looked up and cannot be edited. Three of them, because three tables each showed one term of an expression and left the reader to find the rest in another tab: the Periods table names the STANDARD MONTHLY FTE its period selects and multiplies it by the project's own weight, so the row carries the month's demand instead of half the expression for it; both Monthly estimation panels name the PERIOD the month falls in and the weight that period carried; and the person's panel also names HOW MANY PEOPLE held that role that month, which is the divisor in (role factor / sharers) and the usual explanation for a share that halved with nothing of the person's own changing. LOOKED UP, NEVER STORED: none of the three is a column of the sheet it is shown beside, so no edit and no save can leave a stale copy of a standard in a file after the standards have moved - which is the failure the lookup exists to prevent. NAMED FROM THE CALCULATION'S OWN WORKINGS, not by asking the sheets again, so a screen cannot name one period while the figure beside it came from another. A missing standard says it is missing and names V-19 rather than printing the 1.00 the calculation falls back to; that fallback is a degradation, and showing it as a standard would hide the very thing V-19 reports.", "Should", "R-40", "4"],
     [f"{MARK_NEW}REQ-DSH-13", "Dashboard", "Every bounded scroll region draws its own scrollbars rather than relying on the browser's. A region deliberately capped on both axes is only honest if the reader can see there is more and reach it, and the browser's bar does not do that on a build that uses overlay scrollbars: it occupies no layout space and fades out when idle, so a table with eleven columns off to the right looks exactly like one with none. The drawn bar is present whenever there is anywhere to scroll to, can be dragged, and pages when its track is clicked. Native scrolling - wheel, shift-wheel, trackpad, keyboard - is untouched.", "Must", "R-23", "4"],
     [f"{MARK_NEW}REQ-CAL-20", "Calculation", "EVERY FTE FIGURE THE APPLICATION PRODUCES IS A WHOLE NUMBER OF HUNDREDTHS - not displayed to two places, but IS two places. The rounding happens once, where a person-month is decided, so the screen, the results export, the change log and all four independent implementations report the same number: a figure shown as 4.27 was 4.27 when it was worked out, not 4.2683 dressed up for a table. Two places because that is the granularity the plan is written in: at 160 hours to the FTE, 0.01 is 1.6 hours, the smallest edit that means anything to somebody staffing a study, and already what a manual estimate is typed at (REQ-CAL-18). ROUNDING EACH SHARE ON ITS OWN WOULD NOT DO - round three shares of 4.27 separately and they come to 4.26 or 4.28, so the detail rows would stop summing to the month (REQ-OUT-06) and the shares would stop adding to one (REQ-CAL-19); measured on the 62-project fixture that missed on 644 of 1,629 project-months. So THE MONTH IS ROUNDED FIRST AND ITS HUNDREDTHS ARE HANDED OUT: each line takes its floor and the hundredths left over go to the lines with the largest remainders, one each - the largest-remainder method, which makes both guarantees exact by construction rather than by tolerance. THE TIE-BREAK IS PART OF THE RULE: where two remainders are equal the hundredth goes to the line whose assignment_id sorts first, a total order that does not depend on array order or on the order rows were read from a sheet. Without it two implementations could differ by 0.01 and both be right. A row therefore sits up to 0.01 from the exact product of its own terms - measured worst 0.0070 - and the results export says so. Hundredths are counted as integers throughout, so the arithmetic cannot introduce the error it exists to remove.", "Must", "R-38", "4"],
     [f"{MARK_NEW}REQ-CAL-19", "Calculation", "A PROJECT-MONTH IS ITS STANDARD. PeriodFTEStandard.standard_fte is the DEMAND in FTE for a project of this type, clinical phase and work scope in this period; ProjectPeriod.weight ADJUSTS it for the particular study (1.00 = an ordinary project of its kind); and the product, scaled by how much of the month the project actually ran, IS the month. The people on it DIVIDE that month rather than each adding to it. Every term that used to reduce a figure now decides a share: role factor / people holding that role, times person_weight, times that person's own month coverage, makes a CLAIM; the claim over the sum of the claims is the SHARE; the share times the demand is the figure. THE SHARES ADD TO ONE BY CONSTRUCTION, so the month is its demand however many people are on it and whatever their weights - an unstaffed role's work lands on the others (REQ-CAL-16 decides on WHOM), and a part-time commitment pushes load onto colleagues rather than making the project cheaper. Under-staffing is therefore visible on the PEOPLE, as months over the ceiling, and never as a project that costs less than the work it contains. The month a project ran is taken as the largest coverage any of its people have, so a project whose period ends on the 10th draws a third of a month rather than a whole one. A missing standard falls back to 1.00 and V-19 reports it.", "Must", "R-31, R-32", "4"],

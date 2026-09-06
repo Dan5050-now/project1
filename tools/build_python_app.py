@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.12"
+VERSION = "1.13"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,44 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.13
+
+  * THE PERIODS TABLE NOW SHOWS WHAT THE WEIGHT IS A WEIGHT OF. Beside it,
+    the STANDARD MONTHLY FTE that period selects for a project of this type,
+    phase and work scope - and the two multiplied:
+
+        Start-up   weight 1.29   |   4.05 -> 5.22 a month
+
+    A row reading "x1.29" told you this study is a bit heavier than usual
+    through start-up and did not tell you heavier than WHAT. Finding out
+    meant leaving the tab for General assumptions and reading a 48-row
+    matrix for one figure.
+
+  * AND THE MONTHLY ESTIMATION TABLES NOW SAY WHERE EACH MONTH'S AUTOMATIC
+    FIGURE CAME FROM. A new column names the period the month falls in and
+    the weight it carried - "Start-up x1.29" - on both the project's table
+    and each person's.
+
+  * ON A PERSON'S TABLE THERE IS ONE MORE: how many people held that role on
+    that project that month. "2 share this role" is usually the answer to
+    "why did this drop by half when nothing of mine changed" - the role
+    factor is what the ROLE costs the project, so a second holder halves
+    each share and the project's month does not move.
+
+    The project's table deliberately does NOT show that count: a project
+    month is divided between several roles, each with its own number of
+    holders, so one figure there would be an average of things that do not
+    compare.
+
+  * ALL THREE ARE LOOKED UP, NOT STORED. They are read-only, they are marked
+    as lookups, and they are not columns of your workbook - so nothing can
+    leave a stale copy of a standard in the file after the standards have
+    been edited. A period with no standard says "none - V-19" rather than
+    showing the 1.00 the calculation falls back to.
+
+  * No figure has changed anywhere.
+
 
 WHAT IS NEW IN 1.12
 

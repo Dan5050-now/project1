@@ -319,8 +319,15 @@ function calculate(M){
 
   reportGaps(M, gaps);
   reportManual(M, lines);
+  /* periodAt is handed out for the SAME reason projPeriod is built from the lines: so a
+     screen naming the period a month falls in cannot name a different one from the
+     period the figure used. projPeriod answers it for every month that produced a
+     figure, which is nearly all of them; periodAt answers it for the months that did
+     not - a manual project month with nobody assigned to it (V-32) has a stated figure
+     and no line to read a period off. Two answers from one function rather than one
+     answer and a second lookup that could drift from it. */
   return {projMonth, persMonth, persProj, projPers, cell, who, projPeriod, sharers,
-          shareCount, staffed, effectiveFactor, gaps, lines,
+          periodAt, shareCount, staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }
 

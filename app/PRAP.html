@@ -1001,7 +1001,7 @@ td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
 
 <script>
 "use strict";
-const APP_VERSION = "1.45";
+const APP_VERSION = "1.46";
 const SCHEMA_EXPECTED = 11;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1010,9 +1010,9 @@ const SCHEMA_EXPECTED = 11;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.47.xlsx",          ver:"2.47",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.48.xlsx",          ver:"2.48",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.21.xlsx", ver:"1.21",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.22.xlsx", ver:"1.22",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
@@ -2240,6 +2240,8 @@ const COLUMN_HELP = {
   edited_at:"When this figure was last set, so a reader can tell a figure somebody typed from one the application copied across on switching.",
   automatic_fte:"What the assumptions ALONE would have produced for this month — the project's standard FTE × its period weight, shared out among the people on it by (role factor ÷ sharers) × person weight × month coverage. Shown for comparison only; it is not stored anywhere and changing an assumption moves it, not the stated figure beside it.",
   difference:"The stated figure minus the automatic one. This is the size of the departure the manual estimate is making, month by month.",
+  period:"WHICH PERIOD of the project's own plan this month falls in, and the weight that period carries — the row that selected the standard monthly FTE behind the automatic figure. A month belonging to no period is weighted 1.00 by default and V-12 says so. Read off the same calculation the figure came from, so it cannot name a different period from the one the arithmetic used.",
+  sharers:"How many people hold THIS ROLE on this project in this month. The role factor is what the ROLE costs the project, not what each holder costs, so it is divided by this: put a second data manager on a trial and each of them claims half of what one claimed, and the project's month does not move (REQ-CAL-14). A share that halves from one month to the next with nothing else changed is usually this.",
   project_id:"Unique identifier for the project. Editing it cascades to every row that references it.",
   project_name:"Display name. Shown wherever the project appears.",
   project_type:"'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Everything but 'Others' is a clinical trial: they share one period set and differ in their weights.",
@@ -3502,8 +3504,15 @@ function calculate(M){
 
   reportGaps(M, gaps);
   reportManual(M, lines);
+  /* periodAt is handed out for the SAME reason projPeriod is built from the lines: so a
+     screen naming the period a month falls in cannot name a different one from the
+     period the figure used. projPeriod answers it for every month that produced a
+     figure, which is nearly all of them; periodAt answers it for the months that did
+     not - a manual project month with nobody assigned to it (V-32) has a stated figure
+     and no line to read a period off. Two answers from one function rather than one
+     answer and a second lookup that could drift from it. */
   return {projMonth, persMonth, persProj, projPers, cell, who, projPeriod, sharers,
-          shareCount, staffed, effectiveFactor, gaps, lines,
+          periodAt, shareCount, staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }
 
@@ -6081,6 +6090,39 @@ function periodGenButton(pr, pid){
     + (can ? "" : `<span class="scope k">needs a CTA submission date and a DB lock</span>`);
 }
 
+/** The Periods table's columns, with the STANDARD the period selects shown beside the
+ *  project's own adjustment to it.
+ *
+ *  weight has always been half an answer. A row reading 'Start-up · 1.20' says this study
+ *  is a fifth heavier than usual through start-up and does not say heavier than WHAT -
+ *  and the what is a lookup into PeriodFTEStandard on four columns (type, phase, work
+ *  scope, period name), which meant leaving the tab and reading a 48-row matrix to find
+ *  the one figure that decided the size of this project's month. The two belong side by
+ *  side: standard_fte x weight IS the month's demand (REQ-CAL-19).
+ *
+ *  LOOKED UP, NOT STORED. It is not a ProjectPeriod column and must not become one -
+ *  copying the standard onto every period row would let a project keep a stale figure
+ *  after the standards were edited, which is exactly the failure the lookup exists to
+ *  prevent. dataTable draws a derived column read-only and marks it 'lookup'.
+ *
+ *  The SAME function the calculation uses, so the figure named here cannot be a different
+ *  one from the figure behind the bar. Missing, it says so and names V-19 rather than
+ *  showing the 1.00 the calculation falls back to - that fallback is a degradation, and
+ *  printing it as though it were a standard would hide the very thing V-19 reports. */
+const PERIOD_COLS = ["project_id","period_name","period_seq","period_start","period_end",
+                     "weight","standard_fte","note_1"];
+
+function periodStandardCol(proj){
+  return {standard_fte: r => {
+    if (!proj || !r.period_name) return "";
+    const v = num(stdWeight(S.model, proj, r.period_name));
+    if (v === null || v === undefined) return "none — V-19";
+    const w = num(r.weight);
+    return `${v.toFixed(2)}`
+      + (w === null || w === undefined ? "" : ` → ${(v * w).toFixed(2)} a month`);
+  }};
+}
+
 function projDetail(pid){
   const M = S.model, pr = M.projects[pid];
   /* Clicking a row that has not been saved yet makes its identifier the selection, and
@@ -6135,14 +6177,17 @@ function projDetail(pid){
           ${periodGenButton(pr, pid)}
           <span class="scope k">${per.length} row(s)${derived ? " &#183; derived" : ""}</span></div>
         <p class="cap">${derived ? "Derived from the milestones above." : "As entered in the workbook."}
-          Names are unique within a project, so <code>project_id + period_name</code> identifies a row.</p>
+          Names are unique within a project, so <code>project_id + period_name</code> identifies a row.
+          <code>standard_fte</code> beside the weight is the <strong>standard monthly FTE</strong>
+          this period selects for a project of this type, phase and work scope — looked up, not
+          stored here — and the two multiplied are the month's demand.</p>
         ${derived
           ? `<p class="note">These periods were DERIVED from the milestones above because the workbook
              carries none for this project. Adding a row here starts a hand-entered set, which the
              application will then use as given.</p>`
           : ""}
         ${dataTable("ProjectPeriod", childrenOf(M.raw.ProjectPeriod, "project_id", pid),
-          ["project_id","period_name","period_seq","period_start","period_end","weight","note_1"])}
+          PERIOD_COLS, null, null, periodStandardCol(pr))}
         </div>
     </div>`;
 }
@@ -6191,9 +6236,8 @@ function scratchProject(draft){
         <p class="cap">Leave this empty for a clinical trial and let the milestones derive it.
           An <code>Others</code> project is not derived — enter Planning / Develop / Close
           here yourself, with no gap and no overlap.</p>
-        ${dataTable("ProjectPeriod", per,
-          ["project_id","period_name","period_seq","period_start","period_end","weight","note_1"],
-          null, null, null, lock)}</div>
+        ${dataTable("ProjectPeriod", per, PERIOD_COLS, null, null,
+          periodStandardCol(draft), lock)}</div>
     </div>`;
 }
 
@@ -7231,6 +7275,53 @@ function monthlyOf(scope, id){
   return {now, auto};
 }
 
+/** WHERE A MONTH'S AUTOMATIC FIGURE CAME FROM, month by month.
+ *
+ *  automatic_fte answers "what would the assumptions have said" and stops there. The
+ *  next two questions a reader has are always the same, and neither had an answer on
+ *  this screen: WHICH PERIOD is this month in - the row of the plan that selected the
+ *  standard and the weight - and, for one person's assignment, HOW MANY PEOPLE was the
+ *  role divided between that month. A stated figure that looks half what was expected
+ *  usually has one of those two as its explanation, and hunting for it meant leaving the
+ *  tab for the timeline and then for the assignments list.
+ *
+ *  Read off the LINES, which is where the figure itself came from, so what is named here
+ *  cannot be a different period or a different divisor from the one the arithmetic used.
+ *  One line per assignment-month, so the first is the only one. */
+function monthFacts(scope, id){
+  const facts = new Map();
+  for (const L of ((S.calc && S.calc.lines) || [])){
+    if (scope === "project" ? L.project_id !== id : L.assignment_id !== id) continue;
+    const k = isoMonth(L.month);
+    if (!facts.has(k))
+      facts.set(k, {name:L.period_name, weight:L.period_weight, sharers:L.sharers,
+                    project_id:L.project_id});
+  }
+  return facts;
+}
+
+/** The period a month falls in when NO line carries it.
+ *
+ *  It happens for one reason worth naming: a manual project month in which nobody is
+ *  assigned (V-32) has a stated figure and no line at all. The period is still a fact of
+ *  the project's own plan, so it is answered from the same function the calculation uses
+ *  rather than left blank - a blank there reads as "no period", which is a different and
+ *  much more alarming thing. */
+function periodOfMonth(pid, mm){
+  const [y, m] = String(mm || "").split("-").map(Number);
+  if (!pid || !y || !m || !S.calc || !S.calc.periodAt) return null;
+  const seg = S.calc.periodAt(pid, y, m - 1);
+  return seg ? {name:seg.period_name, weight:num(seg.weight) ?? 1} : null;
+}
+
+/** The period as one readable cell: which row of the plan, and what it did to the figure. */
+function periodCell(facts, pid, mm){
+  const f = facts.get(mm);
+  const p = f && f.name ? f : periodOfMonth(f ? f.project_id : pid, mm);
+  return p && p.name ? `${p.name} ×${(num(p.weight) ?? 1).toFixed(2)}`
+                     : "no period — ×1.00 (V-12)";
+}
+
 /* ------------------------------------------------------------------ the switch */
 
 /** Ask, then do. Every change of calculation way goes through this - there is no path
@@ -7415,6 +7506,10 @@ function manualPanel(scope, id){
   const missing = [...now.keys()].filter(mm => !mine.some(r => r.month === mm));
   const stray = mine.filter(r => r.month && !now.has(r.month));
   const what = scope === "project" ? "project" : "assignment";
+  const facts = monthFacts(scope, id);
+  const ownPid = scope === "project" ? id
+    : (((S.model.raw.Assignment || []).find(a => a.assignment_id === id) || {}).project_id
+       || null);
   const totalNow = [...now.values()].reduce((a, b) => a + b, 0);
   const totalAuto = [...auto.values()].reduce((a, b) => a + b, 0);
 
@@ -7494,7 +7589,12 @@ function manualPanel(scope, id){
           + "and it replaces the share they would otherwise have been given."}
       <code>automatic_fte</code> beside it is what the assumptions alone would have said,
       so the departure is readable: <strong>${totalNow.toFixed(2)}</strong> stated against
-      <strong>${totalAuto.toFixed(2)}</strong> calculated across ${now.size} month(s).</p>
+      <strong>${totalAuto.toFixed(2)}</strong> calculated across ${now.size} month(s).
+      <code>period</code> says which row of this project's plan the automatic figure came
+      from and what its weight did to it${scope === "project" ? "" :
+        ", and <code>sharers</code> how many people this role was divided between that "
+        + "month — the two things that most often explain a figure that is not the size "
+        + "it was expected to be"}. Both are looked up, not stored.</p>
     ${missing.length ? `<p class="note bad">${missing.length} month(s) this ${what} covers
       have <strong>no stated figure</strong> (${esc(missing.slice(0, 6).join(", "))}${
       missing.length > 6 ? ", …" : ""}) and are counted as <strong>0.00</strong> — V-31.
@@ -7505,7 +7605,10 @@ function manualPanel(scope, id){
       scope === "project" ? " — a project month with nobody assigned has nobody to share "
         + "it out to, which V-32 reports" : ""}.</p>` : ""}
     ${filterTable("MonthlyEstimate", rows,
-      ["month", "fte", "automatic_fte", "difference", "edited_at", "note_1"],
+      scope === "project"
+        ? ["month", "fte", "automatic_fte", "difference", "period", "edited_at", "note_1"]
+        : ["month", "fte", "automatic_fte", "difference", "period", "sharers",
+           "edited_at", "note_1"],
       null, null,
       // Two places, like every other figure (REQ-CAL-20). These were the last four-place
       // numbers on screen, and the difference between a stated 2.41 and an "automatic"
@@ -7516,6 +7619,16 @@ function manualPanel(scope, id){
          if (!auto.has(r.month) || r.fte === null || r.fte === undefined) return "";
          const dd = Number(r.fte) - auto.get(r.month);
          return (dd >= 0 ? "+" : "") + dd.toFixed(2);
+       },
+       period: r => r.month ? periodCell(facts, ownPid, r.month) : "",
+       // Only on the assignment panel. A project's month is divided between SEVERAL
+       // roles, each with its own count, so one number against the project's month
+       // would be an average of things that are not comparable - and the divisor is a
+       // fact about one person's share, which is what this panel is.
+       sharers: r => {
+         const f = facts.get(r.month);
+         if (!f || !f.sharers) return "";
+         return `${f.sharers}` + (f.sharers === 1 ? " (only holder)" : " share this role");
        }})}
     ${manualElsewhere(scope, id)}</div>`;
 }

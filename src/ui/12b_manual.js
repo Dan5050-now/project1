@@ -68,6 +68,53 @@ function monthlyOf(scope, id){
   return {now, auto};
 }
 
+/** WHERE A MONTH'S AUTOMATIC FIGURE CAME FROM, month by month.
+ *
+ *  automatic_fte answers "what would the assumptions have said" and stops there. The
+ *  next two questions a reader has are always the same, and neither had an answer on
+ *  this screen: WHICH PERIOD is this month in - the row of the plan that selected the
+ *  standard and the weight - and, for one person's assignment, HOW MANY PEOPLE was the
+ *  role divided between that month. A stated figure that looks half what was expected
+ *  usually has one of those two as its explanation, and hunting for it meant leaving the
+ *  tab for the timeline and then for the assignments list.
+ *
+ *  Read off the LINES, which is where the figure itself came from, so what is named here
+ *  cannot be a different period or a different divisor from the one the arithmetic used.
+ *  One line per assignment-month, so the first is the only one. */
+function monthFacts(scope, id){
+  const facts = new Map();
+  for (const L of ((S.calc && S.calc.lines) || [])){
+    if (scope === "project" ? L.project_id !== id : L.assignment_id !== id) continue;
+    const k = isoMonth(L.month);
+    if (!facts.has(k))
+      facts.set(k, {name:L.period_name, weight:L.period_weight, sharers:L.sharers,
+                    project_id:L.project_id});
+  }
+  return facts;
+}
+
+/** The period a month falls in when NO line carries it.
+ *
+ *  It happens for one reason worth naming: a manual project month in which nobody is
+ *  assigned (V-32) has a stated figure and no line at all. The period is still a fact of
+ *  the project's own plan, so it is answered from the same function the calculation uses
+ *  rather than left blank - a blank there reads as "no period", which is a different and
+ *  much more alarming thing. */
+function periodOfMonth(pid, mm){
+  const [y, m] = String(mm || "").split("-").map(Number);
+  if (!pid || !y || !m || !S.calc || !S.calc.periodAt) return null;
+  const seg = S.calc.periodAt(pid, y, m - 1);
+  return seg ? {name:seg.period_name, weight:num(seg.weight) ?? 1} : null;
+}
+
+/** The period as one readable cell: which row of the plan, and what it did to the figure. */
+function periodCell(facts, pid, mm){
+  const f = facts.get(mm);
+  const p = f && f.name ? f : periodOfMonth(f ? f.project_id : pid, mm);
+  return p && p.name ? `${p.name} ×${(num(p.weight) ?? 1).toFixed(2)}`
+                     : "no period — ×1.00 (V-12)";
+}
+
 /* ------------------------------------------------------------------ the switch */
 
 /** Ask, then do. Every change of calculation way goes through this - there is no path
@@ -252,6 +299,10 @@ function manualPanel(scope, id){
   const missing = [...now.keys()].filter(mm => !mine.some(r => r.month === mm));
   const stray = mine.filter(r => r.month && !now.has(r.month));
   const what = scope === "project" ? "project" : "assignment";
+  const facts = monthFacts(scope, id);
+  const ownPid = scope === "project" ? id
+    : (((S.model.raw.Assignment || []).find(a => a.assignment_id === id) || {}).project_id
+       || null);
   const totalNow = [...now.values()].reduce((a, b) => a + b, 0);
   const totalAuto = [...auto.values()].reduce((a, b) => a + b, 0);
 
@@ -331,7 +382,12 @@ function manualPanel(scope, id){
           + "and it replaces the share they would otherwise have been given."}
       <code>automatic_fte</code> beside it is what the assumptions alone would have said,
       so the departure is readable: <strong>${totalNow.toFixed(2)}</strong> stated against
-      <strong>${totalAuto.toFixed(2)}</strong> calculated across ${now.size} month(s).</p>
+      <strong>${totalAuto.toFixed(2)}</strong> calculated across ${now.size} month(s).
+      <code>period</code> says which row of this project's plan the automatic figure came
+      from and what its weight did to it${scope === "project" ? "" :
+        ", and <code>sharers</code> how many people this role was divided between that "
+        + "month — the two things that most often explain a figure that is not the size "
+        + "it was expected to be"}. Both are looked up, not stored.</p>
     ${missing.length ? `<p class="note bad">${missing.length} month(s) this ${what} covers
       have <strong>no stated figure</strong> (${esc(missing.slice(0, 6).join(", "))}${
       missing.length > 6 ? ", …" : ""}) and are counted as <strong>0.00</strong> — V-31.
@@ -342,7 +398,10 @@ function manualPanel(scope, id){
       scope === "project" ? " — a project month with nobody assigned has nobody to share "
         + "it out to, which V-32 reports" : ""}.</p>` : ""}
     ${filterTable("MonthlyEstimate", rows,
-      ["month", "fte", "automatic_fte", "difference", "edited_at", "note_1"],
+      scope === "project"
+        ? ["month", "fte", "automatic_fte", "difference", "period", "edited_at", "note_1"]
+        : ["month", "fte", "automatic_fte", "difference", "period", "sharers",
+           "edited_at", "note_1"],
       null, null,
       // Two places, like every other figure (REQ-CAL-20). These were the last four-place
       // numbers on screen, and the difference between a stated 2.41 and an "automatic"
@@ -353,6 +412,16 @@ function manualPanel(scope, id){
          if (!auto.has(r.month) || r.fte === null || r.fte === undefined) return "";
          const dd = Number(r.fte) - auto.get(r.month);
          return (dd >= 0 ? "+" : "") + dd.toFixed(2);
+       },
+       period: r => r.month ? periodCell(facts, ownPid, r.month) : "",
+       // Only on the assignment panel. A project's month is divided between SEVERAL
+       // roles, each with its own count, so one number against the project's month
+       // would be an average of things that are not comparable - and the divisor is a
+       // fact about one person's share, which is what this panel is.
+       sharers: r => {
+         const f = facts.get(r.month);
+         if (!f || !f.sharers) return "";
+         return `${f.sharers}` + (f.sharers === 1 ? " (only holder)" : " share this role");
        }})}
     ${manualElsewhere(scope, id)}</div>`;
 }

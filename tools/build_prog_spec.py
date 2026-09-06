@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.21"
+DOC_VERSION = "1.22"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.47.xlsx"
+PLAN = "PRAP_Development_Plan_v2.48.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,25 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.22", "2026-09-06", "Claude Code", "Dan",
+         "R-40, REQ-DSH-14. Sheet 06 records three LOOKUP columns - read-only, marked as "
+         "such, and belonging to no sheet. The Periods table on tab 2 names the standard "
+         "monthly FTE its period selects and multiplies it by the project's own weight, "
+         "so the row carries the month's demand rather than one term of the expression "
+         "for it. Both Monthly estimation panels name the period the month falls in with "
+         "its weight; the assignment panel also names the sharer count, the divisor in "
+         "(role factor / sharers). The project panel does not carry that count, and sheet "
+         "06 says why: a project month is divided between several roles, each with its "
+         "own, so one number would average things that do not compare. Sheet 05 records "
+         "that calculate() now returns periodAt alongside projPeriod - projPeriod answers "
+         "the period for every month that produced a figure, periodAt for the one month "
+         "that produces none, a manual project month with nobody assigned (V-32) - so "
+         "both answers come from one function and cannot drift apart. NONE OF THE THREE "
+         "IS A SHEET COLUMN: the schema on sheet 03 is unchanged, and a stale standard "
+         "copied onto a period row is the failure the lookup exists to prevent. A missing "
+         "standard reads 'none - V-19' rather than the 1.00 the calculation falls back "
+         "to. No rule changes and no figure moves. Written against plan v2.48.",
+         "Issued"],
         ["1.21", "2026-09-05", "Claude Code", "Dan",
          "R-39. Sheet 04 gains V-33, a WARNING: a manual assignment figure that the "
          "project's own manual figure overrode. No rule changes - REQ-CAL-18 already "
@@ -940,6 +959,28 @@ r = note(ws, r, "From those three, and nothing else: V-33 in the findings, the s
                 "the sheet, the screen and the report cannot name different numbers.")
 r += 1
 r = lines(ws, r, [
+    "WHAT calculate() HANDS BACK FOR THE SCREENS TO READ (REQ-DSH-14). A table that shows a figure has",
+    "to be able to say what decided its size, and every such answer comes from the calculation's own",
+    "workings rather than from a second lookup - otherwise a screen can name one period while the",
+    "figure beside it came from another:",
+])
+r = table(ws, r, ["Returned by calculate()", "Answers"],
+          [["lines[].standard_fte, .period_name, .period_weight, .sharers",
+            "the terms behind one person-month, as the arithmetic used them"],
+           ["projPeriod: project|month -> {name, weight}",
+            "the period of every month that produced a figure"],
+           ["periodAt(project_id, year, month0)",
+            "the period of a month that produced NONE - a manual project month with nobody assigned "
+            "to it (V-32) has a stated figure and no line to read a period off. The same function the "
+            "calculation itself used, so the two answers cannot drift apart."]],
+          [46, 72], wrap_cols=(2,))
+r = note(ws, r, "These feed READ-ONLY lookup columns. None of them is a column of the sheet it is shown "
+                "beside, and none is written on save: a standard copied onto a ProjectPeriod row would "
+                "survive the standards being edited afterwards, which is the failure the lookup exists to "
+                "prevent. A missing standard is shown as missing, naming V-19, rather than as the 1.00 the "
+                "calculation degrades to - printing the fallback as a standard would hide what V-19 reports.")
+r += 1
+r = lines(ws, r, [
     "THE DECIMAL RULE (REQ-CAL-20). Every FTE figure the application produces IS a whole number of",
     "hundredths - not a longer figure displayed to two places. The rounding happens ONCE, where a",
     "person-month is decided (shareOut for a calculated month, applyManual for a stated one).",
@@ -1126,10 +1167,10 @@ r = section(ws, r, "Tab 2 - Source data (project)")
 t2 = [
     ["Project table", "All 23 Project columns, sortable and filterable, total_period_months recomputed. Editable.", "REQ-DSH-03, REQ-IMP-07"],
     ["Milestone sub-table", "Milestones of the selected project in date order. 'Inspection' may appear several times.", "REQ-PRJ-05, REQ-PRJ-13"],
-    ["Period sub-table", "Derived periods with seq, dates and weight, in seq order. Names are unique within a project since R-11, so project_id + period_name identifies a row. Shows whether each date was derived or hand-set.", "REQ-PRJ-06, REQ-CAL-09, REQ-DSH-10"],
+    ["Period sub-table", "Derived periods with seq, dates and weight, in seq order. Names are unique within a project since R-11, so project_id + period_name identifies a row. Shows whether each date was derived or hand-set. A LOOKUP column beside the weight names the standard monthly FTE this period selects for a project of this type, phase and work scope, and multiplies the two - so the row carries the month's demand rather than one term of the expression for it. Missing, it reads 'none - V-19' rather than the 1.00 the calculation falls back to.", "REQ-PRJ-06, REQ-CAL-09, REQ-DSH-10, REQ-DSH-14"],
     ["Recompute periods", "Re-derives from current milestones, warning that hand-set dates will be replaced.", "decision C-10"],
     ["Utilisation graph", "The selected project's monthly resource across the horizon, as bars, with THREE reference lines: 2x and 0.5x the average an ACTIVE project-month draws across the portfolio, and the project's own average over its full life. Sits directly under the project table, mirroring the person tab's strip. Months where the project draws nothing are excluded from the portfolio average - averaging them in would drag the norm toward zero and make every running project look heavy.", "REQ-DSH-12"],
-    ["Monthly estimation panel", "Opened by 'Switch to manual'. One row a month: the stated figure, automatic_fte and difference - all three to TWO decimals, like every other FTE on screen (REQ-CAL-20). Where the project's own stated month overrode a person's stated figure, the panel also tabulates month / stated here / actually given / the project's month, and the cell carries a mark. Editing such a figure SOFT-STOPS at the cell: the dialog names both numbers and offers 'Keep what I typed' or 'Put it back'. It never refuses - see V-33.", "REQ-CAL-18, REQ-CAL-20"],
+    ["Monthly estimation panel", "Opened by 'Switch to manual'. One row a month: the stated figure, automatic_fte and difference - all three to TWO decimals, like every other FTE on screen (REQ-CAL-20) - then a LOOKUP column naming the period the month falls in and its weight. Where the project's own stated month overrode a person's stated figure, the panel also tabulates month / stated here / actually given / the project's month, and the cell carries a mark. Editing such a figure SOFT-STOPS at the cell: the dialog names both numbers and offers 'Keep what I typed' or 'Put it back'. It never refuses - see V-33.", "REQ-CAL-18, REQ-CAL-20, REQ-DSH-14"],
     ["Export", "Visible table to .xlsx.", "REQ-DSH-06"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t2, [24, 90, 20], wrap_cols=(2,))
@@ -1147,7 +1188,7 @@ t3 = [
     ["Assignment sub-table", "The selected person's assignments: project, role, dates, person_weight.", "REQ-PSN-02, REQ-PSN-03"],
     ["Override sub-table", "PersonPeriodWeight windows for the selected assignment.", "REQ-PSN-05"],
     ["Utilisation strip", "The person's monthly FTE across the horizon with both absolute thresholds marked, and capacity_fte shown alongside for context.", "REQ-DSH-08"],
-    ["Monthly estimation panel", "The assignment-level half of the same panel as tab 2, for the selected assignment, with the same two decimals, the same override table and the same soft stop.", "REQ-CAL-18, REQ-CAL-20"],
+    ["Monthly estimation panel", "The assignment-level half of the same panel as tab 2, for the selected assignment, with the same two decimals, the same period lookup, the same override table and the same soft stop. It carries ONE column tab 2's does not: how many people held this role on this project in that month - the divisor in (role factor / sharers), and the usual explanation for a share that halved with nothing of the person's own changing. Tab 2's panel deliberately omits it: a project month is divided between several roles, each with its own count, so one number there would average things that do not compare.", "REQ-CAL-18, REQ-CAL-20, REQ-DSH-14"],
     ["Export", "Visible table to .xlsx.", "REQ-DSH-06"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t3, [24, 90, 20], wrap_cols=(2,))
