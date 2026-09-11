@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.16"
+VERSION = "1.17"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -60,8 +60,13 @@ Double-click this file, or run it from a command prompt:
 
     python PM_APP.py
 
-It opens in your browser, at an address only this machine can reach. Keep the
-console window open while you work; closing it stops the application.
+It opens in your browser, at an address only this machine can reach. Keep this
+window open while you work; closing it stops the application - and closing the
+page in your browser stops it too, a few seconds later. Refreshing the page
+does not, and neither does closing one of two windows.
+
+    python PM_APP.py --keep-running     leave this window open after the page
+                                        is closed, and close it yourself
 """
 
 import os
@@ -82,6 +87,37 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.17
+
+  * CLOSING THE BROWSER NOW CLOSES THE BLACK CONSOLE WINDOW TOO, a few
+    seconds later. It used to stay open, quietly holding the port, your hold
+    on whichever plan was open, and your data folder - and the only way to be
+    rid of it was to know it was there and close it yourself.
+
+  * REFRESHING THE PAGE DOES NOT STOP IT. The browser gives the same signal
+    for a refresh as for a close, so the application waits a few seconds to
+    see whether the page comes back before it does anything.
+
+  * NOR DOES CLOSING ONE OF TWO WINDOWS. If you have the application open in
+    two tabs, closing one leaves the other working.
+
+  * NOR DOES LEAVING IT IN A BACKGROUND TAB. Browsers slow down and even
+    freeze the timers of a tab nobody is looking at, so the fallback that
+    catches a browser being killed outright waits a full fifteen minutes
+    before giving up. It will never shut down under you because you were
+    reading your e-mail.
+
+  * IF YOU WANT THE OLD BEHAVIOUR, start it with --keep-running:
+
+        python PM_APP.py --keep-running
+
+    The console then stays open after you close the page, and you close it
+    yourself as before. The start-up banner says which of the two you are
+    getting.
+
+  * Nothing about the application's figures has changed.
+
 
 WHAT IS NEW IN 1.16
 

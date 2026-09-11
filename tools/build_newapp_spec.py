@@ -22,13 +22,13 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.4"
+DOC_VERSION = "1.5"
 DOC_STATUS = ("v1.2 APPROVED 2026-08-13 and still governing. THIS ISSUE, v1.3, adds change C-N02 - the "
               "Python shell - and AWAITS APPROVAL. Nothing already approved is withdrawn by it: the "
               "Electron shell stays specified and stays the better application wherever it can be "
               "delivered.")
 DOC_DATE = "2026-08-13"
-PLAN = "PRAP_NewApp_Development_Plan_v1.12.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.13.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Specification_v{DOC_VERSION}.xlsx"
@@ -854,6 +854,7 @@ OVERRIDE = {
     "NR-SEC-04": "05a_Python_Shell", "NR-SEC-05": "05a_Python_Shell",
     "NR-SEC-06": "05a_Python_Shell", "NR-IMP-09": "05a_Python_Shell",
     "NR-DEP-16": "05a_Python_Shell",
+    "NR-DEP-17": "05a_Python_Shell",
 }
 
 ws, r = sheet(wb, "11_Traceability", "Every requirement, and where it is specified   [N2.8]",

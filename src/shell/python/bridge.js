@@ -37,6 +37,58 @@
     return j.result;
   }
 
+  /* ---- the window and the application go together ------------------------
+     The console window IS the application; this page is its window. Closing the
+     window and leaving the application running is not something anybody asked for,
+     and it left a console sitting there owning a port, a claim on a plan nobody had
+     open, and a data folder - which the next run then had to argue with.
+
+     TWO MESSAGES, BECAUSE NEITHER IS ENOUGH ON ITS OWN.
+
+     THE CLOSE MESSAGE is the one that matters and the one that is quick. `pagehide`
+     is the event that actually fires when a tab is closed - `unload` does not, on a
+     page the browser has put in its back/forward cache - and `keepalive` is what lets
+     a fetch outlive the document that started it. sendBeacon cannot be used: it
+     refuses custom headers, and every request here carries the key.
+
+     THE HEARTBEAT is the backstop, for the times no close message arrives: the
+     browser was killed, the machine slept. It is slow on purpose. A browser throttles
+     timers in a tab nobody is looking at and can freeze one outright, so anything
+     brisk here would shut the application down on somebody who left it in a
+     background tab - see watch_clients() in server.py for the other half of this.
+
+     `pagehide` fires on a RELOAD as well, and at that moment the two are
+     indistinguishable. The server waits a few seconds before believing it, which is
+     more than a reload needs to say hello again.
+
+     FIRST, BEFORE ANY OF THE START-UP AWAITS. Everything below this point waits on the
+     machine, and one of those waits is a person: a first run stops at the sign-in card
+     until somebody types their name. Registering after that would mean the one case
+     the complaint is really about - open it, look at it, close it again - never
+     registered at all, so the console would sit there for ever having never seen a
+     page. Liveness is not the start-up sequence's business. */
+  const PAGE_ID = (crypto.randomUUID && crypto.randomUUID())
+    || String(Date.now()) + Math.random().toString(16).slice(2);
+  const ALIVE_MS = 20000;
+
+  const alive = () => call("app/alive", { id: PAGE_ID }).catch(() => {});
+  alive();
+  setInterval(alive, ALIVE_MS);
+  // And on the way back from being hidden, so a tab that was frozen for an hour says
+  // so the moment it is looked at again rather than at the next tick.
+  addEventListener("visibilitychange", () => { if (!document.hidden) alive(); });
+
+  addEventListener("pagehide", () => {
+    try {
+      fetch("/api/app/bye", {
+        method: "POST", keepalive: true,
+        headers: { "Content-Type": "application/json", "X-PM-Key": KEY },
+        body: JSON.stringify({ id: PAGE_ID }),
+      }).catch(() => {});
+    } catch (e) { /* the backstop has it */ }
+  });
+
+
   const b64ToBytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
   function bytesToB64(bytes) {
     let out = "";
@@ -662,6 +714,8 @@ Account        ${where.account}</pre>
   }
 
   showFile();
+
   window.__pm = { call, openPlan, savePlan, importSource, adoptBytes, browseFor,
-                  takeClaimOnEdit, state: () => ({ ref, holds, me, caps, where }) };
+                  takeClaimOnEdit, pageId: PAGE_ID,
+                  state: () => ({ ref, holds, me, caps, where }) };
 })();

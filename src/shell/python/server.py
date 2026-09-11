@@ -69,6 +69,14 @@ class App:
         self._heartbeat = None
         self._lock = threading.RLock()
         self.claim_lost = None                # set when a heartbeat finds it gone
+        # WHO IS ACTUALLY LOOKING AT IT (NR-DEP-17). page id -> last seen, monotonic.
+        # The console window is the application; the browser is its window. Closing the
+        # window and leaving the application running is not something anybody asked for,
+        # and the console then sits there owning a port and a claim on a plan nobody has
+        # open. See watch_clients() for how the two are told apart.
+        self.clients = {}
+        self.ever_seen = False
+        self.keep_running = False             # --keep-running, for a headless run
 
     # -------------------------------------------------------------- start-up
 
@@ -130,6 +138,69 @@ class App:
 
     def stop_heartbeat(self):
         self._heartbeat = None                # the thread notices `stop` or a lost claim
+
+    # --------------------------------------------------- who has the page open
+
+    def client_here(self, cid):
+        """A page saying it is still there. Also the first thing it ever says."""
+        if not cid:
+            return
+        with self._lock:
+            self.clients[str(cid)] = time.monotonic()
+            self.ever_seen = True
+
+    def client_gone(self, cid):
+        """A page saying it is closing. Sent from pagehide, which fires on a RELOAD
+        as well as on a close - the two are indistinguishable at this moment, and
+        that is what GRACE below is for."""
+        with self._lock:
+            self.clients.pop(str(cid), None)
+
+    def watch_clients(self, grace=4.0, stale=900.0, tick=0.5):
+        """Stop when the last page has gone, and not before.
+
+        TWO SIGNALS, BECAUSE NEITHER IS ENOUGH ON ITS OWN.
+
+        THE CLOSE MESSAGE is the one that matters and the one that is quick: the page
+        sends it from pagehide, so clicking the browser's X stops this in about
+        `grace` seconds. It is not trusted immediately, because pagehide fires on a
+        RELOAD too, and a reload that killed the application would make F5 a way of
+        losing your work. `grace` is the window a reloading page has to say hello
+        again; it only has to survive one page load.
+
+        THE HEARTBEAT is the backstop, for the times no close message arrives - the
+        browser was killed, the machine slept, the process was taken down. It is
+        deliberately SLOW to give up: `stale` is fifteen minutes. A browser throttles
+        timers in a tab nobody is looking at, hard, and can freeze one altogether for
+        minutes at a time - so a short timeout here would quietly shut the application
+        down on somebody who had left it open in a background tab, which is worse than
+        the console outliving the window by a quarter of an hour on the rare occasion
+        the browser dies without a word.
+
+        NOTHING HAPPENS BEFORE THE FIRST PAGE CONNECTS. A slow browser, a machine that
+        opens the URL by hand, `--no-browser` for the tests: none of those should be a
+        countdown to shutting down."""
+        if self.keep_running:
+            return
+        empty_since = None
+        while not self.stop.wait(tick):
+            now = time.monotonic()
+            with self._lock:
+                for cid, seen in list(self.clients.items()):
+                    if now - seen > stale:
+                        self.clients.pop(cid, None)
+                live = len(self.clients)
+                started = self.ever_seen
+            if not started or live:
+                empty_since = None
+                continue
+            if empty_since is None:
+                empty_since = now
+            elif now - empty_since >= grace:
+                print("\nThe application's page was closed, so it is stopping. "
+                      "Run PM_APP again to carry on.")
+                self.shutdown()
+                return
 
     def shutdown(self):
         # The claim goes on the way out - NOT on save alone, which would hand the
@@ -406,6 +477,17 @@ def operations(app):
         threading.Timer(0.2, app.shutdown).start()
         return {"ok": True}
 
+    def app_alive(b):
+        """The page saying it is open. Sent once on load and then on a slow timer."""
+        app.client_here(b.get("id"))
+        return {"ok": True}
+
+    def app_bye(b):
+        """The page saying it is closing. From pagehide - which fires on a reload
+        too, so watch_clients() waits a moment before believing it."""
+        app.client_gone(b.get("id"))
+        return {"ok": True}
+
     return {
         "caps": caps,
         "paths": paths,
@@ -433,6 +515,8 @@ def operations(app):
         "audit/append": audit_append,
         "audit/where": audit_where,
         "quit": app_quit,
+        "app/alive": app_alive,
+        "app/bye": app_bye,
     }
 
 

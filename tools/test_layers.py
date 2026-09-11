@@ -170,8 +170,43 @@ check(not third_party,
       "; ".join(third_party[:3]) if third_party else
       f"{len(build_python_app.MODULES)} modules, no pip install")
 
+def code_only(text):
+    """The module with its comments and string literals BLANKED OUT, in place.
+
+    Matching DOM names against the raw text found "the browser is its window." in a
+    sentence about a console window - which is prose, in a file whose whole subject is
+    windows. A check a comment can fail is one people learn to word around rather than
+    one they trust, so this reads the CODE.
+
+    Blanked rather than removed, and that is the whole of the care needed here: joining
+    the surviving tokens with spaces turns `window.alert` into `window . alert`, and
+    joining them with nothing turns `return document.x` into `returndocument.x` - both
+    of which stop the pattern matching real DOM code, which is worse than the false
+    positive being fixed. Overwriting each comment and string with spaces of its own
+    length leaves every other character exactly where it was.
+    """
+    import io
+    import tokenize
+    lines = text.splitlines(keepends=True)
+    try:
+        toks = list(tokenize.generate_tokens(io.StringIO(text).readline))
+    except (tokenize.TokenError, IndentationError):
+        return text                     # unparseable: fall back to the strict reading
+    for tok in toks:
+        if tok.type not in (tokenize.COMMENT, tokenize.STRING):
+            continue
+        (r0, c0), (r1, c1) = tok.start, tok.end
+        for r in range(r0 - 1, r1):
+            ln = lines[r]
+            a = c0 if r == r0 - 1 else 0
+            b = c1 if r == r1 - 1 else len(ln.rstrip("\r\n"))
+            lines[r] = ln[:a] + " " * (b - a) + ln[b:]
+    return "".join(lines)
+
+
 py_dom = [rel for rel in build_python_app.MODULES
-          if re.search(r"\bdocument\.|\bwindow\.", (SRC / rel).read_text(encoding="utf-8"))]
+          if re.search(r"\bdocument\.|\bwindow\.",
+                       code_only((SRC / rel).read_text(encoding="utf-8")))]
 check(not py_dom,
       "and it decides where files go, never what a number is",
       "; ".join(py_dom[:3]) if py_dom else

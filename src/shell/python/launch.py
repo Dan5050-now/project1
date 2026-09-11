@@ -80,12 +80,22 @@ def main(argv=None):
             return 1
         r = app.settle_data_dir(chosen=chosen)
 
+    # --keep-running leaves the application up after the page is closed. For a headless
+    # run, or for somebody who wants to shut one browser window and open another; the
+    # console then has to be closed by hand, as it always did.
+    app.keep_running = ("--keep-running" in argv
+                        or os.environ.get("PM_APP_KEEP_RUNNING") == "1")
+
     httpd = SV.serve(app, port=int(os.environ.get("PM_APP_PORT", "0")))
     host, port = httpd.server_address[0], httpd.server_address[1]
     url = f"http://127.0.0.1:{port}/?k={app.key}"
 
     threading.Thread(target=httpd.serve_forever, daemon=True,
                      name="pm-http").start()
+    # The window and the application go together: close the page and this stops by
+    # itself, instead of leaving a console behind holding a port and a claim on a plan
+    # nobody has open. Daemon, so it can never be the thread that keeps us alive.
+    threading.Thread(target=app.watch_clients, daemon=True, name="pm-watch").start()
 
     print("Project Management APP")
     print("=" * 60)
@@ -101,6 +111,12 @@ def main(argv=None):
     print(f"    {url}")
     print()
     print("  KEEP THIS WINDOW OPEN while you work. Closing it stops the application.")
+    if app.keep_running:
+        print("  --keep-running: closing the page leaves this window open. Close it "
+              "yourself when you are finished.")
+    else:
+        print("  CLOSING THE PAGE ALSO CLOSES THIS WINDOW, a few seconds later. "
+              "Reloading the page does not.")
     print("=" * 60)
 
     if "--no-browser" not in argv:
