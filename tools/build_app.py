@@ -60,6 +60,7 @@ PARTS = [
     "storage/web/audit.js",
     "ui/13_findings.js",
     "ui/13b_audit_ui.js",
+    "ui/13c_gap.js",
     "shell/web/14a_wiring.js",
     "storage/web/load.js",
     "shell/web/14b_wiring.js",

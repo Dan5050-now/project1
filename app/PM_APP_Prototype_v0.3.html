@@ -812,6 +812,68 @@ td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
 .estclash{background:var(--overbg);border-left:3px solid var(--crit);
  border-radius:var(--r-sm);padding:8px 11px;margin:0 0 8px}
 
+/* ---------------------------------------------- standard vs staffed (V-34)
+
+   TWO DIRECTIONS, TWO MARKS, AND NEVER THE SAME ONE. Short of the standard is a project
+   running on less than its kind usually takes; over it is one deliberately staffed
+   heavier. Marking both the same way would say they were one fact. Short borrows the
+   under-allocation amber and over borrows the over-allocation red, so the page keeps
+   one vocabulary: red is too much, amber is too little, everywhere it appears.
+
+   Never colour alone (D-04): every mark carries an arrow as well, in the cell, on the
+   chart and in the pop-up. */
+.tile.gap{background:var(--fill)}
+.tile.gap .tv{color:var(--ink)}
+.tile[data-gapjump]{cursor:pointer}
+.tile[data-gapjump]:hover{box-shadow:var(--shadow-lift)}
+.gshort{color:var(--underink);font-weight:590}
+.gover{color:var(--crit);font-weight:590}
+.gtot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+.gpill{font-size:var(--t-xs);font-weight:590;border-radius:999px;padding:3px 10px}
+.gpill.short{background:var(--underbg);color:var(--underink)}
+.gpill.over{background:var(--overbg);color:var(--crit)}
+table.gapt td.num{text-align:right;font-variant-numeric:tabular-nums}
+/* Both tinted, and tinted DIFFERENTLY. `over` alone would have picked up the
+   over-allocation background that already exists on td.over and left `short` plain, so
+   one direction would have read as the problem and the other as a note. */
+table.gapt td.num.short{color:var(--underink);font-weight:600;background:var(--underbg)}
+table.gapt td.num.over{color:var(--crit);font-weight:600;background:var(--overbg)}
+tr.gaprow{cursor:pointer}
+tr.gaprow.short > th.rh{box-shadow:inset 3px 0 0 var(--warn)}
+tr.gaprow.over  > th.rh{box-shadow:inset 3px 0 0 var(--crit)}
+tr.gaprow:hover > *{background:var(--fill)}
+/* The marked month IN the resource table, so a shortfall does not wait to be hovered. */
+td.c.gapc{cursor:pointer;position:relative}
+td.c.gapc.short{box-shadow:inset 0 0 0 2px var(--warn)}
+td.c.gapc.over{box-shadow:inset 0 0 0 2px var(--crit)}
+/* The arrow, so the mark is never carried by hue alone (D-04). Amber and red are the
+   confusable pair, and they are exactly the two directions here, so an outline colour on
+   its own would be the worst possible way to tell them apart. Absolutely positioned in
+   the corner rather than appended to the text: the figure is right-aligned across the
+   whole grid and a glyph in the flow would shift it out of column with its neighbours. */
+td.c.gapc::after{position:absolute;top:1px;left:3px;font-size:9px;line-height:1;
+ font-weight:700}
+td.c.gapc.short::after{content:"\\25BC";color:var(--underink)}
+td.c.gapc.over::after{content:"\\25B2";color:var(--crit)}
+/* And on the project's own utilisation chart. Dashed, so it cannot be mistaken for the
+   solid tinted outline the person chart already uses for a threshold breach. */
+rect.gapmark{fill:none;stroke-width:1.6;stroke-dasharray:3 2}
+rect.gapmark.short{stroke:var(--warn)}
+rect.gapmark.over{stroke:var(--crit)}
+/* The dialog's three figures, read before anything else in it. */
+.gapsum{display:flex;gap:var(--sp-5);align-items:baseline;flex-wrap:wrap;
+ background:var(--fill);border-radius:var(--r-md);padding:11px 15px;margin:0 0 10px}
+.gapsum.short{background:var(--underbg)}
+.gapsum.over{background:var(--overbg)}
+.gapsum .tl{display:block;font-size:var(--t-xs);color:var(--muted);font-weight:590;
+ letter-spacing:.03em;text-transform:uppercase}
+.gapsum .tv{font-size:var(--t-2xl);font-weight:600;font-variant-numeric:tabular-nums}
+.gapsum.short .tv{color:var(--underink)}
+.gapsum.over .tv{color:var(--crit)}
+.gapsum .gapwhat{flex:1 1 260px;font-size:var(--t-md);color:var(--ink2)}
+#gapdlg{width:min(980px,94vw)}
+#gapdlg table.gapt{margin:0 0 10px}
+
 /* ===================== PM_APP prototype chrome ==========================
    Added by tools/build_newapp_demo.py. Everything below is prototype dressing
    around the real application - it styles the window, not the product. */
@@ -1135,6 +1197,15 @@ td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
   <div class="dlg-b" id="estBody"></div>
 </dialog>
 
+<!-- One project-month whose demand and staffing have come apart (V-34). Carries the
+     figures that caused it as EDITABLE cells over the MonthlyEstimate sheet, so the
+     existing editing path handles them - there is no second way to change a figure. -->
+<dialog id="gapdlg">
+  <div class="dlg-h"><strong id="gapTitle"></strong>
+    <button class="btn primary" style="margin-left:auto" id="gapClose">Close</button></div>
+  <div class="dlg-b" id="gapBody"></div>
+</dialog>
+
 <!-- What an import changed about how the plan is READ, as opposed to what is in it. -->
 <dialog id="cfgchg">
   <div class="dlg-h"><strong>Settings this file brought with it</strong>
@@ -1151,7 +1222,7 @@ td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
 
 <script>
 "use strict";
-const APP_VERSION = "1.47";
+const APP_VERSION = "1.48";
 const SCHEMA_EXPECTED = 11;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1160,9 +1231,9 @@ const SCHEMA_EXPECTED = 11;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.49.xlsx",          ver:"2.49",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.50.xlsx",          ver:"2.50",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.23.xlsx", ver:"1.23",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.24.xlsx", ver:"1.24",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
@@ -3430,6 +3501,10 @@ function calculate(M){
      Null where the month belongs to no period - V-12 reports that, and the charts say
      so rather than leaving a gap that reads as a defect in the chart. */
   const projPeriod = new Map();
+  // project|month -> the DEMAND, which is what the project needs rather than what it is
+  // getting. Taken off the lines like everything else here, so the figure V-34 compares
+  // against is the one the arithmetic itself worked out.
+  const projDemand = new Map();
   const add = (map, k, v) => map.set(k, (map.get(k) || 0) + v);
 
   const periodAt = (pid, y, m) => {
@@ -3650,10 +3725,33 @@ function calculate(M){
     who.get(qk).push([L.person_id, L.role_name]);
     if (!projPeriod.has(qk))
       projPeriod.set(qk, L.period_name ? {name:L.period_name, weight:L.period_weight} : null);
+    if (!projDemand.has(qk)) projDemand.set(qk, L.demand_fte ?? 0);
+  }
+
+  /* WHAT THE PROJECT NEEDS AGAINST WHAT IT IS BEING GIVEN (V-34).
+     These are the two figures that can come apart, and until now nothing said when they
+     had. The pair people reach for first - the project's month against the sum of its
+     people - CANNOT differ: projMonth is built from the lines a few lines above, so it
+     is that sum by construction (REQ-OUT-06). The real pair is DEMAND against APPLIED.
+     An all-automatic month has them equal, because shareOut hands out exactly the
+     demand's hundredths and the shares add to one (REQ-CAL-19). A manual figure at
+     either level breaks that, deliberately, and the application then simply drew a
+     smaller project: a study needing 10.00 and staffed at 5.00 looked exactly like a
+     study that only ever needed 5.00. That is the thing worth reporting - not an
+     arithmetic fault, but a plan that has quietly stopped matching its own standard. */
+  const projGap = new Map();
+  for (const [qk, applied] of projMonth){
+    const demand = projDemand.get(qk);
+    if (demand === undefined) continue;
+    const cents = toCents(applied) - toCents(demand);
+    if (cents === 0) continue;
+    projGap.set(qk, {demand, applied, gap: fromCents(cents),
+                     dir: cents < 0 ? "short" : "over"});
   }
 
   reportGaps(M, gaps);
   reportManual(M, lines);
+  reportDemandGap(M, projGap);
   /* periodAt is handed out for the SAME reason projPeriod is built from the lines: so a
      screen naming the period a month falls in cannot name a different one from the
      period the figure used. projPeriod answers it for every month that produced a
@@ -3661,8 +3759,8 @@ function calculate(M){
      not - a manual project month with nobody assigned to it (V-32) has a stated figure
      and no line to read a period off. Two answers from one function rather than one
      answer and a second lookup that could drift from it. */
-  return {projMonth, persMonth, persProj, projPers, cell, who, projPeriod, sharers,
-          periodAt, shareCount, staffed, effectiveFactor, gaps, lines,
+  return {projMonth, persMonth, persProj, projPers, cell, who, projPeriod, projGap,
+          sharers, periodAt, shareCount, staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }
 
@@ -3866,6 +3964,62 @@ function reportManual(M, lines){
         + `is not what they are given. Either change the project's figure to one that `
         + `leaves room for this person's, or take this assignment off manual and let it `
         + `take its share.`});
+  }
+}
+
+/** V-34: a project that is no longer being given what its own standard says it needs.
+ *
+ *  REPORTED, NEVER REFUSED, AND NEVER A GATE. The severity is `warning` on purpose:
+ *  refuses() only acts on errors, so this reaches the findings report, the load banner,
+ *  the archived change log and the results export without stopping a save or asking a
+ *  question. Departing from the standard is the entire point of REQ-CAL-18 - a manager
+ *  part way through a trial knows better than the assumptions - so the application has
+ *  no business calling it wrong. What it does have business doing is SAYING SO, because
+ *  the departure is otherwise completely silent.
+ *
+ *  BOTH DIRECTIONS, AND THEY ARE NOT THE SAME FACT. Short of the standard is a project
+ *  being asked to run on less than its kind usually takes; over it is a project
+ *  deliberately staffed heavier. Summed together they would cancel - a project three
+ *  short in March and three over in April would report as fine - so they are counted and
+ *  named separately and the net is never shown on its own.
+ *
+ *  One finding per PROJECT rather than per month: twenty-four consecutive months of the
+ *  same manual decision is one decision, and twenty-four findings would bury every other
+ *  rule in the report. The months are named inside it. */
+function reportDemandGap(M, projGap){
+  if (!M || !Array.isArray(M.findings)) return;
+  for (let i = M.findings.length - 1; i >= 0; i--)
+    if (M.findings[i].rule === "V-34") M.findings.splice(i, 1);
+
+  const by = new Map();
+  for (const [qk, g] of projGap){
+    const pid = qk.slice(0, qk.lastIndexOf("|"));
+    if (!by.has(pid)) by.set(pid, []);
+    by.get(pid).push([isoOf(+qk.slice(qk.lastIndexOf("|") + 1)), g]);
+  }
+  for (const [pid, ms] of by){
+    ms.sort((a, b) => a[0] < b[0] ? -1 : 1);
+    const short = ms.filter(([, g]) => g.dir === "short");
+    const over = ms.filter(([, g]) => g.dir === "over");
+    const worst = ms.slice().sort((a, b) =>
+      Math.abs(b[1].gap) - Math.abs(a[1].gap))[0];
+    const parts = [];
+    if (short.length) parts.push(`${short.length} month(s) SHORT of it by up to `
+      + `${Math.max(...short.map(([, g]) => -g.gap)).toFixed(2)}`);
+    if (over.length) parts.push(`${over.length} month(s) OVER it by up to `
+      + `${Math.max(...over.map(([, g]) => g.gap)).toFixed(2)}`);
+    M.findings.push({sev:"warning", rule:"V-34", sheet:"MonthlyEstimate", row:"",
+      msg:`Project ${pid} is not being given what its own standard says it needs: `
+        + `${parts.join(", and ")} FTE. Worst is ${worst[0]}, which needs `
+        + `${worst[1].demand.toFixed(2)} and is getting ${worst[1].applied.toFixed(2)}. `
+        + `A manual figure - on the project or on one of its assignments - replaces the `
+        + `standard rather than adjusting it, so this is what somebody decided rather `
+        + `than a fault. It is reported because it is otherwise invisible: the charts `
+        + `simply draw a ${short.length && !over.length ? "smaller"
+            : over.length && !short.length ? "larger" : "different"} project, which `
+        + `looks exactly like a project that was always that size. Open Standard vs `
+        + `staffed on the Overall tab to see every month and change the figures behind `
+        + `them.`});
   }
 }
 
@@ -5245,6 +5399,7 @@ function chartStacked(pids){
         + `${keyToLabel(k)} &#183; <b>${fmt(v)} ${unitLabel()}</b>`
         + `<span class="tr"> &#183; ${month > 0 ? (100*v/month).toFixed(0) : 0}% of the month</span><br>`
         + periodLine(p, k)
+        + gapLine(p, k)
         + `<span class="tr">${crew.length} ${crew.length===1?"person":"people"} this month</span><br>`
         + (list || "&#183; nobody assigned")
         + (crew.length > 8 ? `<br>&#183; and ${crew.length-8} more` : "")
@@ -5330,7 +5485,7 @@ function chartPeople(sids){
              : v < M.UNDER ? `<br><span class="tr">below the ${M.UNDER.toFixed(2)} floor</span>` : "")
           + `<br>${projs.slice(0,6).map(([q, qv]) =>
                 `&#183; ${esc(M.projects[q].project_name)} <span class="tr">${fmt(qv)}</span>`
-                + periodTag(q, k)).join("<br>")}`
+                + periodTag(q, k) + gapTag(q, k)).join("<br>")}`
           + (projs.length > 6 ? `<br>&#183; and ${projs.length-6} more` : "")
           + `<hr>${keyToLabel(k)} across everyone in view: <b>${fmt(month)} ${unitLabel()}</b>`;
       // A person over the ceiling is outlined, so the flag never rests on colour alone (D-04).
@@ -5417,6 +5572,7 @@ function chartProjectUtil(pid){
           + `<span class="tr"> &#183; ${total > 0 ? (100*v/total).toFixed(0) : 0}% of the month</span>`
           + `<hr><b>${esc(M.projects[pid].project_name)}</b><br>`
           + periodLine(pid, k)
+          + gapLine(pid, k)
           + `Total this month: <b>${fmt(total)} ${unitLabel()}</b>`
           + `<span class="tr"> across ${bys.size} ${bys.size === 1 ? "person" : "people"} `
           + `&#183; this project averages ${ownAvg.toFixed(2)}, an active project ${portAvg.toFixed(2)}</span>`;
@@ -5424,6 +5580,20 @@ function chartProjectUtil(pid){
         + `width="${w.toFixed(1)}" height="${Math.max(0.8, y1-y0).toFixed(1)}" `
         + `fill="${sid === REST ? "var(--other)" : persColourOf(sid)}" data-tip="${att(tip)}"></rect>`);
     }
+  });
+  /* A MONTH OFF ITS OWN STANDARD IS MARKED ON THE CHART (V-34), not only in its pop-up.
+     Drawn after the stack so the outline sits over every segment of the month rather
+     than over one person's band, because the gap is a fact about the MONTH. The two
+     directions get different classes: short of the standard and over it are different
+     facts, and one mark for both would say they were the same one. */
+  G.forEach((k, i) => {
+    const g = gapOf(pid, k);
+    if (!g) return;
+    const v = C.projMonth.get(pid + "|" + k) || 0;
+    const y0 = base - (v / vmax) * (base - top);
+    o.push(`<rect class="gapmark ${g.dir}" x="${(padL + i * bw).toFixed(1)}" `
+      + `y="${Math.min(y0, base - 4).toFixed(1)}" width="${(bw - 1).toFixed(1)}" `
+      + `height="${Math.max(4, base - y0).toFixed(1)}" rx="3"></rect>`);
   });
   monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base);
   for (const [v, cls, lab] of [[upper,"th-over",`2 × portfolio avg — ${upper.toFixed(2)}`],
@@ -5440,7 +5610,8 @@ function chartProjectUtil(pid){
   for (const sid of order)
     leg.push(`<li><span class="sw" style="background:${sid === REST ? "var(--other)" : persColourOf(sid)}"></span>`
       + `${esc(sid === REST ? `the other ${rest.length} people` : persName(sid))}</li>`);
-  leg.push(`<li class="hint">tinted outline = the month's TOTAL crosses a reference line</li></ul>`);
+  leg.push(`<li class="hint">tinted outline = the month's TOTAL crosses a reference line`
+    + ` &#183; dashed outline = the month is off this project's own standard (V-34)</li></ul>`);
   return {svg:o.join("") + (order.length ? leg.join("") : ""), portAvg, ownAvg};
 }
 
@@ -5510,6 +5681,7 @@ function chartPersonStrip(sid){
         + `<span class="tr">${esc(M.projects[p].project_type)}</span><br>`
         + `${keyToLabel(k)}<br>`
         + periodLine(p, k)
+        + gapLine(p, k)
         + `Project milestone: ${ms.length
             ? ms.map(([nm, d]) => `${esc(nm)} <span class="tr">${ymd(d)}</span>`).join("<br>"
               + "&nbsp;".repeat(10))
@@ -5589,9 +5761,21 @@ function tableProjects(pids){
     let tot = 0;
     const tds = G.map(k => {
       const v = C.projMonth.get(pid+"|"+k) || 0; tot += v;
-      if (v <= 0.004) return '<td class="c z">&middot;</td>';
+      /* A month that is not what the project's own standard asks for is marked HERE,
+         on the figure, rather than only in a pop-up or a panel (V-34). A shortfall you
+         have to hover to discover is very nearly as silent as one nobody reports: the
+         whole failure being fixed is that the application quietly drew a smaller
+         project. Both directions are marked and they are marked DIFFERENTLY - short of
+         the standard and over it are different facts. */
+      const g = gapOf(pid, k);
+      const mark = g ? ` gapc ${g.dir}` : "";
+      const gtip = g ? ` data-gap="${att(pid)}" data-gk="${k}"`
+        + ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${gapLine(pid, k)}`
+        + `<span class="tr">click for the month and the figures behind it</span>`)}"` : "";
+      if (v <= 0.004) return `<td class="c z${mark}"${gtip}>&middot;</td>`;
       const i = seqStep(v, vmax);
-      return `<td class="c" style="background:${SEQ[i]};color:${i>6?"#fff":"var(--ink)"}">${fmt(v)}</td>`;
+      return `<td class="c${mark}"${gtip} style="background:${SEQ[i]};`
+        + `color:${i>6?"#fff":"var(--ink)"}">${fmt(v)}</td>`;
     }).join("");
     body.push(`<tr class="parent" data-k="p-${esc(pid)}" tabindex="0" role="button" `
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
@@ -6084,6 +6268,13 @@ function renderOverall(){
     }
     if (run >= M.MINM) runs++;
   }
+  /* The gap counted the same way the panel below lists it, from one function, so the
+     tile cannot claim a number the panel does not show. Counted as PROJECT-MONTHS in
+     each direction and never netted: three short in March and three over in April is
+     not a plan in balance, and one figure would say it was. */
+  const gaps = gapRows(pids);
+  const gshort = gaps.filter(r => r.dir === "short").length;
+  const gover = gaps.length - gshort;
   const tiles = [
     ["Projects in view", pids.length, `of ${Object.keys(M.projects).length} in the file`, "",
      "Projects matching the current filters that draw resource somewhere in the horizon. Change the "
@@ -6100,10 +6291,20 @@ function renderOverall(){
      `Stretches of ${M.MINM} or more consecutive months below ${M.UNDER.toFixed(2)} FTE. Counted as RUNS, `
      + "not months — three separate amber cells would look like three problems. A month at zero breaks a "
      + "run rather than continuing it: somebody with no assignments is unassigned, not under-allocated."],
-  ].map(([l,v,s,c,h]) => `<div class="tile ${c}" data-tip="${att(`<b>${l}</b><br>${h}`)}">`
+    ["Off their standard", gaps.length, `${gshort} short &#183; ${gover} over`,
+     gaps.length ? "gap" : "",
+     "Project-months where what the project NEEDS — standard FTE × period weight × the part of the "
+     + "month it runs — is not what it is being GIVEN. An automatic month always has the two equal, "
+     + "because the people on it divide the month rather than each adding to it. A figure stated by "
+     + "hand replaces the standard rather than adjusting it, which is what puts them out of step. The "
+     + "two directions are counted apart and never netted. V-34 reports it; <b>Standard vs staffed</b> "
+     + "below lists every one and lets you change the figures behind it."],
+  ].map(([l,v,s,c,h]) => `<div class="tile ${c}" data-tip="${att(`<b>${l}</b><br>${h}`)}"`
+    + `${c === "gap" ? ' data-gapjump="1" tabindex="0" role="button"' : ""}>`
     + `<div class="tl">${l}</div>`
     + `<div class="tv">${c==="over"?"&#9650; ":c==="under"?"&#9660; ":""}${v}</div>`
     + `<div class="ts">${s}</div></div>`).join("");
+  const gapSection = gapPanel(pids);
 
   const scope = `${G.length} months &#183; ${pids.length} project(s) &#183; ${sids.length} people`;
   el("t-overall").innerHTML =
@@ -6116,6 +6317,13 @@ function renderOverall(){
         because in a stack every band's baseline moves with the bands beneath it.
         <strong>Hover any line</strong> for its total, mean and peak month.</p>
       <div class="scrollx fit">${projectLines(pids)}</div></div>
+    ${/* Second, directly under the trend it explains, and ALWAYS in the same place -
+          a panel that appears only when there is something to say is a panel nobody
+          learns the position of, and one whose absence cannot be told from one that was
+          scrolled past. The tile above jumps here. It is not first because the trend
+          chart is what the tab is for; it is not last because something whose whole
+          danger is being silent does not belong under six panels of charts. */
+      gapSection}
     <div class="panel">
       <div class="phead"><h2>Project timeline</h2>
         <span class="scope k">${pids.length} project(s)</span></div>
@@ -8343,6 +8551,262 @@ function setWho(name){
   if (box) box.hidden = true;
   renderDirty();
 }
+/* ============================== 13c. standard vs staffed (REQ-DSH-15, V-34)
+
+   TWO FIGURES THAT CAN COME APART, AND THE PAIR IS NOT THE OBVIOUS ONE.
+
+   The pair people reach for first - a project's month against the sum of its people -
+   cannot differ. projMonth is built FROM the lines, so it IS that sum by construction,
+   and the results export rests on it (REQ-OUT-06). Checking it would be checking that
+   addition works.
+
+   The pair that does come apart is what the project NEEDS against what it is BEING
+   GIVEN. An all-automatic month has them equal: shareOut hands out exactly the demand's
+   hundredths and the shares add to one (REQ-CAL-19). A manual figure - at either level -
+   replaces the standard rather than adjusting it, and the two part company. Set a
+   project needing 10.00 to 5.00, or cut one person's stated month, and the application
+   drew a smaller project and said nothing. A study needing ten people and staffed with
+   five looked exactly like a study that only ever needed five.
+
+   THIS SECTION IS WHERE THAT IS SAID, and it is deliberately not a tab. A tab is the
+   surface you only visit once you already suspect a problem, which is the wrong property
+   for something whose whole danger is that it is silent. So the finding reaches the
+   report, the load banner and the archived log by being a rule; the figure carries a
+   mark wherever it is drawn; and this panel sits on the Overall tab, under the tiles,
+   where somebody looking at the plan will meet it without going to find it.
+
+   AND IT IS NOT A LIST YOU HAVE TO ACT ON SOMEWHERE ELSE. Every row opens a dialog
+   carrying the month's own figures - the demand term by term, everybody on it, and the
+   stated figures behind the gap AS EDITABLE CELLS. They are ordinary contenteditable
+   cells over the MonthlyEstimate sheet, so the existing editing path validates, logs,
+   marks and undoes them exactly as it does in a table: there is no second way to change
+   a figure, which is the only way two ways cannot drift apart.
+
+   BOTH DIRECTIONS, COUNTED SEPARATELY. Short of the standard is a project running on
+   less than its kind usually takes; over it is one deliberately staffed heavier. They
+   are different facts, and summing them would let three short in March cancel three over
+   in April and report a plan as fine. */
+
+/** Every project-month whose demand and applied figure differ, largest first.
+ *  `pids` scopes it to the projects in view, so the panel and the tiles above it cannot
+ *  disagree about how many there are. */
+function gapRows(pids){
+  const C = S.calc, want = new Set(pids || []);
+  const out = [];
+  for (const [qk, g] of (C.projGap || new Map())){
+    const i = qk.lastIndexOf("|");
+    const pid = qk.slice(0, i), k = +qk.slice(i + 1);
+    if (want.size && !want.has(pid)) continue;
+    out.push({pid, k, ...g});
+  }
+  out.sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap) || (a.pid < b.pid ? -1 : 1));
+  return out;
+}
+
+/** The gap on one project-month, or null. Used by the charts and the tables to mark a
+ *  figure where it is drawn, so a shortfall does not depend on anybody hovering. */
+function gapOf(pid, k){
+  return (S.calc && S.calc.projGap && S.calc.projGap.get(pid + "|" + k)) || null;
+}
+
+/** The one line the chart pop-ups carry. Short and always in the same shape, because it
+ *  sits under a period line that is already two facts long. */
+function gapLine(pid, k){
+  const g = gapOf(pid, k);
+  if (!g) return "";
+  return `<span class="${g.dir === "short" ? "gshort" : "gover"}">`
+    + `${g.dir === "short" ? "&#9660; Short of" : "&#9650; Over"} the standard by `
+    + `<b>${Math.abs(g.gap).toFixed(2)}</b></span>`
+    + `<span class="tr"> &#183; needs ${g.demand.toFixed(2)}, staffed `
+    + `${g.applied.toFixed(2)} (V-34)</span><br>`;
+}
+
+/** The same thing as a short trailing phrase, for a pop-up that lists SEVERAL projects.
+ *  A person's month is made of every project they are on, and those projects need not be
+ *  off their standard in the same direction or at all - so the tag sits against each
+ *  project, exactly as the period tag does, rather than once against the bar. */
+function gapTag(pid, k){
+  const g = gapOf(pid, k);
+  if (!g) return "";
+  return `<span class="${g.dir === "short" ? "gshort" : "gover"}"> `
+    + `&#183; ${g.dir === "short" ? "&#9660;" : "&#9650;"} `
+    + `${Math.abs(g.gap).toFixed(2)} ${g.dir} of standard</span>`;
+}
+
+/* ------------------------------------------------------------------- the panel */
+
+const GAP_SHOW = 40;      // rows drawn; the rest are counted, not listed
+
+function gapPanel(pids){
+  const M = S.model, rows = gapRows(pids);
+  const short = rows.filter(r => r.dir === "short");
+  const over = rows.filter(r => r.dir === "over");
+  const projects = new Set(rows.map(r => r.pid));
+  if (!rows.length)
+    return `<div class="panel" id="gappanel">
+      <div class="phead"><h2>Standard vs staffed</h2>
+        <span class="scope k">nothing to report</span></div>
+      <p class="cap">Every project in view is drawing exactly what its own standard says
+        it needs — <strong>standard FTE × period weight × the part of the month it
+        runs</strong>. That is what an automatic month always does, because the people on
+        it divide the month rather than each adding to it. A figure stated by hand, on a
+        project or on one assignment, replaces the standard rather than adjusting it, and
+        this panel is where the difference is listed when there is one.</p></div>`;
+
+  const body = rows.slice(0, GAP_SHOW).map(r => {
+    const pr = M.projects[r.pid] || {};
+    return `<tr class="gaprow ${r.dir}" data-gap="${att(r.pid)}" data-gk="${r.k}"
+        tabindex="0" role="button">
+      <th class="rh"><span class="nm">${esc(pr.project_name || r.pid)}</span>
+        <span class="sub">${esc(r.pid)}</span></th>
+      <td>${keyToLabel(r.k)}</td>
+      <td class="num">${r.demand.toFixed(2)}</td>
+      <td class="num">${r.applied.toFixed(2)}</td>
+      <td class="num ${r.dir}">${r.gap > 0 ? "&#9650; +" : "&#9660; "}${r.gap.toFixed(2)}</td>
+      <td>${r.dir === "short" ? "short of the standard" : "over the standard"}</td>
+      <td><button class="btn tiny" data-gap="${att(r.pid)}" data-gk="${r.k}"
+        >Check and fix</button></td></tr>`;
+  }).join("");
+
+  return `<div class="panel" id="gappanel">
+    <div class="phead"><h2>Standard vs staffed</h2>
+      <span class="scope k">${rows.length} month(s) across ${projects.size}
+        project(s)</span></div>
+    <p class="cap">What each project <strong>needs</strong> — standard FTE × period
+      weight × the part of the month it runs — against what it is actually
+      <strong>being given</strong>. These are the two figures that can come apart. The
+      project's month against the sum of its people cannot: the month is built from those
+      people, so it is their sum by construction. A figure stated by hand replaces the
+      standard rather than adjusting it, which is what puts these two out of step —
+      <strong>deliberately</strong>, in every case, which is why this reports rather than
+      refuses. <strong>Click any row</strong> to see the month and change the figures
+      behind it.</p>
+    <div class="gtot">
+      <span class="gpill short">&#9660; ${short.length} month(s) short of the standard</span>
+      <span class="gpill over">&#9650; ${over.length} month(s) over it</span>
+      <span class="tr">counted apart, never netted — three short in March and three over
+        in April is not a plan in balance</span></div>
+    <div class="scrollx lg"><table class="grid-t gapt">
+      <thead><tr><th class="rh">Project</th><th>Month</th><th>Needs</th>
+        <th>Staffed</th><th>Gap</th><th>Direction</th><th></th></tr></thead>
+      <tbody>${body}</tbody></table></div>
+    ${rows.length > GAP_SHOW
+      ? `<p class="note">Showing the ${GAP_SHOW} largest of ${rows.length}. The rest are
+         in the findings report, which lists every one of them by project.</p>` : ""}
+    <p class="note">V-34 reports this as a <strong>warning</strong>: it reaches the
+      findings report, the load banner and the archived change log, and it never stops a
+      save or asks a question. Departing from the standard is the point of a manual
+      figure — somebody part way through a trial knows better than the assumptions — so
+      the application says so and leaves the decision where it belongs.</p></div>`;
+}
+
+/* ------------------------------------------------------------------ the dialog */
+
+let GAP_AT = null;         // {pid, k} while the dialog is open, so an edit can redraw it
+
+/** Open the month, with the figures that caused the gap editable in place. */
+function openGap(pid, k){
+  GAP_AT = {pid, k};
+  drawGap();
+  const dlg = el("gapdlg");
+  if (!dlg.open) dlg.showModal();
+}
+
+function closeGap(){
+  GAP_AT = null;
+  const dlg = el("gapdlg");
+  if (dlg.open) dlg.close();
+}
+
+/** Redraw the open dialog after an edit. Called from the render path, so a figure
+ *  changed in the dialog moves the numbers IN the dialog as well as behind it - a panel
+ *  that kept showing the gap you had just closed would read as an edit that did nothing. */
+function gapRefresh(){ if (GAP_AT && el("gapdlg").open) drawGap(); }
+
+function drawGap(){
+  const M = S.model, {pid, k} = GAP_AT;
+  const pr = M.projects[pid] || {};
+  const g = gapOf(pid, k);
+  const mm = isoMonth(k);
+  const lines = ((S.calc && S.calc.lines) || [])
+    .filter(L => L.project_id === pid && L.month === k)
+    .sort((a, b) => (a.role_name || "").localeCompare(b.role_name || ""));
+  const applied = lines.reduce((t, L) => t + L.fte, 0);
+  const demand = g ? g.demand : (lines[0] || {}).demand_fte ?? 0;
+
+  el("gapTitle").innerHTML = `${esc(pr.project_name || pid)} `
+    + `<span class="tr">${esc(pid)} &#183; ${keyToLabel(k)}</span>`;
+
+  /* THE FIGURES THAT CAN ACTUALLY BE CHANGED, and nothing else offered as if it could.
+     A gap has exactly two possible authors: the project's own stated month, or a stated
+     month on one of its assignments. Whichever is present is what appears here as an
+     editable cell; where the project is automatic there is no project row to edit and
+     saying so beats showing a disabled box. */
+  const projRow = (M.raw.MonthlyEstimate || []).find(r =>
+    r.scope === "project" && r.ref_id === pid && String(r.month) === mm);
+  const manualAsg = new Map();
+  for (const r of (M.raw.MonthlyEstimate || []))
+    if (r.scope === "assignment" && String(r.month) === mm) manualAsg.set(r.ref_id, r);
+
+  const cellFor = r => r
+    ? `<td class="cell" contenteditable="true" data-sheet="MonthlyEstimate"
+         data-row="${r.__row}" data-col="fte">${r.fte ?? ""}</td>`
+    : `<td class="muted">—</td>`;
+
+  const who = lines.map(L => {
+    const r = manualAsg.get(L.assignment_id);
+    return `<tr>
+      <th class="rh"><span class="nm">${esc((M.people[L.person_id] || {}).person_name
+        || L.person_id)}</span><span class="role">${esc(L.role_name || "")}</span></th>
+      <td>${esc(L.assignment_id || "")}</td>
+      <td>${r ? '<span class="est man">MANUAL</span>' : '<span class="est aut">auto</span>'}</td>
+      <td class="num">${L.fte.toFixed(2)}</td>
+      ${cellFor(r)}
+      <td><button class="btn tiny" data-act="gopers" data-sid="${att(L.person_id)}"
+        data-aid="${att(L.assignment_id)}">Open</button></td></tr>`;
+  }).join("");
+
+  el("gapBody").innerHTML = `
+    <div class="gapsum ${g ? g.dir : ""}">
+      <div><span class="tl">Needs</span><span class="tv">${demand.toFixed(2)}</span></div>
+      <div><span class="tl">Staffed</span><span class="tv">${applied.toFixed(2)}</span></div>
+      <div><span class="tl">Gap</span><span class="tv">${g
+        ? (g.gap > 0 ? "&#9650; +" : "&#9660; ") + g.gap.toFixed(2)
+        : "0.00"}</span></div>
+      <div class="gapwhat">${g
+        ? (g.dir === "short"
+            ? "This project is being asked to run on less than its kind usually takes in "
+              + "this period."
+            : "This project is deliberately staffed heavier than its kind usually is in "
+              + "this period.")
+        : "This month now matches its standard."}</div></div>
+    <p class="cap">What it needs is
+      <strong>${periodCell("project", monthFacts("project", pid), pr, mm)}</strong>.
+      What it is given is the ${lines.length} figure(s) below added up — the month is
+      built from them, so it always equals their sum. Change a MANUAL figure here and
+      everything behind this dialog follows.</p>
+    ${projRow
+      ? `<p class="note"><strong>This project's own month is stated by hand.</strong> It
+         is the whole month, and the people below are scaled so they still add up to it
+         (REQ-CAL-18) — so this is the figure to change first.</p>
+         <table class="grid-t gapt"><thead><tr><th class="rh">The project's stated month</th>
+           <th>Applied</th><th>Change it here</th></tr></thead>
+         <tbody><tr><th class="rh">${esc(pid)} &#183; ${esc(mm)}</th>
+           <td class="num">${applied.toFixed(2)}</td>${cellFor(projRow)}</tr></tbody></table>`
+      : `<p class="note">This project is on <strong>automatic</strong> estimation, so it
+         has no stated month of its own — the gap comes from the assignment figures
+         below. Change one of those, or switch the assignment back to automatic and let
+         it take its share.</p>`}
+    <table class="grid-t gapt"><thead><tr><th class="rh">Who is on it</th>
+      <th>Assignment</th><th>Estimation</th><th>Applied</th><th>Stated (edit here)</th>
+      <th></th></tr></thead>
+      <tbody>${who || `<tr><td class="muted" colspan="6">Nobody is assigned to this
+        project this month — V-32.</td></tr>`}</tbody></table>
+    <p class="note">Edits here are the same edits as anywhere else in the application:
+      validated as you leave the cell, listed under <strong>Show details</strong>, undone
+      by <strong>Leave without change</strong>, and written only when you press
+      <strong>Save</strong>.</p>`;
+}
 /* ============================================================ 14. wiring */
 
 /* Re-rendering a panel replaces its DOM, and a fresh element starts at the top left.
@@ -8515,6 +8979,12 @@ function paintCue(box){
 
 function renderKeepingTab(){
   keepScroll(() => { renderAll(); showTab(S.tab); });
+  /* An open gap dialog is redrawn with everything else. Its whole purpose is to let a
+     figure be changed from inside it, and a dialog still showing the gap you had just
+     closed would read as an edit that did nothing. Safe after the edit rather than
+     during it: applyEdit runs on focusout, so the cell being typed into has already
+     been left by the time this fires. */
+  gapRefresh();
 }
 function showTab(id){
   S.tab = id;
@@ -8811,6 +9281,10 @@ el("whoName").addEventListener("keydown", e => {
   if (e.key === "Enter"){ e.preventDefault(); setWho(el("whoName").value); }
 });
 el("repClose").onclick = () => el("report").close();
+el("gapClose").onclick = () => closeGap();
+// Escape and the backdrop close it too; GAP_AT has to be cleared either way or a
+// later edit would redraw a dialog nobody has open.
+el("gapdlg").addEventListener("close", () => closeGap());
 el("cfgClose").onclick = () => el("cfgchg").close();
 el("chgBtn").onclick = () => { renderChanges(); el("changes").showModal(); };
 el("chgClose").onclick = () => el("changes").close();
@@ -8914,9 +9388,30 @@ document.addEventListener("click", e => {
     keepScroll(renderGenTab);
     return;
   }
+  /* V-34, opened from wherever it is marked: the panel row, its button, the tile above
+     it, or the marked cell in Resource by project. stopPropagation because a marked
+     cell sits inside a row whose own click expands it - without this, asking about the
+     month would also toggle the project open underneath the dialog. */
+  const gj = e.target.closest("[data-gapjump]");
+  if (gj){
+    e.stopPropagation();
+    showTab("t-overall");
+    const p = el("gappanel");
+    if (p) p.scrollIntoView({block:"start", behavior:"smooth"});
+    return;
+  }
+  const gp = e.target.closest("[data-gap]");
+  if (gp){
+    e.stopPropagation();
+    openGap(gp.dataset.gap, +gp.dataset.gk);
+    return;
+  }
   const act = e.target.closest("[data-act]");
   if (act){
     e.stopPropagation();
+    // Opening the other tab from INSIDE the gap dialog has to shut it first, or the tab
+    // it just took you to is drawn behind a modal nobody asked to keep.
+    if (act.dataset.act === "gopers" || act.dataset.act === "goproj") closeGap();
     if (act.dataset.act === "blankms") blankMilestones(act.dataset.pid);
     if (act.dataset.act === "autoper") autoPeriods(act.dataset.pid);
     if (act.dataset.act === "blankper") blankPeriods(act.dataset.pid);

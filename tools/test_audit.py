@@ -133,11 +133,21 @@ with sync_playwright() as pw:
                     msg:'role "Data Analyst, Snr" is uncosted'},
                    {sev:'fatal',   rule:'V-01', sheet:'Person', row:3,
                     msg:'a quote " and a comma, together'}];
+        const was = S.events.length;
         S.events.push(...findingEntries(F, ['V-19'], 'save', 'Kim Soo-jin'));
-        return {n: S.events.length, kept: S.events.filter(e => e.kept === 'yes').length};}""")
-    check(r["n"] == 3 and r["kept"] == 1,
+        return {was, n: S.events.length,
+                kept: S.events.filter(e => e.kept === 'yes').length,
+                rules: [...new Set(S.events.map(e => e.rule))].sort()};}""")
+    # A DELTA, not a total. The save in section 2 already logged the findings standing at
+    # that moment, which is the whole point of the findings archive - so the count this
+    # starts from depends on what the fixture happens to raise, and asserting a total
+    # would make this test a hostage to the dummy data.
+    check(r["n"] - r["was"] == 3 and r["kept"] == 1,
           "findings are logged with the ones the user chose to keep marked",
-          f"{r['n']} logged, {r['kept']} marked kept")
+          f"{r['was']} already logged, +3 pushed, {r['kept']} marked kept")
+    check("V-34" in r["rules"],
+          "and the save really did log what the plan was reporting at the time",
+          " ".join(r["rules"]))
 
     print("\n4. there is no export — the archive is the only route out")
     pg.evaluate("() => { el('expMenu').open = true; }")
@@ -218,9 +228,19 @@ else:
                 browser.close()
 
             files = sorted(home.rglob("audit/*.csv"))
-            check(len(files) == 1 and "changes" in files[0].name,
-                  "one file, named for the month, in an audit folder",
-                  files[0].name if files else "none written")
+            changes = [f for f in files if "changes" in f.name]
+            found = [f for f in files if "findings" in f.name]
+            check(len(changes) == 1,
+                  "one CHANGES file, named for the month, in an audit folder",
+                  ", ".join(f.relative_to(home).as_posix() for f in files) or "none written")
+            # And the findings beside it, in their own file. Two questions - what was
+            # changed, and what the application was reporting while it was changed - and
+            # two files, because merging them would make both harder to read. The
+            # fixture raises V-34, so this file has something in it to check.
+            check(len(found) == 1 and "V-34" in found[0].read_text(encoding="utf-8-sig"),
+                  "with the FINDINGS archived beside them, carrying what was reported",
+                  found[0].name if found else "none written")
+            files = changes
             # SHARED, not per-person: the folder sits beside users/, not inside one
             # person's copy of it. A change log split per person answers "what did I
             # do" and not "what happened to this plan", and on a shared deployment

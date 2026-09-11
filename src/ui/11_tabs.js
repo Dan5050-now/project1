@@ -19,6 +19,13 @@ function renderOverall(){
     }
     if (run >= M.MINM) runs++;
   }
+  /* The gap counted the same way the panel below lists it, from one function, so the
+     tile cannot claim a number the panel does not show. Counted as PROJECT-MONTHS in
+     each direction and never netted: three short in March and three over in April is
+     not a plan in balance, and one figure would say it was. */
+  const gaps = gapRows(pids);
+  const gshort = gaps.filter(r => r.dir === "short").length;
+  const gover = gaps.length - gshort;
   const tiles = [
     ["Projects in view", pids.length, `of ${Object.keys(M.projects).length} in the file`, "",
      "Projects matching the current filters that draw resource somewhere in the horizon. Change the "
@@ -35,10 +42,20 @@ function renderOverall(){
      `Stretches of ${M.MINM} or more consecutive months below ${M.UNDER.toFixed(2)} FTE. Counted as RUNS, `
      + "not months — three separate amber cells would look like three problems. A month at zero breaks a "
      + "run rather than continuing it: somebody with no assignments is unassigned, not under-allocated."],
-  ].map(([l,v,s,c,h]) => `<div class="tile ${c}" data-tip="${att(`<b>${l}</b><br>${h}`)}">`
+    ["Off their standard", gaps.length, `${gshort} short &#183; ${gover} over`,
+     gaps.length ? "gap" : "",
+     "Project-months where what the project NEEDS — standard FTE × period weight × the part of the "
+     + "month it runs — is not what it is being GIVEN. An automatic month always has the two equal, "
+     + "because the people on it divide the month rather than each adding to it. A figure stated by "
+     + "hand replaces the standard rather than adjusting it, which is what puts them out of step. The "
+     + "two directions are counted apart and never netted. V-34 reports it; <b>Standard vs staffed</b> "
+     + "below lists every one and lets you change the figures behind it."],
+  ].map(([l,v,s,c,h]) => `<div class="tile ${c}" data-tip="${att(`<b>${l}</b><br>${h}`)}"`
+    + `${c === "gap" ? ' data-gapjump="1" tabindex="0" role="button"' : ""}>`
     + `<div class="tl">${l}</div>`
     + `<div class="tv">${c==="over"?"&#9650; ":c==="under"?"&#9660; ":""}${v}</div>`
     + `<div class="ts">${s}</div></div>`).join("");
+  const gapSection = gapPanel(pids);
 
   const scope = `${G.length} months &#183; ${pids.length} project(s) &#183; ${sids.length} people`;
   el("t-overall").innerHTML =
@@ -51,6 +68,13 @@ function renderOverall(){
         because in a stack every band's baseline moves with the bands beneath it.
         <strong>Hover any line</strong> for its total, mean and peak month.</p>
       <div class="scrollx fit">${projectLines(pids)}</div></div>
+    ${/* Second, directly under the trend it explains, and ALWAYS in the same place -
+          a panel that appears only when there is something to say is a panel nobody
+          learns the position of, and one whose absence cannot be told from one that was
+          scrolled past. The tile above jumps here. It is not first because the trend
+          chart is what the tab is for; it is not last because something whose whole
+          danger is being silent does not belong under six panels of charts. */
+      gapSection}
     <div class="panel">
       <div class="phead"><h2>Project timeline</h2>
         <span class="scope k">${pids.length} project(s)</span></div>

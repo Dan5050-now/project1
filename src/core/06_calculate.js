@@ -95,6 +95,10 @@ function calculate(M){
      Null where the month belongs to no period - V-12 reports that, and the charts say
      so rather than leaving a gap that reads as a defect in the chart. */
   const projPeriod = new Map();
+  // project|month -> the DEMAND, which is what the project needs rather than what it is
+  // getting. Taken off the lines like everything else here, so the figure V-34 compares
+  // against is the one the arithmetic itself worked out.
+  const projDemand = new Map();
   const add = (map, k, v) => map.set(k, (map.get(k) || 0) + v);
 
   const periodAt = (pid, y, m) => {
@@ -315,10 +319,33 @@ function calculate(M){
     who.get(qk).push([L.person_id, L.role_name]);
     if (!projPeriod.has(qk))
       projPeriod.set(qk, L.period_name ? {name:L.period_name, weight:L.period_weight} : null);
+    if (!projDemand.has(qk)) projDemand.set(qk, L.demand_fte ?? 0);
+  }
+
+  /* WHAT THE PROJECT NEEDS AGAINST WHAT IT IS BEING GIVEN (V-34).
+     These are the two figures that can come apart, and until now nothing said when they
+     had. The pair people reach for first - the project's month against the sum of its
+     people - CANNOT differ: projMonth is built from the lines a few lines above, so it
+     is that sum by construction (REQ-OUT-06). The real pair is DEMAND against APPLIED.
+     An all-automatic month has them equal, because shareOut hands out exactly the
+     demand's hundredths and the shares add to one (REQ-CAL-19). A manual figure at
+     either level breaks that, deliberately, and the application then simply drew a
+     smaller project: a study needing 10.00 and staffed at 5.00 looked exactly like a
+     study that only ever needed 5.00. That is the thing worth reporting - not an
+     arithmetic fault, but a plan that has quietly stopped matching its own standard. */
+  const projGap = new Map();
+  for (const [qk, applied] of projMonth){
+    const demand = projDemand.get(qk);
+    if (demand === undefined) continue;
+    const cents = toCents(applied) - toCents(demand);
+    if (cents === 0) continue;
+    projGap.set(qk, {demand, applied, gap: fromCents(cents),
+                     dir: cents < 0 ? "short" : "over"});
   }
 
   reportGaps(M, gaps);
   reportManual(M, lines);
+  reportDemandGap(M, projGap);
   /* periodAt is handed out for the SAME reason projPeriod is built from the lines: so a
      screen naming the period a month falls in cannot name a different one from the
      period the figure used. projPeriod answers it for every month that produced a
@@ -326,8 +353,8 @@ function calculate(M){
      not - a manual project month with nobody assigned to it (V-32) has a stated figure
      and no line to read a period off. Two answers from one function rather than one
      answer and a second lookup that could drift from it. */
-  return {projMonth, persMonth, persProj, projPers, cell, who, projPeriod, sharers,
-          periodAt, shareCount, staffed, effectiveFactor, gaps, lines,
+  return {projMonth, persMonth, persProj, projPers, cell, who, projPeriod, projGap,
+          sharers, periodAt, shareCount, staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }
 
@@ -531,6 +558,62 @@ function reportManual(M, lines){
         + `is not what they are given. Either change the project's figure to one that `
         + `leaves room for this person's, or take this assignment off manual and let it `
         + `take its share.`});
+  }
+}
+
+/** V-34: a project that is no longer being given what its own standard says it needs.
+ *
+ *  REPORTED, NEVER REFUSED, AND NEVER A GATE. The severity is `warning` on purpose:
+ *  refuses() only acts on errors, so this reaches the findings report, the load banner,
+ *  the archived change log and the results export without stopping a save or asking a
+ *  question. Departing from the standard is the entire point of REQ-CAL-18 - a manager
+ *  part way through a trial knows better than the assumptions - so the application has
+ *  no business calling it wrong. What it does have business doing is SAYING SO, because
+ *  the departure is otherwise completely silent.
+ *
+ *  BOTH DIRECTIONS, AND THEY ARE NOT THE SAME FACT. Short of the standard is a project
+ *  being asked to run on less than its kind usually takes; over it is a project
+ *  deliberately staffed heavier. Summed together they would cancel - a project three
+ *  short in March and three over in April would report as fine - so they are counted and
+ *  named separately and the net is never shown on its own.
+ *
+ *  One finding per PROJECT rather than per month: twenty-four consecutive months of the
+ *  same manual decision is one decision, and twenty-four findings would bury every other
+ *  rule in the report. The months are named inside it. */
+function reportDemandGap(M, projGap){
+  if (!M || !Array.isArray(M.findings)) return;
+  for (let i = M.findings.length - 1; i >= 0; i--)
+    if (M.findings[i].rule === "V-34") M.findings.splice(i, 1);
+
+  const by = new Map();
+  for (const [qk, g] of projGap){
+    const pid = qk.slice(0, qk.lastIndexOf("|"));
+    if (!by.has(pid)) by.set(pid, []);
+    by.get(pid).push([isoOf(+qk.slice(qk.lastIndexOf("|") + 1)), g]);
+  }
+  for (const [pid, ms] of by){
+    ms.sort((a, b) => a[0] < b[0] ? -1 : 1);
+    const short = ms.filter(([, g]) => g.dir === "short");
+    const over = ms.filter(([, g]) => g.dir === "over");
+    const worst = ms.slice().sort((a, b) =>
+      Math.abs(b[1].gap) - Math.abs(a[1].gap))[0];
+    const parts = [];
+    if (short.length) parts.push(`${short.length} month(s) SHORT of it by up to `
+      + `${Math.max(...short.map(([, g]) => -g.gap)).toFixed(2)}`);
+    if (over.length) parts.push(`${over.length} month(s) OVER it by up to `
+      + `${Math.max(...over.map(([, g]) => g.gap)).toFixed(2)}`);
+    M.findings.push({sev:"warning", rule:"V-34", sheet:"MonthlyEstimate", row:"",
+      msg:`Project ${pid} is not being given what its own standard says it needs: `
+        + `${parts.join(", and ")} FTE. Worst is ${worst[0]}, which needs `
+        + `${worst[1].demand.toFixed(2)} and is getting ${worst[1].applied.toFixed(2)}. `
+        + `A manual figure - on the project or on one of its assignments - replaces the `
+        + `standard rather than adjusting it, so this is what somebody decided rather `
+        + `than a fault. It is reported because it is otherwise invisible: the charts `
+        + `simply draw a ${short.length && !over.length ? "smaller"
+            : over.length && !short.length ? "larger" : "different"} project, which `
+        + `looks exactly like a project that was always that size. Open Standard vs `
+        + `staffed on the Overall tab to see every month and change the figures behind `
+        + `them.`});
   }
 }
 

@@ -184,6 +184,15 @@
   <div class="dlg-b" id="estBody"></div>
 </dialog>
 
+<!-- One project-month whose demand and staffing have come apart (V-34). Carries the
+     figures that caused it as EDITABLE cells over the MonthlyEstimate sheet, so the
+     existing editing path handles them - there is no second way to change a figure. -->
+<dialog id="gapdlg">
+  <div class="dlg-h"><strong id="gapTitle"></strong>
+    <button class="btn primary" style="margin-left:auto" id="gapClose">Close</button></div>
+  <div class="dlg-b" id="gapBody"></div>
+</dialog>
+
 <!-- What an import changed about how the plan is READ, as opposed to what is in it. -->
 <dialog id="cfgchg">
   <div class="dlg-h"><strong>Settings this file brought with it</strong>

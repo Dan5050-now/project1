@@ -40,9 +40,21 @@ function tableProjects(pids){
     let tot = 0;
     const tds = G.map(k => {
       const v = C.projMonth.get(pid+"|"+k) || 0; tot += v;
-      if (v <= 0.004) return '<td class="c z">&middot;</td>';
+      /* A month that is not what the project's own standard asks for is marked HERE,
+         on the figure, rather than only in a pop-up or a panel (V-34). A shortfall you
+         have to hover to discover is very nearly as silent as one nobody reports: the
+         whole failure being fixed is that the application quietly drew a smaller
+         project. Both directions are marked and they are marked DIFFERENTLY - short of
+         the standard and over it are different facts. */
+      const g = gapOf(pid, k);
+      const mark = g ? ` gapc ${g.dir}` : "";
+      const gtip = g ? ` data-gap="${att(pid)}" data-gk="${k}"`
+        + ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${gapLine(pid, k)}`
+        + `<span class="tr">click for the month and the figures behind it</span>`)}"` : "";
+      if (v <= 0.004) return `<td class="c z${mark}"${gtip}>&middot;</td>`;
       const i = seqStep(v, vmax);
-      return `<td class="c" style="background:${SEQ[i]};color:${i>6?"#fff":"var(--ink)"}">${fmt(v)}</td>`;
+      return `<td class="c${mark}"${gtip} style="background:${SEQ[i]};`
+        + `color:${i>6?"#fff":"var(--ink)"}">${fmt(v)}</td>`;
     }).join("");
     body.push(`<tr class="parent" data-k="p-${esc(pid)}" tabindex="0" role="button" `
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`

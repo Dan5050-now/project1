@@ -81,6 +81,10 @@ el("whoName").addEventListener("keydown", e => {
   if (e.key === "Enter"){ e.preventDefault(); setWho(el("whoName").value); }
 });
 el("repClose").onclick = () => el("report").close();
+el("gapClose").onclick = () => closeGap();
+// Escape and the backdrop close it too; GAP_AT has to be cleared either way or a
+// later edit would redraw a dialog nobody has open.
+el("gapdlg").addEventListener("close", () => closeGap());
 el("cfgClose").onclick = () => el("cfgchg").close();
 el("chgBtn").onclick = () => { renderChanges(); el("changes").showModal(); };
 el("chgClose").onclick = () => el("changes").close();
@@ -184,9 +188,30 @@ document.addEventListener("click", e => {
     keepScroll(renderGenTab);
     return;
   }
+  /* V-34, opened from wherever it is marked: the panel row, its button, the tile above
+     it, or the marked cell in Resource by project. stopPropagation because a marked
+     cell sits inside a row whose own click expands it - without this, asking about the
+     month would also toggle the project open underneath the dialog. */
+  const gj = e.target.closest("[data-gapjump]");
+  if (gj){
+    e.stopPropagation();
+    showTab("t-overall");
+    const p = el("gappanel");
+    if (p) p.scrollIntoView({block:"start", behavior:"smooth"});
+    return;
+  }
+  const gp = e.target.closest("[data-gap]");
+  if (gp){
+    e.stopPropagation();
+    openGap(gp.dataset.gap, +gp.dataset.gk);
+    return;
+  }
   const act = e.target.closest("[data-act]");
   if (act){
     e.stopPropagation();
+    // Opening the other tab from INSIDE the gap dialog has to shut it first, or the tab
+    // it just took you to is drawn behind a modal nobody asked to keep.
+    if (act.dataset.act === "gopers" || act.dataset.act === "goproj") closeGap();
     if (act.dataset.act === "blankms") blankMilestones(act.dataset.pid);
     if (act.dataset.act === "autoper") autoPeriods(act.dataset.pid);
     if (act.dataset.act === "blankper") blankPeriods(act.dataset.pid);

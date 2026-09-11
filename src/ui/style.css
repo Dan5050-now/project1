@@ -794,3 +794,65 @@ td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
  margin-left:5px;vertical-align:middle}
 .estclash{background:var(--overbg);border-left:3px solid var(--crit);
  border-radius:var(--r-sm);padding:8px 11px;margin:0 0 8px}
+
+/* ---------------------------------------------- standard vs staffed (V-34)
+
+   TWO DIRECTIONS, TWO MARKS, AND NEVER THE SAME ONE. Short of the standard is a project
+   running on less than its kind usually takes; over it is one deliberately staffed
+   heavier. Marking both the same way would say they were one fact. Short borrows the
+   under-allocation amber and over borrows the over-allocation red, so the page keeps
+   one vocabulary: red is too much, amber is too little, everywhere it appears.
+
+   Never colour alone (D-04): every mark carries an arrow as well, in the cell, on the
+   chart and in the pop-up. */
+.tile.gap{background:var(--fill)}
+.tile.gap .tv{color:var(--ink)}
+.tile[data-gapjump]{cursor:pointer}
+.tile[data-gapjump]:hover{box-shadow:var(--shadow-lift)}
+.gshort{color:var(--underink);font-weight:590}
+.gover{color:var(--crit);font-weight:590}
+.gtot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+.gpill{font-size:var(--t-xs);font-weight:590;border-radius:999px;padding:3px 10px}
+.gpill.short{background:var(--underbg);color:var(--underink)}
+.gpill.over{background:var(--overbg);color:var(--crit)}
+table.gapt td.num{text-align:right;font-variant-numeric:tabular-nums}
+/* Both tinted, and tinted DIFFERENTLY. `over` alone would have picked up the
+   over-allocation background that already exists on td.over and left `short` plain, so
+   one direction would have read as the problem and the other as a note. */
+table.gapt td.num.short{color:var(--underink);font-weight:600;background:var(--underbg)}
+table.gapt td.num.over{color:var(--crit);font-weight:600;background:var(--overbg)}
+tr.gaprow{cursor:pointer}
+tr.gaprow.short > th.rh{box-shadow:inset 3px 0 0 var(--warn)}
+tr.gaprow.over  > th.rh{box-shadow:inset 3px 0 0 var(--crit)}
+tr.gaprow:hover > *{background:var(--fill)}
+/* The marked month IN the resource table, so a shortfall does not wait to be hovered. */
+td.c.gapc{cursor:pointer;position:relative}
+td.c.gapc.short{box-shadow:inset 0 0 0 2px var(--warn)}
+td.c.gapc.over{box-shadow:inset 0 0 0 2px var(--crit)}
+/* The arrow, so the mark is never carried by hue alone (D-04). Amber and red are the
+   confusable pair, and they are exactly the two directions here, so an outline colour on
+   its own would be the worst possible way to tell them apart. Absolutely positioned in
+   the corner rather than appended to the text: the figure is right-aligned across the
+   whole grid and a glyph in the flow would shift it out of column with its neighbours. */
+td.c.gapc::after{position:absolute;top:1px;left:3px;font-size:9px;line-height:1;
+ font-weight:700}
+td.c.gapc.short::after{content:"\\25BC";color:var(--underink)}
+td.c.gapc.over::after{content:"\\25B2";color:var(--crit)}
+/* And on the project's own utilisation chart. Dashed, so it cannot be mistaken for the
+   solid tinted outline the person chart already uses for a threshold breach. */
+rect.gapmark{fill:none;stroke-width:1.6;stroke-dasharray:3 2}
+rect.gapmark.short{stroke:var(--warn)}
+rect.gapmark.over{stroke:var(--crit)}
+/* The dialog's three figures, read before anything else in it. */
+.gapsum{display:flex;gap:var(--sp-5);align-items:baseline;flex-wrap:wrap;
+ background:var(--fill);border-radius:var(--r-md);padding:11px 15px;margin:0 0 10px}
+.gapsum.short{background:var(--underbg)}
+.gapsum.over{background:var(--overbg)}
+.gapsum .tl{display:block;font-size:var(--t-xs);color:var(--muted);font-weight:590;
+ letter-spacing:.03em;text-transform:uppercase}
+.gapsum .tv{font-size:var(--t-2xl);font-weight:600;font-variant-numeric:tabular-nums}
+.gapsum.short .tv{color:var(--underink)}
+.gapsum.over .tv{color:var(--crit)}
+.gapsum .gapwhat{flex:1 1 260px;font-size:var(--t-md);color:var(--ink2)}
+#gapdlg{width:min(980px,94vw)}
+#gapdlg table.gapt{margin:0 0 10px}

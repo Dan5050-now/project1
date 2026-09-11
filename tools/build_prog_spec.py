@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.23"
+DOC_VERSION = "1.24"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.49.xlsx"
+PLAN = "PRAP_Development_Plan_v2.50.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,22 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.24", "2026-09-11", "Claude Code", "Dan",
+         "R-42, REQ-DSH-15. Sheet 04 gains V-34, a WARNING: a project-month whose demand "
+         "and applied figure have come apart. Sheet 05 records why the obvious pair "
+         "cannot - projMonth is built from the lines, so a project's month IS the sum of "
+         "its people - and what calculate() therefore returns instead: projDemand, kept "
+         "off the lines like every other map here, and projGap, the two compared in "
+         "integer hundredths so a rounding difference cannot be reported as a decision. "
+         "Sheet 06 records the four surfaces: the rule, the mark on the figure itself in "
+         "Resource by project and on the project utilisation chart, the tile, and the "
+         "Standard vs staffed section on Overall - deliberately a SECTION and not a tab, "
+         "for the reason recorded there. Its rows open a dialog carrying the stated "
+         "figures as ORDINARY contenteditable cells over MonthlyEstimate, so the editing "
+         "path of sheet 07 handles them unchanged and there is no second way to change a "
+         "figure. Both directions are counted apart and never netted. No rule changes, "
+         "no schema change and no figure moves. Written against plan v2.50.",
+         "Issued"],
         ["1.23", "2026-09-06", "Claude Code", "Dan",
          "R-41. Sheet 06 records that the derivation column carries the WHOLE expression "
          "term by term rather than the period alone, and sheet 05 writes down the shape "
@@ -752,6 +768,7 @@ rules = [
     ["V-22", "Warning", "Person.capacity_fte is below config.under_allocation_fte.", "PSN-018: capacity 0.50 FTE is below the under-allocation floor of 0.60, so this person can never clear it however fully they are booked. Lower the floor or raise the capacity."],
     ["V-31", "Error", "A project or assignment set to estimation_type = 'manual' has months it covers with no MonthlyEstimate row.", "Project PRJ-019 is set to MANUAL but MonthlyEstimate has no figure for 3 of its month(s): 2028-01, 2028-02, 2028-03. Those months are counted as 0.00."],
     ["V-32", "Error", "A manual PROJECT has a figure for a month in which nobody is assigned to it, so there is nobody to share it out to.", "Project PRJ-019 has a manual figure for 2 month(s) in which nobody is assigned to it. It has NOT been applied - the project would otherwise show a total that none of its people account for."],
+    ["V-34", "Warning", "A project-month where what the project NEEDS - standard FTE x period weight x the part of the month it runs - is not what it is being GIVEN, in either direction. Raised from the calculation; one finding per project.", "Project PRJ-019 is not being given what its own standard says it needs: 2 month(s) SHORT of it by up to 5.00 FTE, and 1 month(s) OVER it by up to 3.00 FTE. Worst is 2026-09, which needs 10.00 and is getting 5.00. It is reported because it is otherwise invisible: the charts simply draw a different project."],
     ["V-33", "Warning", "A manual ASSIGNMENT figure that the project's own manual figure overrode. REQ-CAL-18 makes the project month the mother figure, so the stated figure for the person is not what they are given.", "Assignment ASG-001 states a monthly figure that its PROJECT'S own manual figure overrode in 1 month(s) - 2025-03: stated 99.00, applied 9.97. Either change the project's figure to one that leaves room for this person's, or take this assignment off manual and let it take its share."],
 ]
 r = table(ws, r, ["ID", "Severity", "Trigger", "Message shown to the user"],
@@ -976,6 +993,39 @@ r = note(ws, r, "From those three, and nothing else: V-33 in the findings, the s
                 "the Monthly estimation panel, and the soft stop the editor raises at the cell. One source, so "
                 "the sheet, the screen and the report cannot name different numbers.")
 r += 1
+r = section(ws, r, "Demand against applied, and the pair that cannot differ   [REQ-DSH-15, V-34]")
+r = lines(ws, r, [
+    "A PROJECT'S MONTH IS ALWAYS THE SUM OF ITS PEOPLE. projMonth is accumulated FROM the lines, so it",
+    "is that sum by construction and REQ-OUT-06 rests on it. Checking it would be checking that addition",
+    "works, and no rule does.",
+    "",
+    "THE PAIR THAT DOES COME APART is what the project NEEDS against what it is BEING GIVEN:",
+])
+r = code(ws, r, [
+    "  demand  = standard_fte x period weight x month_run          # what its kind takes",
+    "  applied = SUM( fte of every line on that project-month )     # what it is getting",
+    "  gap     = applied - demand        # in integer hundredths, so rounding is never a finding",
+    "",
+    "  gap < 0  ->  SHORT of the standard: asked to run on less than its kind takes",
+    "  gap > 0  ->  OVER it: deliberately staffed heavier",
+])
+r = lines(ws, r, [
+    "AN AUTOMATIC MONTH HAS THEM EQUAL, always: shareOut hands out exactly the demand's hundredths and",
+    "the shares add to one (REQ-CAL-19). So a file nobody has edited raises nothing, which is what keeps",
+    "the rule worth reading. A figure stated by hand at either level REPLACES the standard rather than",
+    "adjusting it, and the two part company - after which the application simply drew a different",
+    "project. A study needing 10.00 and staffed at 5.00 looked exactly like a study that only ever",
+    "needed 5.00, and that is what V-34 exists to say.",
+    "",
+    "COUNTED APART, NEVER NETTED. Five short in September and five over in October sum to zero and are",
+    "not a plan in balance. The two directions are counted, coloured and worded separately everywhere,",
+    "and no net figure is shown anywhere.",
+    "",
+    "calculate() returns projDemand (project|month -> demand) and projGap (project|month -> {demand,",
+    "applied, gap, dir}), both built from the lines like every other map here.",
+])
+r += 1
+
 r = lines(ws, r, [
     "WHAT calculate() HANDS BACK FOR THE SCREENS TO READ (REQ-DSH-14). A table that shows a figure has",
     "to be able to say what decided its size, and every such answer comes from the calculation's own",
@@ -1146,7 +1196,8 @@ ov = [
     ["Graph 1", "Stacked bar: total monthly demand, ONE BAND PER PROJECT, ordered by total resource with the largest on the baseline. 'Others' projects are grey; trials take the extended colour set. NO LEGEND - a list of 62 entries cannot be matched against the chart. Identity comes from the hover pop-up, which carries project name and type, that month's FTE and its hour equivalent, its share of the month, the headcount, every person on the project that month with their role, and - under a rule - THE MONTH'S TOTAL ACROSS EVERY PROJECT IN VIEW. The total is what a band on its own cannot give: 4.02 FTE means nothing until you know whether the month came to five or to fifty. It is the same figure Graph 2 states for that month, summed along the other axis, so the two pop-ups are held to agreeing in words as well as in pixels.", "REQ-DSH-02"],
     ["Graph 2", "Monthly FTE per person, with reference lines at the two thresholds - one pair of lines, since both are absolute. Above the bar budget it shows a ranked subset with the rest rolled into one 'others' band, and says which it is showing.", "REQ-DSH-02, REQ-DSH-08, REQ-DSH-09"],
     ["Graph 3", "Timeline per project - the FIRST panel on the tab, above the summary tiles. Each row carries the project name with its start, end and length beneath. Bands are coloured BY PERIOD NAME (see the colour rule below), with the period weight as a lightness step inside each hue. Milestones are inverted triangles in a lane above the bands; 'Inspection' takes the same marker as every other milestone. The hover pop-up gives the period, its dates, its weight and the FTE per month the project draws across it.", "REQ-DSH-02, REQ-PRJ-05, REQ-DSH-10"],
-    ["Summary tiles", "Active projects; people assigned; total FTE in the horizon; over-allocated person-months; under-allocation runs.", "REQ-DSH-08"],
+    ["Summary tiles", "Active projects; people assigned; total FTE in the horizon; over-allocated person-months; under-allocation runs; and project-months OFF THEIR STANDARD, split short/over and never netted. The last one is clickable and scrolls to the section below; it is counted by the same function that draws that section, so the two cannot disagree.", "REQ-DSH-08, REQ-DSH-15"],
+    ["Standard vs staffed", "A SECTION, under the tiles: every project-month where what the project needs is not what it is getting, largest gap first, with the project, the month, needs, staffed, the gap and its direction. Deliberately NOT a tab - a tab is the surface you visit only once you already suspect a problem, which is the wrong property for something whose whole danger is that it is silent, and the findings report is already the list of everything wrong. Clicking any row opens that month in a dialog: the demand term by term, everyone on it with their applied figures, and the STATED figures behind the gap as ordinary contenteditable cells over MonthlyEstimate - so the editing path of sheet 07 validates, logs, marks and undoes them unchanged. The dialog redraws after an edit; one still showing the gap just closed would read as an edit that did nothing. Empty when there is nothing to report, and it says why rather than disappearing.", "REQ-DSH-15"],
     ["Reset filters", "Clears every filter and restores the default 24-month horizon in one action.", "REQ-DSH-05"],
     ["Scroll regions", "Every chart and table sits in its own scroll region - horizontal for wide content, and a bounded height with vertical scroll for tall content. Wide or long content scrolls INSIDE its panel; the page body never scrolls sideways, and a long sub-table never pushes the panels below it down the page. A scrolled table keeps its header row visible.", "REQ-NFR-02"],
     ["Row expansion - project", "Clicking a project name reveals one row per person and role on it, each with its own monthly figures. Clicking again collapses.", "REQ-DSH-01"],

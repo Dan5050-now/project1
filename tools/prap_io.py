@@ -1018,9 +1018,60 @@ def calculate(M):
         pers_proj[(L["person_id"], L["month"])][L["project_id"]] += L["fte"]
         cell[(L["project_id"], L["person_id"], L["role_name"], L["month"])] += L["fte"]
 
+    # V-34: what the project NEEDS against what it is being GIVEN. Exactly as
+    # core/06_calculate.js computes it - in integer hundredths, so a rounding
+    # difference can never be reported as somebody's decision. The pair people reach
+    # for first, a project's month against the sum of its people, cannot differ:
+    # proj_month is accumulated from the lines a few lines above, so it IS that sum.
+    proj_demand = {}
+    for L in lines:
+        proj_demand.setdefault((L["project_id"], L["month"]), L.get("demand_fte", 0.0))
+    proj_gap = {}
+    for key, applied in proj_month.items():
+        demand = proj_demand.get(key)
+        if demand is None:
+            continue
+        cents = to_cents(applied) - to_cents(demand)
+        if cents == 0:
+            continue
+        proj_gap[key] = {"demand": demand, "applied": applied,
+                         "gap": cents / CENTS,
+                         "dir": "short" if cents < 0 else "over"}
+
     report_gaps(M, gaps)
+    report_demand_gap(M, proj_gap)
     return {"proj_month": proj_month, "pers_month": pers_month, "pers_proj": pers_proj,
-            "cell": cell, "gaps": gaps, "lines": lines, "lo": lo or 0, "hi": hi or 0}
+            "cell": cell, "gaps": gaps, "lines": lines, "proj_gap": proj_gap,
+            "lo": lo or 0, "hi": hi or 0}
+
+
+def report_demand_gap(M, proj_gap):
+    """V-34, worded as core/06_calculate.js words it. A WARNING: it reports and never
+    refuses, because departing from the standard is the point of a manual figure."""
+    if not hasattr(M, "findings"):
+        return
+    M.findings[:] = [f for f in M.findings if f.get("rule") != "V-34"]
+    by = defaultdict(list)
+    for (pid, k), g in proj_gap.items():
+        by[pid].append((f"{k // 12}-{k % 12 + 1:02d}", g))
+    for pid in sorted(by):
+        ms = sorted(by[pid])
+        short = [g for _, g in ms if g["dir"] == "short"]
+        over = [g for _, g in ms if g["dir"] == "over"]
+        worst = max(ms, key=lambda t: abs(t[1]["gap"]))
+        parts = []
+        if short:
+            parts.append(f"{len(short)} month(s) SHORT of it by up to "
+                         f"{max(-g['gap'] for g in short):.2f}")
+        if over:
+            parts.append(f"{len(over)} month(s) OVER it by up to "
+                         f"{max(g['gap'] for g in over):.2f}")
+        M.findings.append({
+            "sev": "warning", "rule": "V-34", "sheet": "MonthlyEstimate", "row": "",
+            "msg": f"Project {pid} is not being given what its own standard says it "
+                   f"needs: {', and '.join(parts)} FTE. Worst is {worst[0]}, which "
+                   f"needs {worst[1]['demand']:.2f} and is getting "
+                   f"{worst[1]['applied']:.2f}."})
 
 
 # REQ-CAL-20, the decimal rule, exactly as core/06_calculate.js states it. Every FTE

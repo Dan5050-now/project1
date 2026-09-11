@@ -71,7 +71,11 @@ def largest_remainder(items, total_cents):
     return out
 
 
-def reference_person_months(path):
+def _reference_lines(path):
+    """The reference engine's own person-month lines, with the DEMAND of each
+    project-month recorded on them. Two public answers are drawn from it - the figures
+    and the V-34 gaps - and they have to come from one pass, or the reference could
+    report a gap against a demand that produced different figures."""
     wb = load_workbook(path)
     P = {r["project_id"]: r for r in rows(wb["Project"])}
     PER = defaultdict(list)
@@ -154,7 +158,8 @@ def reference_person_months(path):
             lines.append({"aid": a["assignment_id"], "pid": a["project_id"],
                           "sid": a["person_id"], "y": y, "m": m, "fte": 0.0,
                           "claim": (rf / share) * weight(a, y, m) * cov, "cov": cov,
-                          "std": std, "pw": (sg["weight"] if sg else 1.0)})
+                          "std": std, "pw": (sg["weight"] if sg else 1.0),
+                          "demand": 0.0})
 
     # REQ-CAL-19: the demand, divided between the claims on it.
     grp0 = defaultdict(list)
@@ -169,6 +174,7 @@ def reference_person_months(path):
             demand_cents)
         for L, c in zip(group, cents):
             L["fte"] = c / CENTS
+            L["demand"] = demand_cents / CENTS
 
     # REQ-CAL-18. A manual assignment takes the figure it was given - and 0.00 where it
     # was given none, which is the only reading of "the user owns every month" that does
@@ -206,9 +212,34 @@ def reference_person_months(path):
         for L, c in zip(g, cents):
             L["fte"] = c / CENTS
 
+    return lines
+
+
+def reference_person_months(path):
     out = defaultdict(float)
-    for L in lines:
+    for L in _reference_lines(path):
         out[(L["sid"], L["y"] * 12 + L["m"] - 1)] += L["fte"]
+    return out
+
+
+def reference_gaps(path):
+    """V-34 from the reference: what each project-month needs against what it gets.
+
+    Compared in integer hundredths, exactly as core/06_calculate.js does it, so a
+    rounding difference is never reported as somebody's decision. An all-automatic
+    month is empty here by construction - largest_remainder hands out exactly the
+    demand's hundredths, so the parts add to it."""
+    applied, demand = defaultdict(float), {}
+    for L in _reference_lines(path):
+        k = (L["pid"], L["y"] * 12 + L["m"] - 1)
+        applied[k] += L["fte"]
+        demand.setdefault(k, L["demand"])
+    out = {}
+    for k, v in applied.items():
+        cents = to_cents(v) - to_cents(demand[k])
+        if cents:
+            out[k] = {"demand": demand[k], "applied": v, "gap": cents / CENTS,
+                      "dir": "short" if cents < 0 else "over"}
     return out
 
 
@@ -229,7 +260,16 @@ def main(DUMMY):
         # Informational findings are explanations, not problems: V-14 and V-21 both fire
         # on these fixtures to say WHY an inspection after the DB lock is legitimate.
         # Anything above information on a file the verifier calls clean is a failure.
-        findings = pg.evaluate("S.model.findings.filter(f => f.sev !== 'information')"
+        #
+        # V-34 IS EXCLUDED, AND ITS EXCLUSION IS ITSELF CHECKED BELOW. These fixtures
+        # carry manual monthly figures that deliberately depart from the standard -
+        # seeded figures that never departed would exercise nothing, and the `difference`
+        # column would read +0.00 on every row. So V-34 fires, correctly, and on a
+        # correct file. What matters here is not that it is silent but that the browser
+        # and the Python reference raise it on exactly the same months, which is the
+        # invariant this whole suite exists for.
+        findings = pg.evaluate("S.model.findings.filter(f => f.sev !== 'information'"
+                               " && f.rule !== 'V-34')"
                                ".map(f => f.sev + ' ' + f.rule + ': ' + f.msg)")
         info = pg.evaluate("S.model.findings.filter(f => f.sev === 'information').length")
         if findings:
@@ -252,6 +292,24 @@ def main(DUMMY):
         else:
             notes.append(f"calculation matches the reference on all {len(ref)} person-months")
 
+        # V-34 in both engines, month for month. A warning only one of them raises would
+        # mean the two disagree about what the plan SAYS while agreeing about what it
+        # totals - which is exactly the kind of drift four implementations are kept for.
+        app_gap = pg.evaluate("() => Object.fromEntries([...S.calc.projGap].map("
+                              "([k, g]) => [k, +g.gap.toFixed(2)]))")
+        ref_gap = {f"{p}|{k}": round(g["gap"], 2)
+                   for (p, k), g in reference_gaps(DUMMY).items()}
+        gap_bad = ([k for k in set(app_gap) ^ set(ref_gap)]
+                   + [k for k in set(app_gap) & set(ref_gap)
+                      if abs(app_gap[k] - ref_gap[k]) > 1e-9])
+        if gap_bad:
+            failures.append(f"V-34 differs between app and reference on {len(gap_bad)} "
+                            f"project-month(s); e.g. {gap_bad[0]}: "
+                            f"app {app_gap.get(gap_bad[0])} vs ref {ref_gap.get(gap_bad[0])}")
+        else:
+            notes.append(f"V-34 agrees with the reference on all {len(ref_gap)} "
+                         f"project-month(s) off their standard")
+
         with pg.expect_download() as dl:
             pg.click("#exportBtn")            # opens the export menu
             pg.click("#exportBtn2")           # …source data .xlsx
@@ -263,11 +321,20 @@ def main(DUMMY):
         pg2.wait_for_timeout(200)
         pg2.set_input_files("#picker", exported)
         pg2.wait_for_timeout(4000)
-        n = pg2.evaluate("S.model.findings.filter(f => f.sev !== 'information').length")
+        # V-34 excluded for the same reason as on the way in, and for one more: the
+        # export carries the MonthlyEstimate rows through unchanged, so a round trip that
+        # stopped raising it would mean the manual figures had been lost in the file.
+        n = pg2.evaluate("S.model.findings.filter(f => f.sev !== 'information'"
+                         " && f.rule !== 'V-34').length")
+        g = pg2.evaluate("() => S.calc.projGap.size")
         if n:
             failures.append(f"the exported file re-imports with {n} findings above information")
+        elif g != len(ref_gap):
+            failures.append(f"the round trip changed what V-34 says: {len(ref_gap)} "
+                            f"project-month(s) before, {g} after")
         else:
-            notes.append("export re-imports with no findings above information")
+            notes.append(f"export re-imports with no findings above information, and the "
+                         f"same {g} month(s) off their standard")
 
         if errors:
             failures.append(f"page errors: {errors[:2]}")

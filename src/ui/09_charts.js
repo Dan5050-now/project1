@@ -299,6 +299,7 @@ function chartStacked(pids){
         + `${keyToLabel(k)} &#183; <b>${fmt(v)} ${unitLabel()}</b>`
         + `<span class="tr"> &#183; ${month > 0 ? (100*v/month).toFixed(0) : 0}% of the month</span><br>`
         + periodLine(p, k)
+        + gapLine(p, k)
         + `<span class="tr">${crew.length} ${crew.length===1?"person":"people"} this month</span><br>`
         + (list || "&#183; nobody assigned")
         + (crew.length > 8 ? `<br>&#183; and ${crew.length-8} more` : "")
@@ -384,7 +385,7 @@ function chartPeople(sids){
              : v < M.UNDER ? `<br><span class="tr">below the ${M.UNDER.toFixed(2)} floor</span>` : "")
           + `<br>${projs.slice(0,6).map(([q, qv]) =>
                 `&#183; ${esc(M.projects[q].project_name)} <span class="tr">${fmt(qv)}</span>`
-                + periodTag(q, k)).join("<br>")}`
+                + periodTag(q, k) + gapTag(q, k)).join("<br>")}`
           + (projs.length > 6 ? `<br>&#183; and ${projs.length-6} more` : "")
           + `<hr>${keyToLabel(k)} across everyone in view: <b>${fmt(month)} ${unitLabel()}</b>`;
       // A person over the ceiling is outlined, so the flag never rests on colour alone (D-04).
@@ -471,6 +472,7 @@ function chartProjectUtil(pid){
           + `<span class="tr"> &#183; ${total > 0 ? (100*v/total).toFixed(0) : 0}% of the month</span>`
           + `<hr><b>${esc(M.projects[pid].project_name)}</b><br>`
           + periodLine(pid, k)
+          + gapLine(pid, k)
           + `Total this month: <b>${fmt(total)} ${unitLabel()}</b>`
           + `<span class="tr"> across ${bys.size} ${bys.size === 1 ? "person" : "people"} `
           + `&#183; this project averages ${ownAvg.toFixed(2)}, an active project ${portAvg.toFixed(2)}</span>`;
@@ -478,6 +480,20 @@ function chartProjectUtil(pid){
         + `width="${w.toFixed(1)}" height="${Math.max(0.8, y1-y0).toFixed(1)}" `
         + `fill="${sid === REST ? "var(--other)" : persColourOf(sid)}" data-tip="${att(tip)}"></rect>`);
     }
+  });
+  /* A MONTH OFF ITS OWN STANDARD IS MARKED ON THE CHART (V-34), not only in its pop-up.
+     Drawn after the stack so the outline sits over every segment of the month rather
+     than over one person's band, because the gap is a fact about the MONTH. The two
+     directions get different classes: short of the standard and over it are different
+     facts, and one mark for both would say they were the same one. */
+  G.forEach((k, i) => {
+    const g = gapOf(pid, k);
+    if (!g) return;
+    const v = C.projMonth.get(pid + "|" + k) || 0;
+    const y0 = base - (v / vmax) * (base - top);
+    o.push(`<rect class="gapmark ${g.dir}" x="${(padL + i * bw).toFixed(1)}" `
+      + `y="${Math.min(y0, base - 4).toFixed(1)}" width="${(bw - 1).toFixed(1)}" `
+      + `height="${Math.max(4, base - y0).toFixed(1)}" rx="3"></rect>`);
   });
   monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base);
   for (const [v, cls, lab] of [[upper,"th-over",`2 × portfolio avg — ${upper.toFixed(2)}`],
@@ -494,7 +510,8 @@ function chartProjectUtil(pid){
   for (const sid of order)
     leg.push(`<li><span class="sw" style="background:${sid === REST ? "var(--other)" : persColourOf(sid)}"></span>`
       + `${esc(sid === REST ? `the other ${rest.length} people` : persName(sid))}</li>`);
-  leg.push(`<li class="hint">tinted outline = the month's TOTAL crosses a reference line</li></ul>`);
+  leg.push(`<li class="hint">tinted outline = the month's TOTAL crosses a reference line`
+    + ` &#183; dashed outline = the month is off this project's own standard (V-34)</li></ul>`);
   return {svg:o.join("") + (order.length ? leg.join("") : ""), portAvg, ownAvg};
 }
 
@@ -564,6 +581,7 @@ function chartPersonStrip(sid){
         + `<span class="tr">${esc(M.projects[p].project_type)}</span><br>`
         + `${keyToLabel(k)}<br>`
         + periodLine(p, k)
+        + gapLine(p, k)
         + `Project milestone: ${ms.length
             ? ms.map(([nm, d]) => `${esc(nm)} <span class="tr">${ymd(d)}</span>`).join("<br>"
               + "&nbsp;".repeat(10))

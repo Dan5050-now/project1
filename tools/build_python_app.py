@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.14"
+VERSION = "1.15"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,48 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.15
+
+  * THE APPLICATION NOW TELLS YOU WHEN A PROJECT IS NOT GETTING WHAT ITS OWN
+    STANDARD SAYS IT NEEDS. Set a project's month by hand to 5.00 when its
+    standard says 10.00 - or cut one person's month on it - and until now the
+    application simply drew a smaller project. A study needing ten people and
+    staffed with five looked exactly like a study that only ever needed five.
+
+    (The other comparison, a project's month against the sum of its people,
+    cannot differ: the month is BUILT from those people, so it is always
+    their sum.)
+
+  * A NEW SECTION ON THE OVERALL TAB, "Standard vs staffed", lists every
+    month it happens in - the project, the month, what it needs, what it is
+    getting, and the gap. There is a tile above it counting them.
+
+  * CLICK ANY ROW AND YOU CAN FIX IT THERE. The month opens with its own
+    figures: what it needs term by term, everybody on it, and the stated
+    figures that caused the gap - EDITABLE in place. Change one and
+    everything behind the dialog follows. They are ordinary edits: validated
+    as you leave the cell, listed under Show details, undone by Leave without
+    change, written only when you press Save.
+
+  * BOTH DIRECTIONS ARE SHOWN AND THEY ARE NEVER ADDED TOGETHER. Short of the
+    standard is amber with a down arrow; over it is red with an up arrow.
+    Five short in September and five over in October come to zero, and that
+    is not a plan in balance.
+
+  * THE MONTHS THEMSELVES ARE MARKED, so you do not have to go looking: an
+    outlined cell in "Resource by project", and a dashed outline on the
+    project's own utilisation chart.
+
+  * IT NEVER STOPS YOU. This is a warning (V-34), not an error. Deciding a
+    month by hand is the whole point of manual estimation - somebody part way
+    through a trial knows better than the assumptions - so the application
+    says so and leaves the decision to you. It also appears in the findings
+    report and in the archived change log. A plan nobody has edited by hand
+    reports nothing at all.
+
+  * No figure has changed anywhere.
+
 
 WHAT IS NEW IN 1.14
 

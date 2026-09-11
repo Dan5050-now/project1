@@ -170,6 +170,12 @@ function paintCue(box){
 
 function renderKeepingTab(){
   keepScroll(() => { renderAll(); showTab(S.tab); });
+  /* An open gap dialog is redrawn with everything else. Its whole purpose is to let a
+     figure be changed from inside it, and a dialog still showing the gap you had just
+     closed would read as an edit that did nothing. Safe after the edit rather than
+     during it: applyEdit runs on focusout, so the cell being typed into has already
+     been left by the time this fires. */
+  gapRefresh();
 }
 function showTab(id){
   S.tab = id;
