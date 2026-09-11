@@ -82,6 +82,20 @@ el("whoName").addEventListener("keydown", e => {
 });
 el("repClose").onclick = () => el("report").close();
 el("gapClose").onclick = () => closeGap();
+/* A Stated cell with no row behind it yet. Its own listener rather than applyEdit's,
+   because there is no row to write through - see stateMonth() for the two cases and why
+   only one of them asks. Registered once, on the document, like every other cell
+   handler; the dialog's contents are replaced on every redraw, so anything bound to the
+   cells themselves would be lost the first time a figure changed. */
+document.addEventListener("focusin", e => {
+  const td = e.target.closest("td[data-gapnew]");
+  if (td) td.dataset.orig = td.textContent;
+});
+document.addEventListener("focusout", e => {
+  const td = e.target.closest("td[data-gapnew]");
+  if (td && td.textContent !== (td.dataset.orig ?? "")) stateMonth(td);
+});
+el("gapClose").onclick = () => closeGap();
 // Escape and the backdrop close it too; GAP_AT has to be cleared either way or a
 // later edit would redraw a dialog nobody has open.
 el("gapdlg").addEventListener("close", () => closeGap());
@@ -315,6 +329,11 @@ document.addEventListener("focusin", e => {
 document.addEventListener("focusout", e => {
   const td = e.target.closest('td[contenteditable="true"]');
   if (!td) return;
+  /* A cell with no data-sheet is not a cell OVER a row: it is one offering to CREATE
+     the row that does not exist yet, and it carries its own handler. Without this guard
+     applyEdit would be called with an undefined sheet and a NaN row number, and
+     M.raw[undefined] throws before anything can say why. */
+  if (!td.dataset.sheet) return;
   /* Close on a delay, and only if the panel is still THIS cell's. Clicking straight
      from one cell to the next opens the panel for the new one before this timer fires,
      and an unconditional close would then shut the panel that had just been opened -
@@ -328,6 +347,13 @@ document.addEventListener("focusout", e => {
 document.addEventListener("keydown", e => {
   const td = e.target.closest('td[contenteditable="true"]');
   if (!td) return;
+  // Enter and Escape still behave, on a creating cell as on any other - they are the
+  // two keys everybody expects from a cell, and the blur is what runs its handler.
+  if (!td.dataset.sheet){
+    if (e.key === "Enter"){ e.preventDefault(); td.blur(); }
+    if (e.key === "Escape"){ td.textContent = td.dataset.orig ?? ""; td.blur(); }
+    return;
+  }
   if (SUGG.key(e)) return;                       // the list takes the key first
   if (CAL.key(e)) return;
   if (e.key === "Enter"){ e.preventDefault(); SUGG.close(); CAL.close(); td.blur(); }

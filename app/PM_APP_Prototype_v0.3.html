@@ -873,6 +873,17 @@ rect.gapmark.over{stroke:var(--crit)}
 .gapsum .gapwhat{flex:1 1 260px;font-size:var(--t-md);color:var(--ink2)}
 #gapdlg{width:min(980px,94vw)}
 #gapdlg table.gapt{margin:0 0 10px}
+/* A Stated cell with nothing in it yet. It used to be a dash, which read as "there is
+   nothing you can do here" on exactly the figure somebody most wants to change. An empty
+   editable cell reads as read-only too, so it says what it is for - and says it in the
+   cell rather than only in a tooltip, because a tooltip is for people who already
+   suspect there is something to hover. */
+/* Applied is not what was stated, because the project's own month overrode it (V-33). */
+.ovr{color:var(--crit);margin-left:5px;font-size:var(--t-xs);cursor:help}
+td.cell.gapnew{cursor:text}
+td.cell.gapnew:empty::before{content:"type to state";color:var(--muted);
+ font-style:italic;font-size:var(--t-xs)}
+td.cell.gapnew:focus:empty::before{content:""}
 
 /* ===================== PM_APP prototype chrome ==========================
    Added by tools/build_newapp_demo.py. Everything below is prototype dressing
@@ -1222,7 +1233,7 @@ rect.gapmark.over{stroke:var(--crit)}
 
 <script>
 "use strict";
-const APP_VERSION = "1.48";
+const APP_VERSION = "1.49";
 const SCHEMA_EXPECTED = 11;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1231,9 +1242,9 @@ const SCHEMA_EXPECTED = 11;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.50.xlsx",          ver:"2.50",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.51.xlsx",          ver:"2.51",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.24.xlsx", ver:"1.24",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.25.xlsx", ver:"1.25",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
@@ -8748,20 +8759,59 @@ function drawGap(){
   for (const r of (M.raw.MonthlyEstimate || []))
     if (r.scope === "assignment" && String(r.month) === mm) manualAsg.set(r.ref_id, r);
 
-  const cellFor = r => r
+  /* EDITABLE IN ALL THREE STATES, and the three are genuinely different.
+     A row that EXISTS is an ordinary cell over MonthlyEstimate: data-sheet, data-row,
+     data-col, and the application's one editing path does the rest.
+     A row that does NOT exist cannot be one - there is no __row to write through - so
+     the cell carries what it needs to CREATE it instead, and its own handler. Leaving it
+     as a dash was the defect: the figure a reader most wants to change on this screen is
+     the one on an automatic person, and the dash said the screen was read-only for them.
+     WHAT IT CANNOT DO IS QUIETLY WRITE ONE ROW. An assignment that is automatic ignores
+     MonthlyEstimate entirely, so a lone row would be a figure that did nothing; and
+     setting estimation_type without seeding the other months would count every one of
+     them as 0.00 (REQ-CAL-18) - the one change in this application that silently zeroes
+     a figure. So typing on an automatic person asks first, then seeds every month and
+     applies what was typed. Already-manual with no row for this month is the V-31 case
+     and needs no question: the months are already the user's. */
+  const cellFor = (r, aid, live) => r
     ? `<td class="cell" contenteditable="true" data-sheet="MonthlyEstimate"
          data-row="${r.__row}" data-col="fte">${r.fte ?? ""}</td>`
-    : `<td class="muted">—</td>`;
+    : `<td class="cell gapnew" contenteditable="true" data-gapnew="${att(aid || "")}"
+         data-gapmonth="${att(mm)}" data-gapman="${live ? "1" : ""}"
+         data-tip="${att(`<b>Not stated yet</b><br>`
+           + (live ? `This month carries no figure, so it counts as <b>0.00</b> (V-31). `
+                   + `Type one here.`
+                   : `This person's months on this project are CALCULATED. Type a figure `
+                   + `and the application will offer to state them all — it has to, `
+                   + `because stating one month means owning every month (REQ-CAL-18).`))}"
+       ></td>`;
 
   const who = lines.map(L => {
     const r = manualAsg.get(L.assignment_id);
+    // MANUAL is a property of the ASSIGNMENT, not of whether this month happens to carry
+    // a figure. Reading it off the row made an assignment on manual with a month missing
+    // (V-31) show as 'auto', which is the opposite of what is wrong with it.
+    const a = (M.raw.Assignment || []).find(x => x.assignment_id === L.assignment_id);
+    const live = estType(a) === "manual";
     return `<tr>
       <th class="rh"><span class="nm">${esc((M.people[L.person_id] || {}).person_name
         || L.person_id)}</span><span class="role">${esc(L.role_name || "")}</span></th>
       <td>${esc(L.assignment_id || "")}</td>
-      <td>${r ? '<span class="est man">MANUAL</span>' : '<span class="est aut">auto</span>'}</td>
-      <td class="num">${L.fte.toFixed(2)}</td>
-      ${cellFor(r)}
+      <td>${live ? '<span class="est man">MANUAL</span>'
+                 : '<span class="est aut">auto</span>'}</td>
+      <td class="num">${L.fte.toFixed(2)}${L.overridden_by_project
+        ? `<span class="ovr" data-tip="${att(`<b>V-33</b><br>Stated `
+            + `${(L.stated_assignment_fte ?? 0).toFixed(2)}, given `
+            + `${L.fte.toFixed(2)}.<br>The project's own stated month is the WHOLE `
+            + `month, so the people on it are scaled to add up to it (REQ-CAL-18) — `
+            + `the project's figure wins.<br><span class="tr">change the project's `
+            + `month above to one that leaves room for this</span>`)}">&#9888;</span>`
+        : ""}</td>
+      ${/* Applied and Stated differing on the same row, with nothing to say why, is the
+            silence V-33 was added to end - and repeating it here costs one glyph. The
+            project's stated month is the mother figure and scales everyone on it, so a
+            person can state 4.00 and be given 2.50 with neither figure being wrong. */
+        cellFor(r, L.assignment_id, live)}
       <td><button class="btn tiny" data-act="gopers" data-sid="${att(L.person_id)}"
         data-aid="${att(L.assignment_id)}">Open</button></td></tr>`;
   }).join("");
@@ -8792,7 +8842,8 @@ function drawGap(){
          <table class="grid-t gapt"><thead><tr><th class="rh">The project's stated month</th>
            <th>Applied</th><th>Change it here</th></tr></thead>
          <tbody><tr><th class="rh">${esc(pid)} &#183; ${esc(mm)}</th>
-           <td class="num">${applied.toFixed(2)}</td>${cellFor(projRow)}</tr></tbody></table>`
+           <td class="num">${applied.toFixed(2)}</td>
+           ${cellFor(projRow, null, true)}</tr></tbody></table>`
       : `<p class="note">This project is on <strong>automatic</strong> estimation, so it
          has no stated month of its own — the gap comes from the assignment figures
          below. Change one of those, or switch the assignment back to automatic and let
@@ -8805,7 +8856,96 @@ function drawGap(){
     <p class="note">Edits here are the same edits as anywhere else in the application:
       validated as you leave the cell, listed under <strong>Show details</strong>, undone
       by <strong>Leave without change</strong>, and written only when you press
-      <strong>Save</strong>.</p>`;
+      <strong>Save</strong>. A person still on <strong>auto</strong> can be given a
+      figure too — type in their <code>Stated</code> cell and the application will offer
+      to state all of their months, because stating one means owning every one.</p>`;
+}
+
+/* ------------------------------ stating a month that has no row yet (REQ-CAL-18) */
+
+/** A figure typed into a Stated cell that has no MonthlyEstimate row behind it.
+ *
+ *  TWO CASES, AND ONLY ONE OF THEM ASKS.
+ *
+ *  ALREADY MANUAL, month missing: this is V-31 - the thing covers a month it never
+ *  stated, which counts as 0.00. The months are already the user's, so filling one in is
+ *  an ordinary edit and a dialog would be asking permission for something already
+ *  granted. The 'Fill missing month(s)' button does exactly this in bulk.
+ *
+ *  STILL AUTOMATIC: this ASKS, and it has to. estimation_type has one way in for a
+ *  reason (REQ-CAL-18): writing a single MonthlyEstimate row against an automatic
+ *  assignment produces a figure that is read by nothing, and setting the flag without
+ *  seeding the other months counts every one of them as 0.00 - the one change in this
+ *  application that silently zeroes a figure. So the switch, the seeding and the typed
+ *  figure happen together, after one question that says so, or none of them happen.
+ *
+ *  Everything below goes through beginEditSession / S.pending, so it is listed under
+ *  Show details, undone by Leave without change, archived at Save, and it reaches the
+ *  file only when the user presses Save - exactly like a cell typed in a table. */
+function stateMonth(td){
+  const aid = td.dataset.gapnew, mm = td.dataset.gapmonth;
+  const raw = td.textContent.trim();
+  const back = () => { td.textContent = ""; };
+  if (!raw || !aid) return back();
+  const v = num(raw);
+  if (v === undefined || v === null || v < 0){
+    back();
+    showBanner("bad", `Edit rejected — '${raw}' is not a figure. Type a monthly FTE, `
+      + `such as 1.25. It cannot be negative: a month somebody does not work is 0.00.`);
+    return;
+  }
+  const a = (S.model.raw.Assignment || []).find(x => x.assignment_id === aid);
+  if (!a) return back();
+
+  if (estType(a) === "manual"){ writeMonth(aid, mm, round2(v), null); return; }
+
+  const {now} = monthlyOf("assignment", aid);
+  const total = [...now.values()].reduce((x, y) => x + y, 0);
+  back();                                   // the dialog owns the figure from here
+  askEstimation(`State ${assignmentLabel(aid)} by hand?`,
+    `<p class="cap">Assignment ${esc(aid)} &#183; ${esc(monthLabel(mm))}</p>
+     <p>This assignment's months are <strong>calculated</strong> today. Stating one means
+       stating <strong>all ${now.size}</strong> of them: they will be copied across as
+       they stand (${total.toFixed(2)} FTE-months in total, to two decimal places), and
+       <strong>${esc(monthLabel(mm))}</strong> will then be set to the
+       <strong>${round2(v).toFixed(2)}</strong> you typed.</p>
+     <p class="note">The copy is what stops the other months jumping — nothing else moves
+       by more than the rounding. <strong>All of them become yours, not just this one.</strong>
+       Changing a period weight, a role factor or this person's weight will no longer move
+       any of them. That is what stating a figure means, and it is why this asks.</p>`,
+    "State them, and set this month",
+    () => {
+      applyEstimationSwitch("assignment", aid, a, "manual", now);
+      writeMonth(aid, mm, round2(v), now.get(mm) ?? null);
+    },
+    null, "Leave it calculated");
+}
+
+/** Put a figure on one assignment-month, creating the row if the seeding did not. */
+function writeMonth(aid, mm, v, seeded){
+  const at = new Date();
+  beginEditSession();
+  let r = (S.model.raw.MonthlyEstimate || []).find(x =>
+    x.scope === "assignment" && x.ref_id === aid && String(x.month) === mm);
+  if (!r){
+    r = newRow("MonthlyEstimate", {scope:"assignment", ref_id:aid, month:mm,
+                                   fte:v, edited_at:at});
+    delete r.__new;                 // complete, not a draft waiting for the rest of it
+    S.pending.push({at, sheet:"MonthlyEstimate", row:r.__row, col:`${aid} ${mm}`,
+                    from:null, to:v});
+  } else if (round2(r.fte) !== v){
+    // The seeding has just written this month at the calculated figure; what is logged
+    // is the move FROM that TO what was typed, which is the change somebody made.
+    S.pending.push({at, sheet:"MonthlyEstimate", row:r.__row, col:`${aid} ${mm}`,
+                    from:seeded === null ? r.fte : round2(seeded), to:v});
+    r.fte = v;
+    r.edited_at = at;
+  }
+  S.editedCells.add(`MonthlyEstimate|${r.__row}|fte`);
+  rebuild(true);
+  renderKeepingTab();
+  showBanner("", `${assignmentLabel(aid)} — ${monthLabel(mm)} is now stated at `
+    + `${v.toFixed(2)}. This is provisional; press Save to keep it.`);
 }
 /* ============================================================ 14. wiring */
 
@@ -9282,6 +9422,20 @@ el("whoName").addEventListener("keydown", e => {
 });
 el("repClose").onclick = () => el("report").close();
 el("gapClose").onclick = () => closeGap();
+/* A Stated cell with no row behind it yet. Its own listener rather than applyEdit's,
+   because there is no row to write through - see stateMonth() for the two cases and why
+   only one of them asks. Registered once, on the document, like every other cell
+   handler; the dialog's contents are replaced on every redraw, so anything bound to the
+   cells themselves would be lost the first time a figure changed. */
+document.addEventListener("focusin", e => {
+  const td = e.target.closest("td[data-gapnew]");
+  if (td) td.dataset.orig = td.textContent;
+});
+document.addEventListener("focusout", e => {
+  const td = e.target.closest("td[data-gapnew]");
+  if (td && td.textContent !== (td.dataset.orig ?? "")) stateMonth(td);
+});
+el("gapClose").onclick = () => closeGap();
 // Escape and the backdrop close it too; GAP_AT has to be cleared either way or a
 // later edit would redraw a dialog nobody has open.
 el("gapdlg").addEventListener("close", () => closeGap());
@@ -9515,6 +9669,11 @@ document.addEventListener("focusin", e => {
 document.addEventListener("focusout", e => {
   const td = e.target.closest('td[contenteditable="true"]');
   if (!td) return;
+  /* A cell with no data-sheet is not a cell OVER a row: it is one offering to CREATE
+     the row that does not exist yet, and it carries its own handler. Without this guard
+     applyEdit would be called with an undefined sheet and a NaN row number, and
+     M.raw[undefined] throws before anything can say why. */
+  if (!td.dataset.sheet) return;
   /* Close on a delay, and only if the panel is still THIS cell's. Clicking straight
      from one cell to the next opens the panel for the new one before this timer fires,
      and an unconditional close would then shut the panel that had just been opened -
@@ -9528,6 +9687,13 @@ document.addEventListener("focusout", e => {
 document.addEventListener("keydown", e => {
   const td = e.target.closest('td[contenteditable="true"]');
   if (!td) return;
+  // Enter and Escape still behave, on a creating cell as on any other - they are the
+  // two keys everybody expects from a cell, and the blur is what runs its handler.
+  if (!td.dataset.sheet){
+    if (e.key === "Enter"){ e.preventDefault(); td.blur(); }
+    if (e.key === "Escape"){ td.textContent = td.dataset.orig ?? ""; td.blur(); }
+    return;
+  }
   if (SUGG.key(e)) return;                       // the list takes the key first
   if (CAL.key(e)) return;
   if (e.key === "Enter"){ e.preventDefault(); SUGG.close(); CAL.close(); td.blur(); }

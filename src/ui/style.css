@@ -856,3 +856,14 @@ rect.gapmark.over{stroke:var(--crit)}
 .gapsum .gapwhat{flex:1 1 260px;font-size:var(--t-md);color:var(--ink2)}
 #gapdlg{width:min(980px,94vw)}
 #gapdlg table.gapt{margin:0 0 10px}
+/* A Stated cell with nothing in it yet. It used to be a dash, which read as "there is
+   nothing you can do here" on exactly the figure somebody most wants to change. An empty
+   editable cell reads as read-only too, so it says what it is for - and says it in the
+   cell rather than only in a tooltip, because a tooltip is for people who already
+   suspect there is something to hover. */
+/* Applied is not what was stated, because the project's own month overrode it (V-33). */
+.ovr{color:var(--crit);margin-left:5px;font-size:var(--t-xs);cursor:help}
+td.cell.gapnew{cursor:text}
+td.cell.gapnew:empty::before{content:"type to state";color:var(--muted);
+ font-style:italic;font-size:var(--t-xs)}
+td.cell.gapnew:focus:empty::before{content:""}

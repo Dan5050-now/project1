@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.15"
+VERSION = "1.16"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -82,6 +82,44 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.16
+
+  * IN THE "Standard vs staffed" POP-UP, YOU CAN NOW TYPE A FIGURE FOR ANYONE
+    ON THE PROJECT - not only for people already on manual estimation. Their
+    Stated cell used to show a dash, which looked as though the screen was
+    read-only for them, and they are usually exactly the person whose figure
+    you wanted to change.
+
+  * TYPING FOR SOMEBODY STILL ON "auto" ASKS FIRST, and it has to. Stating one
+    month means stating ALL of that person's months on that project: the
+    message says how many, what they total, and what the month you typed will
+    become. Say yes and the switch, the copy of every month, and your figure
+    happen together. Say no and nothing at all is written.
+
+    (Why: a figure written against somebody on automatic estimation is read by
+    nothing, and flipping them to manual without copying their other months
+    across would count every one of those months as 0.00.)
+
+  * SOMEBODY ALREADY ON MANUAL WHO HAS NO FIGURE FOR THAT MONTH IS NOT ASKED.
+    Their months are already theirs, so the figure is simply written. That is
+    the month the application counts as 0.00 and reports as V-31.
+
+  * TYPING SOMETHING THAT IS NOT A NUMBER IS REFUSED, in the same words the
+    tables use, and nothing is written.
+
+  * Everything is an ordinary edit: listed under Show details, undone by
+    Leave without change, archived when you press Save.
+
+  * TWO SMALLER FIXES IN THE SAME POP-UP. The Estimation column now reads
+    MANUAL from the ASSIGNMENT rather than from whether that month happens to
+    have a figure - somebody on manual with a month missing was showing as
+    "auto", which is the opposite of what is wrong with it. And where the
+    Applied figure is not the Stated one, the row now carries a warning mark
+    explaining that the project's own stated month overrode it (V-33).
+
+  * No figure has changed anywhere.
+
 
 WHAT IS NEW IN 1.15
 

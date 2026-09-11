@@ -251,11 +251,16 @@ with sync_playwright() as pw:
           "with the demand term by term, the same derivation the estimation panel shows")
     cells = pg.evaluate("""() => [...el('gapBody')
         .querySelectorAll('td[contenteditable="true"]')]
-        .map(t => [t.dataset.sheet, t.dataset.col, t.textContent.trim()])""")
-    check(cells == [["MonthlyEstimate", "fte", "5"]],
+        .map(t => [t.dataset.sheet || null, t.dataset.gapnew || null,
+                   t.textContent.trim()])""")
+    check(cells[0] == ["MonthlyEstimate", None, "5"],
           "and the project's stated month as an ORDINARY editable cell over "
           "MonthlyEstimate — one editing path, not a second one to keep in step",
-          str(cells))
+          str(cells[0]))
+    # The people on it are automatic here, so they have no row to write through. Their
+    # cells offer to CREATE one instead - checked in section 10.
+    check(len(cells) == 3 and all(c[1] for c in cells[1:]),
+          "and every other Stated cell is editable too", str(cells))
 
     print("\n9. changing it there closes the gap, through the ordinary edit path")
     before = pg.evaluate("() => S.pending.length")
@@ -278,6 +283,110 @@ with sync_playwright() as pw:
     pg.evaluate("() => closeGap()")
     pg.wait_for_timeout(300)
     check(pg.evaluate("() => !el('gapdlg').open"), "Close closes it")
+
+    print("\n10. a person still on AUTO can be given a figure here too")
+    pg.evaluate("() => openGap('PRJ-B', 2026 * 12 + 9)")
+    pg.wait_for_timeout(700)
+    cells = pg.evaluate("""() => [...el('gapBody').querySelectorAll('td.cell')]
+        .map(t => [t.dataset.gapnew || ('row ' + t.dataset.row), t.isContentEditable])""")
+    check(len(cells) == 2 and all(c[1] for c in cells)
+          and any(c[0] == "ASG-004" for c in cells),
+          "every Stated cell is editable, including the automatic person's — a dash "
+          "there said the screen was read-only on the figure most worth changing",
+          str(cells))
+    n0 = pg.evaluate("() => S.pending.length")
+    pg.evaluate("""() => { const t = el('gapBody')
+        .querySelector('td[data-gapnew="ASG-004"]');
+        t.focus(); t.dispatchEvent(new Event('focusin', {bubbles: true}));
+        t.textContent = '3.5';
+        t.dispatchEvent(new Event('focusout', {bubbles: true}));}""")
+    pg.wait_for_timeout(800)
+    # IT ASKS, and it has to: writing one row against an automatic assignment is a figure
+    # nothing reads, and setting the flag without seeding counts every other month as
+    # 0.00 (REQ-CAL-18). The switch, the seeding and the typed figure go together.
+    check(pg.evaluate("() => el('estchg').open"),
+          "typing on an automatic person ASKS before anything is written — stating one "
+          "month means owning every month (REQ-CAL-18)")
+    check("all 3" in pg.evaluate("() => el('estBody').innerText")
+          and "3.50" in pg.evaluate("() => el('estBody').innerText"),
+          "naming how many months it will state and what this one becomes",
+          pg.evaluate("() => el('estBody').innerText").split(".")[1][:90])
+    check(pg.evaluate("() => S.pending.length") == n0,
+          "and nothing is written while the question is open")
+    pg.click("#estYes")
+    pg.wait_for_timeout(1500)
+    got = pg.evaluate("""() => ({
+        type: S.model.raw.Assignment.find(a => a.assignment_id === 'ASG-004')
+                .estimation_type,
+        months: S.model.raw.MonthlyEstimate
+          .filter(r => r.scope === 'assignment' && r.ref_id === 'ASG-004')
+          .map(r => [r.month, r.fte]).sort()})""")
+    check(got["type"] == "manual" and len(got["months"]) == 3,
+          "every month is seeded, not just the one typed — the other two would count as "
+          "0.00 otherwise, which is the one change that silently zeroes a figure",
+          str(got["months"]))
+    check(dict(got["months"])["2026-10"] == 3.5,
+          "and the month typed carries what was typed", str(got["months"]))
+    check(pg.evaluate("() => S.pending.length") - n0 == 5,
+          "logged as what it is: the switch, three seeded months, and the one change",
+          f"{pg.evaluate('() => S.pending.length') - n0} entries")
+    check(pg.evaluate("() => el('gapdlg').open")
+          and "MANUAL" in pg.evaluate("() => el('gapBody').innerText"),
+          "the dialog redrew and now shows that person as MANUAL")
+
+    print("\n11. already manual with no figure for this month (V-31) does NOT ask")
+    pg.evaluate("""() => { const rs = S.model.raw.MonthlyEstimate;
+        const i = rs.findIndex(r => r.scope === 'assignment' && r.ref_id === 'ASG-004'
+                                 && r.month === '2026-11');
+        rs.splice(i, 1); rebuild(true); renderKeepingTab();}""")
+    pg.wait_for_timeout(900)
+    check(pg.evaluate("() => (S.model.findings||[]).filter(f => f.rule === 'V-31').length")
+          == 1, "the missing month is V-31 — counted as 0.00 until it is filled in")
+    pg.evaluate("() => openGap('PRJ-B', 2026 * 12 + 10)")
+    pg.wait_for_timeout(700)
+    n1 = pg.evaluate("() => S.pending.length")
+    pg.evaluate("""() => { const t = el('gapBody')
+        .querySelector('td[data-gapnew="ASG-004"]');
+        t.focus(); t.dispatchEvent(new Event('focusin', {bubbles: true}));
+        t.textContent = '2';
+        t.dispatchEvent(new Event('focusout', {bubbles: true}));}""")
+    pg.wait_for_timeout(1000)
+    check(not pg.evaluate("() => el('estchg').open"),
+          "no question this time: the months are already this person's, so asking would "
+          "be asking permission for something already given")
+    check(pg.evaluate("""() => S.model.raw.MonthlyEstimate.filter(
+            r => r.scope === 'assignment' && r.ref_id === 'ASG-004'
+              && r.month === '2026-11').map(r => r.fte)""") == [2],
+          "the figure is simply written")
+    check(pg.evaluate("() => S.pending.length") - n1 == 1,
+          "as one ordinary logged edit")
+
+    print("\n12. and a figure that is not one is refused, not written")
+    # PRJ-A in October: its two people were never switched, so both their cells are
+    # still offering to create a row - which is the path being checked.
+    pg.evaluate("() => openGap('PRJ-A', 2026 * 12 + 9)")
+    pg.wait_for_timeout(700)
+    n2 = pg.evaluate("() => S.pending.length")
+    before_rows = pg.evaluate("() => S.model.raw.MonthlyEstimate.length")
+    got = pg.evaluate("""() => { const t = el('gapBody')
+        .querySelector('td[data-gapnew="ASG-002"]');
+        if (!t) return 'no creating cell to type into';
+        t.focus(); t.dispatchEvent(new Event('focusin', {bubbles: true}));
+        t.textContent = 'abc';
+        t.dispatchEvent(new Event('focusout', {bubbles: true}));
+        return 'typed';}""")
+    check(got == "typed", "the automatic person's cell is there to type into", got)
+    pg.wait_for_timeout(800)
+    check(not pg.evaluate("() => el('estchg').open"),
+          "nonsense does not even get as far as the question")
+    check(pg.evaluate("() => S.model.raw.MonthlyEstimate.length") == before_rows
+          and pg.evaluate("() => S.pending.length") == n2,
+          "no row created and nothing logged")
+    check("not a figure" in pg.evaluate("() => el('banner').textContent || ''"),
+          "and it says why, in the words the rest of the application uses",
+          pg.evaluate("() => (el('banner').textContent || '').slice(0, 70)"))
+    pg.evaluate("() => closeGap()")
+    pg.wait_for_timeout(300)
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()

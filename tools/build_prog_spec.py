@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.24"
+DOC_VERSION = "1.25"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.50.xlsx"
+PLAN = "PRAP_Development_Plan_v2.51.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,20 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.25", "2026-09-11", "Claude Code", "Dan",
+         "R-43. Sheet 06 records that EVERY Stated cell in the Standard vs staffed "
+         "dialog is editable, and the three states it has to tell apart: a row that "
+         "exists (an ordinary cell over MonthlyEstimate), a row that does not exist on a "
+         "thing already manual (V-31 - created without a question, because the months "
+         "are already the user's), and a row that does not exist on a thing still "
+         "AUTOMATIC (asked, then switched, seeded and set together - REQ-CAL-18 makes "
+         "estimation_type one-way-in precisely because the alternatives are a figure "
+         "nothing reads or every other month counted as 0.00). Sheet 07 records the one "
+         "mechanical consequence: the generic contenteditable handler now skips a cell "
+         "with no data-sheet, which is what lets a creating cell carry its own handler "
+         "rather than reaching applyEdit with an undefined sheet. No rule changes, no "
+         "schema change and no figure moves. Written against plan v2.51.",
+         "Issued"],
         ["1.24", "2026-09-11", "Claude Code", "Dan",
          "R-42, REQ-DSH-15. Sheet 04 gains V-34, a WARNING: a project-month whose demand "
          "and applied figure have come apart. Sheet 05 records why the obvious pair "
@@ -1197,7 +1211,7 @@ ov = [
     ["Graph 2", "Monthly FTE per person, with reference lines at the two thresholds - one pair of lines, since both are absolute. Above the bar budget it shows a ranked subset with the rest rolled into one 'others' band, and says which it is showing.", "REQ-DSH-02, REQ-DSH-08, REQ-DSH-09"],
     ["Graph 3", "Timeline per project - the FIRST panel on the tab, above the summary tiles. Each row carries the project name with its start, end and length beneath. Bands are coloured BY PERIOD NAME (see the colour rule below), with the period weight as a lightness step inside each hue. Milestones are inverted triangles in a lane above the bands; 'Inspection' takes the same marker as every other milestone. The hover pop-up gives the period, its dates, its weight and the FTE per month the project draws across it.", "REQ-DSH-02, REQ-PRJ-05, REQ-DSH-10"],
     ["Summary tiles", "Active projects; people assigned; total FTE in the horizon; over-allocated person-months; under-allocation runs; and project-months OFF THEIR STANDARD, split short/over and never netted. The last one is clickable and scrolls to the section below; it is counted by the same function that draws that section, so the two cannot disagree.", "REQ-DSH-08, REQ-DSH-15"],
-    ["Standard vs staffed", "A SECTION, under the tiles: every project-month where what the project needs is not what it is getting, largest gap first, with the project, the month, needs, staffed, the gap and its direction. Deliberately NOT a tab - a tab is the surface you visit only once you already suspect a problem, which is the wrong property for something whose whole danger is that it is silent, and the findings report is already the list of everything wrong. Clicking any row opens that month in a dialog: the demand term by term, everyone on it with their applied figures, and the STATED figures behind the gap as ordinary contenteditable cells over MonthlyEstimate - so the editing path of sheet 07 validates, logs, marks and undoes them unchanged. The dialog redraws after an edit; one still showing the gap just closed would read as an edit that did nothing. Empty when there is nothing to report, and it says why rather than disappearing.", "REQ-DSH-15"],
+    ["Standard vs staffed", "A SECTION, under the tiles: every project-month where what the project needs is not what it is getting, largest gap first, with the project, the month, needs, staffed, the gap and its direction. Deliberately NOT a tab - a tab is the surface you visit only once you already suspect a problem, which is the wrong property for something whose whole danger is that it is silent, and the findings report is already the list of everything wrong. Clicking any row opens that month in a dialog: the demand term by term, everyone on it with their applied figures, and EVERY Stated figure editable in place. A month that already has a MonthlyEstimate row is an ordinary contenteditable cell over it, so the editing path of sheet 07 handles it unchanged. A month with NO row has nothing to write through, so its cell CREATES one - and where the assignment is still automatic it asks first, because a lone row against an automatic assignment is read by nothing and setting estimation_type without seeding the other months counts each of them as 0.00 (REQ-CAL-18); the switch, the seeding and the typed figure are then applied together or not at all. Already manual with no row for that month is the V-31 case and is not asked. A cell with no data-sheet is skipped by the generic handler, which is what lets a creating cell carry its own. A row whose Applied is not its Stated carries the V-33 mark. The dialog redraws after an edit; one still showing the gap just closed would read as an edit that did nothing. Empty when there is nothing to report, and it says why rather than disappearing.", "REQ-DSH-15"],
     ["Reset filters", "Clears every filter and restores the default 24-month horizon in one action.", "REQ-DSH-05"],
     ["Scroll regions", "Every chart and table sits in its own scroll region - horizontal for wide content, and a bounded height with vertical scroll for tall content. Wide or long content scrolls INSIDE its panel; the page body never scrolls sideways, and a long sub-table never pushes the panels below it down the page. A scrolled table keeps its header row visible.", "REQ-NFR-02"],
     ["Row expansion - project", "Clicking a project name reveals one row per person and role on it, each with its own monthly figures. Clicking again collapses.", "REQ-DSH-01"],
