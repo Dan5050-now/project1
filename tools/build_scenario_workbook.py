@@ -36,6 +36,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 VERSION = "1.0"
 SOURCE = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.10.xlsx"
 OUT = ROOT / "templates" / f"PRAP_SourceData_Scenarios_v{VERSION}.xlsx"
+LARGE_VERSION = "1.0"
+LARGE_OUT = ROOT / "templates" / f"PRAP_SourceData_Scenarios_50x50_v{LARGE_VERSION}.xlsx"
 
 _spec = importlib.util.spec_from_file_location("bsw", ROOT / "tools" / "build_source_workbook.py")
 B = importlib.util.module_from_spec(_spec)
@@ -81,7 +83,9 @@ def months_between(a, b):
     return out
 
 
-def main():
+def main(size="small"):
+    """size 'small': the 12 hand-built scenario projects alone.
+       size 'large': the same scenarios, plus enough generated work to reach 50 and 50."""
     src = load_workbook(SOURCE)
     take = lambda s: [list(r) for r in src[s].iter_rows(min_row=2, values_only=True) if r[0]]
     pws_rows, role_rows = take("PeriodFTEStandard"), take("RoleFactor")
@@ -130,7 +134,7 @@ def main():
                   "Overall > Monthly demand by project. Source data (project) > "
                   "Periods, to see the standard beside each weight.")
     e1 = project(p1, "SCN-001 Baseline trial", "NewDrug CT", "Phase 3", base, CT7,
-                 note="Nothing unusual. Read this one first - the others are "
+                 note="SCENARIO. Nothing unusual - read this one first, the others are "
                       "departures from it.")
 
     p2 = scenario("SCN-002", "A project STATED BY HAND, below what its own standard asks "
@@ -139,15 +143,15 @@ def main():
                   "in Resource by project; click it to open the figures behind it.")
     e2 = project(p2, "SCN-002 Stated below standard", "NewDrug CT", "Phase 1", base, CT7,
                  estimation="manual",
-                 note="estimation_type = manual. The MonthlyEstimate figures are "
-                      "deliberately smaller than the standard.")
+                 note="SCENARIO. estimation_type = manual, with figures deliberately "
+                      "smaller than the standard - V-34 short.")
 
     p3 = scenario("SCN-003", "The same, stated ABOVE the standard. Trips V-34 over.",
                   "Overall > Standard vs staffed - the two directions are counted "
                   "separately and never netted off.")
     e3 = project(p3, "SCN-003 Stated above standard", "Biosimilar CT (Healthy)", "Phase 3",
                  base, CT7, estimation="manual",
-                 note="estimation_type = manual, figures above the standard.")
+                 note="SCENARIO. estimation_type = manual, figures above the standard - V-34 over.")
 
     p4 = scenario("SCN-004", "A project figure stated by hand OVER an assignment figure "
                   "also stated by hand. Trips V-33.",
@@ -155,20 +159,24 @@ def main():
                   "figure and the one actually given are both shown.")
     e4 = project(p4, "SCN-004 Two manual levels", "Biosimilar CT (Patient)", "Phase 1",
                  base, CT7, estimation="manual",
-                 note="Both levels manual. The project figure is the mother figure and "
-                      "the people on it are scaled to it (REQ-CAL-18).")
+                 note="SCENARIO. Both levels manual. The project figure is the mother "
+                      "figure and the people on it are scaled to it (REQ-CAL-18) - V-33.")
 
     p5 = scenario("SCN-005", "An assignment on manual with a month that has NO figure. "
                   "Trips V-31.",
                   "Source data (person) > PSN-005 > Monthly estimation, and the 'Fill "
                   "the missing months' button.")
-    e5 = project(p5, "SCN-005 Missing stated month", "NewDrug CT", "Phase 2", base, CT7)
+    e5 = project(p5, "SCN-005 Missing stated month", "NewDrug CT", "Phase 2", base, CT7,
+                 note="SCENARIO. One assignment here is manual with a month left "
+                      "unstated - V-31. Its Inspection is also early - V-21.")
 
     p6 = scenario("SCN-006", "A project figure for a month with NOBODY assigned. "
                   "Trips V-32 - it cannot be shared out, so it is not applied.",
                   "The findings report, and Source data (project) > Monthly estimation.")
     e6 = project(p6, "SCN-006 Figure with nobody on it", "NewDrug CT", "Phase 4", base,
-                 CT7, estimation="manual")
+                 CT7, estimation="manual",
+                 note="SCENARIO. Manual figures run the whole project; the staffing "
+                      "stops half way, so the later figures cannot be shared out - V-32.")
 
     p7 = scenario("SCN-007", "An 'Others' project: three hand-entered periods, three "
                   "'Others' roles, no milestone derivation.",
@@ -176,29 +184,33 @@ def main():
                   "'Standard periods' here, not 'Auto derivation'.")
     e7 = project(p7, "SCN-007 Internal project", "Others", None, base,
                  [("Planning", 3), ("Develop", 8), ("Close", 2)],
-                 category=None, note="An 'Others' project has no clinical phase and no "
-                                     "product; its periods are entered by hand.")
+                 category=None, note="SCENARIO. An 'Others' project: no clinical phase, no product, "
+                                     "and periods entered by hand.")
 
     p8 = scenario("SCN-008", "A role NOBODY holds, whose factor is picked up by another "
                   "role (REQ-CAL-16).",
                   "Source data (project) > Utilisation. Clinical Data Associator is "
                   "unstaffed; its factor lands on the Lead data manager.")
     e8 = project(p8, "SCN-008 Unstaffed role absorbed", "NewDrug CT", "Phase 2", base, CT7,
-                 note="No Clinical Data Associator is assigned. RoleFactor.absorbed_by "
-                      "sends that work to the Lead data manager.")
+                 note="SCENARIO. No Clinical Data Associator is assigned; "
+                      "RoleFactor.absorbed_by sends that work to the Lead data manager.")
 
     p9 = scenario("SCN-009", "One role held by THREE people at once, so each claims a "
                   "third of what one would.",
                   "Source data (person) > Monthly estimation > 'Sharing this role'. "
                   "The project's month does not move when a sharer is added.")
-    e9 = project(p9, "SCN-009 Three share one role", "NewDrug CT", "Phase 3", base, CT7)
+    e9 = project(p9, "SCN-009 Three share one role", "NewDrug CT", "Phase 3", base, CT7,
+                 note="SCENARIO. Three people hold Clinical Data Associator, so each "
+                      "claims a third of the factor. A milestone is also duplicated - V-20.")
 
     p10 = scenario("SCN-010", "A project with NO assignments at all.",
                    "Resource by project - it draws nothing, and says so rather than "
                    "disappearing.")
     e10 = project(p10, "SCN-010 Nobody assigned", "Others", None, base,
                   [("Planning", 2), ("Develop", 6), ("Close", 2)], category=None,
-                  status="Planned")
+                  status="Planned",
+                  note="SCENARIO. No assignments at all - it draws nothing and says so "
+                       "rather than disappearing from the tables.")
 
     p11 = scenario("SCN-011", "A derived column that DISAGREES with its master row. "
                    "Trips V-13 - the file is read, then the master value wins.",
@@ -206,7 +218,7 @@ def main():
                    "project_name; Project is the master and is used.")
     e11 = project(p11, "SCN-011 Derived disagreement", "NewDrug CT", "Phase 3", base, CT7,
                   total_months=99,
-                  note="One milestone row carries a stale project_name - V-13. "
+                  note="SCENARIO. One milestone row carries a stale project_name - V-13. "
                        "total_period_months also says 99; that one is recomputed in "
                        "silence, because the file's value is never trusted for it.")
 
@@ -214,7 +226,9 @@ def main():
                    "The findings report - a warning, not a refusal: the plan is still "
                    "costed.")
     e12 = project(p12, "SCN-012 No product named", "NewDrug CT", "Phase 1", base, CT7,
-                  category=None)
+                  category=None,
+                  note="SCENARIO. A clinical trial with no product recorded - V-04. "
+                       "A warning, not a refusal: the plan is still costed.")
 
     # ---- milestones, on the baseline and one with an early inspection ----------
     def milestones(pid, start, early_inspection=False, duplicate=False):
@@ -253,6 +267,10 @@ def main():
     scenario("PSN-001", "A person over the 1.50 FTE ceiling, on four projects at once.",
              "Overall > Resource by person, and Source data (person) > Utilisation: "
              "the bar is outlined where the month crosses a threshold.")
+    scenario("BLK-xxx", "A milestone dated AFTER the project's own end, which extends "
+             "the timeline rather than being dropped. Trips V-14, for information. "
+             "(Large set only.)",
+             "The findings report, and Overall > Project timeline.")
     scenario("(several)", "A role that carries a factor and that NOBODY holds and "
              "nothing covers for. Trips V-29, for information - it is work not being "
              "counted.",
@@ -436,6 +454,103 @@ def main():
     stated("project", p6, m6, at(d6, m6, 1.00),
            "The later months have nobody assigned, so they cannot be shared out - V-32.")
 
+    # ====================================================== bulk, for the large set
+    #
+    # The scenarios above are the point of the file; this is the PORTFOLIO they sit in,
+    # so that 50 projects and 50 people is a realistic load rather than twelve special
+    # cases padded out.
+    #
+    # STARTS ARE STAGGERED ACROSS FOUR YEARS, and that is not cosmetic. REQ-CAL-19 makes
+    # a project-month its own standard, divided among whoever is on it, so the load a
+    # person carries is set by how many projects run AT ONCE, not by how many exist. Fifty
+    # projects all starting together would put every person permanently over the ceiling
+    # and the file would read as broken. Staggered, about a third overlap at any time.
+    if size == "large":
+        import collections
+        import random
+        rnd = random.Random(20260912)          # fixed, so the file is reproducible
+        TYPES = [("NewDrug CT", ["Phase 1", "Phase 2", "Phase 3", "Phase 4"]),
+                 ("Biosimilar CT (Healthy)", ["Phase 1", "Phase 3"]),
+                 ("Biosimilar CT (Patient)", ["Phase 1", "Phase 3"]),
+                 ("Others", [None])]
+        SCOPES = ["fully in-housed", "fully outsourced",
+                  "Partially outsourced (in-house for EDC)"]
+        STATUS = ["Active"] * 6 + ["Planned"] * 2 + ["On hold", "Completed"]
+        FIRST = ["Nam", "Baek", "Shin", "Koo", "Ryu", "Moon", "Jang", "Hwang", "Cho",
+                 "Song", "Yang", "Bae", "Noh", "Gil", "Sun", "Pyo", "Wi", "Ji"]
+        LAST = list("ABCDEFGHJKLMNPRSTWY")
+        DEPTS = ["Clinical Operations", "Data Management", "Programming",
+                 "Biostatistics", "Business Systems"]
+
+        while len(ppl) < 50:
+            i = len(ppl) + 1
+            nm = f"{FIRST[i % len(FIRST)]} {LAST[i % len(LAST)]}."
+            dept = DEPTS[i % len(DEPTS)]
+            role = (OROLES if dept == "Business Systems" else ROLES)[i % 3]
+            cap = rnd.choice([1.00] * 7 + [0.80, 0.80, 0.60])
+            person(f"PSN-{i:03d}", nm, dept, role, cap,
+                   "Portfolio staff - not a scenario.")
+
+        load = collections.Counter()
+        for a in asg:                       # the scenario assignments already placed
+            load[a[1]] += 1
+        bulk_n = 50 - len(proj)
+        for i in range(bulk_n):
+            pid = f"BLK-{i + 1:03d}"
+            t, phases = TYPES[i % len(TYPES)]
+            phase = phases[i % len(phases)]
+            start = date(2025, 1, 1) + rd(months=rnd.randrange(0, 96))
+            start = start.replace(day=1)
+            if t == "Others":
+                spans = [("Planning", rnd.randint(2, 4)), ("Develop", rnd.randint(5, 10)),
+                         ("Close", rnd.randint(1, 3))]
+            else:
+                spans = [("Before-Start-up", rnd.randint(1, 3)),
+                         ("Start-up", rnd.randint(3, 5)),
+                         ("Conduct (interim)", rnd.randint(4, 9)),
+                         ("Close-out (interim)", rnd.randint(1, 3)),
+                         ("Conduct (final)", rnd.randint(4, 10)),
+                         ("Close-out (final)", rnd.randint(2, 4))]
+                if i % 4 == 0:
+                    spans.append(("After Close-out (final)", rnd.randint(1, 2)))
+            weights = {n: round(rnd.uniform(0.80, 1.30), 2) for n, _ in spans}
+            end = project(pid, f"{pid} {t.split()[0]} study", t, phase, start, spans,
+                          weights=weights, status=rnd.choice(STATUS),
+                          scope=rnd.choice(SCOPES),
+                          category=None if t == "Others" else f"Compound {chr(65 + i % 26)}",
+                          note="Portfolio project - not a scenario.")
+            if t != "Others" and i % 3 == 0:
+                milestones(pid, start)
+
+            # EVERY project is staffed from the whole pool, and EVERY person ends up on
+            # several projects, which is what the request asked for and what makes the
+            # person tab worth looking at.
+            roles = OROLES if t == "Others" else ROLES
+            pool50 = [f"PSN-{k:03d}" for k in range(6, len(ppl) + 1)]  # 1-5 are scenarios
+            for role in roles:
+                # The least-loaded person, with a random tie-break so the same few are
+                # not always first. Random choice alone put one person on twelve projects
+                # and another on one.
+                sid = min(sorted(pool50, key=lambda _: rnd.random()),
+                          key=lambda x: load[x])
+                load[sid] += 1
+                part = rnd.random() < 0.18
+                assign(aid(), sid, pid, role, round(rnd.uniform(0.20, 0.60), 2),
+                       s=start + rd(months=2) if part else None,
+                       e=eom(end - rd(months=2)) if part else None,
+                       note="Portfolio assignment." if not part
+                            else "Portfolio assignment, joining late and leaving early.")
+                # A second holder on some roles - the role factor is then divided
+                # between them (REQ-CAL-14), so the project's month does not move.
+                if rnd.random() < 0.35:
+                    sid2 = min(sorted([x for x in pool50 if x != sid],
+                                      key=lambda _: rnd.random()),
+                               key=lambda x: load[x])
+                    load[sid2] += 1
+                    assign(aid(), sid2, pid, role, round(rnd.uniform(0.20, 0.50), 2),
+                           note="Shares this role with a colleague - the factor is "
+                                "divided between them.")
+
     # ==================================================================== write
     wb = Workbook()
     wb.remove(wb.active)
@@ -469,6 +584,25 @@ def main():
         "   The weights and role factors are ILLUSTRATIVE. Replace them before drawing any",
         "   conclusion from the output.",
         "",
+        "IF YOU ARE AN AI AGENT READING THIS FILE",
+        "   docs/prap_contract.json is the machine-readable contract: every sheet, column,",
+        "   value list and validation rule, with the severity each one carries. Read it before",
+        "   writing to this workbook - it is what stops a plausible-looking column name being",
+        "   silently ignored.",
+        "",
+        "   To check a file without a browser:",
+        "      python tools/verify_source_workbook.py <file.xlsx>     full validation + figures",
+        "      python tools/prap_io.py validate <file>                .xlsx or .prap.json",
+        "",
+        "   Every project note_1 says whether the row is a SCENARIO or portfolio filler, so the",
+        "   interesting rows can be found without reading this sheet.",
+        "",
+        "   The figures are checked by four independent implementations that must agree - the",
+        "   browser engine, tools/prap_io.py, tools/verify_source_workbook.py and the reference",
+        "   inside tools/test_app.py. If your own arithmetic disagrees with all four, it is",
+        "   probably yours; REQ-CAL-19 is the rule most often got wrong (a project-month IS its",
+        "   standard, and the people on it DIVIDE it - they do not each add to it).",
+        "",
         "WHAT EACH PROJECT IS FOR",
     ]
     for pid, what, look in SCENARIOS:
@@ -488,11 +622,13 @@ def main():
     B.write_sheet(wb, "MonthlyEstimate", est, None, list_ranges)
     B.write_sheet(wb, "Lists", list_rows, None, list_ranges)
     B.write_sheet(wb, "Config", cfg_rows, None, list_ranges)
-    wb.save(OUT)
-    print(f"Written: {OUT}")
+    out = OUT if size == "small" else LARGE_OUT
+    wb.save(out)
+    print(f"Written: {out}")
     print(f"  {len(SCENARIOS)} scenarios | {len(proj)} projects | {len(ppl)} people | "
           f"{len(asg)} assignments | {len(ppw)} override windows | {len(est)} stated months")
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    main("large" if "--large" in sys.argv else "small")
