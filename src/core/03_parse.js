@@ -219,7 +219,7 @@ const COLUMN_HELP = {
   person_name:"Display name. On Assignment this is DERIVED and recomputed from the master row.",
   department:"Grouping used by the dashboard filters.",
   primary_role:"Usual role. An assignment can override it.",
-  capacity_fte:"How much this person is available for, in FTE. Shown for context — the allocation thresholds are absolute and are NOT scaled by it.",
+  capacity_fte:"How much this person is available for, in FTE. BETWEEN 0.00 AND 1.00 — it is how much of ONE PERSON there is, so 1.00 is full-time, 0.50 is half a week, and 0.00 is somebody on the books who is not available at all. Anything outside that range is refused (V-35); a figure above 1.00 is almost always hours typed into an FTE column. Somebody doing the work of two people is two assignments, or a person weight above 1.00 on one of them. Shown for context — the allocation thresholds are absolute and are NOT scaled by it.",
   assignment_id:"Unique identifier. One row per person + project + role.",
   assign_start_date:"When this person starts on this project. EMPTY means the project's own start date — leave both dates blank for somebody on the project throughout, and fill them in only for a partial involvement (REQ-CAL-15).",
   assign_end_date:"When they finish. EMPTY means the project's own end date.",

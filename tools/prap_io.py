@@ -836,9 +836,20 @@ def validate(M):
                 M.add("error", "V-05", "PersonPeriodWeight", "",
                       f"{aid}: override window ends before it starts.")
 
+    # V-35: capacity_fte is how much of ONE PERSON there is, so 0.00 to 1.00 and no
+    # further. An ERROR, and so it refuses - unlike every other figure in this
+    # application, which is a judgement somebody is entitled to make. 1.5 people is not
+    # a heavier person; it is hours typed into an FTE column.
     for sid, p in M.people.items():
         cap = _as_num(p.get("capacity_fte"))
-        if cap is not None and cap < M.UNDER:
+        if cap is None:
+            continue
+        if cap < 0 or cap > 1:
+            M.add("error", "V-35", "Person", p["__row"],
+                  f"{sid}: capacity {cap:.2f} FTE is outside 0.00 to 1.00. capacity_fte is "
+                  f"how much of ONE PERSON there is, so 1.00 is full-time and 0.50 is half "
+                  f"a week.")
+        elif cap < M.UNDER:
             M.add("warning", "V-22", "Person", p["__row"],
                   f"{sid}: capacity {cap:.2f} FTE is below the under-allocation floor of "
                   f"{M.UNDER:.2f}.")

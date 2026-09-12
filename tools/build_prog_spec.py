@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.25"
+DOC_VERSION = "1.26"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.51.xlsx"
+PLAN = "PRAP_Development_Plan_v2.52.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,21 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.26", "2026-09-12", "Claude Code", "Dan",
+         "R-44. Sheet 04 gains V-35: capacity_fte is bounded 0.00 to 1.00 and, alone "
+         "among the rules added this year, it REFUSES. The distinction is recorded "
+         "because it is the one that decides a rule's class: a period weight, a role "
+         "factor and a stated month are judgements somebody is entitled to make, and "
+         "their rules report; a capacity of 1.5 is a number in the wrong unit, and "
+         "refusing it at the cell is the only moment the person who knows what they "
+         "meant is still there. Sheet 03 records the bound on the column without a "
+         "schema change - the schema stays at 11 and no column moves. Sheet 07 records "
+         "that a workbook already breaking the rule still opens: both the save and the "
+         "edit path compare the COUNT of blocking findings before and after, which is "
+         "what stops a new rule locking somebody out of their own plan, and which is now "
+         "written down rather than merely true. The template carries a matching decimal "
+         "range so Excel refuses it at entry as well. No rule changes for the "
+         "calculation and no figure moves. Written against plan v2.52.", "Issued"],
         ["1.25", "2026-09-11", "Claude Code", "Dan",
          "R-43. Sheet 06 records that EVERY Stated cell in the Standard vs staffed "
          "dialog is editable, and the three states it has to tell apart: a row that "
@@ -782,6 +797,7 @@ rules = [
     ["V-22", "Warning", "Person.capacity_fte is below config.under_allocation_fte.", "PSN-018: capacity 0.50 FTE is below the under-allocation floor of 0.60, so this person can never clear it however fully they are booked. Lower the floor or raise the capacity."],
     ["V-31", "Error", "A project or assignment set to estimation_type = 'manual' has months it covers with no MonthlyEstimate row.", "Project PRJ-019 is set to MANUAL but MonthlyEstimate has no figure for 3 of its month(s): 2028-01, 2028-02, 2028-03. Those months are counted as 0.00."],
     ["V-32", "Error", "A manual PROJECT has a figure for a month in which nobody is assigned to it, so there is nobody to share it out to.", "Project PRJ-019 has a manual figure for 2 month(s) in which nobody is assigned to it. It has NOT been applied - the project would otherwise show a total that none of its people account for."],
+    ["V-35", "Error", "Person.capacity_fte outside 0.00 to 1.00, in either direction. REFUSES - the only rule added this year that does.", "PSN-001: capacity 1.50 FTE is outside 0.00 to 1.00. capacity_fte is how much of ONE PERSON there is, so 1.00 is full-time and 0.50 is half a week - there is no such thing as 1.50 of a person. A figure above 1.00 is usually hours typed into an FTE column: 1.50 hours a month is 0.01 FTE. Somebody who does the work of two people is TWO ASSIGNMENTS, or a person weight above 1.00 on one of them - not a capacity above 1.00."],
     ["V-34", "Warning", "A project-month where what the project NEEDS - standard FTE x period weight x the part of the month it runs - is not what it is being GIVEN, in either direction. Raised from the calculation; one finding per project.", "Project PRJ-019 is not being given what its own standard says it needs: 2 month(s) SHORT of it by up to 5.00 FTE, and 1 month(s) OVER it by up to 3.00 FTE. Worst is 2026-09, which needs 10.00 and is getting 5.00. It is reported because it is otherwise invisible: the charts simply draw a different project."],
     ["V-33", "Warning", "A manual ASSIGNMENT figure that the project's own manual figure overrode. REQ-CAL-18 makes the project month the mother figure, so the stated figure for the person is not what they are given.", "Assignment ASG-001 states a monthly figure that its PROJECT'S own manual figure overrode in 1 month(s) - 2025-03: stated 99.00, applied 9.97. Either change the project's figure to one that leaves room for this person's, or take this assignment off manual and let it take its share."],
 ]

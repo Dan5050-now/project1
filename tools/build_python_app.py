@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.17"
+VERSION = "1.18"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -87,6 +87,41 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.18
+
+  * CAPACITY IS NOW LIMITED TO BETWEEN 0.00 AND 1.00, on the People table of
+    the Source data (person) tab. It is how much of ONE PERSON there is:
+
+        1.00   full-time
+        0.50   half a week
+        0.00   on the books, not available at all (on leave, say)
+
+    Anything outside that is REFUSED as you leave the cell, and the message
+    tells you why - including the most likely reason, which is hours typed
+    into an FTE column.
+
+  * SOMEBODY DOING THE WORK OF TWO PEOPLE IS NOT A CAPACITY OF 2.00. It is
+    two assignments, or a person weight above 1.00 on one of them. The
+    message says so.
+
+  * THIS IS THE ONLY RULE ADDED THIS YEAR THAT REFUSES. Period weights, role
+    factors and stated monthly figures are all judgements you are entitled to
+    make, so the application reports on them and leaves the decision with you.
+    A capacity of 1.5 is not a judgement - there is no such thing as one and a
+    half of a person - so it is stopped at the moment you type it, while you
+    still remember what you meant.
+
+  * A PLAN THAT ALREADY HAS ONE STILL OPENS. It is reported, and you can carry
+    on working; only edits that would make things worse are stopped.
+
+  * THE TEMPLATE STOPS IT TOO. If you fill the workbook in using Excel, Excel
+    itself now refuses a capacity outside 0.00 to 1.00, with its own message.
+    Template v1.15, example files v1.17 and v1.9 - the layout is unchanged,
+    only the guard rail is new.
+
+  * No figure has changed anywhere.
+
 
 WHAT IS NEW IN 1.17
 

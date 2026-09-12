@@ -40,9 +40,9 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 SCHEMA_VERSION = 11
-TEMPLATE_VERSION = "1.14"
-DUMMY_VERSION = "1.16"
-DUMMY_SMALL_VERSION = "1.8"
+TEMPLATE_VERSION = "1.15"
+DUMMY_VERSION = "1.17"
+DUMMY_SMALL_VERSION = "1.9"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -398,6 +398,20 @@ DROPDOWNS = {
                              "period_name": "period_name_clinical"},
     "RoleFactor": {"project_type": "project_type", "clinical_phase": "clinical_phase",
                    "work_scope_type": "work_scope_type"},
+}
+
+# Columns Excel itself holds to a range, so the file refuses a bad figure at the moment
+# somebody types it rather than reporting it when the application next reads the file.
+# The application checks the same thing (V-35) because a workbook can be written by
+# anything; this is the guard rail on the way in, not a substitute for the rule.
+RANGES = {
+    "Person": {"capacity_fte": (0.0, 1.0, "Capacity is how much of ONE PERSON there is",
+                                "Enter 0.00 to 1.00. 1.00 is full-time, 0.50 is half a "
+                                "week, 0.00 is somebody on the books who is not "
+                                "available. A figure above 1.00 is usually hours typed "
+                                "into an FTE column. Somebody doing the work of two "
+                                "people is two assignments, or a person weight above "
+                                "1.00 on one of them.")},
 }
 
 
@@ -1051,6 +1065,16 @@ def write_sheet(wb, name, rows, example=None, list_ranges=None):
             ws.add_data_validation(dv)
             letter = get_column_letter(col_index(name, col))
             dv.add(f"{letter}2:{letter}{max(last, 400)}")
+
+    # ranges: the same refusal, for a number rather than a list
+    for col, (lo, hi, title, msg) in RANGES.get(name, {}).items():
+        dv = DataValidation(type="decimal", operator="between",
+                            formula1=str(lo), formula2=str(hi), allow_blank=True,
+                            showErrorMessage=True, errorTitle=title, error=msg,
+                            promptTitle=title, prompt=msg, showInputMessage=True)
+        ws.add_data_validation(dv)
+        letter = get_column_letter(col_index(name, col))
+        dv.add(f"{letter}2:{letter}{max(last, 400)}")
 
     # ---- derived columns: locked, and said so ------------------------------
     #

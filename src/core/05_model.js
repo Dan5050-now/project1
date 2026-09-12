@@ -549,10 +549,44 @@ function validate(M, F){
       add("error","V-05","PersonPeriodWeight","",`${aid}: override window ends before it starts.`);
   }
 
+  /* ---- V-35: a person cannot be more than one person -------------------
+     capacity_fte is how much of ONE PERSON there is, so the only figures it can take
+     are between 0.00 and 1.00. 1.00 is somebody full-time; 0.50 is somebody who works
+     half a week; 0.00 is somebody who is on the books and not available at all, which
+     is a true thing to say about a person on leave and is therefore allowed.
+
+     AN ERROR RATHER THAN A WARNING, and so it refuses. Every other figure in this
+     application is a judgement somebody is entitled to make - a period weight, a role
+     factor, a stated month - and those report rather than refuse. This one is not a
+     judgement: 1.5 people is not a heavier person, it is a number in the wrong unit,
+     and the usual cause is hours typed into an FTE column. Refusing it at the cell is
+     the only moment at which the person who knows what they meant is still there.
+
+     A FILE THAT ALREADY CONTAINS ONE STILL OPENS. Both the save and the edit check
+     compare the count of blocking findings BEFORE and AFTER, so a rule that was
+     already broken when the workbook arrived does not lock anybody out of their own
+     plan - it is reported, and it blocks only the edits that would make things worse. */
+  for (const [sid, p] of Object.entries(M.people)){
+    const cap = num(p.capacity_fte);
+    if (cap === null || cap === undefined) continue;
+    if (cap < 0 || cap > 1)
+      add("error","V-35","Person",p.__row,
+        `${sid}: capacity ${cap.toFixed(2)} FTE is outside 0.00 to 1.00. capacity_fte is `
+        + `how much of ONE PERSON there is, so 1.00 is full-time and 0.50 is half a `
+        + `week — there is no such thing as ${cap.toFixed(2)} of a person. `
+        + (cap > 1 ? `A figure above 1.00 is usually hours typed into an FTE column: `
+                   + `${cap.toFixed(2)} hours a month is ${(cap / (M.HOURS || 160))
+                       .toFixed(2)} FTE. `
+                   : `A negative capacity has no meaning; 0.00 is somebody who is on the `
+                   + `books and not available. `)
+        + `Somebody who does the work of two people is TWO ASSIGNMENTS, or a person `
+        + `weight above 1.00 on one of them — not a capacity above 1.00.`);
+  }
+
   // V-22: an absolute floor only means something if everyone can reach it
   for (const [sid, p] of Object.entries(M.people)){
     const cap = num(p.capacity_fte);
-    if (cap !== null && cap !== undefined && cap < M.UNDER)
+    if (cap !== null && cap !== undefined && cap >= 0 && cap <= 1 && cap < M.UNDER)
       add("warning","V-22","Person",p.__row,
         `${sid}: capacity ${cap.toFixed(2)} FTE is below the under-allocation floor of `
         + `${M.UNDER.toFixed(2)}, so this person can never clear it however fully they are booked.`);

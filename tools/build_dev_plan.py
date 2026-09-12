@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.51"
+DOC_VERSION = "2.52"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,7 +397,38 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
-    [f"{MARK_NEW}2.51", "2026-09-11", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.52", "2026-09-12", "Claude Code", "Pending",
+     "R-44, V-35: capacity_fte IS BOUNDED, 0.00 TO 1.00. Reported from the field. It is "
+     "the one figure on the Person sheet with a hard ceiling and it did not have one - "
+     "1.5 went in, was believed, and sat beside everybody else's 1.00 as though it meant "
+     "something. capacity_fte is how much of ONE PERSON there is; 0.00 is allowed, "
+     "because somebody on the books and not available is a true thing to say. "
+     "IT REFUSES, WHICH IS A DEPARTURE AND IS THE POINT. Every other rule added this "
+     "year reports rather than refuses - V-31 to V-34 all leave the decision with the "
+     "user, because a period weight, a role factor and a stated month are judgements "
+     "somebody is entitled to make. A capacity of 1.5 is not a judgement. It is a number "
+     "in the wrong unit, the usual cause is hours typed into an FTE column, and the "
+     "moment of entry is the only one at which the person who knows what they meant is "
+     "still there to be asked. The message names the unit, does the hours-to-FTE "
+     "arithmetic, and says what to do instead: two assignments, or a person weight above "
+     "1.00 on one of them. "
+     "FOUR PLACES ENFORCE IT, and the fourth is the one that matters most in practice. "
+     "The application refuses the edit; prap_io and verify_source_workbook raise the "
+     "same rule at the same severity, because the four-implementation rule applies to "
+     "what the application REFUSES exactly as it applies to what it calculates; and the "
+     "TEMPLATE now carries a decimal range on the column, so Excel stops the figure "
+     "where people actually type it, with a message of its own rather than the generic "
+     "one. "
+     "A FILE THAT ALREADY BREAKS IT STILL OPENS - checked, because the alternative would "
+     "be a rule that locks somebody out of their own plan. Both the save and the edit "
+     "path compare the COUNT of blocking findings before and after, so a pre-existing "
+     "breach is reported and only the edits that would make matters worse are stopped. "
+     "V-22 stands down on an out-of-range row rather than piling on. "
+     "Template v1.15, dummies v1.17 and v1.9 - the schema is UNCHANGED at 11; only the "
+     "guard rail is new. No calculation change and no figure moves. tools/test_capacity.py "
+     "is new, 22 checks across all four places.",
+     "Issued for review"],
+    ["2.51", "2026-09-11", "Claude Code", "Pending",
      "R-43: THE STATED CELL IS EDITABLE FOR EVERY PERSON IN THE DIALOG, not only for "
      "those already on manual. Reported from the field, and it was the most important "
      "half of the section missing: a gap is usually somebody ELSE's figure, and the "
@@ -429,7 +460,7 @@ rows = [
      "carries the V-33 mark, so two figures differing on one line is explained where it "
      "is seen rather than only in the estimation panel on another tab. No calculation "
      "change and no figure moves. tools/test_gap.py grows to 49 checks.",
-     "Issued for review"],
+     "Superseded by v2.52"],
     ["2.50", "2026-09-11", "Claude Code", "Pending",
      "R-42, REQ-DSH-15, V-34: WHAT A PROJECT NEEDS AGAINST WHAT IT IS BEING GIVEN. "
      "RAISED AS 'a project's FTE differs from the sum of its people's', AND THAT PAIR "
@@ -2063,6 +2094,7 @@ rules = [
     [f"{MARK_CHG}V-28", "RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all.", "Retired - and deliberately not reinstated at a lower severity. What the rule SAID was true; what it did not account for was WHEN it said it. An error refuses the edit that raised it (REQ-IMP-09), and unlike V-23 this one did not need the project to have any periods - so it fired on a project still being built, which is exactly when assignments are being typed in. A user could not record who was on a project until the standing assumptions carried a factor for their role, which is backwards: the plan is the document being written, the assumptions are maintained separately. The gap is not denied - V-03 still refuses a role invalid for the project type, and V-23 still reports a role with no factor for a period the project spans, which is the same finding at the point where it can be acted on. The id is not reused."],
     [f"{MARK_NEW}V-29", "A role that carries a factor, that nobody holds on the project, and that nothing covers for.", "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct."],
     [f"{MARK_NEW}V-31", "A project or assignment set to MANUAL has months it covers that carry no MonthlyEstimate figure. Named, with the months listed.", "Error - those months are counted as 0.00, and a figure silently dropping to zero is the one outcome this feature must never produce quietly. Not a refusal: it is raised from the CALCULATION, like V-23, because it is something that happened to a number rather than a fact about a sheet, and a finding that exists only after the arithmetic cannot refuse the edit that led to it. Switching to manual copies every month across, so a month with no figure is one that has since been removed or a month the thing has grown into - the application offers to fill them from the calculation."],
+    [f"{MARK_NEW}V-35", "Person.capacity_fte outside 0.00 to 1.00, in either direction.", "Error - and it REFUSES, which almost nothing else in this application does. capacity_fte is how much of ONE PERSON there is: 1.00 is full-time, 0.50 is half a week, 0.00 is somebody on the books who is not available at all and is therefore allowed. Every other figure here is a judgement somebody is entitled to make - a period weight, a role factor, a stated month - and the rules about those report rather than refuse, because which of two deliberate numbers is wrong is not the application's business. This is not a judgement: there is no such thing as one and a half of a person, the number is in the wrong unit, and the usual cause is hours typed into an FTE column - which the message says, with the arithmetic. Somebody doing the work of two people is TWO ASSIGNMENTS, or a person weight above 1.00 on one of them. A workbook that already breaks it still OPENS: the save and edit checks compare the count of blocking findings before and after, so a rule broken by an incoming file is reported without locking anybody out of their own plan. V-22 stands down on the same row - reporting that 1.50 is also not below the under-allocation floor would be true and useless."],
     [f"{MARK_NEW}V-34", "A project whose month is not what its own standard says it needs - standard FTE x period weight x the part of the month it runs - in either direction. Raised from the CALCULATION, one finding per project, naming the months and the worst of them.", "Warning - it reports and never refuses. refuses() acts only on errors, so this reaches the findings report, the load banner, the archived change log and the results export without gating a save or asking a question. Departing from the standard is the POINT of a manual figure (REQ-CAL-18): a manager part way through a trial knows better than the assumptions, and the application has no business calling that wrong. What it does have business doing is saying so, because the departure is otherwise completely silent - the charts just draw a different project. An all-automatic plan raises nothing at all, which is what keeps the rule worth reading."],
         [f"{MARK_NEW}V-33", "A manual ASSIGNMENT figure that the project's own manual figure overrode. REQ-CAL-18 makes the project figure the mother figure - it is the whole month, and the people on it are scaled so they still add up to it - so somebody can type 2.00 against their own name and be given 1.73, because their figure and a colleague's together had to come to the project's month. That is the specified behaviour and it is what keeps the two utilisation charts agreeing; what was missing is that the application did it SILENTLY, so the sheet said one thing and the chart another with nothing connecting them. Now: a SOFT STOP at the moment the figure is edited, naming both numbers and offering to keep it or put it back; the cell marked; the Monthly estimation panel carrying a table of stated against given; and this finding, which reaches the findings report and the archived change log. WARNING, not error, and it never refuses: both numbers were typed deliberately and which of them is wrong is not the application's judgement.", "Warning", "R-39", "4"],
 [f"{MARK_NEW}V-32", "A project set to MANUAL has a figure for a month in which nobody is assigned to it.", "Error - the figure is NOT applied. A project month is shared out among the people on it, so there is nobody to give this to; applying it anyway would give the project a total that none of its people account for, which is exactly the disagreement REQ-CAL-18 scales the people to avoid. Assign somebody to those months, or remove the figure."],

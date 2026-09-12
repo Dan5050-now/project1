@@ -490,8 +490,15 @@ def main(path):
     _floor = float(CFG["under_allocation_fte"])
     for sid, per in PSN.items():
         cap = per.get("capacity_fte")
-        if cap is not None and float(cap) < _floor:
-            warnings.append(f"V-22 {sid}: capacity {float(cap):.2f} FTE is below the "
+        if cap is None:
+            continue
+        cap = float(cap)
+        # V-35: how much of ONE PERSON there is. 0.00 to 1.00, and an ERROR outside it.
+        if cap < 0 or cap > 1:
+            errors.append(f"V-35 {sid}: capacity {cap:.2f} FTE is outside 0.00 to 1.00 - "
+                          f"capacity_fte is how much of one person there is")
+        elif cap < _floor:
+            warnings.append(f"V-22 {sid}: capacity {cap:.2f} FTE is below the "
                             f"under-allocation floor of {_floor:.2f}, so this person can never "
                             f"clear it however fully they are booked")
 
