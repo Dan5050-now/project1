@@ -139,18 +139,41 @@ function thumbSize(full, view, track){
 function paintCue(box){
   const w = box.parentElement;
   if (!w || !w.classList.contains("cue")) return;
+
+  /* THE TWO BARS DECIDE EACH OTHER, so the flags are settled before anything is drawn.
+     A visible bar costs the region 15px of its own space - .cue.hbar and .cue.vbar pad
+     the scroller to make room - so turning the VERTICAL bar on can be the very thing
+     that pushes the content past the right edge. Measured once, before either was on,
+     that region reads as fitting, and you get the failure REQ-DSH-13 exists to prevent:
+     a table that scrolls sideways with nothing on screen to say so.
+
+     Found by testing rather than by reading, on an eleven-column table that fitted its
+     panel by TWO PIXELS until its own vertical bar appeared - a gap narrow enough that
+     no layout before this one had landed in it.
+
+     It settles in at most two changes and cannot oscillate: the padding is fixed, and
+     adding it can only create overflow, never remove it, so a bar that has come on
+     never goes off again. The loop stops as soon as a pass changes nothing. */
+  let hOn = false, vOn = false;
+  for (let pass = 0; pass < 3; pass++){
+    // A region that is hidden, or not laid out yet, measures zero on both axes - which
+    // is not the same statement as "everything fits", so no bar is drawn either way.
+    const live = box.clientWidth > 0 && box.clientHeight > 0;
+    hOn = live && box.scrollWidth - box.clientWidth > 1;
+    vOn = live && box.scrollHeight - box.clientHeight > 1;
+    const settled = w.classList.contains("hbar") === hOn
+                 && w.classList.contains("vbar") === vOn;
+    w.classList.toggle("hbar", hOn);
+    w.classList.toggle("vbar", vOn);
+    if (settled) break;           // reading clientWidth above flushes the last toggle
+  }
+
   const x = box.scrollWidth - box.clientWidth, y = box.scrollHeight - box.clientHeight;
   w.classList.toggle("l", box.scrollLeft > 1);
   w.classList.toggle("r", x - box.scrollLeft > 1);
   w.classList.toggle("u", box.scrollTop > 1);
   w.classList.toggle("d", y - box.scrollTop > 1);
 
-  // A region that is hidden, or not laid out yet, measures zero on both axes - which
-  // is not the same statement as "everything fits", so no bar is drawn either way.
-  const live = box.clientWidth > 0 && box.clientHeight > 0;
-  const hOn = live && x > 1, vOn = live && y > 1;
-  w.classList.toggle("hbar", hOn);
-  w.classList.toggle("vbar", vOn);
   for (const bar of w.children){
     if (!bar.classList || !bar.classList.contains("sbar")) continue;
     const horiz = bar.classList.contains("h");

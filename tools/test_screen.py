@@ -1,4 +1,4 @@
-"""Drive app/PRAP.html and check the four screen changes the request named.
+"""Drive app/PRAP.html and check the five screen changes the request named.
 
   1. LONG HORIZONS. The two Utilisation charts - one project, one person - used to be a
      fixed 1080 wide whatever the span, so five years put sixty month labels into 790px
@@ -15,6 +15,9 @@
        2a. the three panels are in ONE column
        2b. in the order they are worked in: Assignments, then overrides, then months
        2c. and each is wider than it was beside a sibling
+     (The drawn scroll bars this layout change exposed are checked where they were
+      already owned and where the condition naturally arises - test_ui section 3,
+      against the 62-project fixture. See paintCue for what went wrong.)
 
   3. WHICH ASSIGNMENT. Monthly estimation is a child of the selected assignment and said
      so nowhere: eight columns of months with no statement of what they belong to.
