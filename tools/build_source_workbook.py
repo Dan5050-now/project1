@@ -916,14 +916,13 @@ def manual_examples(projects, A, periods, pws, roles):
             # the middle, tailing off - stated to two places, as figures are.
             frac = i / max(1, n - 1)
             fte = 1.20 + 2.30 * (1 - abs(frac - 0.55) / 0.55) ** 1.4
-            rows.append(["project", manual_proj, iso(k), round(fte, 2), None,
+            rows.append(["project", manual_proj, iso(k), round(fte, 2),
                          "Manager's own estimate - the assumptions understate this study"
                          if i == 0 else None])
     if manual_asg:
         lo, hi = asg_span
         for i, k in enumerate(range(lo, hi + 1)):
             rows.append(["assignment", manual_asg, iso(k), round(0.35 + 0.05 * (i % 4), 2),
-                         None,
                          "Agreed with the study lead" if i == 0 else None])
     return rows, manual_proj, manual_asg
 
@@ -1031,6 +1030,21 @@ def write_sheet(wb, name, rows, example=None, list_ranges=None):
             c.fill = EG_FILL
             c.border = BOX
         start += 1
+
+    # EVERY ROW IS POSITIONAL, so a row longer than the header is a silent misalignment:
+    # the extra value lands in a column with no heading, the application reads by header
+    # and skips it, and the value is simply gone. That is exactly what happened when
+    # edited_at was retired from MonthlyEstimate - the builders still emitted six values
+    # against five columns, so note_1 came out empty and every note sat one column to its
+    # right, headerless and unread. Nothing failed; the dummy just quietly lost its notes.
+    # Checked here rather than trusted, because the cost is one comparison and the
+    # failure is invisible in the file.
+    for n, row in enumerate(list(rows) + ([example] if example is not None else []), 1):
+        if len(row) != len(cols):
+            raise SystemExit(
+                f"{name}: row {n} has {len(row)} value(s) for {len(cols)} column(s) "
+                f"({', '.join(c for c, _, _ in cols)}). A positional row that does not "
+                f"match the header puts values under the wrong column, or under none.")
 
     for r, row in enumerate(rows, start=start):
         for i, v in enumerate(row, start=1):
@@ -1394,7 +1408,7 @@ def build(kind):
                            date(2025, 10, 1), date(2027, 6, 30), 0.45, "automatic",
                            "example row - delete before use", None, None],
             "PersonPeriodWeight": ["ASG-001", date(2026, 7, 1), date(2026, 9, 30), 0.20, "Part-time - parental leave"],
-            "MonthlyEstimate": ["project", "PRJ-001", "2026-06", 3.50, None,
+            "MonthlyEstimate": ["project", "PRJ-001", "2026-06", 3.50,
                                 "example row - delete before use"],
             "Lists": None,
             "Config": None,

@@ -35,22 +35,22 @@
    "what": "source_data_template",
    "path": "templates/PRAP_SourceData_Template_v1.16.xlsx",
    "exists": true,
-   "bytes": 77121,
-   "sha256": "bfb76e1836cfc88730f092fca78818bb5d0b90b23d711cbc3455f6b4c1edac7e"
+   "bytes": 77116,
+   "sha256": "80be8636d0c94f767fe02d027ed2f1afa8f623b999c02390339c9287a0e869fb"
   },
   {
    "what": "worked_example_large",
    "path": "templates/PRAP_SourceData_Dummy_v1.18.xlsx",
    "exists": true,
-   "bytes": 133707,
-   "sha256": "3bf77ff80416b0711a01121e406516d1cbca8ff9a0f0564bab16e2248429ec83"
+   "bytes": 133467,
+   "sha256": "732d98bf38d4ca0831b14206b48f235a953179dacf51141a121f610a98fe8432"
   },
   {
    "what": "worked_example_small",
    "path": "templates/PRAP_SourceData_Dummy_10x10_v1.10.xlsx",
    "exists": true,
-   "bytes": 105164,
-   "sha256": "34b2738311fb79040bba7638bc8cd23d8984637a156ddfdcf8ab35e682b2a392"
+   "bytes": 104945,
+   "sha256": "9d67f82af14f315bb4e4f198d62c77a31e5f9de0bb7cb2f6802d2dbbc009fe57"
   },
   {
    "what": "agent_guide",
@@ -84,8 +84,8 @@
    "what": "agent_guide_workbook",
    "path": "docs/PRAP_AI_Agent_Guide_v1.0.xlsx",
    "exists": true,
-   "bytes": 34045,
-   "sha256": "005ed3fa3ef22a26b98264b216f224881b42cefce3a9b8bed4be0a4fcb5b2685"
+   "bytes": 34046,
+   "sha256": "cb01a9eac7c10ebca71977b35c75fd01785808ad236b7b9fb7a8a82dc4ecfc63"
   }
  ]
 }
