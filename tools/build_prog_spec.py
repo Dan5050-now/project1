@@ -212,12 +212,15 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "second key where they stand for two series at once, and marks belonging to the "
          "MONTH - thresholds, baselines, the V-34 outline - carry none and never fade. "
          "Sheet 03 records COLUMN_LABEL beside COLUMN_HELP: a plain name for every "
-         "column, shown above the column's own name in each heading. Nothing is renamed, "
-         "the schema stays at 11, validation messages still name the column, and the "
-         "cell still writes back through the identifier - the label is a second line, "
-         "not a substitution. Sheet 07 records the one mechanical consequence: a test "
-         "reading a column name off a heading must read the identifier line, not the "
-         "heading's text. Written against plan v2.53.", "Issued"],
+         "column, and it is now the WHOLE of what a heading prints. The column's own "
+         "name went on a second line for one release and was taken off at review: the "
+         "need for it is occasional - editing the workbook, chasing a finding - and a "
+         "heading is read on every glance, so it belongs in the pop-up, which every "
+         "heading now carries, and on the element as data-cid. Nothing is renamed, the "
+         "schema stays at 11, validation messages still name the column, and the cell "
+         "still writes back through the identifier. Sheet 07 records the one mechanical "
+         "consequence: a test reading a column name off a heading reads data-cid, not "
+         "the heading's text. Written against plan v2.53.", "Issued"],
         ["1.26", "2026-09-12", "Claude Code", "Dan",
          "R-44. Sheet 04 gains V-35: capacity_fte is bounded 0.00 to 1.00 and, alone "
          "among the rules added this year, it REFUSES. The distinction is recorded "
@@ -781,15 +784,25 @@ r = section(ws, r, "What a column is called on screen   [COLUMN_LABEL, R-45]")
 r = lines(ws, r, [
     "Every column carries TWO names in the parse module, in one place so that adding one and forgetting",
     "the other takes effort: COLUMN_HELP, a sentence saying what the column is for, and COLUMN_LABEL, a",
-    "plain name for it. Each table heading shows the plain name above the column's own name, and the same",
-    "two-part head opens the heading's pop-up, every cell's, and the filter buttons'.",
+    "plain name for it. A table heading prints the PLAIN NAME AND NOTHING ELSE; the column's own name is",
+    "in the heading's pop-up and on the element as data-cid. The same two-part head - plain name, then",
+    "column name in the quieter type - opens the heading's pop-up, every cell's, and the filter buttons'.",
     "",
-    "THIS IS NOT A RENAME. The workbook's column names stay on screen, stay in every validation message,",
-    "and stay as the key the editing path writes back through (data-col on the cell is the identifier,",
-    "never the label). The schema is unchanged at 11 and no file is affected. What changes is that a",
-    "reader who has never seen this document can now read the table: work_scope_type, outsourcing_scope_det,",
-    "absorbed_by and ref_id were legible to whoever wrote the schema and to nobody else, and their meaning",
-    "lived in a pop-up - which is to say it was there only for a reader who already knew to hover.",
+    "WHERE THE IDENTIFIER BELONGS WAS SETTLED TWICE, and the reasoning is recorded because the first",
+    "answer was defensible and still wrong. It was printed on a second line under the label, on the",
+    "argument that the screen and the file are the same thing, so a heading must be findable in the",
+    "spreadsheet, quotable in a mail and lookup-able here. Right about the need, wrong about the place:",
+    "looking a column name up is OCCASIONAL - editing the workbook, chasing a finding - and a heading is",
+    "read on EVERY glance by everyone, so printing it charged the common case for the rare one while the",
+    "pop-up already answered it in full.",
+    "",
+    "THIS IS NOT A RENAME. The workbook's column names stay in every validation message, stay reachable",
+    "from every heading, and stay as the key the editing path writes back through (data-col on the cell is",
+    "the identifier, never the label). The schema is unchanged at 11 and no file is affected. What changes",
+    "is that a reader who has never seen this document can now read the table: work_scope_type,",
+    "outsourcing_scope_det, absorbed_by and ref_id were legible to whoever wrote the schema and to nobody",
+    "else, and their meaning lived in a pop-up - which is to say it was there only for a reader who",
+    "already knew to hover.",
     "",
     "COLUMN_LABEL must cover every column in SHEET_HEADERS, plus the read-only lookup columns the",
     "application adds beside them (standard_fte, automatic_fte, difference, period, sharers). A missing",
@@ -1427,18 +1440,24 @@ t5 = [
      "key and never fade. Every entry is a button: focusable, driven by Enter and Space, and it states "
      "whether it is pressed (D-04).",
      "REQ-DSH-16, D-04"],
-    ["Headings carry two lines",
-     "Every column heading shows a PLAIN NAME above the column's own name. The workbook's column names "
-     "must stay on screen - the screen and the file are the same thing, so a heading is something to "
-     "find in the spreadsheet, quote in a mail and look up in this document - and they are not, by "
-     "themselves, labels: work_scope_type, outsourcing_scope_det, absorbed_by and ref_id are legible to "
-     "whoever wrote the schema and opaque to whoever fills the plan in. The meaning existed, in the "
-     "heading's pop-up, which is to say it existed only for a reader who knew to hover. NOTHING IS "
-     "RENAMED: the schema is unchanged, validation messages still name the column, and the cell still "
-     "writes back through the identifier - the plain name is a second line, never a substitution. The "
-     "same two-part head is used on the heading's pop-up, on every cell's and on the filter buttons', "
-     "so it is learned once. COLUMN_LABEL sits beside COLUMN_HELP in the parse module, so a column gets "
-     "a sentence and a name in the same place.",
+    ["A heading is the plain name",
+     "Every column heading shows a PLAIN NAME and nothing else. work_scope_type, outsourcing_scope_det, "
+     "absorbed_by and ref_id are legible to whoever wrote the schema and opaque to whoever fills the "
+     "plan in, and their meaning existed only in the heading's pop-up - which is to say only for a "
+     "reader who knew to hover. THE COLUMN'S OWN NAME IS IN THE POP-UP AND ON THE ELEMENT, NOT ON THE "
+     "PAGE, and the reasoning is worth recording because it was settled twice. The first attempt put it "
+     "on a second line under the label, on the argument that the screen and the file are the same "
+     "thing, so a heading must be findable in the spreadsheet. That argument is right about the need "
+     "and wrong about the place: looking up a column name is OCCASIONAL - editing the workbook, chasing "
+     "a finding - and a heading is read on EVERY glance, so printing it charged the common case for the "
+     "rare one when the pop-up already answered it. Every heading therefore carries a pop-up naming "
+     "both, and the identifier as data-cid for whatever must read it. A badge that names another column "
+     "('sets ...') uses that column's plain name too, since a heading row that has stopped printing "
+     "identifiers must not keep one in a badge. NOTHING IS RENAMED: the schema is unchanged, validation "
+     "messages still name the column, and the cell still writes back through the identifier. The same "
+     "two-part head is used on the heading's pop-up, on every cell's and on the filter buttons', so it "
+     "is learned once. COLUMN_LABEL sits beside COLUMN_HELP in the parse module, so a column gets a "
+     "sentence and a name in the same place.",
      "REQ-DSH-16, REQ-IMP-07"],
 ]
 r = table(ws, r, ["Rule", "Behaviour", "REQ-ID"], t5, [26, 88, 20], wrap_cols=(2,))

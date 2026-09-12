@@ -1,16 +1,21 @@
 """Drive app/PRAP.html and check every table heading says what the column MEANS.
 
-The tables have always shown the workbook's own column names, which is right - the
-screen and the file are the same thing - and, on its own, not enough: `work_scope_type`,
-`outsourcing_scope_det`, `absorbed_by` and `ref_id` read perfectly well to whoever wrote
-the schema and not at all to the person filling the plan in. The meaning existed, in the
-heading's pop-up, which is to say it was invisible to anyone who did not know to hover.
+The tables used to show the workbook's own column names: `work_scope_type`,
+`outsourcing_scope_det`, `absorbed_by`, `ref_id` - legible to whoever wrote the schema
+and to nobody else. The meaning existed, in the heading's pop-up, which is to say it
+existed only for a reader who knew to hover.
 
-Each heading now carries both lines.
+The heading now PRINTS the plain name and nothing else. The column's own name is in the
+pop-up and on the element as data-cid: it is wanted occasionally - editing the workbook,
+chasing a finding - and the heading is read on every glance, so charging the common case
+for the rare one was the wrong way round. Nothing is renamed; the file, the messages and
+the cell's write-back all still use the identifier.
 
   1. every heading on every editable table leads with a plain name
-  2. and still carries the column's own name under it, so the screen can be matched to
-     the spreadsheet, quoted in a mail, or looked up in the specification
+  2. and does NOT print the workbook's column name on the page. That name is wanted
+     occasionally - editing the workbook, chasing a finding - while the heading is read
+     on every glance, so it lives in the heading's pop-up and on the element as
+     data-cid, where it can be found when it is actually wanted
   3. the two are DIFFERENT - a label that is just the identifier again is an entry
      somebody forgot to write
   4. the plain name is real English: no underscores, not a bare lower-case token
@@ -49,11 +54,15 @@ HEADS = """() => {
   for (const t of document.querySelectorAll('table.data-t[data-sheet]'))
     for (const th of t.querySelectorAll('thead th')){
       if (th.classList.contains('ins')) continue;
-      const lab = th.querySelector('.lab'), cid = th.querySelector('.cid');
+      const lab = th.querySelector('.lab'), cid = th.dataset.cid || null;
+      // What a reader actually SEES, with the filter button and the lookup badge taken
+      // off - those are controls, not part of the column's name.
+      const c = th.cloneNode(true);
+      for (const b of c.querySelectorAll('.fbtn, .drv')) b.remove();
       out.push({sheet: t.dataset.sheet,
                 lab: lab ? lab.textContent.trim() : null,
-                cid: cid ? cid.textContent.trim() : null,
-                labFirst: !!(lab && cid) && !!(lab.compareDocumentPosition(cid) & 4),
+                cid,
+                shown: c.textContent.trim(),
                 tip: th.getAttribute('data-tip') || '',
                 fbtn: th.querySelectorAll('.fbtn').length});
     }
@@ -82,12 +91,33 @@ with sync_playwright() as pw:
     check(heads and not missing, "1. every heading leads with a plain name",
           f"{len(heads)} headings over {len({h['sheet'] for h in heads})} sheets"
           if not missing else "no label: " + ", ".join(missing[:6]))
+    # THE COLUMN'S OWN NAME IS NOT PRINTED. It is wanted occasionally - editing the
+    # workbook, chasing a finding - and the heading is read on every glance, so it lives
+    # in the pop-up and on the element, not on the page.
+    #
+    # Asked as "the visible text is EXACTLY the label" rather than "the identifier does
+    # not appear in it". The second is what a first draft of this check asked, and it is
+    # wrong: 'Period weight' contains 'weight', which is the label using an English word,
+    # not the identifier leaking through. An exact match has no such ambiguity.
+    printed = sorted({f"{h['sheet']}.{h['cid']}: shown {h['shown']!r}" for h in heads
+                      if h["shown"] != h["lab"]})
+    check(heads and not printed,
+          "2. and shows THAT AND NOTHING ELSE — no column name printed beside it",
+          "; ".join(printed[:4]))
+    # Belt and braces on the identifiers that cannot appear by accident.
+    leaked = sorted({f"{h['sheet']}.{h['cid']}" for h in heads
+                     if h["cid"] and "_" in h["cid"] and h["cid"] in h["shown"]})
+    check(not leaked, "   including the ones with an underscore, which are unmistakable",
+          ", ".join(leaked[:6]))
     nocid = [h for h in heads if not h["cid"]]
     check(heads and not nocid,
-          "2. and carries the column's own name under it",
+          "   though every heading still carries it as data-cid, for whoever needs it",
           "" if not nocid else f"{len(nocid)} heading(s) lost the identifier")
-    check(all(h["labFirst"] for h in heads if h["lab"] and h["cid"]),
-          "   with the plain name first — it is the one a reader reads")
+    notip = sorted({f"{h['sheet']}.{h['cid']}" for h in heads
+                    if h["cid"] and h["cid"] not in h["tip"]})
+    check(heads and not notip,
+          "   and names it in the pop-up, which is where it can now be found",
+          ", ".join(notip[:6]))
 
     same = sorted({f"{h['sheet']}.{h['cid']}" for h in heads
                    if h["lab"] and h["cid"] and h["lab"] == h["cid"]})
@@ -114,7 +144,7 @@ with sync_playwright() as pw:
     tips = pg.evaluate("""() => {
       const t = document.querySelector('#t-pers table.data-t[data-sheet="Person"]');
       const th = [...t.querySelectorAll('thead th')]
-        .find(x => (x.querySelector('.cid')||{}).textContent === 'capacity_fte');
+        .find(x => x.dataset.cid === 'capacity_fte');
       const i = [...t.querySelectorAll('thead th')].indexOf(th);
       const td = t.querySelector('tbody tr').querySelectorAll('td')[i];
       const fb = th.querySelector('.fbtn');

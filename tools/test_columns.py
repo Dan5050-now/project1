@@ -67,14 +67,13 @@ SWEEP = """() => {
     for (const th of t.querySelectorAll('thead th')){
       if (th.classList.contains('ins')) continue;         // the row-actions column
       if (th.querySelector('.drv')) continue;             // declared lookup or proxy
-      // The heading is two lines now - the plain name, then the column's own name in
-      // .cid. The identifier is what this suite is about, so read that.
-      const cid = th.querySelector('.cid');
-      const name = cid ? cid.textContent.trim() : (() => {
+      // The heading now PRINTS the plain name and carries the column's own name as
+      // data-cid. The identifier is what this suite is about, so read that.
+      const name = (th.dataset.cid || (() => {
         const c = th.cloneNode(true);
         for (const b of c.querySelectorAll('.fbtn')) b.remove();
         return c.textContent.trim();
-      })();
+      })()).trim();
       if (!known.includes(name)) out.push(sheet + '.' + name);
     }
   }

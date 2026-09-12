@@ -449,18 +449,28 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
                                  : `<b>Filter ${esc(c)}</b><br>Pick the values to keep. `
                                    + `Filters on different columns narrow together.`)}">`
             + `&#9662;</button>` : "";
-        /* TWO LINES: what the column IS, then what it is CALLED in the file. The plain
-           name leads because that is the one a reader needs and the one the old heading
-           did not give; the column name stays under it, in the monospace this
-           application uses for every other identifier, because the screen and the
-           workbook are the same thing and a heading you cannot find in the spreadsheet
-           is a heading you cannot act on. Neither replaces the other. */
-        const lab = COLUMN_LABEL[c];
-        return `<th${h || d ? ` class="hasinfo" data-tip="${att(`${colHead(c)}<br>${(h||"")}${d}`)}"` : ""}>`
-          + (lab ? `<span class="lab">${esc(lab)}</span>` : "")
-          + `<span class="cid">${esc(c)}</span>`
+        /* THE HEADING IS THE PLAIN NAME. The workbook's own column name is not printed
+           here - it is in the pop-up, which every heading now carries, and on the
+           element as data-cid.
+
+           It was shown on a second line for one release, on the reasoning that the
+           screen and the file are the same thing and a heading you cannot find in the
+           spreadsheet is one you cannot quote or look up. That reasoning was right about
+           the NEED and wrong about the PLACE: the need is occasional - you go looking for
+           a column name when you are editing the workbook or reading a finding - and the
+           heading is read on every glance by everyone. Paying for a rare need out of the
+           common one is the wrong trade, and the pop-up already answers it in full.
+
+           data-cid is not decoration. It is what a test reads to check a heading names a
+           real column of its sheet, and it keeps the identifier in the DOM for anything
+           else that needs it, now that the text no longer carries it. */
+        const lab = COLUMN_LABEL[c] || c;
+        return `<th class="hasinfo" data-cid="${att(c)}" `
+          + `data-tip="${att(`${colHead(c)}<br>${(h||"")}${d}`)}">`
+          + `<span class="lab">${esc(lab)}</span>`
           + `${derived[c] ? ' <span class="drv">lookup</span>'
-                          : px ? ' <span class="drv ent">sets ' + esc(px.into) + '</span>' : ""}${fb}</th>`;
+                          : px ? ' <span class="drv ent">sets '
+                                 + esc(COLUMN_LABEL[px.into] || px.into) + '</span>' : ""}${fb}</th>`;
       }).join("");
   const body = shown.map(r => {
     const sel = (selKey && r[selKey] === selVal) ? ' class="sel"' : "";

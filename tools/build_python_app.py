@@ -120,11 +120,18 @@ WHAT IS NEW IN 1.19
     Charts that are drawn a different way round - people rather than projects
     - are simply left alone rather than going blank.
 
-  * EVERY COLUMN HEADING NOW SAYS WHAT THE COLUMN MEANS, with the workbook's
-    own column name underneath it in small type. So 'outsourcing_scope_det'
-    now reads 'What is outsourced', with the column name still there so you
-    can find it in the spreadsheet. NOTHING HAS BEEN RENAMED - your files,
-    your columns and every message are unchanged.
+  * EVERY COLUMN HEADING NOW SAYS WHAT THE COLUMN MEANS, in plain words. So
+    'outsourcing_scope_det' now reads 'What is outsourced', 'person_weight'
+    reads 'Share of this person', and 'capacity_fte' reads 'Capacity in FTE'.
+
+    The workbook's own column name is no longer printed on the heading. Hover
+    the heading - or any cell in it - and the note that pops up names it, so
+    you can still match a column on screen to a column in the spreadsheet
+    whenever you need to.
+
+    NOTHING HAS BEEN RENAMED. Your files, your columns and every message are
+    exactly as they were; only what is printed at the top of the table has
+    changed.
 
 
 WHAT IS NEW IN 1.18

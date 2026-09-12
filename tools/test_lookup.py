@@ -134,9 +134,9 @@ def fixture():
 
 BOOK = fixture()
 
-# The column's own name, which is the second line of a two-line heading.
+# The column's own name. The heading prints the plain name and carries this as data-cid.
 HEADERS = """(t) => [...t.querySelectorAll('thead th')].map(
-             x => ((x.querySelector('.cid') || x).textContent || '').trim())"""
+             x => (x.dataset.cid || x.textContent || '').trim())"""
 ROWS = """(t) => [...t.querySelectorAll('tbody tr')].map(
            r => [...r.querySelectorAll('td')].slice(1).map(c => c.innerText.trim()))"""
 
@@ -145,8 +145,8 @@ def table_with(pg, pane, col):
     """The table in `pane` whose heading row mentions `col`."""
     return pg.evaluate_handle(
         """([pane, col]) => [...document.querySelectorAll(pane + ' table.data-t')]
-             .find(t => [...t.querySelectorAll('thead th .cid')]
-                          .some(x => x.textContent.trim() === col))""",
+             .find(t => [...t.querySelectorAll('thead th[data-cid]')]
+                          .some(x => x.dataset.cid === col))""",
         [pane, col])
 
 
@@ -199,8 +199,7 @@ with sync_playwright() as pw:
     print("\n4. it is a LOOKUP: not editable, and not a column of the sheet")
     check(pg.evaluate("""(t) => {
             const i = [...t.querySelectorAll('thead th')]
-                        .findIndex(x => ((x.querySelector('.cid')||{}).textContent || '')
-                                          .trim() === 'standard_fte');
+                        .findIndex(x => x.dataset.cid === 'standard_fte');
             return [...t.querySelectorAll('tbody tr')].every(r => {
               const td = r.querySelectorAll('td')[i];
               return td && !td.isContentEditable && !td.dataset.col
@@ -317,8 +316,8 @@ with sync_playwright() as pw:
         S.colf.MonthlyEstimate = {sharers: new Set(['1 (only holder)'])};
         renderKeepingTab();
         const t = [...document.querySelectorAll('#t-pers table.data-t')]
-          .find(t => [...t.querySelectorAll('thead th .cid')]
-                       .some(x => x.textContent.trim() === 'automatic_fte'));
+          .find(t => [...t.querySelectorAll('thead th[data-cid]')]
+                       .some(x => x.dataset.cid === 'automatic_fte'));
         const rows = [...t.querySelectorAll('tbody tr')].map(
           r => (r.querySelectorAll('td')[1] || {}).innerText.trim());
         delete S.colf.MonthlyEstimate; renderKeepingTab();
