@@ -167,6 +167,7 @@ with sync_playwright() as pw:
 
     # ---- 3. the drawn scroll bars -------------------------------------------
     print("\n3. every region that scrolls has a bar you can drag")
+    seen = 0
     for tab in ["Overall", "Source data (project)", "Source data (person)",
                 "General assumptions"]:
         pg.click(f"text={tab}")
@@ -184,9 +185,22 @@ with sync_playwright() as pw:
               else missing.push(box.className);
             }
             return {over, ok, missing};}""")
-        check(r["over"] > 0 and r["ok"] == r["over"],
-              f"{tab}: every sideways-scrolling region has a visible bar",
+        seen += r["over"]
+        # NO REGION MAY SCROLL SIDEWAYS WITHOUT A BAR. Asked per tab; whether a tab HAS
+        # such a region is not this check's business, and must not be, because it depends
+        # on how wide the widest table happens to be. Retiring one column from
+        # MonthlyEstimate took the person tab from 1 to 0 and failed this line, which was
+        # a test reporting on a column count rather than on REQ-DSH-13. The guard against
+        # passing vacuously belongs across the whole application, and is made once below.
+        check(r["ok"] == r["over"],
+              f"{tab}: no sideways-scrolling region is left without a bar",
               f"{r['ok']}/{r['over']}" + (f"; missing {r['missing']}" if r["missing"] else ""))
+
+    # AND THE CHECK ABOVE WAS NOT VACUOUS. Made once, across the application, rather than
+    # per tab: the four lines above are each satisfied by a tab with nothing to scroll,
+    # and four satisfied-by-emptiness lines would look exactly like four passes.
+    check(seen > 0, "and there really were regions to check",
+          f"{seen} sideways-scrolling region(s) across the four tabs")
 
     pg.click("text=Source data (project)")
     pg.wait_for_timeout(1300)
