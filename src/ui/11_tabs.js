@@ -368,13 +368,13 @@ function scratchPerson(draft){
   const aid = selectedAssignment(asg);
   const ppw = aid ? M.raw.PersonPeriodWeight.filter(w =>
     w.assignment_id === aid || (w.__new && !w.assignment_id)) : [];
-  return `<div class="two">
+  return `<div class="stack1">
       <div class="panel">
         <div class="phead"><h2>Assignments${who}</h2>
           <span class="scope k">${asg.length} row(s)</span></div>
         <p class="cap">One row per person + project + role. Type the project NAME and
           <code>project_id</code> follows. <strong>+ row</strong> allocates the next
-          <code>assignment_id</code>, and clicking a row selects it for the overrides beside.</p>
+          <code>assignment_id</code>, and clicking a row selects it for the overrides below.</p>
         ${dataTable("Assignment", asg,
           ["assignment_id","project_name","project_id","role_name","assign_start_date",
            "assign_end_date","person_weight","note_1","note_2","note_3"],
@@ -384,7 +384,7 @@ function scratchPerson(draft){
           <span class="scope k">${ppw.length} window(s)</span></div>
         <p class="cap">Only needed where someone's share of a project CHANGES for a stretch of
           months. The window <strong>replaces</strong> <code>person_weight</code> for the months
-          it covers — it does not multiply it — and belongs to the assignment selected beside.</p>
+          it covers — it does not multiply it — and belongs to the assignment selected above.</p>
         ${dataTable("PersonPeriodWeight", ppw,
           ["assignment_id","project_name","role_name","period_start","period_end",
            "weight_override","reason"], null, null,
@@ -396,7 +396,7 @@ function scratchPerson(draft){
              const a = assignmentById(r.assignment_id);
              return a ? (a.role_name ?? "") : "";
            }},
-          aid ? null : "Add an assignment beside first — an override belongs to one.")}</div>
+          aid ? null : "Add an assignment above first — an override belongs to one.")}</div>
     </div>`;
 }
 
@@ -476,13 +476,20 @@ function persDetail(sid){
         for the person's total. Dashed lines are the ceiling and floor — the same two figures for
         everyone, since both thresholds are absolute.</p>
       <div class="scrollx fit">${chartPersonStrip(sid)}</div></div>
-    <div class="two">
+    ${/* ONE COLUMN, NOT TWO. These three tables were a two-column grid with Assignments
+         on the left and the overrides and estimation stacked on the right, which gave
+         each of them half a screen. Every one of the three is WIDE - Assignments carries
+         eleven columns, Monthly estimation carries eight and one of those is a sentence
+         of arithmetic - so half a screen meant all three scrolled sideways all the time.
+         Full width and stacked reads them in the order they are worked in: pick the
+         assignment, then its overrides, then its months. */""}
+    <div class="stack1">
       <div class="panel">
         <div class="phead"><h2>Assignments — ${esc(pe.person_name)} (${esc(sid)})</h2>
           <span class="scope k">${asg.length} row(s)</span></div>
         <p class="cap">Fill in <code>project_name</code> — <code>project_id</code> is derived from it.
           Editing the identifier directly still works and the name follows instead.
-          <strong>Clicking a row selects it</strong>, which drives the overrides beside it.
+          <strong>Clicking a row selects it</strong>, which drives the two panels below it.
           <strong>+ row</strong> allocates the next <code>assignment_id</code>.</p>
         ${dataTable("Assignment", asg,
           ["assignment_id","project_name","project_id","role_name","assign_start_date",
@@ -492,43 +499,58 @@ function persDetail(sid){
     </div>`;
 }
 
-/** The overrides beside the Assignments table, in their own element.
+/** WHICH ASSIGNMENT THE PANEL BELOW IS ABOUT, in one line.
+ *
+ *  Two panels hang off the selected assignment - the weight overrides and the monthly
+ *  estimation - and both of them are headed by a person's name and a person's id, which
+ *  is the one thing that does NOT tell you which of that person's five assignments you
+ *  are looking at. The assignment_id alone would not either: ASG-203 is not a fact
+ *  anybody carries around. So the line names the project, the role, the window and the
+ *  weight, which together are what makes one assignment recognisable.
+ *
+ *  ONE FUNCTION FOR BOTH PANELS. They sit one under the other now, so two versions of
+ *  this line that had drifted would be visible side by side on the same screen.
+ *
+ *  THE WINDOW SHOWN IS THE ONE ACTUALLY USED. A blank assignment date means the
+ *  PROJECT's date (REQ-CAL-15), so the dates are filled in from the project where the
+ *  row leaves them empty - and marked, because "2027-01-01 ~ 2029-06-30" typed onto the
+ *  row and the same pair inherited from the project are different facts, and somebody
+ *  deciding whether to edit the row needs to know which they are looking at. */
+function assignmentLine(aid){
+  const M = S.model;
+  const a = aid ? (M.raw.Assignment || []).find(x => x.assignment_id === aid) : null;
+  if (!a)
+    return `<p class="asgline muted">No assignment selected — click a row in Assignments.</p>`;
+  const pr = M.projects[a.project_id] || {};
+  const s = a.assign_start_date || pr.start_date;
+  const e = a.assign_end_date || pr.end_date;
+  const whole = !a.assign_start_date && !a.assign_end_date;
+  const w = a.person_weight;
+  return `<p class="asgline"><strong>Assignment (${esc(a.assignment_id ?? "—")})</strong>: `
+    + `${esc(pr.project_name ?? a.project_id ?? "—")} / ${esc(a.role_name ?? "—")} / `
+    + `${ymd(s) || "—"} ~ ${ymd(e) || "—"}`
+    + (whole ? `<span class="tr"> · the whole project</span>` : "")
+    + ` / weight ${w === null || w === undefined ? "—" : Number(w).toFixed(2)}</p>`;
+}
+
+/** The overrides UNDER the Assignments table, in their own element.
  *
  *  Separate so that selecting an assignment can redraw THIS and nothing else. Redrawing
  *  the whole person panel would rebuild the Assignments table too - and clicking a cell
  *  both selects the row and puts the caret in it, so the cell would be replaced under the
  *  caret and the edit could never be typed. The project and person tables avoid this by
- *  living outside the panel they drive; this table drives a panel beside it, so the
+ *  living outside the panel they drive; this table drives the panels below it, so the
  *  boundary has to be drawn here instead. */
 function overridesPanel(sid){
   const M = S.model, pe = M.people[sid];
   const asg = childrenOf(M.raw.Assignment, "person_id", sid);
   const aid = selectedAssignment(asg);
-  const sel = asg.find(a => a.assignment_id === aid) || null;
   const ppw = M.raw.PersonPeriodWeight.filter(w =>
     (aid && w.assignment_id === aid) || (w.__new && !w.assignment_id));
-  // A blank assignment date means the PROJECT's date (REQ-CAL-15), so the window shown
-  // is the one actually used. Marked, because "2027-01-01 ~ 2029-06-30" typed into the
-  // row and the same pair inherited from the project are different facts, and somebody
-  // deciding whether to edit the row needs to know which they are looking at.
-  const span = sel ? (() => {
-    const pr = M.projects[sel.project_id] || {};
-    const s = sel.assign_start_date || pr.start_date;
-    const e = sel.assign_end_date || pr.end_date;
-    const whole = !sel.assign_start_date && !sel.assign_end_date;
-    return `${ymd(s) || "—"} ~ ${ymd(e) || "—"}`
-      + (whole ? " · the whole project" : "");
-  })() : "";
   return `<div class="panel">
       <div class="phead"><h2>Weight overrides — ${esc(pe.person_name)} (${esc(sid)})</h2>
         <span class="scope k">${ppw.length} window(s)</span></div>
-      ${sel
-        ? `<p class="asgline"><strong>Assignment (${esc(sel.assignment_id ?? "—")})</strong>: `
-          + `${esc((M.projects[sel.project_id] || {}).project_name ?? sel.project_id ?? "—")} / `
-          + `${esc(sel.role_name ?? "—")} / ${span} / weight `
-          + `${sel.person_weight === null || sel.person_weight === undefined
-               ? "—" : Number(sel.person_weight).toFixed(2)}</p>`
-        : `<p class="asgline muted">No assignment selected — click a row in Assignments.</p>`}
+      ${assignmentLine(aid)}
       <p class="cap">Replaces <code>person_weight</code> for the window it covers, for
         <strong>this assignment only</strong>. One assignment may carry several
         non-overlapping windows.</p>

@@ -452,6 +452,10 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var
    fills the page with an empty white rectangle that reads as missing content. */
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
 .two>*{min-width:0}
+/* One full-width column, for panels too wide to share a screen. Same gap as .two so a
+   page mixing the two keeps one rhythm. */
+.stack1{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+.stack1>*{min-width:0}
 @media(max-width:900px){.two{grid-template-columns:1fr}}
 
 /* --- tables --------------------------------------------------------------
@@ -496,7 +500,19 @@ td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .data-t tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--ink) 2%,transparent)}
 .data-t tbody tr:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
 .data-t thead th{background:var(--surface);color:var(--muted);font-weight:590;
- font-size:var(--t-xs);letter-spacing:.02em;border-bottom:1px solid var(--hairline)}
+ font-size:var(--t-xs);letter-spacing:.02em;border-bottom:1px solid var(--hairline);
+ vertical-align:bottom}
+/* TWO LINES IN EVERY HEADING: what the column is, then what it is called in the file.
+   The plain name takes the page's own type at full strength because it is what a reader
+   reads; the column name sits under it in the monospace this application uses for every
+   other identifier, quieter but never hidden - the screen and the workbook are the same
+   thing, and a heading you cannot find in the spreadsheet is a heading you cannot act
+   on. The lookup badge and the filter button stay on the identifier's line, where they
+   were, so nothing that was clickable has moved. */
+.data-t thead th .lab{display:block;color:var(--ink2);font-weight:620;
+ font-size:var(--t-sm);letter-spacing:0;text-transform:none}
+.data-t thead th .cid{font-family:var(--f-mono);font-size:var(--t-xs);
+ color:var(--muted);font-weight:480;letter-spacing:0}
 .data-t tr.sel td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .data-t tr{cursor:pointer}
 .data-t td[contenteditable="true"]:focus{outline:2px solid var(--accent);outline-offset:-2px;
@@ -577,6 +593,29 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 .legend .sw.tri.key{border-top-color:var(--crit);border-left-width:7px;
  border-right-width:7px;border-top-width:11px}
 .legend .hint{color:var(--muted)}
+
+/* --- picking one series out of a chart ------------------------------------
+   Click a legend entry and everything that is not that series fades back; click it
+   again, press Escape, or pick another, and the chart returns. The pick is set on the
+   TAB, not on one chart, so the same project fades in on its trend line, its band in the
+   stack and its row on the timeline at once - the question is "where is this project on
+   this page", not "where is it in this one drawing".
+
+   The fade is opacity, not colour: a dimmed band keeps its shape, its position in the
+   stack and its tooltip, so the chart still reads as a whole and the one series is
+   simply the one you can see. Marks without a `data-s` - the threshold lines, the month
+   axis, the outline that marks a month off its standard - are properties of the MONTH
+   rather than of any series, so they are left at full strength. */
+.picked [data-s]{transition:opacity .12s ease}
+.picked [data-s]:not(.hi){opacity:.11}
+.picked .ln.hi{stroke-width:3.4}
+.picked .band.hi{stroke:var(--ink);stroke-width:1.4}
+.legend li[data-s]{cursor:pointer;border-radius:var(--r-sm);padding:1px 6px;margin:-1px -6px;
+ user-select:none}
+.legend li[data-s]:hover{background:var(--fill)}
+.legend li[data-s]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.picked-leg li[data-s]:not(.on){opacity:.42}
+.legend li[data-s].on{background:var(--fill2);color:var(--ink);font-weight:640}
 
 /* --- pop-ups: floating material ------------------------------------------ */
 .tip{position:fixed;z-index:50;max-width:340px;pointer-events:none;

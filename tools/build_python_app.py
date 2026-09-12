@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.18"
+VERSION = "1.19"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -87,6 +87,45 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.19
+
+  Five things about reading the screen. No figure has changed anywhere.
+
+  * LONG PLANS NO LONGER SQUASH THE MONTH LABELS. The Utilisation graph on
+    both Source data tabs used to be one fixed width however many months you
+    were looking at, so past about two years the month names ran into one
+    another and the graph stopped being readable - on exactly the long plans
+    that most need reading. Every month now gets room of its own and the
+    panel SCROLLS SIDEWAYS when there are more than fit. Your usual two-year
+    view looks exactly as it always did.
+
+  * ASSIGNMENTS, WEIGHT OVERRIDES AND MONTHLY ESTIMATION NOW HAVE THE WHOLE
+    WIDTH EACH. They used to sit two abreast with half a screen apiece, and
+    all three are wide, so all three scrolled sideways all the time. They are
+    stacked now, in the order you work in them: pick the assignment, then its
+    override windows, then its months.
+
+  * MONTHLY ESTIMATION SAYS WHICH ASSIGNMENT IT IS SHOWING, on a line under
+    the title - the id, project, role, dates and weight, for example:
+
+        Assignment (ASG-203): NEU-143 Phase 3 / Project oversight /
+        2027-08-01 ~ 2030-05-30 / weight 0.16
+
+  * CLICK A NAME IN A GRAPH'S KEY AND THAT ONE LIGHTS UP. Everything else
+    fades back so you can follow a single project or person through the
+    chart. Click it again, click another, or press Escape to bring the rest
+    back. One click works across the whole tab: pick a project in the trend
+    graph and it is picked out in the stacked chart and on the timeline too.
+    Charts that are drawn a different way round - people rather than projects
+    - are simply left alone rather than going blank.
+
+  * EVERY COLUMN HEADING NOW SAYS WHAT THE COLUMN MEANS, with the workbook's
+    own column name underneath it in small type. So 'outsourcing_scope_det'
+    now reads 'What is outsourced', with the column name still there so you
+    can find it in the spreadsheet. NOTHING HAS BEEN RENAMED - your files,
+    your columns and every message are unchanged.
+
 
 WHAT IS NEW IN 1.18
 

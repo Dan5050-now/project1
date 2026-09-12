@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.52"
+DOC_VERSION = "2.53"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,7 +397,65 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
-    [f"{MARK_NEW}2.52", "2026-09-12", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.53", "2026-09-12", "Claude Code", "Pending",
+     "R-45, REQ-DSH-16: FIVE THINGS ABOUT READING THE SCREEN, all reported from the "
+     "field, none of them a change to a figure. "
+     "ONE. THE TWO UTILISATION CHARTS GROW WITH THE HORIZON. They were a fixed 1,080 "
+     "wide whatever the span, which is right for the two years almost everybody opens on "
+     "and wrong for the long plans that most need reading: five years is sixty columns "
+     "in 790 points of plot, thirteen points each, and a three-letter month does not fit "
+     "in thirteen points - so the axis ran its labels into one another exactly where the "
+     "chart stopped being optional. Each month is now guaranteed 32 points and the panel "
+     "scrolls sideways past the point where they all fit, which is what every other "
+     "chart on the page already did. 32 rather than a rounder number so that at 24 "
+     "months the chart is EXACTLY the width it has always been and this change is "
+     "invisible to anyone who did not need it. "
+     "TWO. ASSIGNMENTS, WEIGHT OVERRIDES AND MONTHLY ESTIMATION ARE ONE COLUMN, NOT TWO. "
+     "They were a two-column grid, so each of three wide tables - eleven columns, seven "
+     "and eight, one of those a sentence of arithmetic - had half a screen and all three "
+     "scrolled sideways permanently. Stacked full width they also read in the order they "
+     "are worked in: pick the assignment, then its override windows, then its months. "
+     "THREE. MONTHLY ESTIMATION NAMES ITS ASSIGNMENT. It is a child of the row selected "
+     "above it and said so nowhere - eight columns of months with no statement of what "
+     "they belong to. It now carries the same line Weight overrides carries, word for "
+     "word from one helper so the two cannot drift: the id, the project, the role, the "
+     "window and the weight. "
+     "FOUR. CLICKING A LEGEND ENTRY PICKS THAT SERIES OUT OF THE CHART. Twenty bands in "
+     "twenty shades of one palette read perfectly well as a total and not at all as a "
+     "series; finding one project in the stack by colour alone means carrying a swatch "
+     "in your head down sixty months of bars. Everything that is not the picked series "
+     "fades back; a second click, another entry, or Escape brings it home. THE PICK "
+     "APPLIES TO THE WHOLE TAB, because the question is 'where is this project on this "
+     "page' and not 'where is it in this one drawing' - the trend line, the stack and "
+     "the timeline all mean the same project by the same id, so one click answers it in "
+     "all three. A CHART CUT ALONG A DIFFERENT AXIS IS LEFT ALONE: a person's id means "
+     "nothing to a chart stacked by project, and dimming it anyway would fade a whole "
+     "chart to nothing and light none of it, which reads as 'this has no data' rather "
+     "than 'you asked something this chart cannot answer'. A timeline band is a period "
+     "OF a project and carries both keys, so picking a period lights it across every "
+     "project and picking a project lights that project's whole row. Marks belonging to "
+     "the MONTH rather than to any series - the threshold lines, the baseline, the "
+     "outline that marks a month off its standard - never fade. Every entry is a real "
+     "button: focusable, operable from the keyboard, and it states whether it is "
+     "pressed (D-04). "
+     "FIVE. EVERY HEADING SAYS WHAT THE COLUMN MEANS. The tables have always shown the "
+     "workbook's own column names and that is right - the screen and the file are the "
+     "same thing, so a name on screen is one you can find in the spreadsheet, quote in a "
+     "mail or search the specification for. It is also, on its own, a poor label: "
+     "work_scope_type, outsourcing_scope_det, absorbed_by and ref_id are legible to "
+     "whoever wrote the schema and opaque to the person filling the plan in, and the "
+     "meaning was only ever a hover away, which is to say invisible to anyone who did "
+     "not know to hover. Each heading now carries BOTH lines - the plain name first, in "
+     "the page's own type, and the column name under it in the monospace this "
+     "application uses for every other identifier. NOTHING IS RENAMED: the file keeps "
+     "its columns, every validation message still names them, and the cell still writes "
+     "back through the identifier. The same head is used on the heading's pop-up, on "
+     "every cell's and on the filter buttons', so it is learned once. "
+     "No calculation change, no schema change and no figure moves. tools/test_screen.py "
+     "and tools/test_labels.py are new, 33 checks between them; test_columns and "
+     "test_lookup read the identifier from the heading's second line.",
+     "Issued for review"],
+    ["2.52", "2026-09-12", "Claude Code", "Pending",
      "R-44, V-35: capacity_fte IS BOUNDED, 0.00 TO 1.00. Reported from the field. It is "
      "the one figure on the Person sheet with a hard ceiling and it did not have one - "
      "1.5 went in, was believed, and sat beside everybody else's 1.00 as though it meant "
@@ -1777,6 +1835,7 @@ reqs = [
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-DSH-16", "Dashboard", "THE SCREEN IS READABLE AT THE SIZE THE PLAN ACTUALLY IS, AND SAYS WHAT ITS COLUMNS MEAN. Five things, none of which changes a figure. (a) A CHART THAT CAN RUN LONG GROWS WITH ITS HORIZON AND ITS PANEL SCROLLS. Every month is guaranteed a minimum width of plot; past the point where they all fit, the panel scrolls sideways rather than compressing the axis until its labels overlap. A fixed width is only readable over the span it was chosen for, and it fails silently - the chart still draws, it simply stops being legible, and it does so on the long plans that most need reading. The default two-year view is unchanged, so the rule is invisible to anyone who did not need it. (b) A WIDE TABLE GETS THE WHOLE WIDTH. Panels are placed side by side only where both are narrow enough to be read there; three tables of eleven, seven and eight columns are stacked, in the order the work is done in - the assignment, then its override windows, then its months - not tiled into halves that each scroll sideways permanently. (c) A PANEL THAT IS A CHILD OF A SELECTION NAMES THE ROW IT BELONGS TO, under its title, from ONE helper shared with every other panel that names the same thing, so two statements of the same fact cannot drift apart. (d) CLICKING A LEGEND ENTRY PICKS THAT SERIES OUT: everything that is not it fades back, a second click or Escape brings it home. Twenty bands in twenty shades of one palette read as a total and not as a series, and the fix is not more colours. THE PICK APPLIES TO THE WHOLE TAB, because the question asked is 'where is this project on this page'; a chart cut along a DIFFERENT axis, which has no mark for that key at all, is left alone rather than faded to nothing, since a chart with everything dimmed and nothing lit reads as 'this has no data' instead of 'this cannot answer that'. A mark standing for two series at once - a timeline band is a period OF a project - answers to either. Marks belonging to the MONTH rather than to a series never fade: thresholds, baselines, and the outline that marks a month off its standard are facts about the month and stay at full strength. Every entry is a button, operable from the keyboard and stating whether it is pressed (D-04). (e) EVERY COLUMN HEADING CARRIES A PLAIN NAME AND THE COLUMN'S OWN NAME, in that order. The workbook's column names must stay on screen - the screen and the file are the same thing, so a heading is something to find in the spreadsheet, quote in a mail and look up in this document - and they are not, by themselves, labels: the meaning existed only in a pop-up, which is to say only for a reader who knew to hover. Both lines are shown, nothing is renamed, the cell still writes back through the identifier, and the same two-part head is used on the heading's pop-up, on every cell's and on the filter buttons', so it is learned once.", "Should", "R-45", "4"],
     [f"{MARK_NEW}REQ-DSH-15", "Dashboard", "WHERE A PROJECT IS NOT BEING GIVEN WHAT ITS OWN STANDARD SAYS IT NEEDS, THE APPLICATION SAYS SO. Two figures can come apart and the obvious pair is not one of them: a project's month against the sum of its people CANNOT differ, because the month is built from those people (REQ-OUT-06). The pair that does is DEMAND against APPLIED. An automatic month has them equal by construction - the shares add to one (REQ-CAL-19) - and a figure stated by hand at either level replaces the standard rather than adjusting it, after which the application simply drew a different project: a study needing 10.00 and staffed at 5.00 looked exactly like a study that only ever needed 5.00. FOUR SURFACES, chosen so that nothing has to be suspected before it is seen. V-34 reports it, which carries it into the findings report, the load banner, the archived change log and the results export at no further cost. The figure is MARKED where it is drawn - in Resource by project and on the project's own utilisation chart - because a shortfall that must be hovered over is very nearly as silent as one nobody reports. A TILE on Overall counts it beside the over- and under-allocation tiles, in the place people already look. And a SECTION on Overall, Standard vs staffed, lists every month with what it needs, what it is getting and the gap. NOT A TAB: a tab is the surface you visit only once you already suspect a problem, which is the wrong property for something whose whole danger is that it is silent - and the findings report is already the list of everything wrong. EVERY ROW OPENS THE MONTH ITSELF, AND EVERY FIGURE IN IT CAN BE CHANGED THERE. A month that already has a MonthlyEstimate row is an ORDINARY editable cell over it, so the one editing path validates, logs, marks and undoes it; a second way to change a figure is a second way that can drift. A month that has NO row cannot be one - there is nothing to write through - so its cell offers to CREATE the row instead, and it must, because the figure a reader most wants to change on this screen is the one belonging to somebody still on automatic, and a dash there said the screen was read-only for them. WHAT IT MUST NOT DO IS QUIETLY WRITE ONE ROW: an automatic assignment ignores MonthlyEstimate entirely, so a lone row is a figure nothing reads, and setting estimation_type without seeding the other months counts every one of them as 0.00 - the one change in this application that silently zeroes a figure (REQ-CAL-18). So a figure typed against an automatic assignment ASKS, naming how many months will be stated and what this one becomes, and then the switch, the seeding and the typed figure happen together or none of them happen. A thing ALREADY manual with no figure for that month is V-31 and does not ask - the months are already the user's, and asking would be asking permission for something already given. BOTH DIRECTIONS, COUNTED APART AND NEVER NETTED: short of the standard is a project asked to run on less than its kind takes, over it is one deliberately staffed heavier, and five short in September against five over in October is not a plan in balance however the arithmetic reads. Marked with an arrow as well as a colour (D-04) - amber and red are the confusable pair and they are exactly the two directions here.", "Should", "R-42", "4"],
     [f"{MARK_NEW}REQ-DSH-14", "Dashboard", "WHERE A FIGURE'S SIZE WAS DECIDED SOMEWHERE ELSE, THE TABLE SHOWING THE FIGURE NAMES WHAT DECIDED IT, in a column that is looked up and cannot be edited. Three of them, because three tables each showed one term of an expression and left the reader to find the rest in another tab: the Periods table names the STANDARD MONTHLY FTE its period selects and multiplies it by the project's own weight, so the row carries the month's demand instead of half the expression for it; both Monthly estimation panels carry THE WHOLE DERIVATION OF THE MONTH, TERM BY TERM - the period it falls in, the standard that period selects, the project's own weight, how much of the month it ran, and their product - so a reader who disagrees with an automatic figure can see WHICH of the inputs they disagree with rather than only that they disagree. The person's panel adds their CLAIM on that month: role factor / sharers x person weight x month coverage, ending in the PERCENTAGE of the project's month it won. The two halves are closed off SEPARATELY and the person's is stated as a proportion, never as a product equal to the figure, because since R-32 it is not one - the claim is normalised against every other claim on that project-month (REQ-CAL-19), so terms multiplying to 0.60 can give a figure of 2.40, and writing them as one product would assert an arithmetic the application does not do. A PersonPeriodWeight override is shown as ONE TERM WITH TWO SOURCES rather than as a second factor: it REPLACES person_weight for the months it covers (REQ-PSN-05), and the cell names both values and says which was used. The sharer count also keeps a short column of its own, where it can be sorted and filtered - the derivation is a sentence and is neither. Every fallback SAYS it is a fallback and names its rule - V-19 for a missing standard, V-23 for a missing role factor, V-12 for a month in no period - because a bare 1.00 is indistinguishable from a standard that really is 1.00, which is the whole reason those rules exist. LOOKED UP, NEVER STORED: none of the three is a column of the sheet it is shown beside, so no edit and no save can leave a stale copy of a standard in a file after the standards have moved - which is the failure the lookup exists to prevent. NAMED FROM THE CALCULATION'S OWN WORKINGS, not by asking the sheets again, so a screen cannot name one period while the figure beside it came from another. A missing standard says it is missing and names V-19 rather than printing the 1.00 the calculation falls back to; that fallback is a degradation, and showing it as a standard would hide the very thing V-19 reports.", "Should", "R-40", "4"],
     [f"{MARK_NEW}REQ-DSH-13", "Dashboard", "Every bounded scroll region draws its own scrollbars rather than relying on the browser's. A region deliberately capped on both axes is only honest if the reader can see there is more and reach it, and the browser's bar does not do that on a build that uses overlay scrollbars: it occupies no layout space and fades out when idle, so a table with eleven columns off to the right looks exactly like one with none. The drawn bar is present whenever there is anywhere to scroll to, can be dragged, and pages when its track is clicked. Native scrolling - wheel, shift-wheel, trackpad, keyboard - is untouched.", "Must", "R-23", "4"],

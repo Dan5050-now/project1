@@ -173,6 +173,84 @@ document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   for (const d of document.querySelectorAll("details.ms")) d.open = false;
 });
+/* PICKING ONE SERIES OUT OF A CHART.
+ *
+ * Twenty bands in twenty shades of one palette read perfectly well as a total and not at
+ * all as a series: finding one project in the stack by colour alone means carrying a
+ * swatch in your head down sixty months of bars. Clicking its legend entry fades back
+ * everything that is not it.
+ *
+ * THE PICK APPLIES TO THE WHOLE TAB, not to the chart the legend belongs to. Series keys
+ * are ids, and the same project is the same id on its trend line, its band in the stack
+ * and its row on the timeline - so one click answers "where is this project on this
+ * page", which is the question actually being asked, rather than "where is it in this
+ * one drawing", which is already obvious from the legend.
+ *
+ * The current pick is READ BACK OUT OF THE DOM rather than kept in a variable. Every
+ * render replaces the charts wholesale; a remembered key would survive the marks it
+ * referred to, and the first click after a render would be read as "you picked that
+ * already" and silently do nothing. A class on a legend entry cannot outlive the legend.
+ */
+const PICK = {
+  /** Everything one pick covers: the tab, or the dialog if the chart is inside one. */
+  root: node => node.closest("dialog[open], section.tab") || document.body,
+  /** A mark may stand for two series at once - see `sKey` in the charts. */
+  is: (m, key) => m.getAttribute("data-s") === key || m.getAttribute("data-s2") === key,
+  /** `key` empty puts every chart back.
+   *
+   *  A CHART THAT DOES NOT KNOW THE KEY IS LEFT ALONE. The tab holds charts cut along
+   *  different axes - by project, by person, by period - and a person's id means nothing
+   *  to a chart stacked by project. Dimming it anyway would fade a whole chart to
+   *  nothing and light none of it, which reads as "this project has no data" rather
+   *  than "you asked a question this chart cannot answer". So each chart is asked first
+   *  whether it has a mark for the key, and only the ones that do respond. */
+  apply(root, key){
+    for (const svg of root.querySelectorAll("svg.chart")){
+      const marks = [...svg.querySelectorAll("[data-s]")];
+      const known = !!key && marks.some(m => PICK.is(m, key));
+      svg.classList.toggle("picked", known);
+      for (const m of marks) m.classList.toggle("hi", known && PICK.is(m, key));
+      /* The legend sits OUTSIDE the svg, beside it in the same scrolling box. It fades
+         its own other entries only when it actually offers this one: the timeline's
+         legend names periods, so a project pick lights its bands without touching a
+         list that has nothing to say about projects. */
+      for (const ul of (svg.parentNode || root).querySelectorAll(":scope > ul.legend")){
+        const lis = [...ul.querySelectorAll("li[data-s]")];
+        const offered = known && lis.some(li => li.getAttribute("data-s") === key);
+        ul.classList.toggle("picked-leg", offered);
+        for (const li of lis){
+          const on = offered && li.getAttribute("data-s") === key;
+          li.classList.toggle("on", on);
+          li.setAttribute("aria-pressed", on ? "true" : "false");
+        }
+      }
+    }
+  },
+  toggle(li){
+    const root = PICK.root(li), key = li.getAttribute("data-s");
+    const cur = root.querySelector("ul.legend li[data-s].on");
+    PICK.apply(root, cur && cur.getAttribute("data-s") === key ? "" : key);
+  },
+  /** Asked of the CHARTS rather than of the legends: a pick can light a chart whose own
+   *  legend does not offer the key - the timeline under a project pick - so a chart left
+   *  dimmed is the thing to look for, not a legend left faded. */
+  clear(){
+    for (const svg of document.querySelectorAll("svg.chart.picked")) PICK.apply(PICK.root(svg), "");
+  }
+};
+document.addEventListener("click", e => {
+  const li = e.target.closest && e.target.closest("ul.legend li[data-s]");
+  if (li) PICK.toggle(li);
+});
+document.addEventListener("keydown", e => {
+  // Enter and Space on a focused entry, because a legend entry is a button (D-04).
+  if (e.key === "Enter" || e.key === " "){
+    const li = e.target.closest && e.target.closest("ul.legend li[data-s]");
+    if (li){ e.preventDefault(); PICK.toggle(li); return; }
+  }
+  if (e.key === "Escape") PICK.clear();
+});
+
 for (const id of ["fFrom","fTo"])
   el(id).addEventListener("change", () => { readFilters(); renderKeepingTab(); });
 el("fAll").onclick = () => { S.from = S.calc.lo; S.to = S.calc.hi;
@@ -297,7 +375,7 @@ document.addEventListener("click", e => {
       for (const tr of row.parentNode.children) tr.classList.toggle("sel", tr === row);
       const d = el("persDetail"); if (d) d.innerHTML = persDetail(S.selPers);
     }
-    // Selecting an assignment drives the overrides table beside it. Only the panels that
+    // Selecting an assignment drives the two panels below it. Only the panels that
     // depend on it are redrawn - re-rendering the Assignments table would replace the
     // cell the click just put the caret in, so the edit could never be typed.
     if (sheet === "Assignment" && S.selAsg !== row.dataset.id){

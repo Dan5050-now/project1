@@ -469,6 +469,10 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var
    fills the page with an empty white rectangle that reads as missing content. */
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
 .two>*{min-width:0}
+/* One full-width column, for panels too wide to share a screen. Same gap as .two so a
+   page mixing the two keeps one rhythm. */
+.stack1{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+.stack1>*{min-width:0}
 @media(max-width:900px){.two{grid-template-columns:1fr}}
 
 /* --- tables --------------------------------------------------------------
@@ -513,7 +517,19 @@ td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .data-t tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--ink) 2%,transparent)}
 .data-t tbody tr:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
 .data-t thead th{background:var(--surface);color:var(--muted);font-weight:590;
- font-size:var(--t-xs);letter-spacing:.02em;border-bottom:1px solid var(--hairline)}
+ font-size:var(--t-xs);letter-spacing:.02em;border-bottom:1px solid var(--hairline);
+ vertical-align:bottom}
+/* TWO LINES IN EVERY HEADING: what the column is, then what it is called in the file.
+   The plain name takes the page's own type at full strength because it is what a reader
+   reads; the column name sits under it in the monospace this application uses for every
+   other identifier, quieter but never hidden - the screen and the workbook are the same
+   thing, and a heading you cannot find in the spreadsheet is a heading you cannot act
+   on. The lookup badge and the filter button stay on the identifier's line, where they
+   were, so nothing that was clickable has moved. */
+.data-t thead th .lab{display:block;color:var(--ink2);font-weight:620;
+ font-size:var(--t-sm);letter-spacing:0;text-transform:none}
+.data-t thead th .cid{font-family:var(--f-mono);font-size:var(--t-xs);
+ color:var(--muted);font-weight:480;letter-spacing:0}
 .data-t tr.sel td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .data-t tr{cursor:pointer}
 .data-t td[contenteditable="true"]:focus{outline:2px solid var(--accent);outline-offset:-2px;
@@ -594,6 +610,29 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 .legend .sw.tri.key{border-top-color:var(--crit);border-left-width:7px;
  border-right-width:7px;border-top-width:11px}
 .legend .hint{color:var(--muted)}
+
+/* --- picking one series out of a chart ------------------------------------
+   Click a legend entry and everything that is not that series fades back; click it
+   again, press Escape, or pick another, and the chart returns. The pick is set on the
+   TAB, not on one chart, so the same project fades in on its trend line, its band in the
+   stack and its row on the timeline at once - the question is "where is this project on
+   this page", not "where is it in this one drawing".
+
+   The fade is opacity, not colour: a dimmed band keeps its shape, its position in the
+   stack and its tooltip, so the chart still reads as a whole and the one series is
+   simply the one you can see. Marks without a `data-s` - the threshold lines, the month
+   axis, the outline that marks a month off its standard - are properties of the MONTH
+   rather than of any series, so they are left at full strength. */
+.picked [data-s]{transition:opacity .12s ease}
+.picked [data-s]:not(.hi){opacity:.11}
+.picked .ln.hi{stroke-width:3.4}
+.picked .band.hi{stroke:var(--ink);stroke-width:1.4}
+.legend li[data-s]{cursor:pointer;border-radius:var(--r-sm);padding:1px 6px;margin:-1px -6px;
+ user-select:none}
+.legend li[data-s]:hover{background:var(--fill)}
+.legend li[data-s]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.picked-leg li[data-s]:not(.on){opacity:.42}
+.legend li[data-s].on{background:var(--fill2);color:var(--ink);font-weight:640}
 
 /* --- pop-ups: floating material ------------------------------------------ */
 .tip{position:fixed;z-index:50;max-width:340px;pointer-events:none;
@@ -1104,9 +1143,9 @@ const SCHEMA_EXPECTED = 11;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.52.xlsx",          ver:"2.52",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.53.xlsx",          ver:"2.53",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.26.xlsx", ver:"1.26",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.27.xlsx", ver:"1.27",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v1.0.xlsx",          ver:"1.0",
    status:"APPROVED by Dan, 2026-08-02 — Step 3 gate closed"},
@@ -2380,6 +2419,61 @@ const COLUMN_HELP = {
   note:"Free text.",
   reason:"Why the weight differs for this window, e.g. part-time or covering a peak.",
   note_1:"Free text. Carried through export unchanged and never read by the calculation.",
+};
+
+/* WHAT EACH COLUMN IS CALLED IN PLAIN WORDS.
+ *
+ * The tables have always shown the workbook's own column names, and there is a real
+ * reason for that: the screen and the file are the same thing, so a name on screen is a
+ * name you can find in the spreadsheet, quote in a mail, or search the specification for.
+ * That is worth keeping. It is also, on its own, a poor label. `outsourcing_scope_det`,
+ * `work_scope_type`, `absorbed_by` and `ref_id` are legible to somebody who wrote the
+ * schema and opaque to the person actually filling the plan in, and the meaning was only
+ * ever a hover away - which is to say, invisible to anyone who did not know to hover.
+ *
+ * So each heading now carries BOTH: the plain name first, in the page's own type, and
+ * the column name under it in the smaller monospace the rest of the application uses for
+ * identifiers. Nothing is hidden and nothing is renamed - the file keeps its columns and
+ * every validation message still names them - but a reader who has never seen the schema
+ * can now read the table.
+ *
+ * Kept beside COLUMN_HELP deliberately: a column gets a sentence and a name in the same
+ * place, so adding one and forgetting the other takes effort. `test_labels.py` holds the
+ * map to being COMPLETE for every column any table puts on screen; a missing entry is a
+ * heading that would fall back to the bare identifier, which is the thing this fixes. */
+const COLUMN_LABEL = {
+  // Project
+  project_id:"Project ID", project_name:"Project name", project_type:"Project type",
+  project_category:"Product", clinical_phase:"Phase", work_scope_type:"Work scope",
+  outsourcing_scope_det:"What is outsourced", EDC_setup:"EDC set up by",
+  DataReviewSystem_setup:"Data review system set up by", RBQM_setup:"RBQM set up by",
+  DM_conduct:"Data reviewed by", EDC_system:"EDC system",
+  DataReviewSystem:"Data review system", RBQM_system:"RBQM system",
+  planned_member_count:"Planned team size", start_date:"Starts", end_date:"Ends",
+  total_period_months:"Length in months", status:"Status",
+  estimation_type:"Figures come from",
+  // Milestone
+  milestone_name:"Milestone", milestone_date:"Date", milestone_seq:"Order",
+  // ProjectPeriod, and the standards it reads
+  period_name:"Period", period_seq:"Order", period_start:"From", period_end:"To",
+  weight:"Period weight", standard_fte:"Standard monthly FTE",
+  role_name:"Role", role_factor:"Role factor", absorbed_by:"Picked up by",
+  role_note:"Basis for the factor",
+  // Person
+  person_id:"Person ID", person_name:"Name", department:"Department",
+  primary_role:"Usual role", capacity_fte:"Capacity in FTE",
+  employment_start:"Joined", employment_end:"Left",
+  // Assignment, and the override windows under it
+  assignment_id:"Assignment ID", assign_start_date:"On the project from",
+  assign_end_date:"On the project to", person_weight:"Share of this person",
+  weight_override:"Share instead, for these months", reason:"Why",
+  // MonthlyEstimate, and the lookups the app shows beside it
+  scope:"Figure is for", ref_id:"Belongs to", month:"Month", fte:"Stated FTE",
+  edited_at:"Last set", automatic_fte:"Calculated FTE", difference:"Difference",
+  period:"How this month is worked out", sharers:"Sharing this role",
+  // Config and Lists
+  parameter:"Setting", value:"Value", list_name:"List", note:"Note",
+  note_1:"Note 1", note_2:"Note 2", note_3:"Note 3", note_4:"Note 4", note_5:"Note 5",
 };
 const HELP = {
   rowactions:"<b>Row actions</b><br>Insert a new row directly below this one, or delete this row. "
@@ -5032,9 +5126,58 @@ const CHART = {
   // `headroom` lifts the top of the scale clear of the tallest stack.
   stack:  {Wmin:700, Wbase:90, Wper:74, H:600, padL:62, padR:14, padT:30, padB:52,
            headroom:1.08},
-  // One project against the portfolio average, thresholds labelled down the right.
-  single: {W:1080, H:300, padL:62, padR:230, padT:26, padB:44},
+  /* The two UTILISATION charts - one project against the portfolio average, and one
+     person against both thresholds. Both label their reference lines down the right,
+     which is what the wide padR is for and why they are not `stack`.
+
+     THEY GROW WITH THE HORIZON, like every other chart here. They used to be a fixed
+     1080 wide, which is fine at the default two years and unreadable past it: five
+     years is sixty columns in 790px of plot, thirteen pixels each, and a three-letter
+     month does not fit in thirteen pixels - so the axis ran its labels into one another
+     and the chart stopped being readable exactly where a long plan most needs reading.
+     Wper is the plot width each month is guaranteed; past the point where the panel can
+     show them all, the panel scrolls, which is what every other chart on the page
+     already does. Wper is 32 rather than a rounder number for one reason: at the default
+     24-month horizon it comes to less than Wmin on both charts, so the two-year view -
+     the one almost every reader opens on - is EXACTLY the width it has always been, and
+     this change is visible only on the long plans that needed it. */
+  single: {Wmin:1080, Wper:32, H:300, padL:62, padR:230, padT:26, padB:44},
+  strip:  {Wmin:1080, Wper:32, H:300, padL:62, padR:175, padT:26, padB:44},
 };
+
+/** How wide a chart has to be to give every month `K.Wper` of plot area. */
+const chartW = (K, n) => Math.max(K.Wmin, K.padL + K.padR + Math.max(1, n) * K.Wper);
+
+/* WHICH SERIES A MARK BELONGS TO.
+ *
+ * A stack of twenty bands in twenty shades of the same palette is readable as a total and
+ * unreadable as a series: picking one project out of it by colour alone means holding a
+ * swatch in your head while your eye runs down sixty months. So every mark carries the id
+ * of the series that drew it, and so does its legend entry, and clicking the entry dims
+ * everything that is not that series.
+ *
+ * The key is an id, not a label - project ids, person ids, or a period name on the Gantt -
+ * because ids are what the rest of the app already keys on and two projects may share a
+ * name. Ids from different namespaces (PRJ-, PSN-, period names) never collide, which is
+ * what lets ONE click carry across the several charts on a tab: the trend lines, the
+ * stack and the timeline all mean the same project by the same key, so picking a project
+ * in the legend of one highlights it in all of them. That is the whole point - the
+ * question "where is this project" is asked of the tab, not of one chart.
+ *
+ * A mark may belong to TWO series at once, which is why there is a second key. A band on
+ * the timeline is a period OF a project: picking "Conduct" should light the conduct band
+ * of every project, and picking one project should light that project's whole row. One
+ * key cannot say both, so the band carries the period as `data-s` - the key its own
+ * legend offers - and the project as `data-s2`, which only a pick made elsewhere on the
+ * tab ever asks for.
+ *
+ * `sKey` goes on the marks, `sLeg` on the legend entry that picks them. The legend entry
+ * is a real button: focusable and operable from the keyboard, because a control that only
+ * answers to a mouse is not a control (D-04). */
+const sKey = (k, k2) => ` data-s="${att(String(k))}"`
+  + (k2 === undefined || k2 === null ? "" : ` data-s2="${att(String(k2))}"`);
+const sLeg = k => ` data-s="${att(String(k))}" tabindex="0" role="button" aria-pressed="false"`
+  + ` title="Click to highlight this one; click again to bring the rest back"`;
 
 /* WHICH PERIOD OF THE PROJECT A MONTH FALLS IN, for the pop-ups.
  *
@@ -5133,7 +5276,7 @@ function chartGantt(pids, opts){
         + `<br><b>${fte.toFixed(2)} FTE per month</b> on average across this period`;
       o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${y+13}" width="${w.toFixed(1)}" `
         + `height="${rowh-20}" fill="${bandFill(s.period_name, num(s.weight)||0, wmax)}" rx="2" `
-        + `data-tip="${att(tip)}"></rect>`);
+        + `data-tip="${att(tip)}"${sKey(s.period_name, p)}></rect>`);
       if (opts.single && w > 64)
         o.push(`<text class="bandsub" x="${(x0+w/2).toFixed(1)}" y="${(y+rowh-14).toFixed(1)}" `
           + `text-anchor="middle">${fte.toFixed(2)} FTE/mo</text>`);
@@ -5157,7 +5300,7 @@ function chartGantt(pids, opts){
   const leg = ['<ul class="legend">'];
   for (const p of rows) for (const s of (M.periods[p] || [])) seen.add(s.period_name);
   for (const n of [...CLINICAL_PERIODS, ...OTHER_PERIODS]) if (seen.has(n))
-    leg.push(`<li><span class="sw" style="background:${PERIOD_HUE[n]}"></span>${esc(n)}</li>`);
+    leg.push(`<li${sLeg(n)}><span class="sw" style="background:${PERIOD_HUE[n]}"></span>${esc(n)}</li>`);
   leg.push('<li><span class="sw tri"></span>milestone</li>');
   leg.push('<li><span class="sw tri key"></span>DB lock &#8212; sets a period boundary</li>');
   leg.push('<li class="hint">darker band = higher period weight</li></ul>');
@@ -5223,20 +5366,20 @@ function chartLines(items, valueAt, opts){
       + `<br><span class="tr">mean ${fmt(total / G.length)} &#183; `
       + `peak ${fmt(peak)} in ${keyToLabel(peakK)}</span>`;
     // A hit strip under the stroke: a 2px line is almost impossible to hover deliberately.
-    o.push(`<polyline class="lnhit" points="${pts}" data-tip="${att(tip)}"></polyline>`);
-    o.push(`<polyline class="ln" points="${pts}" stroke="${colour}"></polyline>`);
+    o.push(`<polyline class="lnhit" points="${pts}" data-tip="${att(tip)}"${sKey(id)}></polyline>`);
+    o.push(`<polyline class="ln" points="${pts}" stroke="${colour}"${sKey(id)}></polyline>`);
     for (const [i, k] of G.entries()){
       const v = valueAt(id, k) || 0;
       if (v <= 0.004) continue;
       o.push(`<circle class="lndot" cx="${xOf(i).toFixed(1)}" cy="${yOf(v).toFixed(1)}" r="2.4" `
-        + `fill="${colour}"></circle>`);
+        + `fill="${colour}"${sKey(id)}></circle>`);
     }
   }
   monthAxis(o, G, i => xOf(i) - step / 2, step, H - padB + 17, H - padB + 32, padT, H - padB);
   o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}"/></svg>`);
   const leg = ['<ul class="legend">'];
-  for (const [[, label, colour]] of shown)
-    leg.push(`<li><span class="sw ln" style="background:${colour}"></span>${esc(label)}</li>`);
+  for (const [[id, label, colour]] of shown)
+    leg.push(`<li${sLeg(id)}><span class="sw ln" style="background:${colour}"></span>${esc(label)}</li>`);
   leg.push('</ul>');
   if (totals.length > shown.length)
     leg.push(`<p class="note">The ${LINE_LIMIT} largest by total are drawn; ${totals.length - shown.length} `
@@ -5313,7 +5456,7 @@ function chartStacked(pids){
         + `<hr>${keyToLabel(k)} across every project in view: <b>${fmt(month)} ${unitLabel()}</b>`;
       o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${(base-h).toFixed(1)}" `
         + `width="${(bw-8).toFixed(1)}" height="${Math.max(0.6,h).toFixed(1)}" fill="${colour[p]}" `
-        + `data-tip="${att(tip)}"></rect>`);
+        + `data-tip="${att(tip)}"${sKey(p)}></rect>`);
       base -= h;
     }
   });
@@ -5400,7 +5543,8 @@ function chartPeople(sids){
       o.push(`<rect class="band${breach ? (v > M.OVER ? " brOver" : " brUnder") : ""}" `
         + `x="${x0.toFixed(1)}" y="${(base-h).toFixed(1)}" `
         + `width="${(bw-8).toFixed(1)}" height="${Math.max(0.6,h).toFixed(1)}" `
-        + `fill="${s === REST ? "var(--other)" : persColourOf(s)}" data-tip="${att(tip)}"></rect>`);
+        + `fill="${s === REST ? "var(--other)" : persColourOf(s)}" data-tip="${att(tip)}"`
+        + `${sKey(s)}></rect>`);
       base -= h;
     }
   });
@@ -5408,7 +5552,8 @@ function chartPeople(sids){
   o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-8}" y2="${H-padB}"/></svg>`);
   const leg = ['<ul class="legend">'];
   for (const s of order)
-    leg.push(`<li><span class="sw" style="background:${s === REST ? "var(--other)" : persColourOf(s)}"></span>`
+    leg.push(`<li${sLeg(s)}>`
+      + `<span class="sw" style="background:${s === REST ? "var(--other)" : persColourOf(s)}"></span>`
       + `${esc(s === REST ? `the other ${rest.length} people` : persName(s))}</li>`);
   leg.push(`<li class="hint">outlined segment = that person is over ${M.OVER.toFixed(2)} or `
     + `under ${M.UNDER.toFixed(2)} FTE that month</li></ul>`);
@@ -5428,7 +5573,8 @@ function chartProjectUtil(pid){
   for (const [k, v] of C.projMonth) if (k.startsWith(pid + "|") && v > 0.004) own.push(v);
   const ownAvg = own.length ? own.reduce((a,b)=>a+b,0) / own.length : 0;
   const vals = G.map(k => C.projMonth.get(pid+"|"+k) || 0);
-  const K = CHART.single, W = K.W, H = K.H, padL = K.padL, padR = K.padR;
+  const K = CHART.single, H = K.H, padL = K.padL, padR = K.padR;
+  const W = chartW(K, G.length);
   const vmax = Math.max(Math.max(...vals, upper), 0.01) * 1.18;
   const bw = (W - padL - padR) / Math.max(1, G.length);
   const base = H - K.padB, top = K.padT;
@@ -5485,7 +5631,8 @@ function chartProjectUtil(pid){
           + `&#183; this project averages ${ownAvg.toFixed(2)}, an active project ${portAvg.toFixed(2)}</span>`;
       o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" `
         + `width="${w.toFixed(1)}" height="${Math.max(0.8, y1-y0).toFixed(1)}" `
-        + `fill="${sid === REST ? "var(--other)" : persColourOf(sid)}" data-tip="${att(tip)}"></rect>`);
+        + `fill="${sid === REST ? "var(--other)" : persColourOf(sid)}" data-tip="${att(tip)}"`
+        + `${sKey(sid)}></rect>`);
     }
   });
   /* A MONTH OFF ITS OWN STANDARD IS MARKED ON THE CHART (V-34), not only in its pop-up.
@@ -5515,7 +5662,8 @@ function chartProjectUtil(pid){
   o.push(`<line class="base" x1="${padL}" y1="${base}" x2="${W-padR+4}" y2="${base}"/></svg>`);
   const leg = ['<ul class="legend">'];
   for (const sid of order)
-    leg.push(`<li><span class="sw" style="background:${sid === REST ? "var(--other)" : persColourOf(sid)}"></span>`
+    leg.push(`<li${sLeg(sid)}>`
+      + `<span class="sw" style="background:${sid === REST ? "var(--other)" : persColourOf(sid)}"></span>`
       + `${esc(sid === REST ? `the other ${rest.length} people` : persName(sid))}</li>`);
   leg.push(`<li class="hint">tinted outline = the month's TOTAL crosses a reference line`
     + ` &#183; dashed outline = the month is off this project's own standard (V-34)</li></ul>`);
@@ -5552,10 +5700,11 @@ function chartPersonStrip(sid){
   const order = [...totals.entries()].filter(([, v]) => v > 0.004)
     .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).map(x => x[0]);
 
-  const W = 1080, H = 300, padL = 62, padR = 175;
+  const K = CHART.strip, H = K.H, padL = K.padL, padR = K.padR;
+  const W = chartW(K, G.length);
   const vmax = Math.max(Math.max(...vals, M.OVER), 0.01) * 1.15;
   const bw = (W - padL - padR) / Math.max(1, G.length);
-  const base = H - 44, top = 26;
+  const base = H - K.padB, top = K.padT;
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly load for the selected person, split by project, against both thresholds">`];
   o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
@@ -5603,7 +5752,7 @@ function chartPersonStrip(sid){
            : total < M.UNDER ? `<br><span class="tr">below the ${M.UNDER.toFixed(2)} floor</span>` : "");
       o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" `
         + `width="${w.toFixed(1)}" height="${Math.max(0.8, y1-y0).toFixed(1)}" `
-        + `fill="${projColourOf(p)}" data-tip="${att(tip)}"></rect>`);
+        + `fill="${projColourOf(p)}" data-tip="${att(tip)}"${sKey(p)}></rect>`);
     }
   });
   monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base);
@@ -5619,7 +5768,7 @@ function chartPersonStrip(sid){
     return o.join("") + `<p class="note">This person draws no resource inside the horizon.</p>`;
   const leg = ['<ul class="legend">'];
   for (const p of order)
-    leg.push(`<li><span class="sw" style="background:${projColourOf(p)}"></span>`
+    leg.push(`<li${sLeg(p)}><span class="sw" style="background:${projColourOf(p)}"></span>`
       + `${esc(M.projects[p].project_name)}</li>`);
   leg.push(`<li class="hint">tinted outline = the month's TOTAL is over the ceiling or `
     + `under the floor</li></ul>`);
@@ -6046,6 +6195,13 @@ const BLANK_LABEL = "(blank)";
  * estimation tables (one on each source tab) can never both be live. */
 const FTABLE = {};
 
+/** One head for every pop-up about a column: the plain name, with the column's own name
+ *  beside it in the quieter type. Said the same way on the heading, on a cell and on a
+ *  filter button, so a reader who learns it once reads it everywhere. */
+const colHead = c => COLUMN_LABEL[c]
+  ? `<b>${esc(COLUMN_LABEL[c])}</b> <span class="tr">${esc(c)}</span>`
+  : `<b>${esc(c)}</b>`;
+
 function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable){
   derived = derived || {};
   if (filterable) FTABLE[sheet] = {rows, cols, derived};
@@ -6065,14 +6221,23 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
         const fb = filterable
           ? `<button type="button" class="fbtn${on ? " on" : ""}" data-fsheet="${att(sheet)}" `
             + `data-fcol="${att(c)}" tabindex="-1" aria-label="Filter ${att(c)}" `
-            + `data-tip="${att(on ? `<b>${esc(c)}</b><br>narrowed to ${on.size} value(s)`
+            + `data-tip="${att(on ? `${colHead(c)}<br>narrowed to ${on.size} value(s)`
                                    + `<br><span class="tr">click to change</span>`
                                  : `<b>Filter ${esc(c)}</b><br>Pick the values to keep. `
                                    + `Filters on different columns narrow together.`)}">`
             + `&#9662;</button>` : "";
-        return `<th${h || d ? ` class="hasinfo" data-tip="${att(`<b>${esc(c)}</b><br>${(h||"")}${d}`)}"` : ""}>`
-          + `${esc(c)}${derived[c] ? ' <span class="drv">lookup</span>'
-                       : px ? ' <span class="drv ent">sets ' + esc(px.into) + '</span>' : ""}${fb}</th>`;
+        /* TWO LINES: what the column IS, then what it is CALLED in the file. The plain
+           name leads because that is the one a reader needs and the one the old heading
+           did not give; the column name stays under it, in the monospace this
+           application uses for every other identifier, because the screen and the
+           workbook are the same thing and a heading you cannot find in the spreadsheet
+           is a heading you cannot act on. Neither replaces the other. */
+        const lab = COLUMN_LABEL[c];
+        return `<th${h || d ? ` class="hasinfo" data-tip="${att(`${colHead(c)}<br>${(h||"")}${d}`)}"` : ""}>`
+          + (lab ? `<span class="lab">${esc(lab)}</span>` : "")
+          + `<span class="cid">${esc(c)}</span>`
+          + `${derived[c] ? ' <span class="drv">lookup</span>'
+                          : px ? ' <span class="drv ent">sets ' + esc(px.into) + '</span>' : ""}${fb}</th>`;
       }).join("");
   const body = shown.map(r => {
     const sel = (selKey && r[selKey] === selVal) ? ' class="sel"' : "";
@@ -6084,7 +6249,7 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
            data-col is what makes a cell editable and what the editing code writes back
            through, and a read-only cell must not carry it. */
         return `<td class="muted drvcell" data-drv="${att(c)}" data-tip="${att(
-            `<b>${esc(c)}</b><br>${esc(dv).replace(/\n/g, "<br>") || "&mdash;"}`
+            `${colHead(c)}<br>${esc(dv).replace(/\n/g, "<br>") || "&mdash;"}`
           + `<br><span class="tr">looked up, not stored on this row</span>`)}">${esc(dv)}</td>`;
       }
       const px = proxyFor(sheet, c);
@@ -6093,14 +6258,14 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
         const marked = S.editedCells.has(`${sheet}|${r.__row}|${px.into}`) ? " edited" : "";
         return `<td class="cell${marked}" contenteditable="true" data-sheet="${att(sheet)}" `
           + `data-row="${r.__row}" data-col="${att(c)}" data-tip="${att(
-              `<b>${esc(c)}</b><br>${pv === "" ? "<i>empty</i>" : esc(pv)}`
+              `${colHead(c)}<br>${pv === "" ? "<i>empty</i>" : esc(pv)}`
               + `<br><span class="tr">typing a name here sets ${esc(px.into)}</span>`)}">${esc(pv)}</td>`;
       }
       const v = r[c];
       const disp = v instanceof Date ? ymd(v) : (v === null || v === undefined ? "" : v);
       const marked = S.editedCells.has(`${sheet}|${r.__row}|${c}`) ? " edited" : "";
       const help = COLUMN_HELP[c] ? `<br><span class="tr">${esc(COLUMN_HELP[c])}</span>` : "";
-      const tip = `<b>${esc(c)}</b><br>${disp === "" ? "<i>empty</i>" : esc(disp)}${help}`;
+      const tip = `${colHead(c)}<br>${disp === "" ? "<i>empty</i>" : esc(disp)}${help}`;
       return `<td class="cell${marked}" contenteditable="true" data-sheet="${att(sheet)}" `
         + `data-row="${r.__row}" data-col="${att(c)}" data-tip="${att(tip)}">${esc(disp)}</td>`;
     }).join("");
@@ -6524,13 +6689,13 @@ function scratchPerson(draft){
   const aid = selectedAssignment(asg);
   const ppw = aid ? M.raw.PersonPeriodWeight.filter(w =>
     w.assignment_id === aid || (w.__new && !w.assignment_id)) : [];
-  return `<div class="two">
+  return `<div class="stack1">
       <div class="panel">
         <div class="phead"><h2>Assignments${who}</h2>
           <span class="scope k">${asg.length} row(s)</span></div>
         <p class="cap">One row per person + project + role. Type the project NAME and
           <code>project_id</code> follows. <strong>+ row</strong> allocates the next
-          <code>assignment_id</code>, and clicking a row selects it for the overrides beside.</p>
+          <code>assignment_id</code>, and clicking a row selects it for the overrides below.</p>
         ${dataTable("Assignment", asg,
           ["assignment_id","project_name","project_id","role_name","assign_start_date",
            "assign_end_date","person_weight","note_1","note_2","note_3"],
@@ -6540,7 +6705,7 @@ function scratchPerson(draft){
           <span class="scope k">${ppw.length} window(s)</span></div>
         <p class="cap">Only needed where someone's share of a project CHANGES for a stretch of
           months. The window <strong>replaces</strong> <code>person_weight</code> for the months
-          it covers — it does not multiply it — and belongs to the assignment selected beside.</p>
+          it covers — it does not multiply it — and belongs to the assignment selected above.</p>
         ${dataTable("PersonPeriodWeight", ppw,
           ["assignment_id","project_name","role_name","period_start","period_end",
            "weight_override","reason"], null, null,
@@ -6552,7 +6717,7 @@ function scratchPerson(draft){
              const a = assignmentById(r.assignment_id);
              return a ? (a.role_name ?? "") : "";
            }},
-          aid ? null : "Add an assignment beside first — an override belongs to one.")}</div>
+          aid ? null : "Add an assignment above first — an override belongs to one.")}</div>
     </div>`;
 }
 
@@ -6632,13 +6797,20 @@ function persDetail(sid){
         for the person's total. Dashed lines are the ceiling and floor — the same two figures for
         everyone, since both thresholds are absolute.</p>
       <div class="scrollx fit">${chartPersonStrip(sid)}</div></div>
-    <div class="two">
+    ${/* ONE COLUMN, NOT TWO. These three tables were a two-column grid with Assignments
+         on the left and the overrides and estimation stacked on the right, which gave
+         each of them half a screen. Every one of the three is WIDE - Assignments carries
+         eleven columns, Monthly estimation carries eight and one of those is a sentence
+         of arithmetic - so half a screen meant all three scrolled sideways all the time.
+         Full width and stacked reads them in the order they are worked in: pick the
+         assignment, then its overrides, then its months. */""}
+    <div class="stack1">
       <div class="panel">
         <div class="phead"><h2>Assignments — ${esc(pe.person_name)} (${esc(sid)})</h2>
           <span class="scope k">${asg.length} row(s)</span></div>
         <p class="cap">Fill in <code>project_name</code> — <code>project_id</code> is derived from it.
           Editing the identifier directly still works and the name follows instead.
-          <strong>Clicking a row selects it</strong>, which drives the overrides beside it.
+          <strong>Clicking a row selects it</strong>, which drives the two panels below it.
           <strong>+ row</strong> allocates the next <code>assignment_id</code>.</p>
         ${dataTable("Assignment", asg,
           ["assignment_id","project_name","project_id","role_name","assign_start_date",
@@ -6648,43 +6820,58 @@ function persDetail(sid){
     </div>`;
 }
 
-/** The overrides beside the Assignments table, in their own element.
+/** WHICH ASSIGNMENT THE PANEL BELOW IS ABOUT, in one line.
+ *
+ *  Two panels hang off the selected assignment - the weight overrides and the monthly
+ *  estimation - and both of them are headed by a person's name and a person's id, which
+ *  is the one thing that does NOT tell you which of that person's five assignments you
+ *  are looking at. The assignment_id alone would not either: ASG-203 is not a fact
+ *  anybody carries around. So the line names the project, the role, the window and the
+ *  weight, which together are what makes one assignment recognisable.
+ *
+ *  ONE FUNCTION FOR BOTH PANELS. They sit one under the other now, so two versions of
+ *  this line that had drifted would be visible side by side on the same screen.
+ *
+ *  THE WINDOW SHOWN IS THE ONE ACTUALLY USED. A blank assignment date means the
+ *  PROJECT's date (REQ-CAL-15), so the dates are filled in from the project where the
+ *  row leaves them empty - and marked, because "2027-01-01 ~ 2029-06-30" typed onto the
+ *  row and the same pair inherited from the project are different facts, and somebody
+ *  deciding whether to edit the row needs to know which they are looking at. */
+function assignmentLine(aid){
+  const M = S.model;
+  const a = aid ? (M.raw.Assignment || []).find(x => x.assignment_id === aid) : null;
+  if (!a)
+    return `<p class="asgline muted">No assignment selected — click a row in Assignments.</p>`;
+  const pr = M.projects[a.project_id] || {};
+  const s = a.assign_start_date || pr.start_date;
+  const e = a.assign_end_date || pr.end_date;
+  const whole = !a.assign_start_date && !a.assign_end_date;
+  const w = a.person_weight;
+  return `<p class="asgline"><strong>Assignment (${esc(a.assignment_id ?? "—")})</strong>: `
+    + `${esc(pr.project_name ?? a.project_id ?? "—")} / ${esc(a.role_name ?? "—")} / `
+    + `${ymd(s) || "—"} ~ ${ymd(e) || "—"}`
+    + (whole ? `<span class="tr"> · the whole project</span>` : "")
+    + ` / weight ${w === null || w === undefined ? "—" : Number(w).toFixed(2)}</p>`;
+}
+
+/** The overrides UNDER the Assignments table, in their own element.
  *
  *  Separate so that selecting an assignment can redraw THIS and nothing else. Redrawing
  *  the whole person panel would rebuild the Assignments table too - and clicking a cell
  *  both selects the row and puts the caret in it, so the cell would be replaced under the
  *  caret and the edit could never be typed. The project and person tables avoid this by
- *  living outside the panel they drive; this table drives a panel beside it, so the
+ *  living outside the panel they drive; this table drives the panels below it, so the
  *  boundary has to be drawn here instead. */
 function overridesPanel(sid){
   const M = S.model, pe = M.people[sid];
   const asg = childrenOf(M.raw.Assignment, "person_id", sid);
   const aid = selectedAssignment(asg);
-  const sel = asg.find(a => a.assignment_id === aid) || null;
   const ppw = M.raw.PersonPeriodWeight.filter(w =>
     (aid && w.assignment_id === aid) || (w.__new && !w.assignment_id));
-  // A blank assignment date means the PROJECT's date (REQ-CAL-15), so the window shown
-  // is the one actually used. Marked, because "2027-01-01 ~ 2029-06-30" typed into the
-  // row and the same pair inherited from the project are different facts, and somebody
-  // deciding whether to edit the row needs to know which they are looking at.
-  const span = sel ? (() => {
-    const pr = M.projects[sel.project_id] || {};
-    const s = sel.assign_start_date || pr.start_date;
-    const e = sel.assign_end_date || pr.end_date;
-    const whole = !sel.assign_start_date && !sel.assign_end_date;
-    return `${ymd(s) || "—"} ~ ${ymd(e) || "—"}`
-      + (whole ? " · the whole project" : "");
-  })() : "";
   return `<div class="panel">
       <div class="phead"><h2>Weight overrides — ${esc(pe.person_name)} (${esc(sid)})</h2>
         <span class="scope k">${ppw.length} window(s)</span></div>
-      ${sel
-        ? `<p class="asgline"><strong>Assignment (${esc(sel.assignment_id ?? "—")})</strong>: `
-          + `${esc((M.projects[sel.project_id] || {}).project_name ?? sel.project_id ?? "—")} / `
-          + `${esc(sel.role_name ?? "—")} / ${span} / weight `
-          + `${sel.person_weight === null || sel.person_weight === undefined
-               ? "—" : Number(sel.person_weight).toFixed(2)}</p>`
-        : `<p class="asgline muted">No assignment selected — click a row in Assignments.</p>`}
+      ${assignmentLine(aid)}
       <p class="cap">Replaces <code>person_weight</code> for the window it covers, for
         <strong>this assignment only</strong>. One assignment may carry several
         non-overlapping windows.</p>
@@ -7867,7 +8054,14 @@ function manualPanel(scope, id){
              data-id="${att(id)}" data-tip="${att(HELP.estfill)}"
              >Fill ${missing.length} missing month(s)</button>` : ""}
       <span class="scope k">${on ? `${mine.length} stated month(s)`
-                                 : `${now.size} calculated month(s)`}</span></div>`;
+                                 : `${now.size} calculated month(s)`}</span></div>
+    ${/* WHICH assignment this is, under the title. The heading names the assignment_id
+         and nothing else, and ASG-203 is not a fact anybody carries around - the
+         project, the role, the window and the weight are what make one of a person's
+         five assignments recognisable. Drawn by the same function the Weight overrides
+         panel uses, because the two now sit one under the other and two versions of
+         this line that had drifted would be visible on one screen. */
+      scope === "assignment" ? assignmentLine(id) : ""}`;
 
   if (!on)
     return `<div class="panel">${head}
@@ -9409,6 +9603,84 @@ document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   for (const d of document.querySelectorAll("details.ms")) d.open = false;
 });
+/* PICKING ONE SERIES OUT OF A CHART.
+ *
+ * Twenty bands in twenty shades of one palette read perfectly well as a total and not at
+ * all as a series: finding one project in the stack by colour alone means carrying a
+ * swatch in your head down sixty months of bars. Clicking its legend entry fades back
+ * everything that is not it.
+ *
+ * THE PICK APPLIES TO THE WHOLE TAB, not to the chart the legend belongs to. Series keys
+ * are ids, and the same project is the same id on its trend line, its band in the stack
+ * and its row on the timeline - so one click answers "where is this project on this
+ * page", which is the question actually being asked, rather than "where is it in this
+ * one drawing", which is already obvious from the legend.
+ *
+ * The current pick is READ BACK OUT OF THE DOM rather than kept in a variable. Every
+ * render replaces the charts wholesale; a remembered key would survive the marks it
+ * referred to, and the first click after a render would be read as "you picked that
+ * already" and silently do nothing. A class on a legend entry cannot outlive the legend.
+ */
+const PICK = {
+  /** Everything one pick covers: the tab, or the dialog if the chart is inside one. */
+  root: node => node.closest("dialog[open], section.tab") || document.body,
+  /** A mark may stand for two series at once - see `sKey` in the charts. */
+  is: (m, key) => m.getAttribute("data-s") === key || m.getAttribute("data-s2") === key,
+  /** `key` empty puts every chart back.
+   *
+   *  A CHART THAT DOES NOT KNOW THE KEY IS LEFT ALONE. The tab holds charts cut along
+   *  different axes - by project, by person, by period - and a person's id means nothing
+   *  to a chart stacked by project. Dimming it anyway would fade a whole chart to
+   *  nothing and light none of it, which reads as "this project has no data" rather
+   *  than "you asked a question this chart cannot answer". So each chart is asked first
+   *  whether it has a mark for the key, and only the ones that do respond. */
+  apply(root, key){
+    for (const svg of root.querySelectorAll("svg.chart")){
+      const marks = [...svg.querySelectorAll("[data-s]")];
+      const known = !!key && marks.some(m => PICK.is(m, key));
+      svg.classList.toggle("picked", known);
+      for (const m of marks) m.classList.toggle("hi", known && PICK.is(m, key));
+      /* The legend sits OUTSIDE the svg, beside it in the same scrolling box. It fades
+         its own other entries only when it actually offers this one: the timeline's
+         legend names periods, so a project pick lights its bands without touching a
+         list that has nothing to say about projects. */
+      for (const ul of (svg.parentNode || root).querySelectorAll(":scope > ul.legend")){
+        const lis = [...ul.querySelectorAll("li[data-s]")];
+        const offered = known && lis.some(li => li.getAttribute("data-s") === key);
+        ul.classList.toggle("picked-leg", offered);
+        for (const li of lis){
+          const on = offered && li.getAttribute("data-s") === key;
+          li.classList.toggle("on", on);
+          li.setAttribute("aria-pressed", on ? "true" : "false");
+        }
+      }
+    }
+  },
+  toggle(li){
+    const root = PICK.root(li), key = li.getAttribute("data-s");
+    const cur = root.querySelector("ul.legend li[data-s].on");
+    PICK.apply(root, cur && cur.getAttribute("data-s") === key ? "" : key);
+  },
+  /** Asked of the CHARTS rather than of the legends: a pick can light a chart whose own
+   *  legend does not offer the key - the timeline under a project pick - so a chart left
+   *  dimmed is the thing to look for, not a legend left faded. */
+  clear(){
+    for (const svg of document.querySelectorAll("svg.chart.picked")) PICK.apply(PICK.root(svg), "");
+  }
+};
+document.addEventListener("click", e => {
+  const li = e.target.closest && e.target.closest("ul.legend li[data-s]");
+  if (li) PICK.toggle(li);
+});
+document.addEventListener("keydown", e => {
+  // Enter and Space on a focused entry, because a legend entry is a button (D-04).
+  if (e.key === "Enter" || e.key === " "){
+    const li = e.target.closest && e.target.closest("ul.legend li[data-s]");
+    if (li){ e.preventDefault(); PICK.toggle(li); return; }
+  }
+  if (e.key === "Escape") PICK.clear();
+});
+
 for (const id of ["fFrom","fTo"])
   el(id).addEventListener("change", () => { readFilters(); renderKeepingTab(); });
 el("fAll").onclick = () => { S.from = S.calc.lo; S.to = S.calc.hi;
@@ -9533,7 +9805,7 @@ document.addEventListener("click", e => {
       for (const tr of row.parentNode.children) tr.classList.toggle("sel", tr === row);
       const d = el("persDetail"); if (d) d.innerHTML = persDetail(S.selPers);
     }
-    // Selecting an assignment drives the overrides table beside it. Only the panels that
+    // Selecting an assignment drives the two panels below it. Only the panels that
     // depend on it are redrawn - re-rendering the Assignments table would replace the
     // cell the click just put the caret in, so the edit could never be typed.
     if (sheet === "Assignment" && S.selAsg !== row.dataset.id){

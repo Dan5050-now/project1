@@ -418,6 +418,13 @@ const BLANK_LABEL = "(blank)";
  * estimation tables (one on each source tab) can never both be live. */
 const FTABLE = {};
 
+/** One head for every pop-up about a column: the plain name, with the column's own name
+ *  beside it in the quieter type. Said the same way on the heading, on a cell and on a
+ *  filter button, so a reader who learns it once reads it everywhere. */
+const colHead = c => COLUMN_LABEL[c]
+  ? `<b>${esc(COLUMN_LABEL[c])}</b> <span class="tr">${esc(c)}</span>`
+  : `<b>${esc(c)}</b>`;
+
 function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable){
   derived = derived || {};
   if (filterable) FTABLE[sheet] = {rows, cols, derived};
@@ -437,14 +444,23 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
         const fb = filterable
           ? `<button type="button" class="fbtn${on ? " on" : ""}" data-fsheet="${att(sheet)}" `
             + `data-fcol="${att(c)}" tabindex="-1" aria-label="Filter ${att(c)}" `
-            + `data-tip="${att(on ? `<b>${esc(c)}</b><br>narrowed to ${on.size} value(s)`
+            + `data-tip="${att(on ? `${colHead(c)}<br>narrowed to ${on.size} value(s)`
                                    + `<br><span class="tr">click to change</span>`
                                  : `<b>Filter ${esc(c)}</b><br>Pick the values to keep. `
                                    + `Filters on different columns narrow together.`)}">`
             + `&#9662;</button>` : "";
-        return `<th${h || d ? ` class="hasinfo" data-tip="${att(`<b>${esc(c)}</b><br>${(h||"")}${d}`)}"` : ""}>`
-          + `${esc(c)}${derived[c] ? ' <span class="drv">lookup</span>'
-                       : px ? ' <span class="drv ent">sets ' + esc(px.into) + '</span>' : ""}${fb}</th>`;
+        /* TWO LINES: what the column IS, then what it is CALLED in the file. The plain
+           name leads because that is the one a reader needs and the one the old heading
+           did not give; the column name stays under it, in the monospace this
+           application uses for every other identifier, because the screen and the
+           workbook are the same thing and a heading you cannot find in the spreadsheet
+           is a heading you cannot act on. Neither replaces the other. */
+        const lab = COLUMN_LABEL[c];
+        return `<th${h || d ? ` class="hasinfo" data-tip="${att(`${colHead(c)}<br>${(h||"")}${d}`)}"` : ""}>`
+          + (lab ? `<span class="lab">${esc(lab)}</span>` : "")
+          + `<span class="cid">${esc(c)}</span>`
+          + `${derived[c] ? ' <span class="drv">lookup</span>'
+                          : px ? ' <span class="drv ent">sets ' + esc(px.into) + '</span>' : ""}${fb}</th>`;
       }).join("");
   const body = shown.map(r => {
     const sel = (selKey && r[selKey] === selVal) ? ' class="sel"' : "";
@@ -456,7 +472,7 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
            data-col is what makes a cell editable and what the editing code writes back
            through, and a read-only cell must not carry it. */
         return `<td class="muted drvcell" data-drv="${att(c)}" data-tip="${att(
-            `<b>${esc(c)}</b><br>${esc(dv).replace(/\n/g, "<br>") || "&mdash;"}`
+            `${colHead(c)}<br>${esc(dv).replace(/\n/g, "<br>") || "&mdash;"}`
           + `<br><span class="tr">looked up, not stored on this row</span>`)}">${esc(dv)}</td>`;
       }
       const px = proxyFor(sheet, c);
@@ -465,14 +481,14 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
         const marked = S.editedCells.has(`${sheet}|${r.__row}|${px.into}`) ? " edited" : "";
         return `<td class="cell${marked}" contenteditable="true" data-sheet="${att(sheet)}" `
           + `data-row="${r.__row}" data-col="${att(c)}" data-tip="${att(
-              `<b>${esc(c)}</b><br>${pv === "" ? "<i>empty</i>" : esc(pv)}`
+              `${colHead(c)}<br>${pv === "" ? "<i>empty</i>" : esc(pv)}`
               + `<br><span class="tr">typing a name here sets ${esc(px.into)}</span>`)}">${esc(pv)}</td>`;
       }
       const v = r[c];
       const disp = v instanceof Date ? ymd(v) : (v === null || v === undefined ? "" : v);
       const marked = S.editedCells.has(`${sheet}|${r.__row}|${c}`) ? " edited" : "";
       const help = COLUMN_HELP[c] ? `<br><span class="tr">${esc(COLUMN_HELP[c])}</span>` : "";
-      const tip = `<b>${esc(c)}</b><br>${disp === "" ? "<i>empty</i>" : esc(disp)}${help}`;
+      const tip = `${colHead(c)}<br>${disp === "" ? "<i>empty</i>" : esc(disp)}${help}`;
       return `<td class="cell${marked}" contenteditable="true" data-sheet="${att(sheet)}" `
         + `data-row="${r.__row}" data-col="${att(c)}" data-tip="${att(tip)}">${esc(disp)}</td>`;
     }).join("");

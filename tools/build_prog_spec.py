@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.26"
+DOC_VERSION = "1.27"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.52.xlsx"
+PLAN = "PRAP_Development_Plan_v2.53.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,31 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.27", "2026-09-12", "Claude Code", "Dan",
+         "R-45, REQ-DSH-16. Five screen changes, no rule and no figure. Sheet 06 records "
+         "the four that are drawing decisions. A CHART WHOSE X AXIS IS THE HORIZON takes "
+         "its width from the month count - W = max(Wmin, padL + padR + months x Wper) - "
+         "and its panel scrolls; the two utilisation charts were the last fixed-width "
+         "ones, and a fixed width is legible only over the span it was chosen for and "
+         "fails silently outside it. Wper is chosen so the DEFAULT horizon still falls "
+         "under Wmin, which is what keeps the change invisible to the view almost "
+         "everybody opens on. PANELS ARE TILED ONLY WHERE BOTH ARE NARROW: the person "
+         "tab's three wide tables are one column, in work order. A PANEL THAT IS A CHILD "
+         "OF A SELECTION names its parent from one shared helper, so two panels stating "
+         "the same assignment cannot drift. LEGEND PICKING is recorded with the two "
+         "decisions that are not obvious: the pick is scoped to the TAB, since series "
+         "keys are ids and the same project is the same id on every chart that knows it; "
+         "and a chart with NO mark for the key is left untouched rather than dimmed "
+         "whole, because a chart with nothing lit reads as absent data. Marks carry a "
+         "second key where they stand for two series at once, and marks belonging to the "
+         "MONTH - thresholds, baselines, the V-34 outline - carry none and never fade. "
+         "Sheet 03 records COLUMN_LABEL beside COLUMN_HELP: a plain name for every "
+         "column, shown above the column's own name in each heading. Nothing is renamed, "
+         "the schema stays at 11, validation messages still name the column, and the "
+         "cell still writes back through the identifier - the label is a second line, "
+         "not a substitution. Sheet 07 records the one mechanical consequence: a test "
+         "reading a column name off a heading must read the identifier line, not the "
+         "heading's text. Written against plan v2.53.", "Issued"],
         ["1.26", "2026-09-12", "Claude Code", "Dan",
          "R-44. Sheet 04 gains V-35: capacity_fte is bounded 0.00 to 1.00 and, alone "
          "among the rules added this year, it REFUSES. The distinction is recorded "
@@ -751,6 +776,27 @@ r = note(ws, r, "schema_version stepped from 3 to 4 at R-10 (RoleFactor gained t
 r += 1
 r = note(ws, r, "A missing Config row falls back to the default above and raises a warning. A Config value that fails "
                 "coercion is an error - a threshold read as text would silently disable a flag.")
+r += 1
+r = section(ws, r, "What a column is called on screen   [COLUMN_LABEL, R-45]")
+r = lines(ws, r, [
+    "Every column carries TWO names in the parse module, in one place so that adding one and forgetting",
+    "the other takes effort: COLUMN_HELP, a sentence saying what the column is for, and COLUMN_LABEL, a",
+    "plain name for it. Each table heading shows the plain name above the column's own name, and the same",
+    "two-part head opens the heading's pop-up, every cell's, and the filter buttons'.",
+    "",
+    "THIS IS NOT A RENAME. The workbook's column names stay on screen, stay in every validation message,",
+    "and stay as the key the editing path writes back through (data-col on the cell is the identifier,",
+    "never the label). The schema is unchanged at 11 and no file is affected. What changes is that a",
+    "reader who has never seen this document can now read the table: work_scope_type, outsourcing_scope_det,",
+    "absorbed_by and ref_id were legible to whoever wrote the schema and to nobody else, and their meaning",
+    "lived in a pop-up - which is to say it was there only for a reader who already knew to hover.",
+    "",
+    "COLUMN_LABEL must cover every column in SHEET_HEADERS, plus the read-only lookup columns the",
+    "application adds beside them (standard_fte, automatic_fte, difference, period, sharers). A missing",
+    "entry is not an error - the heading falls back to the bare identifier - which is exactly why it is",
+    "held by a test rather than left to notice: a silent fallback to the old behaviour is the failure",
+    "mode this replaces. tools/test_labels.py checks the map against the schema, not against the screen.",
+])
 
 # ---- 04 Validation --------------------------------------------------------
 ws, r = sheet(wb, "04_Validation", "Validation rules",
@@ -1336,6 +1382,66 @@ r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], t4, [24, 90, 20], wrap_co
 r = note(ws, r, "This tab is read-mostly but not read-only. A role factor is exactly the kind of figure a "
                 "planner wants to try a different value for, and locking it would send them back to the "
                 "workbook - which is what the tab exists to avoid.")
+
+r = section(ws, r, "Reading the screen at the size the plan actually is   [REQ-DSH-16, R-45]")
+r = lines(ws, r, [
+    "Four drawing rules that apply across every tab, not to one panel. None of them changes a figure.",
+])
+t5 = [
+    ["Charts grow with the horizon",
+     "A chart whose x axis is the month grid takes its width from the month count: "
+     "W = max(Wmin, padL + padR + months x Wper), and its panel scrolls sideways past the point where "
+     "they all fit. A FIXED WIDTH IS LEGIBLE ONLY OVER THE SPAN IT WAS CHOSEN FOR, and it fails "
+     "SILENTLY - the chart still draws, it simply stops being readable, and it does so on exactly the "
+     "long plans that most need reading. Wper is chosen so the DEFAULT horizon still falls under Wmin: "
+     "the two-year view almost everybody opens on is unchanged, and the rule is visible only to the "
+     "reader who needed it. The two utilisation charts were the last fixed-width ones.",
+     "REQ-DSH-16"],
+    ["Panels are tiled only where both are narrow",
+     "Two panels share a row only if each is readable in half a screen. The person tab's Assignments, "
+     "Weight overrides and Monthly estimation are eleven, seven and eight columns wide - one of them a "
+     "sentence of arithmetic - so they are ONE COLUMN, full width, in the order the work is done in: "
+     "pick the assignment, then its override windows, then its months. Tiled, all three scrolled "
+     "sideways permanently, which is a layout that costs every reader something to save space no "
+     "reader asked for.",
+     "REQ-DSH-16"],
+    ["A child panel names its parent",
+     "A panel that is a child of a selection states the selected row under its title - the id, and the "
+     "fields a reader needs to recognise it. From ONE helper shared by every panel that names the same "
+     "thing, so two statements of the same assignment cannot drift apart. Monthly estimation was the "
+     "panel without one: eight columns of months and no statement of what they belonged to.",
+     "REQ-DSH-16"],
+    ["Legend picking",
+     "Clicking a legend entry fades back every mark that is not that series; a second click, another "
+     "entry, or Escape brings the chart home. Twenty bands in twenty shades of one palette read as a "
+     "total and not as a series, and the answer is not more colours. THREE DECISIONS WORTH RECORDING. "
+     "(1) The pick is scoped to the TAB, not the chart: series keys are ids, the same project is the "
+     "same id wherever it is drawn, and the question being asked is 'where is this project on this "
+     "page'. (2) A chart with NO mark for that key is left untouched. Dimming it whole would light "
+     "nothing and fade everything, which reads as 'this has no data' rather than 'this chart cannot "
+     "answer that' - charts on one tab are cut along different axes, and a person's id means nothing to "
+     "a chart stacked by project. (3) A mark standing for two series at once carries a SECOND key and "
+     "answers to either: a timeline band is a period OF a project, so picking a period lights it across "
+     "every project and picking a project lights that project's whole row. Marks belonging to the MONTH "
+     "rather than to any series - thresholds, baselines, the V-34 outline, milestone markers - carry no "
+     "key and never fade. Every entry is a button: focusable, driven by Enter and Space, and it states "
+     "whether it is pressed (D-04).",
+     "REQ-DSH-16, D-04"],
+    ["Headings carry two lines",
+     "Every column heading shows a PLAIN NAME above the column's own name. The workbook's column names "
+     "must stay on screen - the screen and the file are the same thing, so a heading is something to "
+     "find in the spreadsheet, quote in a mail and look up in this document - and they are not, by "
+     "themselves, labels: work_scope_type, outsourcing_scope_det, absorbed_by and ref_id are legible to "
+     "whoever wrote the schema and opaque to whoever fills the plan in. The meaning existed, in the "
+     "heading's pop-up, which is to say it existed only for a reader who knew to hover. NOTHING IS "
+     "RENAMED: the schema is unchanged, validation messages still name the column, and the cell still "
+     "writes back through the identifier - the plain name is a second line, never a substitution. The "
+     "same two-part head is used on the heading's pop-up, on every cell's and on the filter buttons', "
+     "so it is learned once. COLUMN_LABEL sits beside COLUMN_HELP in the parse module, so a column gets "
+     "a sentence and a name in the same place.",
+     "REQ-DSH-16, REQ-IMP-07"],
+]
+r = table(ws, r, ["Rule", "Behaviour", "REQ-ID"], t5, [26, 88, 20], wrap_cols=(2,))
 
 # ---- 07 Editing and IO ----------------------------------------------------
 ws, r = sheet(wb, "07_Editing_IO", "Editing, import and export")

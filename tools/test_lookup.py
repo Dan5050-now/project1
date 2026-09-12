@@ -134,7 +134,9 @@ def fixture():
 
 BOOK = fixture()
 
-HEADERS = """(t) => [...t.querySelectorAll('thead th')].map(x => x.innerText.trim())"""
+# The column's own name, which is the second line of a two-line heading.
+HEADERS = """(t) => [...t.querySelectorAll('thead th')].map(
+             x => ((x.querySelector('.cid') || x).textContent || '').trim())"""
 ROWS = """(t) => [...t.querySelectorAll('tbody tr')].map(
            r => [...r.querySelectorAll('td')].slice(1).map(c => c.innerText.trim()))"""
 
@@ -143,8 +145,8 @@ def table_with(pg, pane, col):
     """The table in `pane` whose heading row mentions `col`."""
     return pg.evaluate_handle(
         """([pane, col]) => [...document.querySelectorAll(pane + ' table.data-t')]
-             .find(t => [...t.querySelectorAll('thead th')]
-                          .some(x => x.innerText.trim().split(' ')[0] === col))""",
+             .find(t => [...t.querySelectorAll('thead th .cid')]
+                          .some(x => x.textContent.trim() === col))""",
         [pane, col])
 
 
@@ -165,7 +167,7 @@ with sync_playwright() as pw:
     per = table_with(pg, "#t-proj", "period_name")
     head = pg.evaluate(HEADERS, per)
     rows = pg.evaluate(ROWS, per)
-    check(head.index("standard_fte lookup") == head.index("weight") + 1,
+    check(head.index("standard_fte") == head.index("weight") + 1,
           "standard_fte sits immediately after weight", " | ".join(head))
     by = {r[1]: r for r in rows}
     check(by["Start-up"][6] == "4.00 → 4.00 a month",
@@ -197,7 +199,8 @@ with sync_playwright() as pw:
     print("\n4. it is a LOOKUP: not editable, and not a column of the sheet")
     check(pg.evaluate("""(t) => {
             const i = [...t.querySelectorAll('thead th')]
-                        .findIndex(x => x.innerText.trim().startsWith('standard_fte'));
+                        .findIndex(x => ((x.querySelector('.cid')||{}).textContent || '')
+                                          .trim() === 'standard_fte');
             return [...t.querySelectorAll('tbody tr')].every(r => {
               const td = r.querySelectorAll('td')[i];
               return td && !td.isContentEditable && !td.dataset.col
@@ -217,7 +220,7 @@ with sync_playwright() as pw:
     est = table_with(pg, "#t-proj", "automatic_fte")
     ehead = pg.evaluate(HEADERS, est)
     erows = {r[0]: r for r in pg.evaluate(ROWS, est)}
-    check(ehead.index("period lookup▾") == ehead.index("difference lookup▾") + 1,
+    check(ehead.index("period") == ehead.index("difference") + 1,
           "period sits immediately after difference", " | ".join(ehead))
     check(erows["2026-09"][4] ==
           "Start-up (standard 4.00) × period weight (1.00) × month run (1.00) = 4.00"
@@ -253,8 +256,8 @@ with sync_playwright() as pw:
     pest = table_with(pg, "#t-pers", "automatic_fte")
     phead = pg.evaluate(HEADERS, pest)
     prows = {r[0]: r for r in pg.evaluate(ROWS, pest)}
-    check(phead.index("period lookup▾") == phead.index("difference lookup▾") + 1
-          and phead.index("sharers lookup▾") == phead.index("period lookup▾") + 1,
+    check(phead.index("period") == phead.index("difference") + 1
+          and phead.index("sharers") == phead.index("period") + 1,
           "period then sharers, both after difference", " | ".join(phead))
     check(prows["2026-09"][5] == "1 (only holder)"
           and prows["2026-10"][5] == "2 share this role",
@@ -314,8 +317,8 @@ with sync_playwright() as pw:
         S.colf.MonthlyEstimate = {sharers: new Set(['1 (only holder)'])};
         renderKeepingTab();
         const t = [...document.querySelectorAll('#t-pers table.data-t')]
-          .find(t => [...t.querySelectorAll('thead th')]
-                       .some(x => x.innerText.trim().startsWith('automatic_fte')));
+          .find(t => [...t.querySelectorAll('thead th .cid')]
+                       .some(x => x.textContent.trim() === 'automatic_fte'));
         const rows = [...t.querySelectorAll('tbody tr')].map(
           r => (r.querySelectorAll('td')[1] || {}).innerText.trim());
         delete S.colf.MonthlyEstimate; renderKeepingTab();

@@ -25,9 +25,58 @@ const CHART = {
   // `headroom` lifts the top of the scale clear of the tallest stack.
   stack:  {Wmin:700, Wbase:90, Wper:74, H:600, padL:62, padR:14, padT:30, padB:52,
            headroom:1.08},
-  // One project against the portfolio average, thresholds labelled down the right.
-  single: {W:1080, H:300, padL:62, padR:230, padT:26, padB:44},
+  /* The two UTILISATION charts - one project against the portfolio average, and one
+     person against both thresholds. Both label their reference lines down the right,
+     which is what the wide padR is for and why they are not `stack`.
+
+     THEY GROW WITH THE HORIZON, like every other chart here. They used to be a fixed
+     1080 wide, which is fine at the default two years and unreadable past it: five
+     years is sixty columns in 790px of plot, thirteen pixels each, and a three-letter
+     month does not fit in thirteen pixels - so the axis ran its labels into one another
+     and the chart stopped being readable exactly where a long plan most needs reading.
+     Wper is the plot width each month is guaranteed; past the point where the panel can
+     show them all, the panel scrolls, which is what every other chart on the page
+     already does. Wper is 32 rather than a rounder number for one reason: at the default
+     24-month horizon it comes to less than Wmin on both charts, so the two-year view -
+     the one almost every reader opens on - is EXACTLY the width it has always been, and
+     this change is visible only on the long plans that needed it. */
+  single: {Wmin:1080, Wper:32, H:300, padL:62, padR:230, padT:26, padB:44},
+  strip:  {Wmin:1080, Wper:32, H:300, padL:62, padR:175, padT:26, padB:44},
 };
+
+/** How wide a chart has to be to give every month `K.Wper` of plot area. */
+const chartW = (K, n) => Math.max(K.Wmin, K.padL + K.padR + Math.max(1, n) * K.Wper);
+
+/* WHICH SERIES A MARK BELONGS TO.
+ *
+ * A stack of twenty bands in twenty shades of the same palette is readable as a total and
+ * unreadable as a series: picking one project out of it by colour alone means holding a
+ * swatch in your head while your eye runs down sixty months. So every mark carries the id
+ * of the series that drew it, and so does its legend entry, and clicking the entry dims
+ * everything that is not that series.
+ *
+ * The key is an id, not a label - project ids, person ids, or a period name on the Gantt -
+ * because ids are what the rest of the app already keys on and two projects may share a
+ * name. Ids from different namespaces (PRJ-, PSN-, period names) never collide, which is
+ * what lets ONE click carry across the several charts on a tab: the trend lines, the
+ * stack and the timeline all mean the same project by the same key, so picking a project
+ * in the legend of one highlights it in all of them. That is the whole point - the
+ * question "where is this project" is asked of the tab, not of one chart.
+ *
+ * A mark may belong to TWO series at once, which is why there is a second key. A band on
+ * the timeline is a period OF a project: picking "Conduct" should light the conduct band
+ * of every project, and picking one project should light that project's whole row. One
+ * key cannot say both, so the band carries the period as `data-s` - the key its own
+ * legend offers - and the project as `data-s2`, which only a pick made elsewhere on the
+ * tab ever asks for.
+ *
+ * `sKey` goes on the marks, `sLeg` on the legend entry that picks them. The legend entry
+ * is a real button: focusable and operable from the keyboard, because a control that only
+ * answers to a mouse is not a control (D-04). */
+const sKey = (k, k2) => ` data-s="${att(String(k))}"`
+  + (k2 === undefined || k2 === null ? "" : ` data-s2="${att(String(k2))}"`);
+const sLeg = k => ` data-s="${att(String(k))}" tabindex="0" role="button" aria-pressed="false"`
+  + ` title="Click to highlight this one; click again to bring the rest back"`;
 
 /* WHICH PERIOD OF THE PROJECT A MONTH FALLS IN, for the pop-ups.
  *
@@ -126,7 +175,7 @@ function chartGantt(pids, opts){
         + `<br><b>${fte.toFixed(2)} FTE per month</b> on average across this period`;
       o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${y+13}" width="${w.toFixed(1)}" `
         + `height="${rowh-20}" fill="${bandFill(s.period_name, num(s.weight)||0, wmax)}" rx="2" `
-        + `data-tip="${att(tip)}"></rect>`);
+        + `data-tip="${att(tip)}"${sKey(s.period_name, p)}></rect>`);
       if (opts.single && w > 64)
         o.push(`<text class="bandsub" x="${(x0+w/2).toFixed(1)}" y="${(y+rowh-14).toFixed(1)}" `
           + `text-anchor="middle">${fte.toFixed(2)} FTE/mo</text>`);
@@ -150,7 +199,7 @@ function chartGantt(pids, opts){
   const leg = ['<ul class="legend">'];
   for (const p of rows) for (const s of (M.periods[p] || [])) seen.add(s.period_name);
   for (const n of [...CLINICAL_PERIODS, ...OTHER_PERIODS]) if (seen.has(n))
-    leg.push(`<li><span class="sw" style="background:${PERIOD_HUE[n]}"></span>${esc(n)}</li>`);
+    leg.push(`<li${sLeg(n)}><span class="sw" style="background:${PERIOD_HUE[n]}"></span>${esc(n)}</li>`);
   leg.push('<li><span class="sw tri"></span>milestone</li>');
   leg.push('<li><span class="sw tri key"></span>DB lock &#8212; sets a period boundary</li>');
   leg.push('<li class="hint">darker band = higher period weight</li></ul>');
@@ -216,20 +265,20 @@ function chartLines(items, valueAt, opts){
       + `<br><span class="tr">mean ${fmt(total / G.length)} &#183; `
       + `peak ${fmt(peak)} in ${keyToLabel(peakK)}</span>`;
     // A hit strip under the stroke: a 2px line is almost impossible to hover deliberately.
-    o.push(`<polyline class="lnhit" points="${pts}" data-tip="${att(tip)}"></polyline>`);
-    o.push(`<polyline class="ln" points="${pts}" stroke="${colour}"></polyline>`);
+    o.push(`<polyline class="lnhit" points="${pts}" data-tip="${att(tip)}"${sKey(id)}></polyline>`);
+    o.push(`<polyline class="ln" points="${pts}" stroke="${colour}"${sKey(id)}></polyline>`);
     for (const [i, k] of G.entries()){
       const v = valueAt(id, k) || 0;
       if (v <= 0.004) continue;
       o.push(`<circle class="lndot" cx="${xOf(i).toFixed(1)}" cy="${yOf(v).toFixed(1)}" r="2.4" `
-        + `fill="${colour}"></circle>`);
+        + `fill="${colour}"${sKey(id)}></circle>`);
     }
   }
   monthAxis(o, G, i => xOf(i) - step / 2, step, H - padB + 17, H - padB + 32, padT, H - padB);
   o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}"/></svg>`);
   const leg = ['<ul class="legend">'];
-  for (const [[, label, colour]] of shown)
-    leg.push(`<li><span class="sw ln" style="background:${colour}"></span>${esc(label)}</li>`);
+  for (const [[id, label, colour]] of shown)
+    leg.push(`<li${sLeg(id)}><span class="sw ln" style="background:${colour}"></span>${esc(label)}</li>`);
   leg.push('</ul>');
   if (totals.length > shown.length)
     leg.push(`<p class="note">The ${LINE_LIMIT} largest by total are drawn; ${totals.length - shown.length} `
@@ -306,7 +355,7 @@ function chartStacked(pids){
         + `<hr>${keyToLabel(k)} across every project in view: <b>${fmt(month)} ${unitLabel()}</b>`;
       o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${(base-h).toFixed(1)}" `
         + `width="${(bw-8).toFixed(1)}" height="${Math.max(0.6,h).toFixed(1)}" fill="${colour[p]}" `
-        + `data-tip="${att(tip)}"></rect>`);
+        + `data-tip="${att(tip)}"${sKey(p)}></rect>`);
       base -= h;
     }
   });
@@ -393,7 +442,8 @@ function chartPeople(sids){
       o.push(`<rect class="band${breach ? (v > M.OVER ? " brOver" : " brUnder") : ""}" `
         + `x="${x0.toFixed(1)}" y="${(base-h).toFixed(1)}" `
         + `width="${(bw-8).toFixed(1)}" height="${Math.max(0.6,h).toFixed(1)}" `
-        + `fill="${s === REST ? "var(--other)" : persColourOf(s)}" data-tip="${att(tip)}"></rect>`);
+        + `fill="${s === REST ? "var(--other)" : persColourOf(s)}" data-tip="${att(tip)}"`
+        + `${sKey(s)}></rect>`);
       base -= h;
     }
   });
@@ -401,7 +451,8 @@ function chartPeople(sids){
   o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-8}" y2="${H-padB}"/></svg>`);
   const leg = ['<ul class="legend">'];
   for (const s of order)
-    leg.push(`<li><span class="sw" style="background:${s === REST ? "var(--other)" : persColourOf(s)}"></span>`
+    leg.push(`<li${sLeg(s)}>`
+      + `<span class="sw" style="background:${s === REST ? "var(--other)" : persColourOf(s)}"></span>`
       + `${esc(s === REST ? `the other ${rest.length} people` : persName(s))}</li>`);
   leg.push(`<li class="hint">outlined segment = that person is over ${M.OVER.toFixed(2)} or `
     + `under ${M.UNDER.toFixed(2)} FTE that month</li></ul>`);
@@ -421,7 +472,8 @@ function chartProjectUtil(pid){
   for (const [k, v] of C.projMonth) if (k.startsWith(pid + "|") && v > 0.004) own.push(v);
   const ownAvg = own.length ? own.reduce((a,b)=>a+b,0) / own.length : 0;
   const vals = G.map(k => C.projMonth.get(pid+"|"+k) || 0);
-  const K = CHART.single, W = K.W, H = K.H, padL = K.padL, padR = K.padR;
+  const K = CHART.single, H = K.H, padL = K.padL, padR = K.padR;
+  const W = chartW(K, G.length);
   const vmax = Math.max(Math.max(...vals, upper), 0.01) * 1.18;
   const bw = (W - padL - padR) / Math.max(1, G.length);
   const base = H - K.padB, top = K.padT;
@@ -478,7 +530,8 @@ function chartProjectUtil(pid){
           + `&#183; this project averages ${ownAvg.toFixed(2)}, an active project ${portAvg.toFixed(2)}</span>`;
       o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" `
         + `width="${w.toFixed(1)}" height="${Math.max(0.8, y1-y0).toFixed(1)}" `
-        + `fill="${sid === REST ? "var(--other)" : persColourOf(sid)}" data-tip="${att(tip)}"></rect>`);
+        + `fill="${sid === REST ? "var(--other)" : persColourOf(sid)}" data-tip="${att(tip)}"`
+        + `${sKey(sid)}></rect>`);
     }
   });
   /* A MONTH OFF ITS OWN STANDARD IS MARKED ON THE CHART (V-34), not only in its pop-up.
@@ -508,7 +561,8 @@ function chartProjectUtil(pid){
   o.push(`<line class="base" x1="${padL}" y1="${base}" x2="${W-padR+4}" y2="${base}"/></svg>`);
   const leg = ['<ul class="legend">'];
   for (const sid of order)
-    leg.push(`<li><span class="sw" style="background:${sid === REST ? "var(--other)" : persColourOf(sid)}"></span>`
+    leg.push(`<li${sLeg(sid)}>`
+      + `<span class="sw" style="background:${sid === REST ? "var(--other)" : persColourOf(sid)}"></span>`
       + `${esc(sid === REST ? `the other ${rest.length} people` : persName(sid))}</li>`);
   leg.push(`<li class="hint">tinted outline = the month's TOTAL crosses a reference line`
     + ` &#183; dashed outline = the month is off this project's own standard (V-34)</li></ul>`);
@@ -545,10 +599,11 @@ function chartPersonStrip(sid){
   const order = [...totals.entries()].filter(([, v]) => v > 0.004)
     .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).map(x => x[0]);
 
-  const W = 1080, H = 300, padL = 62, padR = 175;
+  const K = CHART.strip, H = K.H, padL = K.padL, padR = K.padR;
+  const W = chartW(K, G.length);
   const vmax = Math.max(Math.max(...vals, M.OVER), 0.01) * 1.15;
   const bw = (W - padL - padR) / Math.max(1, G.length);
-  const base = H - 44, top = 26;
+  const base = H - K.padB, top = K.padT;
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Monthly load for the selected person, split by project, against both thresholds">`];
   o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
@@ -596,7 +651,7 @@ function chartPersonStrip(sid){
            : total < M.UNDER ? `<br><span class="tr">below the ${M.UNDER.toFixed(2)} floor</span>` : "");
       o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" `
         + `width="${w.toFixed(1)}" height="${Math.max(0.8, y1-y0).toFixed(1)}" `
-        + `fill="${projColourOf(p)}" data-tip="${att(tip)}"></rect>`);
+        + `fill="${projColourOf(p)}" data-tip="${att(tip)}"${sKey(p)}></rect>`);
     }
   });
   monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base);
@@ -612,7 +667,7 @@ function chartPersonStrip(sid){
     return o.join("") + `<p class="note">This person draws no resource inside the horizon.</p>`;
   const leg = ['<ul class="legend">'];
   for (const p of order)
-    leg.push(`<li><span class="sw" style="background:${projColourOf(p)}"></span>`
+    leg.push(`<li${sLeg(p)}><span class="sw" style="background:${projColourOf(p)}"></span>`
       + `${esc(M.projects[p].project_name)}</li>`);
   leg.push(`<li class="hint">tinted outline = the month's TOTAL is over the ceiling or `
     + `under the floor</li></ul>`);

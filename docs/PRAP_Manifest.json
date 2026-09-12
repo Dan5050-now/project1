@@ -12,17 +12,17 @@
  "current": [
   {
    "what": "development_plan",
-   "path": "docs/PRAP_Development_Plan_v2.52.xlsx",
+   "path": "docs/PRAP_Development_Plan_v2.53.xlsx",
    "exists": true,
-   "bytes": 130031,
-   "sha256": "3e52b01c1e0900c9f84a3f13fe1409c9cd09197a6ebb8e438338efa8026bff62"
+   "bytes": 132961,
+   "sha256": "4125624437892551fb0e03060ca646acb3fb1bf57520c84d957d3c4c15913814"
   },
   {
    "what": "programming_specification",
-   "path": "docs/PRAP_Programming_Specification_v1.26.xlsx",
+   "path": "docs/PRAP_Programming_Specification_v1.27.xlsx",
    "exists": true,
-   "bytes": 68553,
-   "sha256": "a8ae4d8e927dac5326410e54e7c63537c1ec3477477c877b45ddaee6630c0369"
+   "bytes": 72090,
+   "sha256": "a7d769281e1001fa2a604d614152e7ae81ff0ee0f45113dbaa6462bf1642c6c2"
   },
   {
    "what": "ui_component_list",
@@ -57,21 +57,21 @@
    "path": "docs/PRAP_AI_Agent_Guide.md",
    "exists": true,
    "bytes": 41826,
-   "sha256": "57b0ea47ad2e1113f7feee25d4567104836078411a641b633e2bff327fe92f0e"
+   "sha256": "65ac7bb8ad086a2ead3597a59e43e4f5f37023a122d05990c951d5566fc961fa"
   },
   {
    "what": "application",
    "path": "app/PRAP.html",
    "exists": true,
-   "bytes": 610411,
-   "sha256": "03e36c9f782dc878c77bc87873c59c316e08b0f6c1a3f9657bb2fc8b58cdb3a1"
+   "bytes": 627255,
+   "sha256": "9f73a6d8daddcf2d9e6321114e66934eeafda0a8d739f5bafad77deff1bc7696"
   },
   {
    "what": "machine_readable_contract",
    "path": "docs/prap_contract.json",
    "exists": true,
    "bytes": 56008,
-   "sha256": "8d34f6887ad03dac318d8b97ffbca0949c9436837e76814d8297bd4a902556f4"
+   "sha256": "be43026398bc8ffd3a1cea99252c54030227f2438b07ec2f3390fb7123586b3e"
   },
   {
    "what": "interchange_tool",
@@ -84,8 +84,8 @@
    "what": "agent_guide_workbook",
    "path": "docs/PRAP_AI_Agent_Guide_v1.0.xlsx",
    "exists": true,
-   "bytes": 34113,
-   "sha256": "665e6a20618c9cdbdd70808bde7aec3449ed921164f39113dcd98e8c14626c71"
+   "bytes": 34112,
+   "sha256": "9cd33875af3bf34c374c9403893b4dabd2d7a0030e58cdb697516713435df9e9"
   }
  ]
 }

@@ -230,6 +230,61 @@ const COLUMN_HELP = {
   reason:"Why the weight differs for this window, e.g. part-time or covering a peak.",
   note_1:"Free text. Carried through export unchanged and never read by the calculation.",
 };
+
+/* WHAT EACH COLUMN IS CALLED IN PLAIN WORDS.
+ *
+ * The tables have always shown the workbook's own column names, and there is a real
+ * reason for that: the screen and the file are the same thing, so a name on screen is a
+ * name you can find in the spreadsheet, quote in a mail, or search the specification for.
+ * That is worth keeping. It is also, on its own, a poor label. `outsourcing_scope_det`,
+ * `work_scope_type`, `absorbed_by` and `ref_id` are legible to somebody who wrote the
+ * schema and opaque to the person actually filling the plan in, and the meaning was only
+ * ever a hover away - which is to say, invisible to anyone who did not know to hover.
+ *
+ * So each heading now carries BOTH: the plain name first, in the page's own type, and
+ * the column name under it in the smaller monospace the rest of the application uses for
+ * identifiers. Nothing is hidden and nothing is renamed - the file keeps its columns and
+ * every validation message still names them - but a reader who has never seen the schema
+ * can now read the table.
+ *
+ * Kept beside COLUMN_HELP deliberately: a column gets a sentence and a name in the same
+ * place, so adding one and forgetting the other takes effort. `test_labels.py` holds the
+ * map to being COMPLETE for every column any table puts on screen; a missing entry is a
+ * heading that would fall back to the bare identifier, which is the thing this fixes. */
+const COLUMN_LABEL = {
+  // Project
+  project_id:"Project ID", project_name:"Project name", project_type:"Project type",
+  project_category:"Product", clinical_phase:"Phase", work_scope_type:"Work scope",
+  outsourcing_scope_det:"What is outsourced", EDC_setup:"EDC set up by",
+  DataReviewSystem_setup:"Data review system set up by", RBQM_setup:"RBQM set up by",
+  DM_conduct:"Data reviewed by", EDC_system:"EDC system",
+  DataReviewSystem:"Data review system", RBQM_system:"RBQM system",
+  planned_member_count:"Planned team size", start_date:"Starts", end_date:"Ends",
+  total_period_months:"Length in months", status:"Status",
+  estimation_type:"Figures come from",
+  // Milestone
+  milestone_name:"Milestone", milestone_date:"Date", milestone_seq:"Order",
+  // ProjectPeriod, and the standards it reads
+  period_name:"Period", period_seq:"Order", period_start:"From", period_end:"To",
+  weight:"Period weight", standard_fte:"Standard monthly FTE",
+  role_name:"Role", role_factor:"Role factor", absorbed_by:"Picked up by",
+  role_note:"Basis for the factor",
+  // Person
+  person_id:"Person ID", person_name:"Name", department:"Department",
+  primary_role:"Usual role", capacity_fte:"Capacity in FTE",
+  employment_start:"Joined", employment_end:"Left",
+  // Assignment, and the override windows under it
+  assignment_id:"Assignment ID", assign_start_date:"On the project from",
+  assign_end_date:"On the project to", person_weight:"Share of this person",
+  weight_override:"Share instead, for these months", reason:"Why",
+  // MonthlyEstimate, and the lookups the app shows beside it
+  scope:"Figure is for", ref_id:"Belongs to", month:"Month", fte:"Stated FTE",
+  edited_at:"Last set", automatic_fte:"Calculated FTE", difference:"Difference",
+  period:"How this month is worked out", sharers:"Sharing this role",
+  // Config and Lists
+  parameter:"Setting", value:"Value", list_name:"List", note:"Note",
+  note_1:"Note 1", note_2:"Note 2", note_3:"Note 3", note_4:"Note 4", note_5:"Note 5",
+};
 const HELP = {
   rowactions:"<b>Row actions</b><br>Insert a new row directly below this one, or delete this row. "
     + "Both are provisional — 'Leave without change' undoes them.",

@@ -390,7 +390,14 @@ function manualPanel(scope, id){
              data-id="${att(id)}" data-tip="${att(HELP.estfill)}"
              >Fill ${missing.length} missing month(s)</button>` : ""}
       <span class="scope k">${on ? `${mine.length} stated month(s)`
-                                 : `${now.size} calculated month(s)`}</span></div>`;
+                                 : `${now.size} calculated month(s)`}</span></div>
+    ${/* WHICH assignment this is, under the title. The heading names the assignment_id
+         and nothing else, and ASG-203 is not a fact anybody carries around - the
+         project, the role, the window and the weight are what make one of a person's
+         five assignments recognisable. Drawn by the same function the Weight overrides
+         panel uses, because the two now sit one under the other and two versions of
+         this line that had drifted would be visible on one screen. */
+      scope === "assignment" ? assignmentLine(id) : ""}`;
 
   if (!on)
     return `<div class="panel">${head}
