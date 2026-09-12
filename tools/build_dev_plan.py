@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.53"
+DOC_VERSION = "2.54"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,6 +397,44 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.54", "2026-09-12", "Claude Code", "Pending",
+     "R-46: MonthlyEstimate.edited_at IS RETIRED. Schema 11 to 12, and the FIRST column "
+     "this schema has removed rather than added or renamed. "
+     "IT COULD NOT DO THE JOB IT WAS ADDED FOR. The column was 'when this figure was "
+     "last set, so a reader can tell a figure somebody typed from one the application "
+     "copied across on switching' - the distinction REQ-CAL-18 creates, because "
+     "switching to manual seeds every month at its calculated value and those seeded "
+     "figures sit in the same column as the ones somebody then types. Three findings, "
+     "all measured against the running application rather than read off the source. "
+     "ONE: the ordinary editing path never stamped it. Typing 0.77 over a stated 0.35 "
+     "in the Monthly estimation table left edited_at null. It was written in exactly "
+     "three places - the switch, 'fill the missing months', and the gap dialog - none of "
+     "which is a person typing a figure, which is the single action it existed to mark. "
+     "TWO: where it WAS written it was not a date. MonthlyEstimate never declared it a "
+     "date column, so the model rebuild coerced the value to text and the cell held "
+     "'Sat Sep 12 2026 10:58:24 GMT+0000 (Coordinated Universal Time)' - saved as a "
+     "string, not a date serial, unsortable in Excel, and formatted by whichever machine "
+     "and locale happened to write it. "
+     "THREE: nothing read it. The engine carried it to every manual line as manual_at "
+     "and no export, report, screen or rule ever asked for that field. "
+     "THE QUESTION IT ASKED IS ALREADY ANSWERED, PROPERLY. Every edit pushes a change-log "
+     "entry carrying the time, the sheet, the row, the column, the value before and the "
+     "value after, and that log is archived to the shared folder on Save with the "
+     "editor's identity on it. Two answers to one question is the arrangement that "
+     "drifts, and this was the worse of the two: partial, mistyped, and read by nothing. "
+     "Fixing it instead was considered and is recorded here because it is the obvious "
+     "alternative: stamp every write to fte and declare the column a date. That buys a "
+     "second, weaker copy of what the change log already holds, and keeps a column in "
+     "the source workbook whose value the user cannot be responsible for. "
+     "A FILE WRITTEN TO SCHEMA 11 STILL OPENS AND STILL SAVES. Retiring a column has the "
+     "same hazard at the edges as renaming one, so it gets the same courtesy: a new "
+     "RETIRED_COLS map drops the column on the way in and tells the reader once, and the "
+     "JSON interchange reader drops it too rather than refusing the file over a column "
+     "this application asked for and then stopped wanting. Nothing is migrated, because "
+     "there is nowhere for it to go. "
+     "No calculation change and NO FIGURE MOVES. Template v1.16, dummies v1.18 and "
+     "v1.10. tools/test_retired.py is new.",
+     "Issued for review"],
     [f"{MARK_NEW}2.53", "2026-09-12", "Claude Code", "Pending",
      "R-45, REQ-DSH-16: FIVE THINGS ABOUT READING THE SCREEN, all reported from the "
      "field, none of them a change to a figure. "
@@ -2128,7 +2166,6 @@ mest = [
     [f"{MARK_NEW}ref_id", "Text", "Yes", "The project_id or the assignment_id this figure belongs to, according to scope.", "REQ-CAL-18"],
     [f"{MARK_NEW}month", "Text", "Yes", "The month, as YYYY-MM. One figure per month per thing (V-08).", "REQ-CAL-18"],
     [f"{MARK_NEW}fte", "Decimal", "Yes", "The monthly FTE, STATED rather than calculated. An assignment figure is that person's own contribution to that project; a project figure is the whole month, and the people on it are scaled to add up to it.", "REQ-CAL-18"],
-    [f"{MARK_NEW}edited_at", "Date", "No", "When the figure was last set. Written by the application, so a figure somebody typed can be told from one copied across on switching.", "REQ-CAL-18"],
     [f"{MARK_NEW}note_1", "Text", "No", "Why this figure was stated. The argument for a departure from the assumptions belongs beside it.", "REQ-CAL-18"],
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
@@ -2141,7 +2178,7 @@ r = note(ws, r, "Read only where the owning Project or Assignment carries estima
 
 r = section(ws, r, "Sheet: Config")
 cfg = [
-    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16), 8 at v2.31 (R-17), 9 at v2.38 (R-30), 10 at v2.39 (R-31), 11 at v2.41 (R-33, the standards sheet renamed).", "11", "REQ-VC-02"],
+    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16), 8 at v2.31 (R-17), 9 at v2.38 (R-30), 10 at v2.39 (R-31), 11 at v2.41 (R-33, the standards sheet renamed), 12 at v2.54 (R-46, MonthlyEstimate.edited_at retired - the first column this schema has REMOVED rather than added or renamed).", "12", "REQ-VC-02"],
     [f"{MARK_NEW}absorb_unstaffed_role_factor", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (REQ-CAL-16). 0 = an unstaffed role simply costs nothing, which is how every version before v2.31 behaved. A setting for the same reason the last one is: it moves every figure on a project that is not fully staffed.", "1", "REQ-CAL-16"],
     [f"{MARK_NEW}split_shared_role_fte", "1 = where several people hold the same role on one project in a month, the role factor is divided between them (REQ-CAL-14). 0 = each carries the whole factor, which is how every version before v2.28 behaved. A setting rather than a constant because it changes every figure a shared role ever produced, and somebody comparing this month's report with last year's has to be able to see where the difference came from.", "1", "REQ-CAL-14"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],

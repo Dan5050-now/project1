@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.19"
+VERSION = "1.20"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -87,6 +87,27 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.20
+
+  * THE 'LAST SET' COLUMN HAS BEEN REMOVED from both Monthly estimation
+    tables. It was meant to tell a figure you typed from one the application
+    copied across when you switched to manual - and it never did: it was
+    filled in by the switch itself, but NOT when you typed a figure into the
+    cell, which is the one thing it existed to mark. It also held a long
+    machine-written string rather than a date.
+
+    Nothing is lost. The change log archived when you press Save already
+    records every edit with the time, who made it, and what the figure was
+    before and after - which is the same question answered properly.
+
+  * YOUR EXISTING FILES STILL OPEN, AND STILL SAVE. A plan written by an
+    earlier version still has the column in it; it is simply left out as the
+    file is read, and you are told once. No figure changes.
+
+  * Workbook layout version 12. Template v1.16, example files v1.18 and
+    v1.10.
+
 
 WHAT IS NEW IN 1.19
 

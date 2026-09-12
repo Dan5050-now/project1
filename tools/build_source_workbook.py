@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 11
-TEMPLATE_VERSION = "1.15"
-DUMMY_VERSION = "1.17"
-DUMMY_SMALL_VERSION = "1.9"
+SCHEMA_VERSION = 12
+TEMPLATE_VERSION = "1.16"
+DUMMY_VERSION = "1.18"
+DUMMY_SMALL_VERSION = "1.10"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -360,7 +360,6 @@ SHEETS = {
         ("ref_id", "The project_id or assignment_id it belongs to, per scope.", ""),
         ("month", "The month, as YYYY-MM.", ""),
         ("fte", "The monthly FTE, STATED rather than calculated.", ""),
-        ("edited_at", "When it was last set. The application fills this in.", ""),
         ("note_1", "Why this figure was stated.", ""),
     ],
     "Lists": [

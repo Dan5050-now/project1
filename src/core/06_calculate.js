@@ -666,7 +666,6 @@ function applyManual(M, lines){
       // but the sheet is a spreadsheet and a hand-edited cell can hold 0.123456.
       L.fte = fromCents(toCents(v));
       L.source = "manual (assignment)";
-      L.manual_at = M.manualAt[key] ?? null;
     }
   }
 
@@ -719,7 +718,6 @@ function applyManual(M, lines){
       L.manual_project_total = fromCents(wantCents);
       L.source = L.manual_assignment ? "manual (assignment, scaled to the project figure)"
                                      : "manual (project, shared out)";
-      L.manual_at = M.manualAt[key] ?? L.manual_at ?? null;
     });
   }
   M.__manualStrays = strays;

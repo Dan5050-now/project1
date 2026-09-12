@@ -61,7 +61,7 @@ const SHEET_HEADERS = {
     "assign_start_date","assign_end_date","person_weight","estimation_type",
     "note_1","note_2","note_3"],
   PersonPeriodWeight:["assignment_id","period_start","period_end","weight_override","reason"],
-  MonthlyEstimate:["scope","ref_id","month","fte","edited_at","note_1"],
+  MonthlyEstimate:["scope","ref_id","month","fte","note_1"],
   Lists:["list_name","value","note_1"],
   Config:["parameter","value","note"],
 };
@@ -98,6 +98,39 @@ const RENAMED_COLS = {
      asked this sheet anything. Renaming it is the smaller half of REQ-CAL-19; the
      values move across on read, so a schema 9 file keeps its figures. */
   PeriodFTEStandard: {weight: "standard_fte"},
+};
+
+/* Columns that were RETIRED, and why.
+   A column is removed from the schema when it cannot do the job it was added for. That
+   is a smaller event than a rename - nothing has to be moved anywhere - but it has the
+   same hazard at the edges: a workbook written to the old schema still has the column in
+   it, and a file that will not open, or will not SAVE, because of a column the
+   application no longer wants is the application's fault and not the file's.
+
+   So a retired column is DROPPED ON THE WAY IN, before anything downstream sees it, and
+   the reader is told once. The values in it are not migrated anywhere because there is
+   nowhere they belong: the column is gone, not moved.
+
+   schema 11 -> 12. MonthlyEstimate.edited_at was "when this figure was last set, so a
+   reader can tell a figure somebody typed from one the application copied across on
+   switching". It never did that, and could not: it was stamped by the switch, by 'fill
+   the missing months' and by the gap dialog, but NOT by the ordinary path of typing a
+   figure into the cell - which is the one action it existed to mark. Measured: editing a
+   stated figure from 0.35 to 0.77 left edited_at null. It was also written as a locale
+   string rather than a date, because this sheet never declared it a date column, so it
+   saved as text and its format depended on the machine that wrote it. And nothing read
+   it: the engine carried it to every manual line as manual_at and no export, report or
+   screen ever asked for it.
+   The question it was meant to answer - when was this figure last set, by whom, and what
+   was it before - is answered properly by the archived change log, which records every
+   edit with a timestamp and an identity (REQ-IMP-12). Two answers to one question is the
+   arrangement that drifts, and this was the worse of the two. */
+const RETIRED_COLS = {
+  MonthlyEstimate: {
+    edited_at: "it never marked a figure you typed, only ones the application wrote, and "
+      + "nothing read it. The change log archived on Save records every edit with its "
+      + "time and who made it, which is the same question answered properly.",
+  },
 };
 
 /* Sheets that were RENAMED, and what they are now.
@@ -180,7 +213,6 @@ const COLUMN_HELP = {
   ref_id:"The project_id or the assignment_id this manual figure belongs to, according to `scope`.",
   month:"The month this figure is for, as YYYY-MM.",
   fte:"The monthly FTE, stated rather than calculated. 1.00 is one person working a full month.",
-  edited_at:"When this figure was last set, so a reader can tell a figure somebody typed from one the application copied across on switching.",
   automatic_fte:"What the assumptions ALONE would have produced for this month — the project's standard FTE × its period weight, shared out among the people on it by (role factor ÷ sharers) × person weight × month coverage. Shown for comparison only; it is not stored anywhere and changing an assumption moves it, not the stated figure beside it.",
   difference:"The stated figure minus the automatic one. This is the size of the departure the manual estimate is making, month by month.",
   period:"THE WHOLE DERIVATION OF THIS MONTH, TERM BY TERM: which period of the project's own plan it falls in, the standard monthly FTE that period selects, this project's own weight, and how much of the month the project ran — which multiplied are the project's month. On a person's table a second line follows with their CLAIM on that month: role factor ÷ sharers × person weight × month coverage, ending in the percentage of the month it won. Those terms make a claim and not a figure — every claim on a project-month is measured against the others, so the shares add to one (REQ-CAL-19), which is why the two halves are closed off separately instead of written as one product. A fallback says it is one and names its rule: no standard row is V-19, no role factor row is V-23, no period at all is V-12. Read off the same calculation the figure came from, so no term shown here can be a different one from the term the arithmetic used.",
@@ -279,7 +311,7 @@ const COLUMN_LABEL = {
   weight_override:"Share instead, for these months", reason:"Why",
   // MonthlyEstimate, and the lookups the app shows beside it
   scope:"Figure is for", ref_id:"Belongs to", month:"Month", fte:"Stated FTE",
-  edited_at:"Last set", automatic_fte:"Calculated FTE", difference:"Difference",
+  automatic_fte:"Calculated FTE", difference:"Difference",
   period:"How this month is worked out", sharers:"Sharing this role",
   // Config and Lists
   parameter:"Setting", value:"Value", list_name:"List", note:"Note",
@@ -407,9 +439,18 @@ const REFS = {
 /** Rows -> objects keyed by header, with per-column coercion. Findings collected. */
 function toObjects(sheet, rows, F){
   if (!rows || !rows.length){ return []; }
-  const renamed = RENAMED_COLS[sheet] || {};
+  const renamed = RENAMED_COLS[sheet] || {}, retired = RETIRED_COLS[sheet] || {};
   const hdr = (rows[0] || []).map(h => {
     const name = txt(h);
+    /* A retired column becomes a blank header, which is how this loop already says
+       "ignore this column" - so it is dropped before the row objects are built and
+       nothing downstream, the export guard included, ever sees it. */
+    if (retired[name]){
+      F.push({sev:"information", rule:"V-09", sheet, row:1,
+        msg:`${sheet}.${name} is no longer part of the schema and has been left out: `
+          + `${retired[name]} Saving or exporting writes the workbook in the current layout.`});
+      return "";
+    }
     if (!renamed[name]) return name;
     F.push({sev:"information", rule:"V-09", sheet, row:1,
       msg:`${sheet}.${name} was renamed to ${renamed[name]}. Its values have been read `

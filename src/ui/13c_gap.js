@@ -364,8 +364,7 @@ function writeMonth(aid, mm, v, seeded){
   let r = (S.model.raw.MonthlyEstimate || []).find(x =>
     x.scope === "assignment" && x.ref_id === aid && String(x.month) === mm);
   if (!r){
-    r = newRow("MonthlyEstimate", {scope:"assignment", ref_id:aid, month:mm,
-                                   fte:v, edited_at:at});
+    r = newRow("MonthlyEstimate", {scope:"assignment", ref_id:aid, month:mm, fte:v});
     delete r.__new;                 // complete, not a draft waiting for the rest of it
     S.pending.push({at, sheet:"MonthlyEstimate", row:r.__row, col:`${aid} ${mm}`,
                     from:null, to:v});
@@ -375,7 +374,6 @@ function writeMonth(aid, mm, v, seeded){
     S.pending.push({at, sheet:"MonthlyEstimate", row:r.__row, col:`${aid} ${mm}`,
                     from:seeded === null ? r.fte : round2(seeded), to:v});
     r.fte = v;
-    r.edited_at = at;
   }
   S.editedCells.add(`MonthlyEstimate|${r.__row}|fte`);
   rebuild(true);

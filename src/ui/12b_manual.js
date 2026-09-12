@@ -275,7 +275,7 @@ function applyEstimationSwitch(scope, id, row, to, seed){
     for (const mm of [...seed.keys()].sort()){
       if (have.has(mm)) continue;
       const r = newRow("MonthlyEstimate", {scope, ref_id:id, month:mm,
-                                           fte:round2(seed.get(mm)), edited_at:at});
+                                           fte:round2(seed.get(mm))});
       delete r.__new;                 // seeded complete, not a draft waiting to be typed
       S.pending.push({at, sheet:"MonthlyEstimate", row:r.__row, col:`${id} ${mm}`,
                       from:null, to:round2(seed.get(mm))});
@@ -318,7 +318,7 @@ function fillEstimates(scope, id){
   const at = new Date();
   for (const mm of add){
     const r = newRow("MonthlyEstimate", {scope, ref_id:id, month:mm,
-                                         fte:round2(now.get(mm)), edited_at:at});
+                                         fte:round2(now.get(mm))});
     delete r.__new;
     S.pending.push({at, sheet:"MonthlyEstimate", row:r.__row, col:`${id} ${mm}`,
                     from:null, to:round2(now.get(mm))});
@@ -483,9 +483,8 @@ function manualPanel(scope, id){
         + "it out to, which V-32 reports" : ""}.</p>` : ""}
     ${filterTable("MonthlyEstimate", rows,
       scope === "project"
-        ? ["month", "fte", "automatic_fte", "difference", "period", "edited_at", "note_1"]
-        : ["month", "fte", "automatic_fte", "difference", "period", "sharers",
-           "edited_at", "note_1"],
+        ? ["month", "fte", "automatic_fte", "difference", "period", "note_1"]
+        : ["month", "fte", "automatic_fte", "difference", "period", "sharers", "note_1"],
       null, null,
       // Two places, like every other figure (REQ-CAL-20). These were the last four-place
       // numbers on screen, and the difference between a stated 2.41 and an "automatic"

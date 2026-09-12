@@ -44,7 +44,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import prap_io                                                       # noqa: E402
 
 fails = []
-BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.15.xlsx")
+BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.16.xlsx")
 SEP = 2026 * 12 + 8
 OCT = 2026 * 12 + 9
 

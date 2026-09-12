@@ -333,8 +333,18 @@ function adopt(sheets, name, opts){
   // reader, and it cannot report what it is never shown.
   const named = renameSheets(sheets, null);
   S.headers = {};
-  for (const s of REQUIRED_SHEETS)
-    S.headers[s] = ((named[s] || [])[0] || []).map(h => txt(h)).filter(Boolean);
+  for (const s of REQUIRED_SHEETS){
+    /* Taken from the FILE, so the application writes back a workbook shaped like the one
+       it read - except for a column the schema has RETIRED, which has to be filtered out
+       here or it comes back from the dead. The row objects no longer carry it (the parser
+       drops it), so leaving it in the header would write the column out again with
+       nothing in it, in a file stamped with the current schema version: a workbook
+       claiming to be v12 and carrying a v11 column, emptied. Found by testing the save
+       path of an old file rather than the load path, which is where it looked fine. */
+    const retired = RETIRED_COLS[s] || {};
+    S.headers[s] = ((named[s] || [])[0] || []).map(h => txt(h))
+      .filter(h => h && !retired[h]);
+  }
   // What is in force NOW, captured before the model is replaced. Every import path -
   // the web file picker, the Python shell's open, a version restore, the difference
   // report's apply - funnels through here, so this is the one place the question can

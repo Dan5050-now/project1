@@ -579,13 +579,12 @@ class Model:
 
         # Manual monthly figures (REQ-CAL-18). A workbook written before schema 9 has no
         # MonthlyEstimate sheet at all, which simply means it carries none.
-        self.manual, self.manual_at = {}, {}
+        self.manual = {}
         for r in sheets.get("MonthlyEstimate", []) or []:
             if not r.get("scope") or not r.get("ref_id") or not r.get("month"):
                 continue
             k = f"{r['scope']}|{r['ref_id']}|{r['month']}"
             self.manual[k] = _as_num(r.get("fte"))
-            self.manual_at[k] = r.get("edited_at")
 
         self.ppw = defaultdict(list)
         for w in sheets["PersonPeriodWeight"]:

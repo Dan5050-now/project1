@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.27"
+DOC_VERSION = "1.28"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.53.xlsx"
+PLAN = "PRAP_Development_Plan_v2.54.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -123,7 +123,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Governing document", f"{PLAN} - APPROVED BASELINE, Dan 2026-08-02"),
-    ("Schema version specified", "11"),
+    ("Schema version specified", "12"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -193,6 +193,26 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.28", "2026-09-12", "Claude Code", "Dan",
+         "R-46. Sheet 03 loses MonthlyEstimate.edited_at and gains RETIRED_COLS, the "
+         "mechanism for taking a column OUT of the schema - the first time this schema "
+         "has done so. The column is dropped on the way in, before row objects are built, "
+         "so nothing downstream sees it and a schema 11 workbook both opens and SAVES; "
+         "the JSON interchange reader drops it too, since that path refuses unknown "
+         "columns outright and would otherwise reject a file over a column this "
+         "application asked for and then stopped wanting. Nothing is migrated - a retired "
+         "column has nowhere to go, which is what distinguishes it from a rename. "
+         "Sheet 05 records that the engine no longer carries manual_at on a line: it was "
+         "read by no export, report or rule. Sheet 06 records that both Monthly "
+         "estimation panels lose the column. WHY IT WENT, because a removal needs a "
+         "better reason than a fix: it was stamped by the switch, by 'fill the missing "
+         "months' and by the gap dialog, but never by somebody typing a figure into the "
+         "cell - the one action it existed to mark - and it was stored as a locale string "
+         "rather than a date, because the sheet never declared it a date column. The "
+         "change log archived on Save answers the same question with a timestamp, an "
+         "identity and the value before and after. Schema steps to 12; the version check "
+         "is a warning, so a schema 11 file still opens. No calculation change and no "
+         "figure moves. Written against plan v2.54.", "Issued"],
         ["1.27", "2026-09-12", "Claude Code", "Dan",
          "R-45, REQ-DSH-16. Five screen changes, no rule and no figure. Sheet 06 records "
          "the four that are drawing decisions. A CHART WHOSE X AXIS IS THE HORIZON takes "
@@ -758,7 +778,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "11", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "12", "Compared with the version this application expects (sheet 08)."],
     ["absorb_unstaffed_role_factor", "Integer", "1", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (sheet 05). 0 = an unstaffed role costs nothing, the arithmetic of every version before this one."],
     ["split_shared_role_fte", "Integer", "1", "1 = the role factor is divided between the people sharing a role in a month (sheet 05). 0 = each carries the whole factor, the arithmetic of every version before this one. A switch, not a threshold - so the Config reader must distinguish a value of 0 from an absent value, which is the defect this setting exposed."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],

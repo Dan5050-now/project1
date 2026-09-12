@@ -206,7 +206,6 @@ function buildModel(sheets){
      they have better knowledge of. A month with no row after that is a figure somebody
      removed, and V-31 says so rather than the application quietly filling it back in. */
   M.manual = {};                               // "project|PRJ-001|2027-03" -> fte
-  M.manualAt = {};                             // the same key -> when it was set
   for (const r of raw.MonthlyEstimate){
     if (!r.scope || !r.ref_id || !r.month) continue;
     const k = `${r.scope}|${r.ref_id}|${r.month}`;
@@ -215,7 +214,6 @@ function buildModel(sheets){
         msg:`MonthlyEstimate has more than one figure for ${r.scope} ${r.ref_id} in `
           + `${r.month}. One month can only have one figure.`});
     M.manual[k] = num(r.fte);
-    M.manualAt[k] = r.edited_at ?? null;
   }
   M.isManual = (scope, id) => {
     const row = scope === "project" ? M.projects[id]
