@@ -1,18 +1,29 @@
-"""Build a workbook at exactly the volume REQ-NFR-03 names, to measure against it.
+"""Build a workbook at any volume, so a requirement about volume can be measured.
 
-    100 projects, 1,000 people, order 8,000 assignments, a 60-month horizon.
+    --projects N --people M   (default: the volume REQ-NFR-03 names, 100 x 150)
 
-That requirement also says "tables of that height are virtualised", and X-04 of the UI
-component list recorded virtualisation as built. It was never built. This file exists so
-the question "does that matter" is answered by measurement rather than by argument.
+IT WAS WRITTEN TO SETTLE ONE ARGUMENT AND IS KEPT TO SETTLE THE NEXT. REQ-NFR-03 used to
+name 100 projects and 1,000 people and say "tables of that height are virtualised"; X-04
+of the UI component list recorded that virtualisation as built, and it never was. Rather
+than build it or argue about it, fixtures were generated here and timed by
+tools/measure_scale.py: the rendering budget turned out to be crossed at about 400 people,
+so at R-47 the REQUIREMENT moved to 100 x 150 - the largest volume whose worst case is
+still inside budget - and the virtualisation clause was removed.
+
+So the default below is the amended figure, and the point of the flags is that the next
+person to ask for more volume can price it in a few minutes instead of arguing about it.
+NOTE WHICH FIGURE BINDS: both Overall tables sit on one tab, so the cost follows
+(projects + people) rows x horizon months. 50 x 200 and 100 x 150 are the same 252 rows
+and measure within 10 ms of each other; varying the project count alone answers nothing.
 
 Nothing here is a scenario. It is bulk, shaped only enough to be realistic: staggered
 starts so the concurrency is plausible, every clinical type and phase, and each person on
 several projects. The figures are not meant to be read - the point is the SIZE.
 
-    python tools/build_stress_workbook.py
+    python tools/build_stress_workbook.py --keep
+    python tools/build_stress_workbook.py --projects 100 --people 400 --keep
 
-Output: templates/PRAP_SourceData_Stress_1000_v1.0.xlsx  (not committed - see below)
+Output: templates/PRAP_SourceData_Stress_<projects>x<people>_v1.0.xlsx  (not committed)
 
 DELIBERATELY NOT COMMITTED by default. It is roughly a megabyte of generated filler that
 tells a reader nothing the generator does not, and the repository already carries four
@@ -37,14 +48,14 @@ _spec = importlib.util.spec_from_file_location("bsw", ROOT / "tools" / "build_so
 B = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(B)
 
-# Defaults are the volume REQ-NFR-03 names. Override to measure another scale:
-#     python tools/build_stress_workbook.py --projects 50 --people 100 --keep
+# Defaults are the volume REQ-NFR-03 names since R-47. Override to measure another scale:
+#     python tools/build_stress_workbook.py --projects 100 --people 400 --keep
 # Assignments are derived rather than fixed, so the shape stays realistic at any size:
-# each project is staffed by ROLES_PER_PROJECT people, which is what decides how many
-# projects one person ends up on once the pool is a given size.
+# each project is staffed by a handful of people, which is what decides how many projects
+# one person ends up on once the pool is a given size.
 N_PROJECTS = 100
-N_PEOPLE = 1000
-ROLES_PER_PROJECT = 80          # 100 x 80 = the 8,000 REQ-NFR-03 names
+N_PEOPLE = 150
+ROLES_PER_PROJECT = 80          # only used at the old 1,000-person volume; see main()
 HORIZON_MONTHS = 60
 
 ROLES = ["Project oversight", "Lead data manager", "Clinical Data Associator",
@@ -66,10 +77,11 @@ def eom(d):
 def main(keep=False, n_projects=N_PROJECTS, n_people=N_PEOPLE, per_project=None):
     global OUT
     OUT = ROOT / "templates" / f"PRAP_SourceData_Stress_{n_projects}x{n_people}_v{VERSION}.xlsx"
-    # At the named volume this is 80 people a project, which is the figure that produces
-    # 8,000 assignments. At a realistic volume a project is staffed by a handful, so the
-    # count follows the pool rather than the other way round: about six a project, which
-    # puts each person on roughly the same number of projects at either size.
+    # A project is staffed by a handful of people, so the assignment count follows the
+    # pool rather than the other way round: about six a project, which puts each person on
+    # roughly the same number of projects whatever the size. The 80-a-project branch
+    # exists only to reproduce the old 1,000-person measurements, where 8,000 assignments
+    # was part of the figure REQ-NFR-03 named before R-47.
     if per_project is None:
         per_project = ROLES_PER_PROJECT if n_people >= 500 else 6
     rnd = random.Random(20260913)
@@ -145,8 +157,10 @@ def main(keep=False, n_projects=N_PROJECTS, n_people=N_PEOPLE, per_project=None)
         "WHAT THIS FILE IS",
         f"   {n_projects} projects, {n_people} people, {len(asg)} assignments.",
         "   Bulk, not scenarios. The figures are not meant to be read - the point is the SIZE.",
-        "   Built to answer one question by measurement: does the absence of row",
-        "   virtualisation (component X-04) matter at the volume the requirement names?",
+        "   Built so a requirement about volume can be MEASURED rather than asserted.",
+        f"   The Overall tab's two tables come to {n_projects + n_people} rows; at a 60-month",
+        "   horizon that row count and that horizon together are what decide the cost.",
+        "   Drive it with tools/measure_scale.py. REQ-NFR-03 names 100 x 150 since R-47.",
     ])
     B.write_sheet(wb, "Project", proj, None, list_ranges)
     B.write_sheet(wb, "Milestone", [], None, list_ranges)

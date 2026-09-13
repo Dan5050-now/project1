@@ -365,8 +365,11 @@ function chartStacked(pids){
 }
 
 /** The people to draw individually, biggest first, with the tail folded into one band.
- *  A thousand people is inside REQ-NFR-03; a thousand legend entries is not readable, so
- *  the same cap D-14 set for the old bar chart applies to the stack (REQ-DSH-09). */
+ *  REQ-NFR-03 allows 150 people, and 150 legend entries is not readable - nor is 150 bands
+ *  of one palette - so the same cap D-14 set for the old bar chart applies to the stack
+ *  (REQ-DSH-09). This is a LEGIBILITY cap, not a performance one: R-47 measured the
+ *  rendering and retired the virtualisation half of REQ-DSH-09, and deliberately left this
+ *  half alone. No volume is small enough to make 150 bars readable. */
 const REST = "__rest";
 function peopleOrder(sids, totalOf, limit){
   const t = sids.map(s => [s, totalOf(s)]).filter(x => x[1] > 0.004)

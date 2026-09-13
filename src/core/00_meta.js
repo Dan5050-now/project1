@@ -7,13 +7,15 @@ const SCHEMA_EXPECTED = 12;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.57.xlsx",          ver:"2.57",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.58.xlsx",          ver:"2.58",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.28.xlsx", ver:"1.28",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.29.xlsx", ver:"1.29",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
-  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.0.xlsx",          ver:"2.0",
+  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.1.xlsx",          ver:"2.1",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
-          + "R-13 to R-46, which added 22 components and made five of the old entries wrong"},
+          + "R-13 to R-46, which added 22 components and made five of the old entries wrong; "
+          + "v2.1 closes X-04 — row virtualisation is not built and, at the volume REQ-NFR-03 now "
+          + "names, not required"},
   {what:"Source data template",   file:"PRAP_SourceData_Template_v1.16.xlsx",       ver:"1.16",
    status:`Schema version ${SCHEMA_EXPECTED} — the layout this application reads`},
   {what:"AI agent reference",     file:"PRAP_AI_Agent_Guide_v1.0.xlsx",             ver:"1.0",

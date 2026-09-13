@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.28"
+DOC_VERSION = "1.29"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.57.xlsx"
+PLAN = "PRAP_Development_Plan_v2.58.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,23 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.29", "2026-09-13", "Claude Code", "Dan",
+         "R-47. The 'Rendering at the target volume' section is rewritten from ESTIMATES "
+         "into MEASUREMENTS, because REQ-NFR-03 has been amended to 100 projects and 150 "
+         "people and the old section reasoned about 1,000. Every figure in it is now "
+         "reproducible from two commands (tools/build_stress_workbook.py --projects N "
+         "--people M, then tools/measure_scale.py) against budgets fixed before the "
+         "numbers were seen. The section also states the quantity it had been missing: "
+         "rows is PROJECTS PLUS PEOPLE, so 50 x 200 and 100 x 150 are the same rendering "
+         "problem and measure within 10 ms of each other - reasoning about the people "
+         "figure alone was wrong by the project count. Row virtualisation is recorded as "
+         "NOT BUILT AND NOT REQUIRED at the named volume, with the one property that "
+         "matters either way kept as a requirement: sorting, filtering and totals run "
+         "over the whole model and never over the drawn slice, so adding virtualisation "
+         "later would change what is drawn and nothing that is computed. The chart "
+         "aggregation half of REQ-DSH-09 is unchanged and explicitly not retired by any "
+         "measurement: 200 bars in a 1,200px panel is a legibility problem, not a speed "
+         "one. No code change, no schema change, no figure moves.", "Draft"],
         ["1.28", "2026-09-12", "Claude Code", "Dan",
          "R-46. Sheet 03 loses MonthlyEstimate.edited_at and gains RETIRED_COLS, the "
          "mechanism for taking a column OUT of the schema - the first time this schema "
@@ -1313,7 +1330,7 @@ ov = [
     ["Row expansion - person", "Clicking a person name reveals one row per project and role they hold, ordered NewDrug CT, Biosimilar CT, Others, then earliest project first.", "REQ-DSH-01"],
     ["Type and phase pills", "Project type and clinical phase shown as labelled pills. The text carries the meaning; the colour only speeds recognition.", "REQ-PRJ-01, REQ-PRJ-09"],
     ["Repeated period labels", "Retained as a guard only. Since R-11 no period name repeats in a project, so the numbering never fires and a name alone identifies a period on screen. V-18 rejects a repeat on import; this keeps the renderer honest if one ever reaches it another way.", "REQ-DSH-10"],
-    ["Row virtualisation", "Both tables render only the rows inside the viewport plus a small overscan, with row height fixed so the scrollbar stays truthful. Sorting, filtering and totals run over the whole model, never over the rendered slice.", "REQ-DSH-09, REQ-NFR-03"],
+    ["Row virtualisation", "NOT BUILT, AND NOT REQUIRED at the volume REQ-NFR-03 names since R-47: both tables render EVERY row, and at 252 rows x 60 months that is 810 ms to draw against a 1,000 ms budget. The property that would have mattered either way holds and is required: sorting, filtering and totals run over the WHOLE MODEL, never over the rendered slice - so adding virtualisation later changes what is drawn and nothing that is computed. If a volume past about 400 people is ever asked for, the build is the visible window plus a small overscan with row height fixed so the scrollbar stays truthful.", "REQ-DSH-09, REQ-NFR-03"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], ov, [24, 90, 20], wrap_cols=(2,))
 r = note(ws, r, "Both tables are the same numbers aggregated differently, so they must always reconcile: the grand "
@@ -1345,27 +1362,45 @@ r = note(ws, r, "This overturns D-06, which shaded bands by weight on the ground
                 "weight as the lightness step and exact in the pop-up.")
 r += 1
 
-r = section(ws, r, "Rendering at the target volume   [S2-06, REQ-DSH-09, REQ-NFR-03]")
+r = section(ws, r, "Rendering at the target volume   [S2-06, R-47, REQ-DSH-09, REQ-NFR-03]")
 r = lines(ws, r, [
-    "REQ-NFR-03 now reads 100 projects and 1,000 people over a 60-month horizon. That is a different rendering",
-    "problem from the 62 projects the prototype was drawn against, and it changes two components from",
-    "'could be optimised later' to 'cannot be built the obvious way':",
+    "REQ-NFR-03 reads 100 projects and 150 people over a 60-month horizon, AMENDED AT R-47 from 100 projects",
+    "and 1,000 people - a figure set at S2-06 and never measured. The figures below are measurements of the",
+    "application at those volumes, not estimates of it: tools/build_stress_workbook.py builds a fixture at any",
+    "--projects / --people, tools/measure_scale.py drives it and times four interactions against budgets fixed",
+    "before any number was seen. Every number in this section is reproducible from those two commands.",
+    "",
+    "THE BINDING QUANTITY IS ROWS x MONTHS, AND ROWS IS PROJECTS PLUS PEOPLE. The Overall tab carries both",
+    "tables, so 50 projects x 200 people and 100 x 150 are the SAME rendering problem - 252 rows - and measure",
+    "within 10 ms of each other. A specification that reasoned about the people figure alone would be wrong by",
+    "a factor of the project count.",
 ])
 scale = [
-    ["Person table", "1,000 rows x 60 months = 60,000 cells, plus the same again on expansion.",
-     "Virtualise: render the visible window plus overscan. A 60,000-node table is seconds of layout on every filter change."],
-    ["Person chart", "1,000 bars across a 1,200px panel is 1.2px each - narrower than the gap between them.",
-     "Aggregate. Show a ranked subset (default: the 20 most loaded) with the remainder as one band, and name what is shown."],
+    ["Overall pair", "At 100 x 150: 252 rows x 60 months = 15,372 cells across the two tables.",
+     "Render every row. MEASURED 810 ms to switch to the tab, worst case 894, against a 1,000 ms budget - so row virtualisation would change no number a user feels and is NOT required (R-47)."],
+    ["Overall pair, beyond", "At 400 people the same tab takes 1,044 ms; at 1,000 it is 3,058 ms, drawing 67,222 cells in 1,102 rows.",
+     "The budget is first crossed at about 400 people. Virtualisation - visible window plus overscan, fixed row height so the scrollbar stays truthful - becomes a requirement only if a volume past that is asked for."],
+    ["Person chart", "200 bars across a 1,200px panel is 6px each; 1,000 bars is 1.2px - narrower than the gap beside them.",
+     "Aggregate, at EVERY volume. Show a ranked subset (default: the 20 most loaded) with the remainder as one named band. This is legibility, not speed, so no measurement retires it."],
     ["Project chart", "100 stacked bands per month, against 8 hues that can be told apart.",
-     "Unchanged from decision D-11: identity comes from legend order and tooltip, not hue. The band order is already by total resource."],
-    ["Calculation", "100 x 1,000 x 60 is bounded by assignments, order 8,000, so about 480,000 month-rows worst case.",
-     "Compute once per import or edit into typed arrays keyed by month index; never recompute inside a render."],
+     "Unchanged from decision D-11: identity comes from legend order, the hover pop-up and - since R-45 - clicking a legend entry to pick the series out. Band order is by total resource."],
+    ["Calculation", "100 x 150 x 60 is bounded by assignments, order 1,000, so about 60,000 month-rows worst case; the fixture yields 13,512.",
+     "Compute once per import or edit into arrays keyed by month index; never recompute inside a render. MEASURED: import 1,182 ms against a 5,000 ms budget at the named volume."],
+    ["Editing and filtering", "One cell edit rebuilds the model and re-renders; a column filter panel is built over the whole column.",
+     "MEASURED at the named volume: edit 60 ms against 1,000, filter 51 ms against 600. Both stay inside budget even at 1,000 people (98 ms and 49 ms), so neither is a scale question."],
 ]
 r = table(ws, r, ["Component", "What the volume implies", "What the specification requires"],
           scale, [20, 54, 60], wrap_cols=(2, 3))
-r = note(ws, r, "The working figure in REQ-NFR-03 is an upper bound to design against, not the expected daily "
-                "dataset. The point is that nothing in the design may assume the small case - a table that is "
-                "fast at 20 rows and unusable at 1,000 fails the requirement.")
+r = note(ws, r, "The figure in REQ-NFR-03 is an upper bound to design against, not the expected daily dataset - "
+                "today's real use is about 50 projects and 100 people, which measures at 53% of the tightest "
+                "budget. Nothing in the design may assume the small case: a table that is fast at 20 rows and "
+                "unusable at 250 fails the requirement. What CHANGED at R-47 is the size of the bound, not that "
+                "principle - and the bound moved because it was measured rather than asserted.")
+r = note(ws, r, "Why the requirement was not simply set to the volume in use. 50 x 100 leaves no room to grow "
+                "into, and 100 x 200 measures at 98% of the tab budget with a worst case of 1,225 ms - over. "
+                "100 x 150 is the largest volume measured whose WORST case is still inside budget, which is a "
+                "reason rather than a preference. Medians reproduce to a few per cent between runs; worst cases "
+                "move much more, so choosing on the median alone would have been choosing on the kinder number.")
 
 r = section(ws, r, "Tab 2 - Source data (project)")
 t2 = [
@@ -1632,8 +1667,8 @@ op = [
     ["S2-06", "Non-functional",
      "The dummy dataset now holds 62 projects and 289 assignments, above REQ-NFR-03's headroom figure of 50 projects and 500 assignments. The requirement's working-volume figure (20 projects, 30 people) is well below what the dataset represents.",
      "Change the requirement: 100 projects, 1,000 people.",
-     "Answered - requirement re-baselined, and raised from Should to Must. REQ-NFR-03 now reads 100 projects and 1,000 people over 60 months (order 8,000 assignments). At that volume the person table is 60,000 cells and the person chart 1,000 bars, so virtualisation and chart aggregation stop being optimisations - see the new section on sheet 06 and REQ-DSH-09. Plan change R-06.",
-     "Closed"],
+     "Answered - requirement re-baselined, and raised from Should to Must. REQ-NFR-03 read 100 projects and 1,000 people over 60 months (order 8,000 assignments). At that volume the person table is 60,000 cells and the person chart 1,000 bars, so virtualisation and chart aggregation stop being optimisations - see the section on sheet 06 and REQ-DSH-09. Plan change R-06. AMENDED LATER AT R-47, once the figure was MEASURED rather than reasoned about: the rendering budget is crossed at about 400 people, so REQ-NFR-03 now reads 100 projects and 150 PEOPLE and the virtualisation half of REQ-DSH-09 is withdrawn. The chart-aggregation half stands - it was never a speed argument. This answer is kept as the record of what was asked and why; it is not the current requirement.",
+     "Closed - volume superseded at R-47"],
 ]
 r = table(ws, r, ["ID", "Topic", "Question as raised in v0.3", "Answer (Dan, 2026-08-01)", "What changed in v0.4", "State"],
           op, [8, 14, 56, 42, 62, 9], wrap_cols=(3, 4, 5))

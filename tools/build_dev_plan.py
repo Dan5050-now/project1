@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.57"
+DOC_VERSION = "2.58"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,7 +397,72 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
-    [f"{MARK_NEW}2.57", "2026-09-13", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.58", "2026-09-13", "Claude Code", "Pending",
+     "R-47: REQ-NFR-03 IS AMENDED TO 100 PROJECTS AND 150 PEOPLE, AND X-04 STOPS BEING A "
+     "DEFECT. The decision v2.57 left open is taken, on the measurements v2.56 and v2.57 "
+     "produced, and it is taken in the MIDDLE: not the 50 x 100 put forward as today's "
+     "real use, and not a build of row virtualisation, but the largest volume that "
+     "measures inside budget so there is growth room without code nobody needs. "
+     "WHY 150 AND NOT 200 OR 400. Candidates were built and driven in one session so they "
+     "could be compared fairly, at the 60-month horizon, against the 1,000 ms budget for "
+     "an Overall tab switch that was fixed before any number was seen: "
+     "50 x 100 529 ms (53% of budget, worst case 571) | 100 x 100 689 ms (69%, 746) | "
+     "100 x 150 810 ms (81%, 894) | 100 x 200 981 ms (98%, 1,225). "
+     "100 x 150 IS THE LARGEST VOLUME WHOSE WORST CASE IS STILL INSIDE BUDGET. 100 x 200 "
+     "is not: its median is 98% and it peaks over. That is the whole of the reason, and it "
+     "makes the number a measurement rather than a preference. "
+     "THE MEDIAN REPRODUCES, THE PEAK DOES NOT, WHICH IS WHY THE PEAK DECIDED IT. The same "
+     "candidates were measured twice in separate runs: 100 x 150 gave 800 ms and then 810, "
+     "100 x 200 gave 941 and then 981 - the medians agree to a few per cent. The WORST "
+     "cases moved much more (100 x 200: 1,026 then 1,225), so a volume chosen on its "
+     "median alone would have been chosen on the more flattering of two figures. "
+     "WHAT THE AMENDED REQUIREMENT NOW SAYS THAT THE OLD ONE DID NOT. It names the figure "
+     "to re-measure: the two Overall tables are (projects + people) rows x horizon months, "
+     "so 50 x 200 and 100 x 150 are the same rendering problem - 252 rows - and measured "
+     "within 10 ms of each other. A requirement that named only projects could be doubled "
+     "by a reader who thought they were staying inside it. It also names where the cliff "
+     "is - about 400 people - so the next person to ask for more volume knows what it "
+     "costs before they ask. "
+     "REQ-DSH-09 LOSES THE VIRTUALISATION CLAUSE AND KEEPS EVERYTHING ELSE. The chart cap "
+     "stays, because a chart of 200 bars is unreadable at any speed and that is not a "
+     "performance question. Panel-level scrolling with a frozen header stays. And the one "
+     "property that matters whether or not rows are virtualised is stated outright: "
+     "sorting, filtering and totals run over the WHOLE MODEL, never over the drawn slice. "
+     "X-04 IS NOW 'NOT BUILT, NOT REQUIRED' RATHER THAN AN OPEN DEFECT, with the figures "
+     "in the entry. It spent five weeks recorded as built, one revision recorded as a "
+     "defect, and is now recorded as a decision - which is the only one of the three "
+     "states that a later reader can act on. The desktop plan's A-N01 inherited the old "
+     "volume by restating it; it now inherits REQ-NFR-03 BY REFERENCE, so the next time "
+     "this figure moves that document does not silently go stale. "
+     "AND THE GUARD GAINS THREE CHECKS, FROM THREE BREACHES FOUND WHILE MAKING THIS "
+     "CHANGE. None was about the figures; all three were the same failure as the one "
+     "v2.55 diagnosed - a fact kept in two places, with only one of them checked - so "
+     "each is closed by a check rather than by a resolution to remember. "
+     "(1) NO HISTORY ROW FOR ITS OWN VERSION. The desktop plan was issued as v1.13 and "
+     "the desktop specification as v1.5, and NEITHER carried a version-history row for "
+     "the version on its own cover. REQ-VC-04 requires one of every re-issue, and this "
+     "is the document set whose own subject is keeping versions in step. Both are "
+     "back-filled from the change that made them - NR-DEP-17, the console window that "
+     "outlived its browser - and every controlled document is now checked for a row "
+     "naming itself. "
+     "(2) THE CONTRACT STILL PINNED COMPONENT LIST v1.0. There were THREE copies of "
+     "'which component list is current' - the application's provenance strip, the path "
+     "check_consistency.py reads, and prap_contract.UIL - and only the first two were "
+     "ever compared. So UIL sat at v1.0 from August, straight through the v2.0 re-issue, "
+     "and docs/PRAP_Manifest.json, the AI agent guide and its workbook all told a reader "
+     "that the APPROVED v1.0 was the document in force. That manifest is the file the "
+     "README tells people to trust over filenames, which is what made it worth finding. "
+     "The contract's pins are now held to the application's provenance strip. "
+     "(3) THE README CALLED v2.40 CURRENT. Its document index labelled development plan "
+     "v2.40 and specification v1.14 'current' while v2.57 and v1.28 were in force - "
+     "eighteen revisions of drift in the file a newcomer reads first. The 'current' "
+     "labels are now held to the manifest. Only the label is checked, not the prose "
+     "beside it: a thin summary is not a false one, but a stale 'current' is. "
+     "BREACH (2) WAS FOUND BY CHECK (3), two artefacts downstream and within a minute of "
+     "its being added, which is the argument for adding checks rather than for reading "
+     "more carefully. Each of the three was made to fail on purpose before being trusted.",
+     "Issued for review"],
+    [f"{MARK_CHG}2.57", "2026-09-13", "Claude Code", "Pending",
      "MEASURED AT THE SCALE ACTUALLY IN USE, AND X-04 LOOKS DIFFERENT FROM THERE. "
      "Asked at review to re-measure against 50 projects x 100 people rather than the "
      "100 x 1,000 REQ-NFR-03 names. Done, across a range, so the shape of the curve is "
@@ -2021,7 +2086,7 @@ reqs = [
     ["REQ-DSH-06", "Dashboard", "Any table on screen can be exported to Excel.", "Should", "Derived", "4"],
     [f"{MARK_NEW}REQ-DSH-07", "Dashboard", "The horizon control offers 24 months by default and a one-click expansion to cover the latest project end date across all projects.", "Must", "Q-11", "3,4"],
     [f"{MARK_NEW}REQ-DSH-08", "Dashboard", "Over-allocated and under-allocated person-months are distinguishable at a glance, and both are counted in the summary tiles.", "Must", "Q-08", "3,4"],
-    [f"{MARK_NEW}REQ-DSH-09", "Dashboard", "At the target volume a table taller than the viewport renders only the visible rows, and the per-person chart shows an aggregate or a ranked subset rather than one bar per person. A thousand bars is not a chart.", "Must", "S2-06", "3,4"],
+    [f"{MARK_CHG}REQ-DSH-09", "Dashboard", "THE PER-PERSON CHART SHOWS AN AGGREGATE OR A RANKED SUBSET rather than one bar per person, and says which it is showing. A thousand bars is not a chart, and neither is two hundred: past the point where a bar is narrower than the gap beside it the drawing stops carrying information, so the cap is on the BARS and not on the data - the remainder is rolled into one band and named, never dropped. A TABLE TALLER THAN THE VIEWPORT SCROLLS INSIDE ITS OWN PANEL, keeping its header row visible, and the page body never scrolls to reach it. Sorting, filtering and totals are computed over the whole model rather than over whatever is currently drawn - which is the property that must hold whether or not the rows are virtualised, and is therefore the one stated here. ROW VIRTUALISATION IS NOT REQUIRED AT THE VOLUME REQ-NFR-03 NAMES, and the clause that required it was removed at R-47 rather than carried as a Must nobody intended to build. Measured: the Overall pair renders 252 rows x 60 months in 810 ms against a 1,000 ms budget, and the budget is first crossed at about 400 people. Virtualisation becomes a requirement if and when a volume past that is asked for; until then it would change no number a user feels, and the measurement that says so is reproducible from two commands.", "Must", "S2-06, R-47", "3,4"],
     [f"{MARK_CHG}REQ-DSH-10", "Dashboard", "Every period of a project is distinguishable from every other on screen. Since R-11 this is satisfied by the data model rather than by a display rule - no name repeats, so a name alone identifies a period. The display numbering that satisfied it before is retained only as a guard against a repeat reaching the renderer.", "Must", "S2-04, R-11", "3,4"],
     [f"{MARK_NEW}REQ-DSH-12", "Dashboard", "The project source-data tab shows the selected project's monthly resource over the horizon, against RELATIVE reference lines - a multiple and a fraction of the average an active project draws across the portfolio, and the project's own average over its full life. A project has no absolute ceiling or floor, so the references are context rather than pass or fail.", "Should", "Reviewer v0.7", "3,4"],
     [f"{MARK_NEW}REQ-DSH-11", "Dashboard", "The standing assumptions the simulation multiplies by - standard period weights, role factors, configuration and value lists - are presented on their own tab, so a reader can see what every figure was derived from without opening the workbook.", "Must", "G-07", "3,4"],
@@ -2049,7 +2114,7 @@ reqs = [
 
     ["REQ-NFR-01", "Non-functional", "The application is built so later requirements can be added without restructuring: parsing, calculation and presentation are separated.", "Must", "Requester", "4"],
     ["REQ-NFR-02", "Non-functional", "Works in Microsoft Edge and Google Chrome on Windows 10/11, offline.", "Must", "Q-05", "4"],
-    [f"{MARK_CHG}REQ-NFR-03", "Non-functional", "Handles 100 projects and 1,000 people, with the assignments that implies (order 8,000) over a 60-month horizon. Tables of that height are virtualised and the per-person chart aggregates rather than drawing a bar each - see REQ-DSH-09.", "Must", "S2-06", "4"],
+    [f"{MARK_CHG}REQ-NFR-03", "Non-functional", "HANDLES 100 PROJECTS AND 150 PEOPLE over a 60-month horizon, with the assignments that implies (order 1,000). MEASURED AT THAT VOLUME, NOT ESTIMATED (tools/build_stress_workbook.py builds the fixture, tools/measure_scale.py drives it): switching to the Overall tab takes 810 ms against a 1,000 ms budget, worst case 894; import 1,182 ms against 5,000; one cell edit 60 ms and opening a column filter 51 ms, each against 1,000 and 600. The budgets were fixed before any number was seen. THE BINDING COST IS THE OVERALL PAIR, whose two tables are (projects + people) rows x horizon months - 252 rows x 60 months here - so the figure to re-measure against is the ROW COUNT and the HORIZON together, not the project count alone. 100 x 150 is the largest volume measured whose WORST case is still inside budget: 100 x 200 medians 981 ms and peaks at 1,225, which is over. The budget is crossed at about 400 people, and only beyond that does row virtualisation become necessary - see REQ-DSH-09. AMENDED AT R-47 from 100 projects and 1,000 people, a figure set at S2-06 and never measured. At 1,000 people the tab takes 3,058 ms; but about half the overage is the CALCULATION - 180,160 person-months - which virtualisation cannot reach, so that volume was never one requirement away from working.", "Must", "S2-06, R-47", "4"],
     ["REQ-NFR-04", "Non-functional", "No data leaves the PC: no network calls, no external CDN, no telemetry.", "Must", "Derived", "4"],
     ["REQ-NFR-05", "Non-functional", "Dates are handled unambiguously (ISO yyyy-mm-dd internally) regardless of Windows regional settings.", "Must", "Derived", "4"],
 ]
@@ -2891,7 +2956,7 @@ chg = [
     ["R-09", "UI", "Nine components changed at the component-list v0.3 review: a fourth tab for the standing assumptions, insert-row on every editable table, clinical-phase filter, the unit toggle demoted from filter to setting, the demand-chart legend replaced by a hover pop-up, four timeline changes, a time zone on the load stamp, and the edit counter stating its validation standing.", "Applied. Seven were satisfiable by design alone. Two were not: nothing in the plan required the assumptions to be reachable in the application, and nothing said a row could be created at all - so REQ-DSH-11 and REQ-IMP-11 were added. REQ-DSH-05 and REQ-IMP-05 reworded. One conflict surfaced: O-10 asks the timeline to be coloured by period name, which contradicts accepted decision D-06 (shade by weight). O-10 is the more specific instruction, so D-06 is superseded and weight becomes a lightness step within each period hue.", "Applied"],
     ["R-08", "UI", "The two 'Conduct' stretches of a project must be distinguishable on screen (S2-04).", "Applied as REQ-DSH-10. A display rule, not a data change: period_name stays 'Conduct' in the workbook and the screen shows it with its sequence, 'Conduct (1)' and 'Conduct (2)'. Changing the stored name would have broken the weight lookup and V-15.", "Applied"],
     ["R-07", "Calculation", "Thresholds stay ABSOLUTE, not relative to capacity_fte (S2-01), and the under-allocation floor moves to 0.60 FTE (S2-05).", "Applied. Taken together these resolve the defect S2-01 was raised about: at a 0.60 floor every capacity in the data can clear it - 1.00 needs 60% utilisation, 0.80 needs 75%, 0.60 needs 100%. The risk only returns for a capacity BELOW the floor, so V-22 warns on exactly that. REQ-CAL-04 and REQ-CAL-07 reworded; Config default 0.80 -> 0.60.", "Applied"],
-    ["R-06", "Non-functional", "Re-baseline REQ-NFR-03 to 100 projects and 1,000 people (S2-06).", "Applied, and it is the most consequential answer in this round. At that volume the person table is 1,000 rows x 60 months = 60,000 cells, and the per-person chart would be 1,000 bars at roughly 1.2px each. Neither survives a naive build, so virtualisation and aggregation become requirements (REQ-DSH-09) rather than optimisations. Priority raised from Should to Must.", "Applied"],
+    ["R-06", "Non-functional", "Re-baseline REQ-NFR-03 to 100 projects and 1,000 people (S2-06).", "Applied, and it was the most consequential answer in this round. At that volume the person table is 1,000 rows x 60 months = 60,000 cells, and the per-person chart would be 1,000 bars at roughly 1.2px each. Neither survives a naive build, so virtualisation and aggregation became requirements (REQ-DSH-09) rather than optimisations. Priority raised from Should to Must. SUPERSEDED AT R-47, and worth reading as a lesson rather than only as a record: the volume was reasoned about and never measured, the aggregation half was duly built, and the VIRTUALISATION half was recorded as built for five weeks without existing. Measurement then put the rendering budget's crossing point at about 400 people, so REQ-NFR-03 is now 100 projects and 150 people and the virtualisation clause is withdrawn. Priority stays Must.", "Applied; volume superseded at R-47"],
     ["R-05", "Data model", "Split project_type: 'Clinical Trial' becomes 'NewDrug CT' and 'Biosimilar CT'; every clinical trial is one or the other.", "Applied. REQ-PRJ-01 and REQ-PRJ-02 reworded. Both new types share the clinical period set and the same derivation - they differ in weights, not shape. RoleFactor and PeriodWeightStandard are now keyed on the type, so the split can carry real differences rather than being only a label. Schema 2 -> 3. All outputs regenerated.", "Applied"],
     ["R-04", "Data model", "Add at least one free-text note column to every sheet of the source workbook.", "Applied. Four sheets had none and each gains note_1: Milestone, ProjectPeriod, PeriodWeightStandard, Lists. Six already had one. Source schema version steps 1 -> 2. Note columns are carried through import and export unchanged and never read by the calculation, so the dummy dataset produces identical figures.", "Applied"],
 ]

@@ -16,8 +16,8 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.57.xlsx"
-SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.28.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.58.xlsx"
+SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.29.xlsx"
 TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.16.xlsx"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.18.xlsx"
 DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.10.xlsx"
@@ -264,6 +264,26 @@ if APP.exists():
     if m and int(m.group(1)) != tpl_v:
         problems.append(f"app expects schema v{m.group(1)}, template is v{tpl_v}")
 
+    # 4e3. AND THE CONTRACT'S OWN PINS MUST AGREE WITH THAT STRIP. There were THREE
+    # copies of "which component list is current" - the application's provenance, the
+    # path this file checks, and prap_contract.py's UIL - and only the first two were
+    # ever compared. So UIL sat at v1.0 from August, through the v2.0 re-issue, and the
+    # manifest, the AI guide and the guide workbook all told an agent that the approved
+    # v1.0 was the document in force. Found at R-47 by the README check below, two
+    # artefacts downstream. A third copy nobody compares is a third copy that rots.
+    if block:
+        import prap_contract as _PC
+        for attr, what in (("PLAN", "Development plan"),
+                           ("SPEC", "Programming specification"),
+                           ("UIL", "UI component list")):
+            pinned, shown = getattr(_PC, attr), claimed.get(what)
+            if shown and pinned != shown:
+                problems.append(f"prap_contract.{attr} pins {pinned}, but the "
+                                f"application's provenance names {shown} for "
+                                f"'{what}' - REQ-VC-01")
+        notes.append("prap_contract.py's document pins agree with the application's "
+                     "provenance strip")
+
 # ---- 4e2. the blank-start seed vs the template it was taken from ----------
 # A plan started inside the application begins from the template's reference content -
 # the value lists, the settings, and the DEFAULT ASSUMPTIONS - embedded in the HTML.
@@ -391,8 +411,8 @@ if MANIFEST.exists():
 # ---- 4h. the desktop plan vs the desktop specification --------------------
 # The second product line gets the same guarantee as the first: a requirement cannot be
 # dropped between the plan and the specification without this saying so.
-NAPP_PLAN = ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.13.xlsx"
-NAPP_SPEC = ROOT / "docs" / "PRAP_NewApp_Specification_v1.5.xlsx"
+NAPP_PLAN = ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.14.xlsx"
+NAPP_SPEC = ROOT / "docs" / "PRAP_NewApp_Specification_v1.6.xlsx"
 if NAPP_PLAN.exists() and NAPP_SPEC.exists():
     np_ = load_workbook(NAPP_PLAN, data_only=True)["03_Requirements"]
     ns_ = load_workbook(NAPP_SPEC, data_only=True)["11_Traceability"]
@@ -486,7 +506,7 @@ if spec_traced - plan_reqs:
 # undocumented components and five entries that had become actively WRONG. The lesson
 # is not "remember to update it"; it is that an artefact nobody checks is an artefact
 # that rots. So it is checked.
-COMPONENTS = ROOT / "docs" / "PRAP_UI_Component_List_v2.0.xlsx"
+COMPONENTS = ROOT / "docs" / "PRAP_UI_Component_List_v2.1.xlsx"
 if not COMPONENTS.exists():
     problems.append(f"{COMPONENTS.name} is missing")
 else:
@@ -556,6 +576,67 @@ else:
     notes.append(f"UI component list: {len(comp_rows)} components, {len(comp_reqs)} "
                  f"requirements cited, {len(headings)} panel headings and {len(have)} "
                  f"dialogs all named")
+
+# ---- 10. every document carries a history row for its OWN version ----------
+#
+# REQ-VC-04: every re-issue adds a version-history row stating what changed and why.
+# FOUND BY BREACH, not by design. The desktop plan was issued as v1.13 and the desktop
+# specification as v1.5, and NEITHER carried a row for the version on its own cover -
+# in the one document set whose subject is keeping versions in step. Both were
+# back-filled at R-47 from the change that made them. The figure in a filename is easy
+# to bump and the history row is easy to forget, so the pairing is checked rather than
+# remembered: a document that cannot say what changed at its current version is a
+# document whose newest change is undocumented.
+VERSIONED = [
+    (PLAN, "01_Version_History"),
+    (SPEC, "01_Version_History"),
+    (ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.14.xlsx", "01_Version_History"),
+    (ROOT / "docs" / "PRAP_NewApp_Specification_v1.6.xlsx", "01_Version_History"),
+]
+for path, sheet_name in VERSIONED:
+    if not path.exists():
+        problems.append(f"{path.name} is missing")
+        continue
+    own = re.search(r"_v([\d.]+)\.xlsx$", path.name).group(1)
+    wsv = load_workbook(path, data_only=True)[sheet_name]
+    listed = {str(wsv.cell(r, 1).value or "").strip()
+              for r in range(1, wsv.max_row + 1)}
+    if own not in listed:
+        nums = [v for v in listed if re.fullmatch(r"[0-9]+(\.[0-9]+)*", v)]
+        newest = max(nums, key=lambda v: [int(x) for x in v.split(".")], default="none")
+        problems.append(f"{path.name} carries no version-history row for v{own} - "
+                        f"REQ-VC-04. The newest row it does carry is v{newest}")
+notes.append(f"version-history rows: {len(VERSIONED)} documents each carry a row for "
+             f"the version on their own cover")
+
+# ---- 11. README's "current" labels vs the manifest --------------------------
+#
+# ALSO FOUND BY BREACH. The README's document index labelled development plan v2.40 and
+# specification v1.14 "current" while v2.57 and v1.28 were the issues in force - eighteen
+# revisions of drift, in the file a newcomer reads first. The manifest was right the whole
+# time, which is the point: a hand-written index beside a generated one will lose, so the
+# two are held together. Only the "current" label is checked, not the prose beside it -
+# a summary can be thin without being false, but a stale "current" is a plain untruth.
+readme = (ROOT / "README.md").read_text()
+manifest = json.loads((ROOT / "docs" / "PRAP_Manifest.json").read_text())
+FAMILIES = {"PRAP_Development_Plan": "development_plan",
+            "PRAP_Programming_Specification": "programming_specification",
+            "PRAP_UI_Component_List": "ui_component_list"}
+by_what = {e["what"]: Path(e["path"]).name for e in manifest.get("current", [])}
+for stem, what in FAMILIES.items():
+    want = by_what.get(what)
+    if not want:
+        continue
+    marked = re.findall(rf"`docs/({re.escape(stem)}_v[\d.]+\.xlsx)` — \*\*current", readme)
+    if not marked:
+        problems.append(f"README marks no {stem} issue as current; the manifest says {want}")
+    elif want not in marked:
+        problems.append(f"README marks {marked} as the current {stem}, but the manifest "
+                        f"says {want} - REQ-VC-01")
+    elif len(marked) > 1:
+        problems.append(f"README marks more than one {stem} issue as current: {marked}")
+notes.append(f"README 'current' labels: {len(FAMILIES)} document families agree with "
+             f"docs/PRAP_Manifest.json")
 
 # ---- report ---------------------------------------------------------------
 print(f"plan       {PLAN.name}")

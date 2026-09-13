@@ -132,7 +132,25 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.12.xlsx` — **current.** Records task **N4.5, the
+- `docs/PRAP_NewApp_Development_Plan_v1.14.xlsx` — **current.** Amends assumption
+  `A-N01` to cite the web plan's `REQ-NFR-03` **by reference instead of restating it**:
+  the row used to read "up to about 100 projects and 1,000 people", which became a false
+  claim about another document the moment that requirement was amended at `R-47`. The
+  desktop line sets no volume of its own — it renders the same tables from the same
+  `core/`. Also **back-fills v1.13**, which was issued with no version-history row at all
+  (`REQ-VC-04`), from the change that made it. `tools/check_consistency.py` now requires
+  every controlled document to carry a history row for the version on its own cover.
+- `docs/PRAP_NewApp_Specification_v1.6.xlsx` — **current specification.** Re-pinned to
+  desktop plan v1.14 (sheet 11's traceability matrix is *read* from the plan, so it must
+  name the current baseline), and **back-fills v1.5**, which had the same missing
+  history row. No `NR-id` changes and no behaviour changes.
+- `docs/PRAP_NewApp_Development_Plan_v1.13.xlsx` — superseded. **NR-DEP-17:** closing
+  the browser now closes the console window too. The console window *is* the
+  application; it used to outlive the page that is its window and then sit holding the
+  port, the write claim and the data folder. The specification's value is in the four
+  cases where it must *not* shut down — before any page has connected, on a reload, while
+  another tab is open, and while somebody is still typing their name at sign-in.
+- `docs/PRAP_NewApp_Development_Plan_v1.12.xlsx` — superseded. Records task **N4.5, the
   import difference report** — the last unbuilt piece of the approved specification.
   Also: **Gate N4a is closed:** the
   Python package arrived by e-mail, ran on the company PC, and imported and exported a
@@ -148,7 +166,7 @@ document through the manifest rather than by sorting filenames.
   carries no browser file interface), `NR-DEP-16` (Python 3.9+, standard library only),
   risk `R-N22`, and Step N4a on the WBS. Sheet `10a_Delivery` carries the four measured
   results and rules route C out. 75 requirements.
-- `docs/PRAP_NewApp_Specification_v1.3.xlsx` — **current specification.** New sheet
+- `docs/PRAP_NewApp_Specification_v1.3.xlsx` — superseded. New sheet
   `05a_Python_Shell`: why there are two shells, the import path step by step, the six
   controls around the socket, and every difference from the Electron shell with whether
   a user can see it. Awaiting approval; nothing already approved is withdrawn.
@@ -218,7 +236,25 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.40.xlsx` — **current.** 81 requirements, 31 live
+- `docs/PRAP_Development_Plan_v2.58.xlsx` — **current.** 85 requirements, source schema
+  version 12. The latest change is **R-47 — `REQ-NFR-03` amended to 100 projects and 150
+  people, measured rather than asserted**, which also withdraws the row-virtualisation
+  clause of `REQ-DSH-09`: it was recorded as built for five weeks without existing, and
+  measurement put the rendering budget's crossing point at about 400 people, so the
+  requirement moved and the code did not. The revisions between v2.40 and here are each
+  summarised on the plan's own sheet `01_Version_History`, which is the authority —
+  this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
+  file) is what says which file is current.
+- `docs/PRAP_Programming_Specification_v1.29.xlsx` — **current specification.** Schema 12.
+  Its `Rendering at the target volume` section is now measurements rather than estimates,
+  and states the quantity it had been missing: the Overall tab's cost follows
+  `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same
+  rendering problem.
+- `docs/PRAP_UI_Component_List_v2.1.xlsx` — **current component list.** 68 components.
+  Closes `X-04`, the one item v2.0 left open: row virtualisation is not built and, at the
+  volume `REQ-NFR-03` now names, not required — recorded as a decision with its figures
+  rather than as a defect.
+- `docs/PRAP_Development_Plan_v2.40.xlsx` — superseded. 81 requirements, 31 live
   validation rules (V-25 and V-28 retired), source schema version 10. Carries changes
   **R-32 — a project-month IS its standard, and the people on it divide it**,
   **R-31 — the standard monthly FTE is where a figure gets its size** (`REQ-CAL-19`,
@@ -244,7 +280,7 @@ document through the manifest rather than by sorting filenames.
   standards keys become `project_type + clinical_phase + work_scope_type + period_name`
   (plus `role_name` on `RoleFactor`); `Biosimilar CT` becomes `Biosimilar CT (Healthy)`
   and `Biosimilar CT (Patient)`; `V-25` and `V-26` are added.
-- `docs/PRAP_Programming_Specification_v1.14.xlsx` — **current specification.** Schema 10
+- `docs/PRAP_Programming_Specification_v1.14.xlsx` — superseded. Schema 10
   (the load formula, `standard_fte`; the `MonthlyEstimate` sheet, `estimation_type`,
   `V-31` and `V-32`; the two-step
   lookup, the new keys, `absorbed_by`), the absorption arithmetic worked
@@ -998,9 +1034,18 @@ Requires `openpyxl`.
   sustained three or more consecutive months (Q-08, S2-05). Both figures are
   **absolute** — not scaled by `capacity_fte` (S2-01). At 0.60 every capacity in the
   data can clear the floor; V-22 warns on import about a capacity below it.
-- **Target volume: 100 projects and 1,000 people** over a 60-month horizon (S2-06).
-  At that size the tables are virtualised and the per-person chart aggregates —
-  requirements, not optimisations (REQ-DSH-09).
+- **Target volume: 100 projects and 150 people** over a 60-month horizon (S2-06,
+  amended at R-47 from 100 × 1,000). **Measured, not asserted**: at that volume the
+  Overall tab — both its tables, so `projects + people` rows × horizon months — renders
+  in 810 ms against a 1,000 ms budget set before any number was seen, with import at
+  1,182 ms of 5,000. It is the largest volume whose *worst* case is still inside budget;
+  100 × 200 medians 98% and peaks at 1,225 ms. The budget is first crossed at about 400
+  people, so **row virtualisation is not built and not required** — the clause requiring
+  it was removed rather than carried as a Must nobody intended to build. The per-person
+  chart still aggregates at every volume, because 150 bars in one panel is a legibility
+  problem no measurement retires (REQ-DSH-09). Re-measure with
+  `python tools/build_stress_workbook.py --projects N --people M --keep` then
+  `python tools/measure_scale.py`.
 - **A repeated period name is numbered on screen** — `Conduct (1)`, `Conduct (2)` —
   wherever it is shown (S2-04, REQ-DSH-10).
 - **Four tabs, not three.** The standing assumptions — standard period weights, role

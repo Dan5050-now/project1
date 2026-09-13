@@ -1,9 +1,26 @@
-"""Measure the application at the volume REQ-NFR-03 names, and say whether X-04 matters.
+"""Measure the application at a given volume, against budgets fixed before the numbers.
 
-REQ-NFR-03: 100 projects, 1,000 people, order 8,000 assignments, a 60-month horizon, and
-"tables of that height are virtualised". X-04 of the UI component list recorded that
-virtualisation as built; it never was. This decides by measurement whether that is a
-defect to fix or a requirement to move.
+WHAT IT SETTLED, AND WHY IT IS KEPT. REQ-NFR-03 used to name 100 projects and 1,000 people
+and say "tables of that height are virtualised"; X-04 of the UI component list recorded
+that virtualisation as built, and it never was. Rather than build it or argue, candidate
+volumes were built (tools/build_stress_workbook.py) and driven here. The Overall tab, over
+a 60-month horizon, against a 1,000 ms budget:
+
+    50 x 100   529 ms  (53% of budget, worst case  571)   <- today's real use
+    100 x 100  689 ms  (69%,                        746)
+    100 x 150  810 ms  (81%,                        894)  <- REQ-NFR-03 since R-47
+    100 x 200  981 ms  (98%,                      1,225)  <- worst case OVER
+    50 x 400 1,044 ms  (104%)                             <- the budget is crossed here
+    100 x 1000 3,058 ms (306%,                    4,537)
+
+At R-47 the REQUIREMENT moved to 100 x 150 - the largest volume whose WORST case is still
+inside budget - and the virtualisation clause was removed. The worst case decided it rather
+than the median because medians reproduce between runs to a few per cent and worst cases do
+not: 100 x 200 gave 1,026 ms in one run and 1,225 in the next.
+
+THE BINDING QUANTITY IS (PROJECTS + PEOPLE) ROWS x HORIZON MONTHS, because both Overall
+tables sit on one tab. 50 x 200 and 100 x 150 are the same 252 rows and measured within
+10 ms of each other, so varying the project count alone answers nothing.
 
 What is timed, and why each one:
 
@@ -13,13 +30,18 @@ What is timed, and why each one:
                 Overall tables are the tall ones, and they render every row.
   edit          committing one cell. It rebuilds the model and re-renders, so it is the
                 cost paid on EVERY keystroke-to-blur, many times an hour.
-  filter        opening a column filter panel on a 1,000-row table.
+  filter        opening a column filter panel, which is built over the whole column.
   rows/nodes    how much DOM is actually made. The reason to virtualise, if there is one.
 
 Run against the small file too, so the figures have something to be a multiple OF.
 
-    python tools/build_stress_workbook.py --keep
+    python tools/build_stress_workbook.py --keep                      # REQ-NFR-03's volume
+    python tools/build_stress_workbook.py --projects 50 --people 100 --keep
     python tools/measure_scale.py
+
+FILES below lists what to measure. Add a line for any fixture on disk; missing ones are
+skipped with a note rather than failing the run. Measure candidates in ONE invocation when
+comparing them - the browser is launched once, so the comparison is fair.
 """
 
 import pathlib
@@ -32,13 +54,13 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
+def fixture(n_proj, n_people):
+    return ROOT / "templates" / f"PRAP_SourceData_Stress_{n_proj}x{n_people}_v1.0.xlsx"
+
+
 FILES = [
-    ("10x10   (today's typical)", ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.10.xlsx"),
-    ("50x50   (a busy portfolio)", ROOT / "templates" / "PRAP_SourceData_Scenarios_50x50_v1.0.xlsx"),
-    ("50x100  (proposed real scale)", ROOT / "templates" / "PRAP_SourceData_Stress_50x100_v1.0.xlsx"),
-    ("50x200", ROOT / "templates" / "PRAP_SourceData_Stress_50x200_v1.0.xlsx"),
-    ("50x400", ROOT / "templates" / "PRAP_SourceData_Stress_50x400_v1.0.xlsx"),
-    ("100x1000 (REQ-NFR-03 today)", ROOT / "templates" / "PRAP_SourceData_Stress_100x1000_v1.0.xlsx"),
+    ("50x100   today's real use", fixture(50, 100)),
+    ("100x150  REQ-NFR-03", fixture(100, 150)),
 ]
 
 # Anything a person waits on beyond this reads as a hang rather than a pause. Chosen

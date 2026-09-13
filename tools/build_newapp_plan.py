@@ -20,7 +20,7 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.13"
+DOC_VERSION = "1.14"
 DOC_STATUS = ("Baseline v1.0 + changes C-N01 and C-N02. Gates N1-N3 closed; Step N4 in progress and "
               "Step N4a - the Python shell - BUILT AND TESTED, awaiting your run on the company laptop. "
               "Two company controls are measured rather than feared: an executable may run but may not "
@@ -228,7 +228,47 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
-    [f"{MARK_NEW}1.12", "2026-08-25", "Claude Code", "-",
+    [f"{MARK_NEW}1.14", "2026-09-13", "Claude Code", "-",
+     "TWO CORRECTIONS, BOTH ABOUT THIS DOCUMENT RATHER THAN THE APPLICATION. No "
+     "requirement, decision, risk or task changes, and no code is touched. "
+     "A-N01 NOW CITES THE WEB PLAN INSTEAD OF COPYING IT. It used to read 'up to about "
+     "100 projects and 1,000 people', which was true of REQ-NFR-03 when it was written. "
+     "That requirement was amended at R-47 to 100 projects and 150 people - measured "
+     "rather than asserted - at which moment this row became a false statement about "
+     "another document. The desktop line sets no volume of its own and never did: it "
+     "renders the same tables from the same core/, so the binding cost is the same "
+     "(projects + people) rows x horizon months. Citing the requirement instead of "
+     "restating it means this row cannot go stale the next time the figure moves, which "
+     "is the only fix that survives the next amendment. "
+     "AND v1.13 IS BACK-FILLED BELOW, because it was issued with no row of its own. "
+     "REQ-VC-04 says every re-issue adds a version-history row stating what changed and "
+     "why; this document skipped one, in a document set whose own subject is keeping "
+     "versions in step, and nothing was checking. check_consistency.py now requires every "
+     "controlled document to carry a history row for the version it calls itself - the "
+     "desktop specification had the same gap at v1.5 and is corrected the same way. The "
+     "back-filled entry is taken from the change that made it, not reconstructed from "
+     "memory.",
+     "Issued for review"],
+    [f"{MARK_NEW}1.13", "2026-09-11", "Claude Code", "-",
+     "BACK-FILLED AT v1.14 - this version was issued without a history row, which "
+     "REQ-VC-04 requires. Recorded now from the change that produced it rather than "
+     "reconstructed: NR-DEP-17 added. CLOSING THE BROWSER NOW CLOSES THE CONSOLE WINDOW "
+     "TOO. Reported from the field: the console window that IS the application outlived "
+     "the page that is its window, and then sat owning the port, the write claim on "
+     "whichever plan was open and the data folder, with no way to be rid of it but to "
+     "know it was there. Closing the last page stops it in about four seconds - and what "
+     "made it more than one line is everything it must NOT do, each of which is a test: "
+     "not before any page has ever connected, not on a reload (pagehide is "
+     "indistinguishable from a close at the moment it fires, so F5 would otherwise lose "
+     "the plan), not while another tab is open, and not while somebody is still typing "
+     "their name at sign-in. The no-message backstop is deliberately slow - fifteen "
+     "minutes - because a browser freezes the timers of a tab nobody is looking at, and "
+     "shutting down on someone who left it in a background tab is worse than a console "
+     "outliving its window on the rare occasion a browser dies without a word. "
+     "--keep-running opts out. Desktop specification v1.5, Python package v1.17, "
+     "tools/test_shutdown.py new. The web application was untouched.",
+     "Issued"],
+    [f"{MARK_CHG}1.12", "2026-08-25", "Claude Code", "-",
      "THE DIFFERENCE REPORT IS BUILT - task N4.5, NR-IMP-02, and the last unbuilt piece "
      "of the approved specification. Importing a revised workbook over a plan somebody "
      "has been working in used to REPLACE it. Now it asks first, then shows what would "
@@ -1310,7 +1350,7 @@ r += 1
 
 r = section(ws, r, "Assumptions")
 assum = [
-    ["A-N01", "Data volume stays as assumed by the web plan - up to about 100 projects and 1,000 people.", "Inherited, standing"],
+    [f"{MARK_CHG}A-N01", "Data volume is whatever the web plan's REQ-NFR-03 currently says, BY REFERENCE AND NOT RESTATED. The desktop line sets no volume of its own: it renders the same tables from the same core/, so the binding cost is the same one - (projects + people) rows x horizon months on the Overall tab.", "AMENDED at R-47. It used to restate the figure ('up to about 100 projects and 1,000 people'), and when REQ-NFR-03 was amended to 100 x 150 that restatement became a false claim about the web plan - in the document set whose own subject is keeping versions in step. Citing it instead of copying it means this row cannot go stale the next time the volume moves"],
     [f"{MARK_CHG}A-N02", "Windows 10 or 11, 64-bit, is the only target. macOS and Linux are out of scope.", "CONFIRMED at review round 1"],
     [f"{MARK_NEW}A-N08", "The application is never installed: it is copied as a folder and run in place, and the machine is unchanged by its presence.", "CONFIRMED at review round 1"],
     [f"{MARK_CHG}A-N09", "The user can extract a zip and run an executable from their own folder, and nothing will later block or remove it.", "CONFIRMED IN PART 2026-08-15 - an unsigned .exe extracted from a zip ran on BOOK-R8USOPHQ11 and wrote beside itself. The clause about a LARGE package and anti-virus is still untested"],

@@ -21,9 +21,16 @@ decisions, what was done. Nothing there is rewritten. Corrections are marked [FI
 and say what the entry used to claim; additions are marked [NEW v2.0] and name the change
 request that introduced them.
 
+v2.1 CLOSES THE ONE ITEM v2.0 LEFT OPEN. X-04, row virtualisation, was recorded as NOT
+IMPLEMENTED against a requirement naming 1,000 people and needed a decision. It was
+measured at six volumes rather than argued about; REQ-NFR-03 was amended to 100 projects
+and 150 people (R-47), which is the largest volume whose worst case is still inside the
+rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. Marked
+[FIXED v2.1].
+
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.0.xlsx
+Output: docs/PRAP_UI_Component_List_v2.1.xlsx
 """
 
 from pathlib import Path
@@ -33,7 +40,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.0"
+VERSION = "2.1"
 DATE = "2026-09-13"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
@@ -180,6 +187,7 @@ CONFIRMED = {"G-02", "G-06", "G-07", "O-03", "O-04", "O-06", "O-10", "P-01", "S-
 K = "Keep"
 A = "Added after approval"
 FIX = "[FIXED v2.0] "
+FIX21 = "[FIXED v2.1] "
 C = [
     # id, area, component, what it does, REQ-IDs, your decision, your comment, what was done
     ("G-01", "Global", "Header", "Application name, version, expected schema version.",
@@ -385,31 +393,47 @@ C = [
      "requirement structurally instead. The numbering code is kept as a guard: V-18 now rejects a "
      "repeated name on import, but a hand-built model could still reach the renderer, and a silent "
      "collision there would be worse than a redundant ten lines."),
-    ("X-04", "Layout", "Row virtualisation",
-     "NOT IMPLEMENTED, AND NOW MEASURED. " + FIX + "v1.0 recorded this as 'Keep - "
-     "unchanged', which read as built. It never was: there is no virtualisation anywhere "
-     "in src/, and both Overall tables render every row. "
-     "MEASURED at exactly the volume REQ-NFR-03 names - 100 projects, 1,000 people, "
-     "8,000 assignments, a 60-month horizon (tools/build_stress_workbook.py and "
-     "tools/measure_scale.py): the Overall tab takes 3,058 ms to switch to, worst case "
-     "4,537 ms, drawing 67,222 cells in 1,102 rows. Budget was 1,000 ms, set before the "
-     "numbers were seen. THREE TIMES OVER, so this is a real defect rather than a "
-     "theoretical one, and it is exactly the two tables this component names. "
-     "AND AT THE SCALE ACTUALLY IN USE IT IS NOT A DEFECT AT ALL. Measured across the "
-     "range (50 projects throughout, 60-month horizon), the Overall tab takes: 50 people "
-     "369 ms, 100 people 503 ms, 200 people 786 ms, 400 people 1,044 ms, 1,000 people "
-     "3,207 ms. THE BUDGET IS CROSSED AT ABOUT 400 PEOPLE. At 50 projects x 100 people - "
-     "the volume put forward as the real operating requirement - the tightest measurement "
-     "of any kind sits at 55% of its budget, which is roughly a factor of two of "
-     "headroom. Whether this component needs building therefore depends entirely on which "
-     "volume the requirement names, and that is a decision about the requirement rather "
-     "than about the code. "
-     "WHAT VIRTUALISATION WOULD NOT FIX. The import at that volume is 7,328 ms against a "
-     "5,000 ms budget, and 3,076 ms of that is the CALCULATION alone - 180,160 "
-     "person-months. Virtualisation touches neither the calculation nor the workbook "
-     "parse, so it answers the tab and about half of the import. Editing (98 ms) and "
-     "filtering (49 ms) are already inside budget at full volume and would not change.",
-     "REQ-DSH-09, REQ-NFR-03", K, "", "Unchanged."),
+    ("X-04", "Layout", FIX21 + "Row virtualisation — not built, and not required",
+     "NOT BUILT, AND SINCE R-47 NOT REQUIRED. Both Overall tables render EVERY row, and "
+     "at the volume REQ-NFR-03 now names that is the right build. "
+     "THIS ENTRY HAS BEEN WRONG TWICE AND IS NOW A DECISION. v1.0 recorded it 'Keep - "
+     "unchanged', which reads as built; it never was, and there is no virtualisation "
+     "anywhere in src/. v2.0 corrected that to NOT IMPLEMENTED, which made it an open "
+     "defect against a requirement naming 1,000 people. v2.1 records what was decided "
+     "once both volumes had been measured. "
+     "WHAT WAS MEASURED (tools/build_stress_workbook.py builds a fixture at any "
+     "--projects / --people; tools/measure_scale.py drives it). Switching to the Overall "
+     "tab, 60-month horizon, against a 1,000 ms budget fixed before any number was seen: "
+     "50 x 100 529 ms (53% of budget, worst case 571) | 100 x 100 689 ms (69%, 746) | "
+     "100 x 150 810 ms (81%, 894) | 100 x 200 981 ms (98%, 1,225) | 50 x 400 1,044 ms "
+     "(104%) | 100 x 1,000 3,058 ms (306%, worst 4,537, drawing 67,222 cells in 1,102 "
+     "rows). "
+     "REQ-NFR-03 WAS AMENDED TO 100 x 150 - the largest volume whose WORST case is still "
+     "inside budget - so the cost this component exists to remove is 810 ms against a "
+     "1,000 ms budget, and removing it would change no number a user feels. "
+     "THE BINDING QUANTITY IS ROWS, AND ROWS IS PROJECTS PLUS PEOPLE. Both Overall tables "
+     "sit on one tab, so 50 x 200 and 100 x 150 are the same 252 rows and measure within "
+     "10 ms of each other. Anyone re-measuring this should vary the row count and the "
+     "horizon together; the project count alone answers nothing. "
+     "WHAT VIRTUALISATION WOULD NOT HAVE FIXED, had it been built for 1,000 people. The "
+     "import at that volume is 7,328 ms against a 5,000 ms budget and 3,076 ms of it is "
+     "the CALCULATION alone - 180,160 person-months. Virtualisation touches neither the "
+     "calculation nor the workbook parse, so it answers the tab and about half the "
+     "import: that volume was never one component away from working. Editing (98 ms) and "
+     "filtering (49 ms) are inside budget even there. "
+     "IF IT IS EVER NEEDED: the visible window plus a small overscan, row height fixed so "
+     "the scrollbar stays truthful. It is cheap to add later because the property that "
+     "would conflict with it is already a requirement - sorting, filtering and totals run "
+     "over the whole model, never over the drawn slice (REQ-DSH-09).",
+     "REQ-DSH-09, REQ-NFR-03", "Change (R-47)",
+     "제안대로 측정부터 해줘  [measure first, as proposed]   ...   "
+     "중간값으로 개정해줘  [revise to a middle value]",
+     "Done, in that order - and the order mattered. Measured at six volumes first, then "
+     "the middle value was chosen FROM the measurements rather than picked and checked "
+     "afterwards: the candidates offered were 200 to 400 people, and measurement showed "
+     "both of those over budget, so the achievable middle is 150. REQ-NFR-03 moved and the "
+     "code did not. Recorded with its figures so a later reader can act on the decision "
+     "instead of re-deriving it."),
 
     ("A-01", "Assumptions tab", "[FIXED v2.0] Standard period FTE for project types",
      "PeriodFTEStandard as a matrix - type and phase down the side, period across, shaded by "
@@ -990,10 +1014,10 @@ ws.cell(r, 1, "Both items carry a judgement call I made rather than guessed at s
 # ---- why an approved document was re-opened ------------------------------
 ws = wb.create_sheet("09_Since_v1.0")
 ws.sheet_view.showGridLines = False
-ws["A1"] = "Why v2.0 re-opens a document that was approved"
+ws["A1"] = "Why v2.0 re-opened a document that was approved, and what v2.1 settles"
 ws["A1"].font = TITLE_F
 ws["A2"] = ("v1.0 closed the Step 3 gate on 2026-08-02. This sheet says what changed after that, "
-            "what was wrong, and why nothing caught it.")
+            "what was wrong, why nothing caught it, and - at v2.1 - how the one open item ended.")
 ws["A2"].font = NOTE_F
 ws.column_dimensions["A"].width = 22
 ws.column_dimensions["B"].width = 118
@@ -1027,10 +1051,11 @@ BODY = [
              "what a month is made of rather than what a person averages."),
     ("X-04", "Recorded row virtualisation as 'Keep - unchanged', which reads as built. IT WAS NEVER "
              "BUILT - there is no virtualisation anywhere in src/. Both Overall tables render every "
-             "row. This is the one correction that is not merely editorial: REQ-DSH-09 and REQ-NFR-03 "
-             "name a thousand people, and at that size this is an open performance risk. It is listed "
-             "as NOT IMPLEMENTED so it stops being mistaken for done, and it needs a decision - build "
-             "it, or move the requirement."),
+             "row. This was the one correction that is not merely editorial: REQ-DSH-09 and "
+             "REQ-NFR-03 named a thousand people, and at that size it was an open performance risk. "
+             "v2.0 listed it as NOT IMPLEMENTED so it would stop being mistaken for done, and said "
+             "it needed a decision - build it, or move the requirement. CLOSED AT v2.1 - see 'WHAT "
+             "v2.1 SETTLES' below."),
     ("WHAT IS STILL TRUE", ""),
     ("", "The v1.0 review trail is preserved exactly: your words against each component, the decision "
          "you took, and what was done about it. Nothing there is rewritten. The 46 components you "
@@ -1043,6 +1068,29 @@ BODY = [
     ("", "It does not re-open the Step 3 GATE. The gate was about whether the component set was the "
          "right one to build, and it was. This is the list catching up with what was then built on "
          "your instructions, request by request."),
+    ("WHAT v2.1 SETTLES", ""),
+    ("", "v2.0 left exactly one thing open: X-04, row virtualisation, recorded as NOT IMPLEMENTED "
+         "against a requirement naming 1,000 people, and needing a decision that v2.0 deliberately "
+         "did not take - build it, or move the requirement."),
+    ("", "YOU ASKED FOR IT TO BE MEASURED FIRST, WHICH IS WHY THE ANSWER IS NOT THE ONE EITHER OF US "
+         "WOULD HAVE GUESSED. A fixture generator takes any --projects and --people "
+         "(tools/build_stress_workbook.py) and a driver times four interactions against budgets set "
+         "before any number was seen (tools/measure_scale.py). Switching to the Overall tab over a "
+         "60-month horizon, against a 1,000 ms budget: 50 x 100 529 ms | 100 x 100 689 ms | "
+         "100 x 150 810 ms | 100 x 200 981 ms | 50 x 400 1,044 ms | 100 x 1,000 3,058 ms."),
+    ("", "THE MIDDLE VALUE YOU THEN ASKED FOR IS 150 PEOPLE, NOT THE 200-400 THAT WAS OFFERED. Both "
+         "of those measure over budget once the worst case is counted, so the offer was wrong and the "
+         "measurement corrected it. 100 x 150 is the largest volume whose WORST case is still inside "
+         "budget (894 ms of 1,000); 100 x 200 medians 98% and peaks at 1,225 ms."),
+    ("", "SO REQ-NFR-03 MOVED AND THE CODE DID NOT, and X-04 is now a decision with its figures "
+         "rather than a defect. The entry had been wrong twice - 'built' when it was not, then "
+         "'defect' against a volume nobody had measured - and a decision is the only one of the three "
+         "states a later reader can act on."),
+    ("", "ONE MORE BREACH CAME OUT OF MAKING THIS CHANGE, and it is the same shape as the drift "
+         "above: the desktop specification was issued as v1.5 with no v1.5 row in its own version "
+         "history, which is REQ-VC-04, in the document set whose whole subject is version control. "
+         "check_consistency.py now requires every controlled document to carry a history row for the "
+         "version it calls itself. Nothing had been checking that either."),
 ]
 r = 4
 for head, text in BODY:

@@ -35,9 +35,9 @@ CONTRACT_VERSION = "1.0"
 
 # The current issue of each controlled document. check_consistency.py verifies the
 # files exist and that the versions agree with the application's provenance strip.
-PLAN = "PRAP_Development_Plan_v2.57.xlsx"
-SPEC = "PRAP_Programming_Specification_v1.28.xlsx"
-UIL = "PRAP_UI_Component_List_v1.0.xlsx"
+PLAN = "PRAP_Development_Plan_v2.58.xlsx"
+SPEC = "PRAP_Programming_Specification_v1.29.xlsx"
+UIL = "PRAP_UI_Component_List_v2.1.xlsx"   # v1.0 until R-47: never moved when v2.0 was issued
 TEMPLATE = f"PRAP_SourceData_Template_v{B.TEMPLATE_VERSION}.xlsx"
 DUMMY = f"PRAP_SourceData_Dummy_v{B.DUMMY_VERSION}.xlsx"
 DUMMY_SMALL = f"PRAP_SourceData_Dummy_10x10_v{B.DUMMY_SMALL_VERSION}.xlsx"

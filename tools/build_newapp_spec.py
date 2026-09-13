@@ -22,13 +22,13 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.5"
+DOC_VERSION = "1.6"
 DOC_STATUS = ("v1.2 APPROVED 2026-08-13 and still governing. THIS ISSUE, v1.3, adds change C-N02 - the "
               "Python shell - and AWAITS APPROVAL. Nothing already approved is withdrawn by it: the "
               "Electron shell stays specified and stays the better application wherever it can be "
               "delivered.")
 DOC_DATE = "2026-08-13"
-PLAN = "PRAP_NewApp_Development_Plan_v1.13.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.14.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Specification_v{DOC_VERSION}.xlsx"
@@ -171,7 +171,40 @@ r = lines(ws, r, [
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
-          [["1.4", "2026-08-22", "Claude Code", "Awaiting approval",
+          [["1.6", "2026-09-13", "Claude Code", "Awaiting approval",
+            "RE-PINNED TO DESKTOP PLAN v1.14, and v1.5 is back-filled below. No NR-id is "
+            "added, removed or reworded and no behaviour changes - sheet 11's traceability "
+            "matrix is READ from the plan when this workbook is generated, so it now reads "
+            "the current baseline rather than a superseded one. The plan moved because its "
+            "assumption A-N01 used to RESTATE the web plan's data volume instead of citing "
+            "it, and that restatement became false when REQ-NFR-03 was amended at R-47 to "
+            "100 projects and 150 people. Nothing in this specification depended on the "
+            "figure: the desktop line renders the same tables from the same core/ and sets "
+            "no volume of its own. "
+            "WHY v1.5 IS BACK-FILLED RATHER THAN LEFT ALONE. It was issued with no row of "
+            "its own, which REQ-VC-04 requires of every re-issue - in a document set whose "
+            "own subject is keeping versions in step, and nothing was checking. The "
+            "desktop plan had the same gap at v1.13. Both are corrected from the change "
+            "that made them rather than from memory, and check_consistency.py now requires "
+            "every controlled document to carry a history row for the version it calls "
+            "itself, so neither gap can reopen in silence."],
+           ["1.5", "2026-09-11", "Claude Code", "Awaiting approval",
+            "BACK-FILLED AT v1.6 - this version was issued without a history row, which "
+            "REQ-VC-04 requires. Recorded now from the change that produced it: NR-DEP-17, "
+            "CLOSING THE BROWSER CLOSES THE CONSOLE WINDOW TOO. The console window that IS "
+            "the application outlived the page that is its window, and then held the port, "
+            "the write claim on the open plan and the data folder until somebody who knew "
+            "it was there closed it by hand. Closing the last page now stops it in about "
+            "four seconds, and the specification's value is in the four cases where it "
+            "must NOT: before any page has ever connected, on a reload (pagehide is "
+            "indistinguishable from a close at the instant it fires, so F5 would otherwise "
+            "be a way of losing the plan), while another tab is still open, and while "
+            "somebody is still typing their name at sign-in. The no-message backstop waits "
+            "fifteen minutes on purpose - a browser freezes the timers of a tab nobody is "
+            "looking at, so anything brisk would shut down on a user who had merely "
+            "switched tabs. --keep-running opts out. Python package v1.17, desktop plan "
+            "v1.13, tools/test_shutdown.py new."],
+           ["1.4", "2026-08-22", "Claude Code", "Awaiting approval",
             "THE DIFFERENCE REPORT IS BUILT - task N4.5, NR-IMP-02, the last unbuilt piece of "
             "this specification. Sheet 09 gains an 'As BUILT' section recording the six "
             "decisions inside it that could each have gone another way, and what proves each. "
