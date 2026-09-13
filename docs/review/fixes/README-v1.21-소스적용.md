@@ -6,11 +6,11 @@
 |---|---|
 | 받은 것 | `PRAP_source_src_tools.zip` (`src/` 45개, `tools/` 70개), `PRAP_relevant_docs.zip` |
 | 출발점 | v1.21 소스 (엔진 v1.51, V-36 · unstaffed 표기 포함) |
-| 결과 | **v1.21.1 소스** — 8개 파일, +644 / −30 줄 |
-| 소스 패치 | `0002-v1.21-src-NR-STO-07-15-16.patch` (967줄, `git am` 으로 적용됨) |
+| 결과 | **v1.21.1 소스** — 10개 파일, +767 / −48 줄 |
+| 소스 패치 | `0002-v1.21-src-NR-STO-07-15-16.patch` (1,177줄) |
 | 배포본 패치 | `PM_APP_v1.21_to_v1.21.1.patch` (이미 쓰고 있는 폴더용, 새로 생성) |
-| 실행 패키지 | `PM_APP_python_v1.21.1.zip` — 14개 파일, 248 KB<br>`50f12cc56aa4f68e872cc08cbe89349e70f85ef8ecbb8decad58fe3d44d0da7a` |
-| 소스 패키지 | `PRAP_src_tools_v1.21.1.zip` — 115개 파일, 944 KB<br>`6cd5644eeabaf153b21224c500d794b407d3e1f7c2c8bf0b8dde39b4c4afe789` |
+| 실행 패키지 | `PM_APP_python_v1.21.1.zip` — 14개 파일, 248 KB<br>`bc302b477891be2b2dcfec86c67ebe18b9ab2866f8eb9dfa8123bc0554ca559d` |
+| 소스 패키지 | `PRAP_src_tools_v1.21.1.zip` — 115개 파일, 944 KB<br>`fd4dc69a7d092601c1f587990e1706f42646cc211ff0d6dbaeee8edb4b80a719` |
 
 ---
 
@@ -115,21 +115,74 @@ being told the plan has freed, without reopening it
 
 ---
 
-## 4. 검증 — 소스에서 빌드한 것으로
+## 4. 또 하나 — 정전 복구 기록이 15% 확률로 버려지고 있었습니다 (공유 폴더에서는 사실상 항상)
 
-### 4.1 경계와 저장 계층
+전체 회귀를 돌리다가 **간헐적으로 실패하는 검사 하나**가 나왔습니다. 이런 것은 보통 "테스트가 예민해서"로 넘어가지만, 그러지 않고 원인을 끝까지 봤습니다. **결함이었습니다.**
+
+문제가 된 규칙은 이렇습니다. 정전 대비 기록(저널)을 되돌려 줄 때, 그것이 **계획서보다 새로운지**를 **파일 수정시각**으로 비교하고 있었습니다.
+
+```
+if  저널의 수정시각  <=  계획서의 수정시각:   저널을 버린다
+```
+
+의도는 맞습니다 — 이미 대체된 숫자를 근거로 만든 편집을 되살리면 안 됩니다. 그런데 **두 파일이 같은 순간에 쓰이면 수정시각이 같아지고**, `<=` 때문에 **버려집니다.** 저널은 바로 **저장 직후에 쓰이는 물건**이므로, 이것은 드문 경우가 아니라 **흔한 경우**입니다. 짐작이 아니라 세어 봤습니다.
+
+```
+같은 조건을 200회 반복 (로컬 디스크):
+  저널이 버려진 횟수:  30회  (15%)
+  첫 유실 시 수정시각 차이:  0ms   ← 같은 순간에 쓰였다
+
+윈도우 공유 폴더(SMB)의 성질을 재현하면:
+  SMB 는 수정시각을 2초 단위로 반올림합니다
+  → 저장 후 2초 안에 쓰인 저널은 전부 "같은 시각"으로 보입니다
+  → 저널 버려짐   ← 정전 시 편집 내용 유실
+```
+
+마지막 줄이 이 문제의 무게입니다. **이 앱이 실제로 놓일 곳이 바로 윈도우 공유 폴더입니다.** 그 환경에서는 15%가 아니라, **저장 직후 2초 안에 쓰인 저널은 사실상 전부** 버려집니다. 즉 제가 이번에 배선한 NR-STO-07(정전 복구)은 **배선만으로는 작동하지 않는 상태**였습니다 — 기록은 쓰이지만, 되돌려 줄 때 버려집니다.
+
+고친 방법은 **이미 같은 이유로 한 번 쓴 방법**입니다. 수정시각을 버리고, **계획서 자신이 말하는 저장 시각(`last_saved`)** 을 비교합니다. 저널을 쓸 때 "나는 이 판본을 보고 만들어졌다"를 함께 적어 두고, 되돌려 줄 때 **그 판본이 아직 그대로인지**만 봅니다.
+
+| | 예전 (수정시각) | 지금 (판본 표시) |
+|---|---|---|
+| 저장 직후에 쓰인 저널 | **버려짐** (같은 시각) | **되돌려 줌** ✅ |
+| 남이 그 뒤에 저장한 경우 | 버려짐 | 버려짐 ✅ |
+| 폴더를 복사해 옮긴 경우 | **버려짐** (복사로 시각이 바뀜) | **되돌려 줌** ✅ (내용은 같은 판본) |
+| 구버전이 남긴 저널 | 수정시각 규칙 | 수정시각 규칙 (비교할 근거가 그것뿐) |
+
+세 번째 줄은 덤으로 고쳐진 것입니다. 공유 폴더를 다른 곳으로 복사하면 파일의 수정시각은 복사한 시각으로 바뀌지만 **내용은 같은 판본**입니다. 예전 규칙은 이 경우에도 저널을 버렸습니다.
+
+**두 셸 모두 고쳤습니다.** 저널 파일 형식은 파이썬 셸과 Electron 셸이 **일부러 똑같이** 맞춰 놓은 것이고(같은 공유 폴더에 두 셸이 섞여 있을 수 있으므로), 한쪽만 고치면 그 약속이 깨집니다. 그리고 **테스트도 고쳤습니다** — 파이썬 쪽 검사에는 `time.sleep(0.02)`이 들어 있었고, 그것이 바로 이 규칙이 같은 순간을 견디지 못한다는 표시였습니다. 잠을 빼고, **SMB의 2초 반올림을 재현하는 검사**로 바꿨습니다.
+
+```
+tools/test_storage_py.py   →  83 passed, 0 failed   (기존 80 + 신규 3)
+  ok   and which save it was made against, which is what makes it judgeable
+  ok   a journal made against a superseded save is not offered
+  ok   and one written in the same tick as its save IS offered, which is when a
+       journal is actually written
+  ok   a journal from an older version, with only times to go on, still obeys them
+
+tools/test_storage.mjs     →  FAILURES: none
+  ok   a journal made against a SUPERSEDED save is not offered
+  ok   and one written in the same tick as its save IS offered
+```
+
+---
+
+## 5. 검증 — 소스에서 빌드한 것으로
+
+### 5.1 경계와 저장 계층
 
 ```
 tools/test_layers.py      →  FAILURES: none
                              셸 7개 모듈 모두 표준 라이브러리만 사용 (NR-DEP-05)
                              계층은 계획서가 말하는 그 4개 (core, shell, storage, ui)
-tools/test_storage_py.py  →  80 passed, 0 failed
+tools/test_storage_py.py  →  83 passed, 0 failed
                              8개 프로세스 동시 경쟁에서 승자 1명 (NR-STO-10)
 ```
 
 `test_storage_py.py`의 검사 하나는 이번에 **고쳐서** 통과한 것이 아니라 **시험 자체를 고쳤습니다.** 저장되는 판본 번호를 `== 5`로 하드코딩해 두어서, 틀린 값을 틀린 값과 비교하며 통과하고 있었습니다. 지금은 엔진이 읽는 값(`core/00_meta.js`의 `SCHEMA_EXPECTED`)을 직접 읽어와 비교합니다.
 
-### 4.2 실제 화면을 띄워서
+### 5.2 실제 화면을 띄워서
 
 ```
 tools/test_python_app.py  →  0 failed
@@ -156,7 +209,7 @@ tools/test_python_app.py  →  0 failed
 
 계산 결과가 **파이썬 독립 구현과 소수점 이하까지 정확히 일치**한다는 것(`0.00e+00`)은, 이 수정이 숫자를 단 하나도 건드리지 않았다는 뜻입니다.
 
-### 4.3 일을 잃는 그 시나리오 — 다시 재현
+### 5.3 일을 잃는 그 시나리오 — 다시 재현
 
 검토서 4판에서 v1.21이 **실패했던** 재현을, 소스에서 빌드한 v1.21.1로 다시 돌렸습니다. 실제로 PM_APP 두 개를 띄우고 한 공유 폴더를 함께 쓰게 한 것입니다.
 
@@ -173,13 +226,23 @@ tools/test_python_app.py  →  0 failed
 
 거부 메시지는 이렇습니다. *"shared.prap was saved by somebody else after you opened it. Nothing has been saved, so their work is intact. Reload the plan and make your change again, or Save As a copy to keep yours."* — **무엇이 일어났는지, 남의 일은 안전한지, 이제 무엇을 하면 되는지**를 한 문장에 담는 것이 이 메시지의 목적입니다.
 
-### 4.4 전체 회귀
+### 5.4 전체 회귀 — 39개 스위트
 
-<!-- SUITE-TABLE -->
+```
+38 통과 · 1 실패
+
+실패 1건:  test_interop  "every file the manifest points at exists"
+           → docs/PRAP_UI_Component_List_v2.2.xlsx
+             docs/PRAP_AI_Agent_Guide_v1.0.xlsx     두 파일이 없음
+```
+
+이 한 건은 **이 수정과 무관합니다.** 손대지 않은 v1.21 소스에서도 똑같이 실패하며(대조해 확인했습니다), 원인은 **두 문서 파일이 업로드에 포함되지 않은 것**입니다. 귀사 저장소에는 있을 것으로 보이므로 확인만 부탁드립니다. 다만 한 가지는 짚어 둘 필요가 있습니다 — **AI Agent Guide는 `.md`로 배포되는데 manifest는 `.xlsx`를 가리키고 있습니다.** 이름이 어긋나 있을 가능성이 있고, 그렇다면 귀사 저장소에서도 같은 검사가 실패할 것입니다.
+
+나머지 38개는 전부 통과했습니다. 계산·차트·표·필터·입력·검증·내보내기·가져오기 비교·종료 처리·저장 계층(파이썬 83건, Electron 전건)·아키텍처 경계가 모두 포함됩니다.
 
 ---
 
-## 5. 무엇을 어떻게 쓰면 되는가
+## 6. 무엇을 어떻게 쓰면 되는가
 
 세 가지 형태로 준비했습니다. **하나만 고르시면 됩니다.**
 
@@ -206,7 +269,7 @@ PM_APP_v1.21_to_v1.21.1.patch             ← 이미 배포된 PM_APP/ 폴더에
 
 ---
 
-## 6. 여전히 남은 일
+## 7. 여전히 남은 일
 
 이 수정으로 **데이터를 잃는 결함은 닫혔습니다.** 그러나 검토서가 지적한 것 중 이 패치의 범위가 아닌 것들이 남아 있습니다. 숨기지 않고 적어 둡니다.
 

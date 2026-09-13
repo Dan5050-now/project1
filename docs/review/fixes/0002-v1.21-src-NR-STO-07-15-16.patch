@@ -599,8 +599,69 @@ index f9b8d64..1f5a0c2 100644
              except WS.StorageError as e:
                  return self._json(200, e.as_dict())
              except OSError as e:
+diff --git a/src/storage/desktop/workspace.js b/src/storage/desktop/workspace.js
+index 9d137c8..6f0e0ff 100644
+--- a/src/storage/desktop/workspace.js
++++ b/src/storage/desktop/workspace.js
+@@ -236,9 +236,22 @@ async function restoreVersion(ref, n = 1) {
+    what lets recovery offer them back without a half-typed row ever having been
+    committed data. */
+ 
++/** What the plan itself says it was last saved at, or null if it cannot say. */
++async function lastSavedOf(ref) {
++  try {
++    const doc = JSON.parse(await fsp.readFile(ref, "utf8"));
++    return (doc?.workspace || {}).last_saved ?? null;
++  } catch { return null; }
++}
++
++/** Write down what has not been committed yet, and WHICH SAVE it was made against.
++ *  The version has to be recorded here, at writing time - a reader cannot work it
++ *  out afterwards from modification times. See readJournal. */
+ async function writeJournal(ref, pending) {
+   const tmp = `${journalPath(ref)}.tmp-${process.pid}`;
+-  await fsp.writeFile(tmp, JSON.stringify({ at: new Date().toISOString(), pending }), "utf8");
++  const body = { at: new Date().toISOString(), pending,
++                 base_saved: await lastSavedOf(ref) };
++  await fsp.writeFile(tmp, JSON.stringify(body), "utf8");
+   await fsp.rename(tmp, journalPath(ref));
+ }
+ 
+@@ -251,12 +264,27 @@ async function readJournal(ref) {
+   } catch {
+     return null;                           // a torn journal is no journal
+   }
+-  // Only offer it if it is NEWER than the workspace. Otherwise the edits were made
+-  // against figures that have since been replaced, and applying them would put them
+-  // somewhere they were never made.
++  // Only offer it if it was made against the plan AS IT STANDS. Otherwise the edits
++  // were made against figures that have since been replaced, and applying them would
++  // put them somewhere they were never made.
++  //
++  // WHAT THIS USED TO COMPARE, AND WHY IT HAD TO CHANGE. It compared modification
++  // times: offer the journal if it is newer than the plan. Two files written in the
++  // same tick have the SAME time, and `<=` then threw the journal away - so a journal
++  // written just after a save was discarded, which is precisely when one is written.
++  // Measured: 30 of 200 on a local disk, and on a Windows share it is not a race at
++  // all but the normal case, because SMB rounds a modification time to two seconds.
++  // A share is where this application lives, and a recovery journal that is thrown
++  // away is NR-STO-07 unimplemented rather than implemented. The plan's own
++  // last_saved is compared instead - the same token the Python shell uses, so a
++  // journal written by either shell means the same thing to both.
+   if (fs.existsSync(ref)) {
+-    const [a, b] = [await fsp.stat(p), await fsp.stat(ref)];
+-    if (a.mtimeMs <= b.mtimeMs) return null;
++    if ("base_saved" in j) {
++      if (j.base_saved !== await lastSavedOf(ref)) return null;
++    } else {
++      const [a, b] = [await fsp.stat(p), await fsp.stat(ref)];
++      if (a.mtimeMs <= b.mtimeMs) return null;   // older version: times are all there is
++    }
+   }
+   return j;
+ }
 diff --git a/src/storage/python/workspace.py b/src/storage/python/workspace.py
-index 3e5505e..b9a79f4 100644
+index 3e5505e..be8eada 100644
 --- a/src/storage/python/workspace.py
 +++ b/src/storage/python/workspace.py
 @@ -32,7 +32,9 @@ from . import timefmt
@@ -669,8 +730,58 @@ index 3e5505e..b9a79f4 100644
      now = timefmt.iso()
      doc = {
          "format": FORMAT,
+@@ -286,9 +327,15 @@ def restore_version(ref, n=1):
+ # committed data.
+ 
+ def write_journal(ref, pending):
++    """Write down what has not been committed yet, and WHICH SAVE it was made against.
++
++    The version it was made against has to be recorded here, at writing time. A
++    reader cannot work it out afterwards from modification times: see read_journal.
++    """
+     tmp = f"{journal_path(ref)}.tmp-{os.getpid()}"
++    body = {"at": timefmt.iso(), "pending": pending, "base_saved": last_saved_of(ref)}
+     with open(tmp, "w", encoding="utf-8") as f:
+-        json.dump({"at": timefmt.iso(), "pending": pending}, f, ensure_ascii=False)
++        json.dump(body, f, ensure_ascii=False)
+         f.flush()
+         os.fsync(f.fileno())
+     os.replace(tmp, journal_path(ref))
+@@ -303,11 +350,27 @@ def read_journal(ref):
+         j = json.loads(Path(p).read_text(encoding="utf-8"))
+     except (ValueError, OSError):
+         return None                           # a torn journal is no journal
+-    # Only offer it if it is NEWER than the workspace. Otherwise the edits were made
+-    # against figures that have since been replaced, and applying them would put
+-    # them somewhere they were never made.
+-    if os.path.exists(ref) and os.stat(p).st_mtime <= os.stat(ref).st_mtime:
+-        return None
++    # Only offer it if it was made against the plan AS IT STANDS. Otherwise the edits
++    # were made against figures that have since been replaced, and applying them would
++    # put them somewhere they were never made.
++    #
++    # WHAT THIS USED TO COMPARE, AND WHY IT HAD TO CHANGE. It compared modification
++    # times: offer the journal if it is newer than the plan. Two files saved in the
++    # same tick have the SAME time, and `<=` then threw the journal away - so a
++    # journal written just after a save was discarded, which is precisely when one is
++    # written. Measured here: 30 of 200 on a local disk, and on a Windows share it is
++    # not a race at all but the normal case, because SMB rounds a modification time to
++    # two seconds and every journal written within two seconds of a save looks equal.
++    # A share is where this application lives (NR-DEP-09), and a recovery journal that
++    # is thrown away is NR-STO-07 unimplemented rather than implemented. So the plan's
++    # own last_saved is compared instead - the same token, for the same reason, as the
++    # superseded-save check in save_workspace.
++    if os.path.exists(ref):
++        if "base_saved" in j:
++            if j["base_saved"] != last_saved_of(ref):
++                return None
++        elif os.stat(p).st_mtime <= os.stat(ref).st_mtime:
++            return None          # written by an older version: times are all there is
+     return j
+ 
+ 
 diff --git a/tools/build_python_app.py b/tools/build_python_app.py
-index 8a8b0e0..f7d5731 100644
+index 8a8b0e0..6a98578 100644
 --- a/tools/build_python_app.py
 +++ b/tools/build_python_app.py
 @@ -33,7 +33,7 @@ import zipfile
@@ -682,7 +793,7 @@ index 8a8b0e0..f7d5731 100644
  
  _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
  build_app = importlib.util.module_from_spec(_spec)
-@@ -88,6 +88,62 @@ if __name__ == "__main__":
+@@ -88,6 +88,74 @@ if __name__ == "__main__":
  READ_ME = """PROJECT MANAGEMENT APP - Python edition
  =======================================
  
@@ -719,6 +830,18 @@ index 8a8b0e0..f7d5731 100644
 +    within half a minute, without having to close and reopen the plan to find
 +    out. Nothing is reloaded when that happens, so the screen you were reading
 +    stays exactly as it was - start editing and the plan is yours.
++
++  * AND THE RECOVERY RECORD IS NO LONGER THROWN AWAY BY THE CLOCK. Whether to
++    offer a journal back was decided by comparing modification times: offer it
++    if it is newer than the plan. Two files written in the same tick have the
++    SAME time, and equal counted as not newer - so a journal written just after
++    a save was discarded, which is exactly when one is written. Measured: 30 of
++    200 on a local disk. On a Windows share it is not a race but the normal
++    case, because a share rounds a modification time to two seconds and every
++    journal written within two seconds of a save then looks equal. A journal now
++    records WHICH SAVE it was made against, and is offered back if that save is
++    still the current one. A folder copied elsewhere keeps its journal too,
++    where the old rule threw it away because copying moves the clock.
 +
 +  * THE WINDOW NO LONGER FREEZES WHILE A FILE DIALOG IS OPEN. The four
 +    operations that ask you to choose a file held the one application lock while
@@ -937,8 +1060,45 @@ index 1804980..8908387 100644
              # ---- export ------------------------------------------------------
              print("\ngetting data back out")
              out = str(home / "exported.xlsx")
+diff --git a/tools/test_storage.mjs b/tools/test_storage.mjs
+index 5128051..2f47c0b 100644
+--- a/tools/test_storage.mjs
++++ b/tools/test_storage.mjs
+@@ -121,11 +121,29 @@ await WS.saveWorkspace(ref, sheets(9), {}, {});
+ check((await WS.readJournal(ref)) === null,
+       "a committed save clears them — they are no longer pending");
+ 
++// SUPERSEDED, not merely older. This check used to backdate the journal's
++// modification time and call that "older than the workspace", because that was what
++// readJournal compared. It compares the plan's own last_saved now, so the condition
++// is driven for real: write a journal, let somebody save over the plan, and the
++// journal must not be offered.
+ await WS.writeJournal(ref, [{ sheet: "Project" }]);
+-fs.utimesSync(WS.journalPath(ref), new Date(Date.now() - 60_000), new Date(Date.now() - 60_000));
++await WS.saveWorkspace(ref, sheets(9), {}, {});
+ check((await WS.readJournal(ref)) === null,
+-      "a journal OLDER than its workspace is not offered — those edits were made "
+-      + "against figures that have since been replaced");
++      "a journal made against a SUPERSEDED save is not offered — those edits were "
++      + "made against figures that have since been replaced");
++
++// And the case the modification-time rule got wrong, which is why it had to go: a
++// journal written in the same tick as the save it belongs to. On a Windows share
++// every journal written within two seconds of a save looked like this, and all of
++// them were thrown away - so NR-STO-07 recovered nothing exactly when it mattered.
++await WS.writeJournal(ref, [{ sheet: "Project", row: 1 }]);
++const jt = fs.statSync(WS.journalPath(ref)), wt = fs.statSync(ref);
++fs.utimesSync(WS.journalPath(ref), wt.atime, wt.mtime);      // as SMB rounds them
++check((await WS.readJournal(ref))?.pending.length === 1,
++      "and one written in the same tick as its save IS offered, which is when a "
++      + "journal is actually written",
++      `journal ${jt.mtimeMs} → workspace ${wt.mtimeMs}`);
++await WS.clearJournal(ref);
+ 
+ /* ---- 5. a protected file is not a corrupt one ----------------------------- */
+ console.log("\nfiles that cannot be read");
 diff --git a/tools/test_storage_py.py b/tools/test_storage_py.py
-index f18ee3e..61734e4 100644
+index f18ee3e..d1b0301 100644
 --- a/tools/test_storage_py.py
 +++ b/tools/test_storage_py.py
 @@ -19,6 +19,7 @@ it. Run it against the BUILT package, because that is what gets sent:
@@ -965,3 +1125,53 @@ index f18ee3e..61734e4 100644
      check("the format is the interchange format", True)
  
      # The Electron shell must be able to read it, so the timestamp must be its
+@@ -223,21 +231,46 @@ def test_journal(d):
+     WS.save_workspace(ref, sheets(), identity=ME)
+     check("nothing pending to start with", WS.read_journal(ref) is None)
+ 
+-    time.sleep(0.02)
++    # No sleep. There WAS one here, to keep the journal's modification time clear of
++    # the save's - which is the tell: the rule being tested could not survive two
++    # files written in the same tick, and a journal is written just after a save.
+     WS.write_journal(ref, [{"sheet": "Project", "row": 0, "col": "project_name",
+                             "was": "Plan 0", "now": "Plan Zero"}])
+     j = WS.read_journal(ref)
+     check("a pending edit is offered back", bool(j) and len(j["pending"]) == 1)
+     check("with when it was made", bool(j.get("at")))
++    check("and which save it was made against, which is what makes it judgeable",
++          "base_saved" in j)
+ 
+     WS.save_workspace(ref, sheets(), identity=ME)
+     check("committing clears it", WS.read_journal(ref) is None)
+ 
+-    # A journal older than the workspace was written against figures that have
++    # A journal made against a SUPERSEDED save was written against figures that have
+     # since been replaced. Offering it would put edits somewhere they never were.
+     WS.write_journal(ref, [{"stale": True}])
++    WS.save_workspace(ref, sheets(), identity=ME)
++    check("a journal made against a superseded save is not offered",
++          WS.read_journal(ref) is None)
++
++    # And the case the modification-time rule got wrong, which is why it had to go.
++    # A Windows share rounds a modification time to two seconds, so EVERY journal
++    # written within two seconds of its save looked no newer than the save and was
++    # thrown away - NR-STO-07 recovering nothing precisely when it had something to
++    # recover. The rounding is reproduced here rather than described.
++    WS.write_journal(ref, [{"sheet": "Project", "row": 1}])
++    for f in (ref, WS.journal_path(ref)):
++        t = os.stat(f).st_mtime
++        os.utime(f, (t - t % 2, t - t % 2))
++    check("and one written in the same tick as its save IS offered, which is when a "
++          "journal is actually written",
++          (WS.read_journal(ref) or {}).get("pending") is not None)
++    WS.clear_journal(ref)
++    Path(WS.journal_path(ref)).write_text(
++        json.dumps({"at": "2026-01-01T00:00:00.000Z", "pending": [{"stale": True}]}),
++        encoding="utf-8")
+     os.utime(WS.journal_path(ref), (time.time() - 600, time.time() - 600))
+-    check("a journal older than the plan is not offered", WS.read_journal(ref) is None)
++    check("a journal from an older version, with only times to go on, still obeys them",
++          WS.read_journal(ref) is None)
+ 
+     Path(WS.journal_path(ref)).write_text("{ not json", encoding="utf-8")
+     check("a torn journal is no journal", WS.read_journal(ref) is None)

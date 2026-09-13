@@ -24,9 +24,9 @@ index.html 크기:  696,460 bytes  ->  707,302 bytes
 
 --------------------------------------------------------------------------------
 diff -ruN '--exclude=index.html' "v1.21/READ ME FIRST.txt" "v1.21.1/READ ME FIRST.txt"
---- "v1.21/READ ME FIRST.txt"	2026-09-13 15:23:51.617652200 +0000
-+++ "v1.21.1/READ ME FIRST.txt"	2026-09-13 15:23:51.621500937 +0000
-@@ -1,6 +1,62 @@
+--- "v1.21/READ ME FIRST.txt"	2026-09-13 15:56:15.981923736 +0000
++++ "v1.21.1/READ ME FIRST.txt"	2026-09-13 15:56:15.985583309 +0000
+@@ -1,6 +1,74 @@
  PROJECT MANAGEMENT APP - Python edition
  =======================================
  
@@ -64,6 +64,18 @@ diff -ruN '--exclude=index.html' "v1.21/READ ME FIRST.txt" "v1.21.1/READ ME FIRS
 +    out. Nothing is reloaded when that happens, so the screen you were reading
 +    stays exactly as it was - start editing and the plan is yours.
 +
++  * AND THE RECOVERY RECORD IS NO LONGER THROWN AWAY BY THE CLOCK. Whether to
++    offer a journal back was decided by comparing modification times: offer it
++    if it is newer than the plan. Two files written in the same tick have the
++    SAME time, and equal counted as not newer - so a journal written just after
++    a save was discarded, which is exactly when one is written. Measured: 30 of
++    200 on a local disk. On a Windows share it is not a race but the normal
++    case, because a share rounds a modification time to two seconds and every
++    journal written within two seconds of a save then looks equal. A journal now
++    records WHICH SAVE it was made against, and is offered back if that save is
++    still the current one. A folder copied elsewhere keeps its journal too,
++    where the old rule threw it away because copying moves the clock.
++
 +  * THE WINDOW NO LONGER FREEZES WHILE A FILE DIALOG IS OPEN. The four
 +    operations that ask you to choose a file held the one application lock while
 +    they waited - up to ten minutes - so every other request queued behind them,
@@ -90,8 +102,8 @@ diff -ruN '--exclude=index.html' "v1.21/READ ME FIRST.txt" "v1.21.1/READ ME FIRS
  
    * A PROJECT WITH NOBODY ON IT NOW TELLS YOU WHAT IT NEEDS. Add a project,
 diff -ruN '--exclude=index.html' v1.21/pmapp/shell/paths.py v1.21.1/pmapp/shell/paths.py
---- v1.21/pmapp/shell/paths.py	2026-09-13 15:23:51.617119519 +0000
-+++ v1.21.1/pmapp/shell/paths.py	2026-09-13 15:23:51.620580607 +0000
+--- v1.21/pmapp/shell/paths.py	2026-09-13 15:56:15.981485739 +0000
++++ v1.21.1/pmapp/shell/paths.py	2026-09-13 15:56:15.985061721 +0000
 @@ -116,14 +116,61 @@
          return False
  
@@ -156,8 +168,8 @@ diff -ruN '--exclude=index.html' v1.21/pmapp/shell/paths.py v1.21.1/pmapp/shell/
      """Where the change log accumulates: ONE folder for the installation.
  
 diff -ruN '--exclude=index.html' v1.21/pmapp/shell/server.py v1.21.1/pmapp/shell/server.py
---- v1.21/pmapp/shell/server.py	2026-09-13 15:23:51.617177952 +0000
-+++ v1.21.1/pmapp/shell/server.py	2026-09-13 15:23:51.620737965 +0000
+--- v1.21/pmapp/shell/server.py	2026-09-13 15:56:15.981572138 +0000
++++ v1.21.1/pmapp/shell/server.py	2026-09-13 15:56:15.985125974 +0000
 @@ -67,6 +67,12 @@
          self.dialogs = F.DialogPump()
          self.stop = threading.Event()
@@ -400,8 +412,8 @@ diff -ruN '--exclude=index.html' v1.21/pmapp/shell/server.py v1.21.1/pmapp/shell
                  return self._json(200, e.as_dict())
              except OSError as e:
 diff -ruN '--exclude=index.html' v1.21/pmapp/storage/workspace.py v1.21.1/pmapp/storage/workspace.py
---- v1.21/pmapp/storage/workspace.py	2026-09-13 15:23:51.617371823 +0000
-+++ v1.21.1/pmapp/storage/workspace.py	2026-09-13 15:23:51.621137529 +0000
+--- v1.21/pmapp/storage/workspace.py	2026-09-13 15:56:15.981765029 +0000
++++ v1.21.1/pmapp/storage/workspace.py	2026-09-13 15:56:15.985256265 +0000
 @@ -32,7 +32,9 @@
  APP = "PM_APP"
  FORMAT = "prap-source-data"
@@ -468,9 +480,59 @@ diff -ruN '--exclude=index.html' v1.21/pmapp/storage/workspace.py v1.21.1/pmapp/
      now = timefmt.iso()
      doc = {
          "format": FORMAT,
+@@ -286,9 +327,15 @@
+ # committed data.
+ 
+ def write_journal(ref, pending):
++    """Write down what has not been committed yet, and WHICH SAVE it was made against.
++
++    The version it was made against has to be recorded here, at writing time. A
++    reader cannot work it out afterwards from modification times: see read_journal.
++    """
+     tmp = f"{journal_path(ref)}.tmp-{os.getpid()}"
++    body = {"at": timefmt.iso(), "pending": pending, "base_saved": last_saved_of(ref)}
+     with open(tmp, "w", encoding="utf-8") as f:
+-        json.dump({"at": timefmt.iso(), "pending": pending}, f, ensure_ascii=False)
++        json.dump(body, f, ensure_ascii=False)
+         f.flush()
+         os.fsync(f.fileno())
+     os.replace(tmp, journal_path(ref))
+@@ -303,11 +350,27 @@
+         j = json.loads(Path(p).read_text(encoding="utf-8"))
+     except (ValueError, OSError):
+         return None                           # a torn journal is no journal
+-    # Only offer it if it is NEWER than the workspace. Otherwise the edits were made
+-    # against figures that have since been replaced, and applying them would put
+-    # them somewhere they were never made.
+-    if os.path.exists(ref) and os.stat(p).st_mtime <= os.stat(ref).st_mtime:
+-        return None
++    # Only offer it if it was made against the plan AS IT STANDS. Otherwise the edits
++    # were made against figures that have since been replaced, and applying them would
++    # put them somewhere they were never made.
++    #
++    # WHAT THIS USED TO COMPARE, AND WHY IT HAD TO CHANGE. It compared modification
++    # times: offer the journal if it is newer than the plan. Two files saved in the
++    # same tick have the SAME time, and `<=` then threw the journal away - so a
++    # journal written just after a save was discarded, which is precisely when one is
++    # written. Measured here: 30 of 200 on a local disk, and on a Windows share it is
++    # not a race at all but the normal case, because SMB rounds a modification time to
++    # two seconds and every journal written within two seconds of a save looks equal.
++    # A share is where this application lives (NR-DEP-09), and a recovery journal that
++    # is thrown away is NR-STO-07 unimplemented rather than implemented. So the plan's
++    # own last_saved is compared instead - the same token, for the same reason, as the
++    # superseded-save check in save_workspace.
++    if os.path.exists(ref):
++        if "base_saved" in j:
++            if j["base_saved"] != last_saved_of(ref):
++                return None
++        elif os.stat(p).st_mtime <= os.stat(ref).st_mtime:
++            return None          # written by an older version: times are all there is
+     return j
+ 
+ 
 diff -ruN '--exclude=index.html' v1.21/version.txt v1.21.1/version.txt
---- v1.21/version.txt	2026-09-13 15:23:51.617584115 +0000
-+++ v1.21.1/version.txt	2026-09-13 15:23:51.621435511 +0000
+--- v1.21/version.txt	2026-09-13 15:56:15.981897751 +0000
++++ v1.21.1/version.txt	2026-09-13 15:56:15.985562214 +0000
 @@ -1 +1 @@
 -1.21
 +1.21.1
