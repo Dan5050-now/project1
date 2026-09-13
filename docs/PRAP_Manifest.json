@@ -12,17 +12,17 @@
  "current": [
   {
    "what": "development_plan",
-   "path": "docs/PRAP_Development_Plan_v2.56.xlsx",
+   "path": "docs/PRAP_Development_Plan_v2.57.xlsx",
    "exists": true,
-   "bytes": 136631,
-   "sha256": "bcf98d65ced0ec28eee86226e896493cdac485e89c25b8280e867cbfd8cabd26"
+   "bytes": 137453,
+   "sha256": "576228799fc78803ba27b86fdfb2a74a77523c5ad514aa05e9bd62c9b6d564fd"
   },
   {
    "what": "programming_specification",
    "path": "docs/PRAP_Programming_Specification_v1.28.xlsx",
    "exists": true,
-   "bytes": 73431,
-   "sha256": "5625319a0a28e16e3df990bd6ae7e8dc32872116b583c7dd636f7ab36d3066d3"
+   "bytes": 73433,
+   "sha256": "4e0a6d2d8ddd970671b0e29db47c522814ffccbbc3969dd38c94a5c3ee4caa80"
   },
   {
    "what": "ui_component_list",
@@ -57,21 +57,21 @@
    "path": "docs/PRAP_AI_Agent_Guide.md",
    "exists": true,
    "bytes": 41749,
-   "sha256": "6cbd6defc72b51a169a2c272467f1b9dc06abaac064f8e1ec8e23708f82f5a94"
+   "sha256": "5524ef69922c802fb88fb535b1bb75ec4e5f4b7d93828b9a896a5d4eda7d6784"
   },
   {
    "what": "application",
    "path": "app/PRAP.html",
    "exists": true,
    "bytes": 632188,
-   "sha256": "f6809e4d537a49bf9630c551c0a8d2eeb4526b76225ecacdcfcc8381b1e74e16"
+   "sha256": "7ba77f101e5abc64b592a201da812c959248350d073544c11a7d0854fdf56ac8"
   },
   {
    "what": "machine_readable_contract",
    "path": "docs/prap_contract.json",
    "exists": true,
    "bytes": 55858,
-   "sha256": "7c38f97ede5c8765510a93b017546e0b9f25fc1ff7974d50f47c408436bb6240"
+   "sha256": "21d8c918b5ca209d963493fb6d506802f7b9e5dc660ee4743ca49d8ee3603326"
   },
   {
    "what": "interchange_tool",
@@ -84,8 +84,8 @@
    "what": "agent_guide_workbook",
    "path": "docs/PRAP_AI_Agent_Guide_v1.0.xlsx",
    "exists": true,
-   "bytes": 34045,
-   "sha256": "da6a9b386e0efb9de7d534ece71e8c60dda0b8a197006bd45fca4f1433cd3a58"
+   "bytes": 34047,
+   "sha256": "c8501cea35372224c7e579c768aaa26fa96d48dc70daeb42241aa6b010379e5f"
   }
  ]
 }

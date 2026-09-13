@@ -16,7 +16,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.56.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.57.xlsx"
 SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.28.xlsx"
 TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.16.xlsx"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.18.xlsx"

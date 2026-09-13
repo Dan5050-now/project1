@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.56"
+DOC_VERSION = "2.57"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,6 +397,36 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.57", "2026-09-13", "Claude Code", "Pending",
+     "MEASURED AT THE SCALE ACTUALLY IN USE, AND X-04 LOOKS DIFFERENT FROM THERE. "
+     "Asked at review to re-measure against 50 projects x 100 people rather than the "
+     "100 x 1,000 REQ-NFR-03 names. Done, across a range, so the shape of the curve is "
+     "visible rather than one point of it. 50 projects and a 60-month horizon "
+     "throughout; the figure is how long the Overall tab takes to switch to, against a "
+     "1,000 ms budget fixed before any number was seen: "
+     "50 people 369 ms (37% of budget) | 100 people 503 ms (50%) | 200 people 786 ms "
+     "(79%) | 400 people 1,044 ms (104%) | 1,000 people 3,207 ms (321%). "
+     "THE BUDGET IS CROSSED AT ABOUT 400 PEOPLE. Below that the application is "
+     "comfortable and row virtualisation would change no number anybody feels; above it "
+     "the Overall pair is the binding cost, exactly as X-04 describes. "
+     "AT 50 x 100 EVERYTHING IS INSIDE BUDGET with room to spare: import 814 ms against "
+     "5,000, the Overall tab 503 ms against 1,000 and worst case 669, editing a cell "
+     "67 ms, opening a column filter 45 ms, 152 rows and 9,272 cells, 16 MB of heap. The "
+     "tightest measurement of any kind is 55% of its budget - about a factor of two of "
+     "headroom before anything needs doing. "
+     "SO THE QUESTION IS NOT WHETHER TO BUILD VIRTUALISATION. It is which volume this "
+     "application is for. At 100 x 1,000 it is a real defect and the figures say so: the "
+     "tab is 3.3x over and the import 1.7x, of which 3,590 ms is the CALCULATION - "
+     "180,160 person-months - which virtualisation cannot touch, so building it would "
+     "answer the tab and about half the import. At 50 x 100 there is nothing to fix. "
+     "THIS ENTRY CHANGES NO REQUIREMENT. REQ-NFR-03 still names 100 projects and 1,000 "
+     "people, and until that is amended X-04 stands as an unmet requirement with its "
+     "cost now measured rather than argued. Amending it is a decision about what the "
+     "application is for, which is not a decision to take inside a documentation pass. "
+     "tools/build_stress_workbook.py takes --projects and --people, so any volume can be "
+     "re-measured with tools/measure_scale.py in a few minutes. The fixtures are not "
+     "committed: generated filler, reproduced from a fixed seed by one command.",
+     "Issued for review"],
     [f"{MARK_NEW}2.56", "2026-09-13", "Claude Code", "Pending",
      "TWO THINGS FROM THE SAME REVIEW: the guard that should have caught the drift, and "
      "the measurement that settles X-04. "

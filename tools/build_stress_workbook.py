@@ -37,8 +37,14 @@ _spec = importlib.util.spec_from_file_location("bsw", ROOT / "tools" / "build_so
 B = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(B)
 
+# Defaults are the volume REQ-NFR-03 names. Override to measure another scale:
+#     python tools/build_stress_workbook.py --projects 50 --people 100 --keep
+# Assignments are derived rather than fixed, so the shape stays realistic at any size:
+# each project is staffed by ROLES_PER_PROJECT people, which is what decides how many
+# projects one person ends up on once the pool is a given size.
 N_PROJECTS = 100
 N_PEOPLE = 1000
+ROLES_PER_PROJECT = 80          # 100 x 80 = the 8,000 REQ-NFR-03 names
 HORIZON_MONTHS = 60
 
 ROLES = ["Project oversight", "Lead data manager", "Clinical Data Associator",
@@ -57,7 +63,15 @@ def eom(d):
     return (d + rd(months=1)).replace(day=1) - rd(days=1)
 
 
-def main(keep=False):
+def main(keep=False, n_projects=N_PROJECTS, n_people=N_PEOPLE, per_project=None):
+    global OUT
+    OUT = ROOT / "templates" / f"PRAP_SourceData_Stress_{n_projects}x{n_people}_v{VERSION}.xlsx"
+    # At the named volume this is 80 people a project, which is the figure that produces
+    # 8,000 assignments. At a realistic volume a project is staffed by a handful, so the
+    # count follows the pool rather than the other way round: about six a project, which
+    # puts each person on roughly the same number of projects at either size.
+    if per_project is None:
+        per_project = ROLES_PER_PROJECT if n_people >= 500 else 6
     rnd = random.Random(20260913)
     src = load_workbook(SOURCE)
     take = lambda s: [list(r) for r in src[s].iter_rows(min_row=2, values_only=True) if r[0]]
@@ -66,7 +80,7 @@ def main(keep=False):
     proj, per, ppl, asg = [], [], [], []
     base = date(2025, 1, 1)
 
-    for i in range(N_PROJECTS):
+    for i in range(n_projects):
         pid = f"PRJ-{i + 1:03d}"
         t, phases = TYPES[i % len(TYPES)]
         phase = phases[i % len(phases)]
@@ -92,7 +106,7 @@ def main(keep=False):
                      "Active", "automatic", "Stress fixture - bulk, not a scenario",
                      None, None, None, None])
 
-    for i in range(N_PEOPLE):
+    for i in range(n_people):
         sid = f"PSN-{i + 1:04d}"
         dept = DEPTS[i % len(DEPTS)]
         roles = OROLES if dept == "Business Systems" else ROLES
@@ -101,13 +115,13 @@ def main(keep=False):
                     "Stress fixture", None, None, None, None])
 
     # Order 8,000 assignments, spread so nobody is on an implausible number of projects.
-    load = {f"PSN-{i + 1:04d}": 0 for i in range(N_PEOPLE)}
+    load = {f"PSN-{i + 1:04d}": 0 for i in range(n_people)}
     n = 0
-    per_project = max(1, round(8000 / N_PROJECTS))
     for i, prow in enumerate(proj):
         pid, t = prow[0], prow[2]
         roles = OROLES if t == "Others" else ROLES
-        pool = sorted(rnd.sample(list(load), 400), key=lambda x: load[x])[:per_project]
+        pool = sorted(rnd.sample(list(load), min(400, n_people)),
+                      key=lambda x: load[x])[:per_project]
         for k in range(per_project):
             sid = pool[k % len(pool)]
             load[sid] += 1
@@ -129,8 +143,7 @@ def main(keep=False):
     B.add_readme(wb, "stress", [
         "",
         "WHAT THIS FILE IS",
-        f"   The volume REQ-NFR-03 names: {N_PROJECTS} projects, {N_PEOPLE} people, "
-        f"{len(asg)} assignments.",
+        f"   {n_projects} projects, {n_people} people, {len(asg)} assignments.",
         "   Bulk, not scenarios. The figures are not meant to be read - the point is the SIZE.",
         "   Built to answer one question by measurement: does the absence of row",
         "   virtualisation (component X-04) matter at the volume the requirement names?",
@@ -154,5 +167,11 @@ def main(keep=False):
         print("  (pass --keep to leave it on disk; it is generated filler, not a deliverable)")
 
 
+def _arg(name, default):
+    return int(sys.argv[sys.argv.index(name) + 1]) if name in sys.argv else default
+
+
 if __name__ == "__main__":
-    main("--keep" in sys.argv)
+    main("--keep" in sys.argv,
+         _arg("--projects", N_PROJECTS), _arg("--people", N_PEOPLE),
+         _arg("--per-project", None) if "--per-project" in sys.argv else None)

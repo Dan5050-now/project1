@@ -35,7 +35,10 @@ CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 FILES = [
     ("10x10   (today's typical)", ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.10.xlsx"),
     ("50x50   (a busy portfolio)", ROOT / "templates" / "PRAP_SourceData_Scenarios_50x50_v1.0.xlsx"),
-    ("100x1000 (REQ-NFR-03)", ROOT / "templates" / "PRAP_SourceData_Stress_1000_v1.0.xlsx"),
+    ("50x100  (proposed real scale)", ROOT / "templates" / "PRAP_SourceData_Stress_50x100_v1.0.xlsx"),
+    ("50x200", ROOT / "templates" / "PRAP_SourceData_Stress_50x200_v1.0.xlsx"),
+    ("50x400", ROOT / "templates" / "PRAP_SourceData_Stress_50x400_v1.0.xlsx"),
+    ("100x1000 (REQ-NFR-03 today)", ROOT / "templates" / "PRAP_SourceData_Stress_100x1000_v1.0.xlsx"),
 ]
 
 # Anything a person waits on beyond this reads as a hang rather than a pause. Chosen
@@ -145,43 +148,45 @@ with sync_playwright() as pw:
     browser.close()
 
 print()
-print(f"{'fixture':28}{'proj':>6}{'people':>8}{'asg':>7}{'lines':>8}"
-      f"{'import':>9}{'tab':>8}{'edit':>8}{'filter':>8}{'rows':>7}{'nodes':>8}{'heap':>7}")
-print("-" * 110)
+print(f"{'fixture':30}{'proj':>5}{'people':>7}{'asg':>6}{'lines':>8}{'mo':>4}"
+      f"{'import':>9}{'tab':>8}{'edit':>7}{'filter':>8}{'rows':>6}{'cells':>8}{'heap':>7}")
+print("-" * 113)
 for label, m in results:
-    print(f"{label:28}{m['projects']:>6}{m['people']:>8}{m['assignments']:>7}{m['lines']:>8}"
-          f"{m['import']:>8.0f}m{m['tab']:>7.0f}m{m['edit']:>7.0f}m{m['filter']:>7.0f}m"
-          f"{m['overallRows']:>7}{m['nodes']:>8}"
+    print(f"{label:30}{m['projects']:>5}{m['people']:>7}{m['assignments']:>6}{m['lines']:>8}"
+          f"{m['months']:>4}{m['import']:>8.0f}m{m['tab']:>7.0f}m{m['edit']:>6.0f}m"
+          f"{m['filter']:>7.0f}m{m['overallRows']:>6}{m['overallCells']:>8}"
           f"{(str(m['heapMB']) + 'M') if m['heapMB'] else '-':>7}")
 
 print()
-if results:
-    label, big = results[-1]
-    print(f"AGAINST THE BUDGETS, at {label.strip()}, {big['months']}-month horizon:")
-    over = []
-    for k, budget in BUDGET_MS.items():
-        v = big[k]
-        ok = v <= budget
-        if not ok:
-            over.append(k)
-        print(f"  {'ok  ' if ok else 'OVER'} {k:8} {v:7.0f} ms   budget {budget} ms"
-              f"   {'' if ok else f'({v / budget:.1f}x over)'}")
-    print(f"       (Overall tab worst case {big['tabWorst']:.0f} ms; "
-          f"project tab {big['tabProj']:.0f} ms, person tab {big['tabPers']:.0f} ms - "
-          f"those two are short tables and are not the question)")
-    print()
-    print("  WHAT VIRTUALISATION WOULD AND WOULD NOT FIX")
-    print(f"    The Overall tab draws {big['overallCells']:,} cells in "
-          f"{big['overallRows']:,} rows. Rendering them is what 'tab' measures, and it is "
-          f"the cost virtualisation removes.")
-    print(f"    The import is {big['import']:.0f} ms, of which the CALCULATION alone is "
-          f"{big['calcMs']:.0f} ms for {big['lines']:,} person-months. Virtualisation does "
-          f"not touch that, nor the workbook parse. So it cannot be the whole answer to "
-          f"import even if it is the whole answer to the tab.")
-    if not over:
-        print("    Nothing is over budget: virtualisation would change no number a user feels.")
-    else:
-        print(f"    Over budget: {', '.join(over)}.")
+print("AGAINST THE BUDGETS  (import 5000 / tab 1000 / edit 1000 / filter 600 ms,")
+print("                      fixed before any number was seen)")
+print()
+for label, m in results:
+    bad = [k for k, b in BUDGET_MS.items() if m[k] > b]
+    mark = "ok  " if not bad else "OVER"
+    detail = ("everything inside budget"
+              if not bad else
+              ", ".join(f"{k} {m[k]:.0f}ms ({m[k] / BUDGET_MS[k]:.1f}x)" for k in bad))
+    print(f"  {mark} {label:30} {detail}")
+    if not bad:
+        worst = max((m[k] / b, k) for k, b in BUDGET_MS.items())
+        print(f"       tightest: {worst[1]} at {100 * worst[0]:.0f}% of its budget"
+              f"   (Overall tab worst case {m['tabWorst']:.0f} ms)")
+
+print()
+print("WHAT VIRTUALISATION WOULD AND WOULD NOT FIX")
+for label, m in results:
+    if not [k for k, b in BUDGET_MS.items() if m[k] > b]:
+        continue
+    print(f"  at {label.strip()}:")
+    print(f"    the Overall tab draws {m['overallCells']:,} cells in {m['overallRows']:,} "
+          f"rows - that is the cost virtualisation removes")
+    print(f"    the import is {m['import']:.0f} ms, of which the CALCULATION alone is "
+          f"{m['calcMs']:.0f} ms for {m['lines']:,} person-months - virtualisation touches "
+          f"neither that nor the parse")
+if all(not [k for k, b in BUDGET_MS.items() if m[k] > b] for _, m in results):
+    print("  Nothing measured here is over budget, so virtualisation would change no "
+          "number a user feels.")
 
 if errors:
     print("\npage errors:", errors[:3])
