@@ -480,8 +480,14 @@ try:
                else f"(built {len(b)} lines, committed {len(c)})")
             + " - edit the part under src/ and run python tools/build_app.py")
     else:
+        # ENCODED length, not len() of the string. This said "bytes" while counting
+        # CHARACTERS, so it under-reported the file by however much multi-byte UTF-8
+        # it contained - 562 at the time this was noticed. The comparison above was
+        # always right; only the number printed beside it was wrong, which is the
+        # kind of wrong that gets quoted in a commit message and believed.
         notes.append(f"app/PRAP.html is byte-identical to a build from src/ "
-                     f"({len(build_app.PARTS)} parts, {len(built):,} bytes)")
+                     f"({len(build_app.PARTS)} parts, "
+                     f"{len(built.encode('utf-8')):,} bytes)")
 except Exception as exc:                                    # noqa: BLE001
     problems.append(f"could not build app/PRAP.html from src/: {exc}")
 

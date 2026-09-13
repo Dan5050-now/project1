@@ -102,7 +102,7 @@ def main():
             return 1
         if built == current:
             print(f"ok    {OUT.relative_to(ROOT)} is byte-identical to a build from src/ "
-                  f"({len(built):,} bytes, {len(PARTS)} parts)")
+                  f"({len(built.encode('utf-8')):,} bytes, {len(PARTS)} parts)")
             return 0
         # Say WHERE, not just that. A diff of two 260 KB files helps nobody.
         b, c = built.split("\n"), current.split("\n")
@@ -115,9 +115,16 @@ def main():
         print(f"FAIL  lengths differ: built {len(b)} lines, committed {len(c)} lines")
         return 1
 
+    # The output folder is not assumed to exist. In the repository it always does, so
+    # this never fired there - but src/ and tools/ are shipped on their own as the
+    # development source, and from a fresh extract of those two trees the very first
+    # command in the instructions died on a missing directory. A build that cannot run
+    # from what it ships is not a build anybody else can use.
+    OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(built, encoding="utf-8")
     verb = "unchanged" if built == current else "written"
-    print(f"{verb}: {OUT.relative_to(ROOT)}  ({len(built):,} bytes from {len(PARTS)} parts)")
+    print(f"{verb}: {OUT.relative_to(ROOT)}  "
+          f"({len(built.encode('utf-8')):,} bytes from {len(PARTS)} parts)")
     return 0
 
 
