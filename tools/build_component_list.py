@@ -386,16 +386,31 @@ C = [
      "repeated name on import, but a hand-built model could still reach the renderer, and a silent "
      "collision there would be worse than a redundant ten lines."),
     ("X-04", "Layout", "Row virtualisation",
-     "NOT IMPLEMENTED. " + FIX + "v1.0 recorded this as 'Keep - unchanged', which read as "
-     "built. It never was: there is no virtualisation anywhere in src/. Both Overall "
-     "tables render every row. At the sizes in use that is fast enough, and the chart "
-     "caps (LIMIT 20 bands, 12 lines) keep the drawing bounded - but REQ-DSH-09 and "
-     "REQ-NFR-03 name a thousand people, and at that size this is an open performance "
-     "risk rather than a solved problem. Listed here so it is not mistaken for done.",
+     "NOT IMPLEMENTED, AND NOW MEASURED. " + FIX + "v1.0 recorded this as 'Keep - "
+     "unchanged', which read as built. It never was: there is no virtualisation anywhere "
+     "in src/, and both Overall tables render every row. "
+     "MEASURED at exactly the volume REQ-NFR-03 names - 100 projects, 1,000 people, "
+     "8,000 assignments, a 60-month horizon (tools/build_stress_workbook.py and "
+     "tools/measure_scale.py): the Overall tab takes 3,058 ms to switch to, worst case "
+     "4,537 ms, drawing 67,222 cells in 1,102 rows. Budget was 1,000 ms, set before the "
+     "numbers were seen. THREE TIMES OVER, so this is a real defect rather than a "
+     "theoretical one, and it is exactly the two tables this component names. "
+     "FOR SCALE, the same measurement at the sizes in use: 10x10 switches in 156 ms and "
+     "50x50 in 374 ms, both comfortable. The problem appears between 50 and 1,000 people, "
+     "not before. "
+     "WHAT VIRTUALISATION WOULD NOT FIX. The import at that volume is 7,328 ms against a "
+     "5,000 ms budget, and 3,076 ms of that is the CALCULATION alone - 180,160 "
+     "person-months. Virtualisation touches neither the calculation nor the workbook "
+     "parse, so it answers the tab and about half of the import. Editing (98 ms) and "
+     "filtering (49 ms) are already inside budget at full volume and would not change.",
      "REQ-DSH-09, REQ-NFR-03", K, "", "Unchanged."),
 
-    ("A-01", "Assumptions tab", "[NEW] Standard period weights",
-     "PeriodWeightStandard as a matrix - phase down the side, period across, shaded by magnitude.",
+    ("A-01", "Assumptions tab", "[FIXED v2.0] Standard period FTE for project types",
+     "PeriodFTEStandard as a matrix - type and phase down the side, period across, shaded by "
+     "magnitude. " + FIX + "v1.0 called this 'Standard period weights' and named the sheet "
+     "PeriodWeightStandard. Both were renamed at R-33: the column holds a monthly FTE, a MAGNITUDE, "
+     "and calling it a weight is most of why it went unused - a weight reads like something to "
+     "multiply by. Caught by the new component check in check_consistency.py, not by reading.",
      "REQ-DSH-11", "", "",
      "Added for G-07. Shown as a matrix, not 48 flat rows: it is a standard, and a standard is read "
      "across. 'Others' projects are absent by design - their weights are hand-entered per project."),
@@ -442,8 +457,10 @@ C = [
     # says 'Added after approval' rather than 'Keep' or 'Change', because none of these
     # was in front of the reviewer at the Step 3 gate - saying otherwise would falsify
     # a review trail that is otherwise exact.
-    ("O-11", "Overall", "[NEW v2.0] Monthly resource trend (line chart)",
-     "One line per project on a shared baseline, capped at the 12 largest by total. A stack "
+    ("O-11", "Overall", "[NEW v2.0] Monthly resource trend / Monthly load trend (line chart)",
+     "One line per project on a shared baseline, capped at the 12 largest by total. The person "
+     "tab carries the same component under the title 'Monthly load trend', one line per person "
+     "with the over-allocation ceiling drawn. A stack "
      "answers 'what is this month made of'; only lines answer 'is this one rising or falling', "
      "because in a stack every band's baseline moves with the bands beneath it. Hover gives "
      "the line's total, mean and peak month.",

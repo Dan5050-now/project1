@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.55"
+DOC_VERSION = "2.56"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,6 +397,41 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.56", "2026-09-13", "Claude Code", "Pending",
+     "TWO THINGS FROM THE SAME REVIEW: the guard that should have caught the drift, and "
+     "the measurement that settles X-04. "
+     "THE COMPONENT LIST IS NOW CHECKED LIKE EVERYTHING ELSE. check_consistency.py gains "
+     "four checks over it: no component may cite a requirement the plan does not have; "
+     "every REQ-DSH-* must reach at least one component; every panel heading in the "
+     "source and every dialog in the page must be NAMED somewhere in the list; and the "
+     "version must match the one the application's own provenance claims. The panel "
+     "check is the one that matters - it is the exact shape of the drift - and it "
+     "immediately found a SIXTH stale entry that reading had missed: A-01 was still "
+     "called 'Standard period weights' over the sheet PeriodWeightStandard, both renamed "
+     "at R-33. Each check was made to fail on purpose before being trusted. "
+     "X-04 IS A REAL DEFECT, AND THE MEASUREMENT SAYS SO. A fixture at exactly the "
+     "volume REQ-NFR-03 names - 100 projects, 1,000 people, 8,000 assignments, 60 months "
+     "- was built and driven (tools/build_stress_workbook.py, tools/measure_scale.py). "
+     "Budgets were fixed before the numbers were seen. THE OVERALL TAB TAKES 3,058 ms TO "
+     "SWITCH TO, worst case 4,537 ms, against a 1,000 ms budget: three times over, "
+     "drawing 67,222 cells in 1,102 rows. That is the cost row virtualisation removes and "
+     "it is exactly the two tables X-04 names. "
+     "IT IS NOT THE WHOLE STORY, WHICH IS WHY THE MEASUREMENT WAS WORTH TAKING. The "
+     "import at that volume is 7,328 ms against 5,000, and 3,076 ms of it is the "
+     "CALCULATION - 180,160 person-months. Virtualisation touches neither that nor the "
+     "workbook parse, so building it answers the tab and roughly half the import, not "
+     "all of it. A first pass at this measured only the import, saw one number over "
+     "budget, and was about to blame virtualisation for a cost virtualisation cannot "
+     "reach; splitting the stages is what stopped that. "
+     "WHAT IS ALREADY FINE AT FULL VOLUME: editing a cell 98 ms, opening a column filter "
+     "49 ms, scrolling the tall table 0.1 ms a step, the project tab 404 ms and the "
+     "person tab 935 ms. The two short tabs are not the question; the Overall pair is. "
+     "AND THE HORIZON IS PART OF THE ANSWER. The same Overall tab switches in 632 ms at "
+     "the default 24 months and 3,058 ms at 60, because the tables are rows x MONTHS. "
+     "Measuring at the default would have reported no problem and been wrong. "
+     "No code change in this entry. The defect is recorded with its figures so the "
+     "decision to build or to move the requirement is taken on evidence.",
+     "Issued for review"],
     [f"{MARK_NEW}2.55", "2026-09-13", "Claude Code", "Pending",
      "THE UI COMPONENT LIST CATCHES UP, AND ONE REAL FINDING COMES OUT OF IT. Raised at "
      "review: the application had changed many times while that document stood still. "

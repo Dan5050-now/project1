@@ -16,7 +16,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.55.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.56.xlsx"
 SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.28.xlsx"
 TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.16.xlsx"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.18.xlsx"
@@ -477,6 +477,86 @@ if plan_reqs - spec_traced:
 if spec_traced - plan_reqs:
     problems.append(f"requirements traced in the spec but absent from the plan: {sorted(spec_traced - plan_reqs)}")
 
+# ---- 9. the UI component list against the application ---------------------
+#
+# THIS SECTION EXISTS BECAUSE OF WHAT HAPPENED WITHOUT IT. Every artefact above is
+# held to every other on each build, and all of them stayed in step for fifty-odd
+# revisions. The component list was not in that set, so it was the one thing nothing
+# checked - and it drifted from plan v2.0 to plan v2.55 in silence, gaining 22
+# undocumented components and five entries that had become actively WRONG. The lesson
+# is not "remember to update it"; it is that an artefact nobody checks is an artefact
+# that rots. So it is checked.
+COMPONENTS = ROOT / "docs" / "PRAP_UI_Component_List_v2.0.xlsx"
+if not COMPONENTS.exists():
+    problems.append(f"{COMPONENTS.name} is missing")
+else:
+    cl = load_workbook(COMPONENTS)
+    cws = cl["01_Components"]
+    chdr = next((r for r in range(1, cws.max_row + 1)
+                 if cws.cell(r, 1).value == "ID"), None)
+    comp_rows, comp_reqs = [], set()
+    for r in range((chdr or 0) + 1, cws.max_row + 1):
+        cid = str(cws.cell(r, 1).value or "").strip()
+        if not cid or "-" not in cid or cid.startswith("="):
+            continue
+        comp_rows.append(cid)
+        comp_reqs |= set(re.findall(r"REQ-[A-Z]+-\d+", str(cws.cell(r, 5).value or "")))
+    cl_blob = " ".join(str(cws.cell(r, c).value or "").lower()
+                       for r in range(1, cws.max_row + 1) for c in range(1, 10))
+
+    # (a) the version the application claims to be built against
+    meta = (ROOT / "src" / "core" / "00_meta.js").read_text()
+    m = re.search(r'file:"(PRAP_UI_Component_List_v[\d.]+\.xlsx)"', meta)
+    if m and m.group(1) != COMPONENTS.name:
+        problems.append(f"the application's provenance names {m.group(1)} for the UI "
+                        f"component list, but this check reads {COMPONENTS.name}")
+
+    # (b) a component may not cite a requirement that does not exist
+    ghosts = sorted(comp_reqs - plan_reqs)
+    if ghosts:
+        problems.append(f"the component list cites requirements absent from the plan: {ghosts}")
+
+    # (c) EVERY DASHBOARD REQUIREMENT MUST REACH A COMPONENT. REQ-DSH-* is the family
+    #     that describes what is on screen, so one with no component is a screen
+    #     requirement nobody has written down as a screen element - which is exactly
+    #     the shape of the drift this section was added to catch.
+    dsh = {q for q in plan_reqs if q.startswith("REQ-DSH-")}
+    orphan = sorted(dsh - comp_reqs)
+    if orphan:
+        problems.append(f"dashboard requirements with no component in the list: {orphan}")
+
+    # (d) EVERY PANEL AND DIALOG THE APPLICATION HAS MUST BE NAMED. Read out of the
+    #     source rather than a browser, so this stays a static check that runs in a
+    #     second. Panel headings are <h2> literals; dialogs are ids on <dialog>.
+    tabs_js = (ROOT / "src" / "ui" / "11_tabs.js").read_text()
+    headings = {h.strip(" —") for h in re.findall(r"<h2>([^<${]*)", tabs_js)}
+    headings |= {h.strip(" —") for h in
+                 re.findall(r"<h2>([^<${]*)", (ROOT / "src" / "ui" / "12b_manual.js").read_text())}
+    headings = {h for h in headings if len(h) > 3}
+    unnamed = sorted(h for h in headings if h.lower() not in cl_blob)
+    if unnamed:
+        problems.append(f"panels the application renders that the component list never "
+                        f"names: {unnamed}")
+
+    DIALOGS = {"report": "findings", "confirm": "confirm", "replace": "replace",
+               "estchg": "switch-estimation", "gapdlg": "month detail",
+               "cfgchg": "settings-change", "changes": "change log"}
+    body = (ROOT / "src" / "shell" / "web" / "page.body.html").read_text()
+    have = set(re.findall(r'<dialog[^>]*id="(\w+)"', body))
+    missing_dlg = sorted(DIALOGS[d] for d in have
+                         if d in DIALOGS and DIALOGS[d] not in cl_blob)
+    if missing_dlg:
+        problems.append(f"dialogs the application has that the component list never "
+                        f"names: {missing_dlg}")
+    unknown_dlg = sorted(have - set(DIALOGS))
+    if unknown_dlg:
+        problems.append(f"dialogs in the page this check does not know about - add them "
+                        f"to DIALOGS and to the component list: {unknown_dlg}")
+
+    notes.append(f"UI component list: {len(comp_rows)} components, {len(comp_reqs)} "
+                 f"requirements cited, {len(headings)} panel headings and {len(have)} "
+                 f"dialogs all named")
+
 # ---- report ---------------------------------------------------------------
 print(f"plan       {PLAN.name}")
 print(f"spec       {SPEC.name}")
@@ -487,6 +567,7 @@ print(f"types      {types}")
 print(f"columns cross-checked: {sum(len(v) for k, v in documented.items() if k in plan_sheets)}"
       f" across {len(plan_sheets)} sheets")
 print(f"requirements traced: {len(plan_reqs)}")
+print(f"components    {COMPONENTS.name}")
 print()
 if problems:
     print(f"PROBLEMS ({len(problems)}):")
