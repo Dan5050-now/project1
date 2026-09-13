@@ -1,0 +1,862 @@
+From 62210b34a8e8e86a3580f5c261159328317fe671 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 13 Sep 2026 05:29:40 +0000
+Subject: [PATCH] fix(shell): wire the three storage operations nothing called
+
+NR-STO-07, NR-STO-15 and NR-STO-16 were specified, agreed at review, and
+implemented in storage/ - where test_storage_py.py covers them. Nothing on the
+page ever called them. The functions passed their tests, the figures were right,
+so nothing failed; what was missing was a caller, and an operation nobody calls
+is a requirement nobody met.
+
+NR-STO-16 - a plan that changed on disk beneath a reader
+  A session that has only READ a plan never takes a claim, so nothing stopped it
+  saving over a colleague's newer save - and the save reported success. Two
+  guards now, because a guard only in the window is one anything else walks past:
+  - bridge.js polls the plan every 10s (S-N01, AGREED), enters STALE, offers
+    File -> Reload plan, and refuses an edit or a save from a superseded view.
+  - storage/workspace.py refuses the write itself when the caller states which
+    issue of the file its figures came from and the file is a different issue.
+  What is compared is the plan's own last_saved, not its modification time: a
+  share may round a modification time to two seconds, and a check that cannot
+  tell two saves apart is no check. ws/stat now reports lastSaved for this.
+
+NR-STO-07 - pending edits survive a crash
+  journal/write was never called, so journal/read had nothing to find and the
+  recovery offer could never appear. The pending count is now WATCHED rather
+  than hooked: S.pending is changed in a dozen places in ui/, and a journal that
+  depends on having wrapped each of them is a journal with holes in it.
+
+NR-STO-15 - a claim ends when the holder is finished
+  Only the application-close path released. Now also: 'Leave without change',
+  opening another plan, and New plan. stop_heartbeat() actually stops the beat -
+  it set an attribute to None while the thread went on refreshing the old plan's
+  claim, so a plan the session had left stayed locked until its 30-minute expiry.
+  The discard hook is a click LISTENER, not a wrapper: shell/web binds the button
+  to the function itself, so replacing the global would have left the button
+  calling the original.
+
+Also in this change
+  - workspace.py SCHEMA_EXPECTED 5 -> 12. core/00_meta.js reads 12, so the
+    storage layer was stamping a version the engine had never used. The test
+    that "checked" this compared the mistake with itself; it now reads the
+    number out of core/00_meta.js so the two cannot drift again.
+  - The four operations that open a file dialog no longer run holding the single
+    application lock. A dialog waits up to ten minutes for a person; every other
+    request queued behind it, the page's own claim check included, and the window
+    looked frozen because it was. ws/saveAs takes the lock around the part that
+    touches shared state.
+  - The change log is one file per person per month in the installation's one
+    audit folder. Two sessions appending to one file across an SMB share can
+    interleave: Python buffers text and a share does not promise an atomic
+    append. Separate files cannot interleave, and every row already names who
+    made the change, so a month still reads as one record.
+  - paths.py gains shared_dir(): data/shared/workspaces/, created at launch with
+    a note in it. 07_Sharing is written for several people opening one plan, and
+    rule 3 puts every plan in one person's private folder - where a claim, a
+    heartbeat and a who-is-editing message protect nothing, because nobody else
+    can open the file.
+
+Verification
+  test_python_app.py gains 14 checks for the wiring itself - that the page calls
+  each operation, and that each one does what its requirement says: the claim
+  comes back on release, on discard and on opening another plan; an edit is
+  journalled and the journal is cleared on commit; a colleague's save is noticed
+  AND THE SAVE IS REFUSED with their file intact. These are the checks whose
+  absence let the gap persist.
+
+  build_python_app.py, test_layers.py, test_storage_py.py (80 passed) and
+  test_python_app.py (0 failed) all pass. The two-instance reproduction that
+  demonstrated the loss - two shells on one shared folder, A saves twelve
+  projects, B saves a three-project view over the top - now ends in a refusal
+  with all twelve intact.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_015uUAZtqavUrwFq3tABxWDZ
+---
+ src/shell/python/bridge.js      | 165 +++++++++++++++++++++++++++++++-
+ src/shell/python/chrome.html    |   1 +
+ src/shell/python/paths.py       |  49 +++++++++-
+ src/shell/python/server.py      | 128 +++++++++++++++++++++----
+ src/storage/python/workspace.py |  45 ++++++++-
+ tools/test_python_app.py        | 113 ++++++++++++++++++++++
+ tools/test_storage_py.py        |  10 +-
+ 7 files changed, 484 insertions(+), 27 deletions(-)
+
+diff --git a/src/shell/python/bridge.js b/src/shell/python/bridge.js
+index eeaf3b3..6a36752 100644
+--- a/src/shell/python/bridge.js
++++ b/src/shell/python/bridge.js
+@@ -115,6 +115,12 @@
+ 
+   /* ---- the plan this session has open ----------------------------------- */
+   let ref = null, holds = false;
++  // NR-STO-16. `baseSaved` is the issue of the file this session's figures came from
++  // - the plan's own last_saved, to the millisecond - and `stale` says the file has
++  // moved on since. Kept here rather than in ui/ because this is the only layer that
++  // knows there is a file at all. Not a modification time: a share may round one to
++  // two seconds, and a check that cannot tell two saves apart is no check.
++  let baseSaved = "", stale = false;
+ 
+   function showFile() {
+     el("pm-file").textContent = ref ? ref.split(/[\\/]/).pop() : "no plan open";
+@@ -128,8 +134,139 @@
+     p.textContent = text;
+   }
+ 
++
++  /* ---- NR-STO-16: the plan can change on disk underneath a reader ---------
++     Somebody who opened a plan at 09:00 and is still shown 09:00's figures at 11:00,
++     after two saves by somebody else, may quote them in good faith - and if they then
++     edit one cell and save, the newer work is replaced by figures that predate it and
++     the save reports success. The claim does not stop it: a session that has not
++     edited anything never took one.
++
++     So the file is checked every ten seconds (S-N01, AGREED) and once more
++     immediately before every save, which is the check that actually prevents the
++     loss - and storage/ checks it again as the bytes go down, because a guard only in
++     the window is a guard anything else can walk past. What is compared is the plan's
++     own last_saved rather than its modification time: a share may round a modification
++     time to two seconds, and a check that cannot tell two saves apart is no check. */
++  const STALE_MS = 10000;
++
++  /** Remember which issue of the file we are looking at. After every open and every
++   *  save of our own - otherwise our own write reads as somebody else's. */
++  async function noteBase(savedAt) {
++    if (savedAt) { baseSaved = savedAt; return; }
++    if (!ref) { baseSaved = ""; return; }
++    try { baseSaved = (await call("ws/stat", { ref })).lastSaved || ""; }
++    catch { baseSaved = ""; }
++  }
++
++  function sayStale(at) {
++    stale = true;
++    showHold("read", "Superseded — reload to edit");
++    showBanner("bad", `Somebody else saved this plan${at ? " at " + at : ""}. The figures `
++      + `on screen are from when you opened it, so saving now would replace their work. `
++      + `Use File → Reload plan to catch up.`);
++  }
++
++  /** Has the file moved on since we read it? Reports it, and says so to the caller. */
++  async function superseded() {
++    if (!ref || !baseSaved) return false;
++    let st;
++    try { st = await call("ws/stat", { ref }); } catch { return false; }
++    if (!st || !st.exists || !st.lastSaved) return false;
++    if (st.lastSaved === baseSaved) return false;
++    sayStale(new Date(st.lastSaved).toLocaleTimeString());
++    return true;
++  }
++
++  setInterval(() => { if (ref && !stale) superseded(); }, STALE_MS);
++
++  /** Read the plan again, from the top. The way out of STALE, and the only one:
++   *  keeping the screen and saving over the newer file is the thing being prevented. */
++  async function reloadPlan() {
++    if (!ref) return;
++    if (S.pending.length && !confirm(`${S.pending.length} change(s) are not committed. `
++        + `Reloading this plan discards them. Continue?`)) return;
++    const p = ref;
++    stale = false;
++    await openPlan(p);
++  }
++
++  /* ---- NR-STO-07: pending edits survive a crash ---------------------------
++     The journal is the record of work that has not been committed, kept APART from
++     the plan so a half-typed row is never committed data. It was being READ when a
++     plan opened and never written, so there was never anything to find. How it is
++     noticed is the paragraph below. */
++  const JOURNAL_MS = 2000;
++  let journalled = false, lastPending = -1;
++
++  function noteJournal() {
++    if (!ref || !caps.journal) return;
++    // `S` is a top-level const, so it is a SCRIPT-scoped binding and not a
++    // property of window - window.S is undefined however alive S is.
++    const pending = (typeof S !== "undefined" && S.pending) || [];
++    if (!pending.length) {
++      // Committed or discarded: there is nothing to recover, and a journal left behind
++      // would be offered back on the next open as though there were.
++      if (journalled) { journalled = false; call("journal/clear", { ref }).catch(() => {}); }
++      return;
++    }
++    journalled = true;
++    call("journal/write", { ref, pending }).catch(() => {});
++  }
++
++  /* WATCHED, NOT HOOKED. The pending list is changed in a dozen places in ui/ - a cell
++     edit, a row insert, a row delete, an identifier cascade, Save changes, Leave
++     without change - and a journal that depends on having wrapped every one of them is
++     a journal with holes in it, which is worse than none: it would be offered back as
++     though it were complete. One timer that notices the count has moved cannot have
++     holes, and it cannot be skipped by an exception raised somewhere else in a render.
++     Two seconds, because this exists for the power cut rather than for the audit trail
++     - S.audit is that - and a plan on a share does not want a write per keystroke. */
++  setInterval(() => {
++    const n = (typeof S !== "undefined" && S.pending) ? S.pending.length : 0;
++    if (n === lastPending) return;
++    lastPending = n;
++    noteJournal();
++  }, JOURNAL_MS);
++
++  /* ---- NR-STO-15: a claim ends when the holder is finished with the plan --- */
++  async function releaseClaim() {
++    // Not guarded on `holds`. That flag is this window's belief about the claim, and
++    // the whole point of releasing is to be right about the FILE: if the two have
++    // drifted - a heartbeat lost it, a claim was taken by a path that did not set the
++    // flag - guarding on the belief would leave the plan locked for half an hour.
++    // release_claim() in storage/ checks ownership itself and a release of a claim
++    // that is not ours, or not there, does nothing.
++    if (!ref || !caps.claims) return;
++    try { await call("claim/release", { ref }); } catch { /* going anyway */ }
++    holds = false;
++    showHold(null);
++  }
++
++  /* 'Leave without change' ends the claim: there is nothing left to protect, and a
++     colleague waiting should not wait on a session that threw its own edits away
++     (NR-STO-15).
++
++     A LISTENER, NOT A WRAPPER. shell/web/14b_wiring.js does
++     `el("discardBtn").onclick = discardEdits`, which captures the function ITSELF at
++     bind time - so replacing window.discardEdits afterwards, the way
++     beginEditSession() is replaced below, would leave the button calling the original
++     and the claim would never come back. beginEditSession() is different because its
++     callers name it at CALL time. addEventListener adds to the button without
++     depending on which of the two it is, and the menu's 'Leave without change' goes
++     through the same click. */
++  el("discardBtn")?.addEventListener("click", () => { releaseClaim(); });
++
+   /* ---- the claim, taken on the first DATA CHANGE ------------------------- */
+   async function takeClaimOnEdit() {
++    // Before the claim, because a stale view is refused for a different reason and the
++    // person needs to hear that one: the claim may well be free, and taking it would
++    // let them save figures that have already been replaced (NR-STO-16).
++    if (stale) {
++      showBanner("bad", "This plan has been saved by somebody else since you opened it. "
++        + "Use File → Reload plan before editing — saving now would replace their work.");
++      return false;
++    }
+     if (!ref || holds || !caps.claims) return true;
+     let r;
+     try { r = await call("claim/take", { ref }); }
+@@ -256,8 +393,12 @@
+   /* ---- workspaces -------------------------------------------------------- */
+   async function openPlan(p) {
+     try {
++      // Finished with the plan we had, so its claim goes back now rather than at its
++      // half-hour expiry (NR-STO-15). The server does this too; doing it here as well
++      // keeps `holds` and the window honest even if the open then fails.
++      if (ref && ref !== p) await releaseClaim();
+       const w = await call("ws/open", { ref: p });
+-      ref = w.ref; holds = false;
++      ref = w.ref; holds = false; stale = false;
+       adopt(w.sheets, ref.split(/[\\/]/).pop());
+       showFile();
+       showHold(w.readOnly ? "read" : null, "Read-only folder");
+@@ -265,6 +406,9 @@
+       if (by) showBanner("", `Last saved by ${by.name}`
+         + (by.department ? ` (${by.department})` : "")
+         + `, ${new Date(w.header.last_saved).toLocaleString()}.`);
++      // The header already says it, so this costs no extra round trip.
++      await noteBase(w.header.last_saved);           // for NR-STO-16
++      journalled = false; lastPending = -1;
+       const j = await call("journal/read", { ref });
+       if (j) showBanner("bad", `This plan has ${j.pending?.length || 0} change(s) that `
+         + `were never saved, from ${new Date(j.at).toLocaleString()}.`);
+@@ -301,8 +445,16 @@
+         if (!out) return;
+         ref = out.ref;
+       } else {
+-        out = await call("ws/save", { ref, sheets: sheetsNow() });
++        // THE CHECK THAT PREVENTS THE LOSS. Between opening this plan and now,
++        // somebody else may have saved theirs; writing on top would replace it with
++        // figures that predate it, and the save would report success (NR-STO-16).
++        if (await superseded()) return;
++        // `baseSaved` goes with it: the guard above is this window's, and the one in
++        // storage/ is the file's. Either alone leaves a way to lose the save.
++        out = await call("ws/save", { ref, sheets: sheetsNow(), baseSaved });
+       }
++      await noteBase(out.savedAt);        // our own write is not somebody else's
++      stale = false;
+       showFile();
+       showBanner("", `Saved to ${out.ref}.`);
+     } catch (e) {
+@@ -528,7 +680,9 @@
+     const what = a.dataset.do;
+     if (what.startsWith("tab:")) return showTab(what.slice(4));
+     switch (what) {
+-      case "new": ref = null; holds = false; showFile(); showHold(null); return startBlank();
++      case "new": await releaseClaim(); ref = null; holds = false; stale = false;
++                  baseSaved = ""; showFile(); showHold(null); return startBlank();
++      case "reload": return reloadPlan();
+       case "open": {
+         let p = caps.nativeDialogs ? await call("ws/openDialog", {}) : null;
+         if (!caps.nativeDialogs)
+@@ -715,7 +869,8 @@ Account        ${where.account}</pre>
+ 
+   showFile();
+ 
+-  window.__pm = { call, openPlan, savePlan, importSource, adoptBytes, browseFor,
++  window.__pm = { call, openPlan, savePlan, reloadPlan, releaseClaim, noteJournal,
++                  superseded, importSource, adoptBytes, browseFor,
+                   takeClaimOnEdit, pageId: PAGE_ID,
+-                  state: () => ({ ref, holds, me, caps, where }) };
++                  state: () => ({ ref, holds, stale, baseSaved, me, caps, where }) };
+ })();
+diff --git a/src/shell/python/chrome.html b/src/shell/python/chrome.html
+index b099545..ec35681 100644
+--- a/src/shell/python/chrome.html
++++ b/src/shell/python/chrome.html
+@@ -6,6 +6,7 @@
+       <a data-do="new">New plan</a>
+       <a data-do="open">Open a plan…</a>
+       <a data-do="recent">Open recent…</a>
++      <a data-do="reload">Reload plan<i>catch up with a colleague's save</i></a>
+       <hr>
+       <a data-do="save">Save<i>Ctrl+S</i></a>
+       <a data-do="saveAs">Save as…</a>
+diff --git a/src/shell/python/paths.py b/src/shell/python/paths.py
+index 685de0b..b3005fe 100644
+--- a/src/shell/python/paths.py
++++ b/src/shell/python/paths.py
+@@ -116,14 +116,61 @@ def writable(d):
+         return False
+ 
+ 
+-def ensure(data_dir):
++def ensure(data_dir, root=None):
+     """Create the folders the resolved location needs. Called once at launch."""
+     for d in (data_dir, os.path.join(data_dir, "workspaces"),
+               os.path.join(data_dir, "backups")):
+         os.makedirs(d, exist_ok=True)
++    if root:
++        shared_dir(root)
+     return data_dir
+ 
+ 
++SHARED_README = """\
++PLANS EVERYONE WORKS ON GO IN HERE
++==================================
++
++  shared\\workspaces\\     a plan the team edits together
++  <your account>\\workspaces\\   your own, which nobody else opens
++
++Why there are two. Each person gets their own folder so that two people cannot
++overwrite each other's settings and so a plan you are only trying out stays yours
++(S-N06). But a plan the TEAM keeps has to sit somewhere everybody can reach, or the
++one-writer-at-a-time rule never comes into play - a claim on a file nobody else opens
++protects nothing.
++
++So: your own folder for your own work, this folder for the team's. One writer at a
++time still applies here, and the application says who is editing before you open
++anything.
++
++Nothing in this folder is created or removed by an update.
++"""
++
++
++def shared_dir(root):
++    """Where plans the whole installation works on live: beside users/, not inside
++    one person's copy.
++
++    The per-user folder at rule 3 is right for settings and for a plan somebody is
++    only trying out, and it is what S-N06 settled. It is the wrong place for a plan a
++    TEAM edits: 07_Sharing is written for several people opening one plan, and two
++    people cannot open one plan that sits in one of their private folders. The write
++    claim, the heartbeat and the who-is-editing message all exist for that case and
++    none of them can fire until the plan is somewhere shared. One folder, and a note
++    in it saying which is which."""
++    d = os.path.join(root, "shared")
++    for sub in (d, os.path.join(d, "workspaces"), os.path.join(d, "backups")):
++        os.makedirs(sub, exist_ok=True)
++    note = os.path.join(d, "READ ME - shared plans.txt")
++    if not os.path.exists(note):
++        try:
++            with open(note, "w", encoding="utf-8") as f:
++                f.write(SHARED_README)
++        except OSError:
++            pass
++    return d
++
++
+ def audit_dir(root):
+     """Where the change log accumulates: ONE folder for the installation.
+ 
+diff --git a/src/shell/python/server.py b/src/shell/python/server.py
+index f9b8d64..1f5a0c2 100644
+--- a/src/shell/python/server.py
++++ b/src/shell/python/server.py
+@@ -67,6 +67,12 @@ class App:
+         self.dialogs = F.DialogPump()
+         self.stop = threading.Event()
+         self._heartbeat = None
++        # The beat's OWN stop, not the application's. Setting _heartbeat to None
++        # did not end the thread: it waited on the application-wide event, so a
++        # beat started for one plan went on refreshing THAT plan's claim after
++        # the session had moved to another one - and the first plan stayed
++        # claimed until its half-hour expiry, with nobody holding it (NR-STO-15).
++        self._beat_stop = None
+         self._lock = threading.RLock()
+         self.claim_lost = None                # set when a heartbeat finds it gone
+         # WHO IS ACTUALLY LOOKING AT IT (NR-DEP-17). page id -> last seen, monotonic.
+@@ -90,11 +96,12 @@ class App:
+             else:
+                 self.resolved = r
+                 return r
+-        self.data_dir = PA.ensure(r["dir"])
++        # The installation root first, because the shared folder is created beside
++        # users/ and ensure() needs to be told where that is.
++        self.data_root = r.get("root") or os.path.dirname(os.path.dirname(r["dir"]))
++        self.data_dir = PA.ensure(r["dir"], self.data_root)
+         r["dir"] = self.data_dir
+-        # The installation root, one level above this person's folder. The change log
+-        # lives there so everyone's entries are in one file.
+-        self.data_root = r.get("root") or os.path.dirname(os.path.dirname(self.data_dir))
++        # The change log lives at the root so everyone's entries are in one folder.
+         self.resolved = r
+         WS.sweep_temp(self.data_dir)          # an interrupted save left a .tmp
+         WS.sweep_temp(os.path.join(self.data_dir, "workspaces"))
+@@ -119,10 +126,16 @@ class App:
+         died twenty minutes ago, and say which (N-23)."""
+         self.stop_heartbeat()
+         self.claim_lost = None
++        stop = threading.Event()          # this beat's own; see _beat_stop above
+ 
+         def beat():
+             while not self.stop.is_set():
+-                if self.stop.wait(CL.HEARTBEAT_MS / 1000.0):
++                # Waiting on the BEAT's event rather than the application's is what
++                # lets stop_heartbeat() end it at once instead of up to thirty
++                # seconds later.
++                if stop.wait(CL.HEARTBEAT_MS / 1000.0):
++                    return
++                if self.stop.is_set():
+                     return
+                 try:
+                     r = CL.refresh_claim(ref, self.identity())
+@@ -132,12 +145,34 @@ class App:
+                     self.claim_lost = r.get("holder")
+                     return
+ 
++        self._beat_stop = stop
+         self._heartbeat = threading.Thread(target=beat, daemon=True,
+                                            name="pm-heartbeat")
+         self._heartbeat.start()
+ 
+     def stop_heartbeat(self):
+-        self._heartbeat = None                # the thread notices `stop` or a lost claim
++        """Actually stop it, rather than forgetting about it."""
++        beat_stop, self._beat_stop, self._heartbeat = self._beat_stop, None, None
++        if beat_stop is not None:
++            beat_stop.set()
++
++    def release_open_claim(self):
++        """Give the plan this session holds back, and stop beating for it.
++
++        NR-STO-15 ends a claim when the holder saves and closes, discards, or closes
++        the application. Moving to ANOTHER plan is the first of those in everything
++        but name - the session is finished with the old one - and until this existed
++        the old plan stayed claimed for half an hour after the person had left it.
++        release_claim() checks ownership itself, so this is safe to call when the
++        claim is somebody else's or already gone."""
++        self.stop_heartbeat()
++        ref, self.open_ref = self.open_ref, None
++        if not ref:
++            return None
++        try:
++            return CL.release_claim(ref, self.identity())
++        except OSError:
++            return None
+ 
+     # --------------------------------------------------- who has the page open
+ 
+@@ -236,7 +271,12 @@ def operations(app):
+         return {"appDir": app.app_dir, "dataDir": app.data_dir,
+                 "version": app.version, "rule": app.resolved.get("rule"),
+                 "account": PA.account_name(),
+-                "workspaces": os.path.join(app.data_dir or "", "workspaces")}
++                "workspaces": os.path.join(app.data_dir or "", "workspaces"),
++                # Where plans the team edits together live. The page offers it as a
++                # place to open from and save to, because a claim on a plan inside one
++                # person's folder protects nothing (NR-STO-10).
++                "shared": (os.path.join(PA.shared_dir(app.data_root), "workspaces")
++                           if app.data_root else None)}
+ 
+     # ---- identity -------------------------------------------------------
+     def identity_get(_):
+@@ -255,6 +295,10 @@ def operations(app):
+     # ---- workspaces -----------------------------------------------------
+     def ws_open(b):
+         p = full(b["ref"])
++        # Opening another plan finishes with this one, so its claim goes back now
++        # rather than at its expiry (NR-STO-15).
++        if app.open_ref and os.path.abspath(app.open_ref) != os.path.abspath(p):
++            app.release_open_claim()
+         out = WS.open_workspace(p)
+         app.open_ref = p
+         app.settings = PA.add_recent(app.settings, p, app.app_dir,
+@@ -273,7 +317,11 @@ def operations(app):
+             p, b["sheets"], b.get("header") or {},
+             holds_claim=lambda r: CL.may_write(r, app.identity()),
+             retain=app.settings.get("preferences", {}).get("retain_versions", 1),
+-            identity=app.identity())
++            identity=app.identity(),
++            # Which issue of the file the page's figures came from, so a save cannot
++            # land on top of a newer one (NR-STO-16). Absent for a caller that
++            # cannot say - a plan being created has no previous issue.
++            base_saved=b.get("baseSaved"))
+         app.open_ref = p
+         app.settings = PA.add_recent(app.settings, p, app.app_dir,
+                                      {"savedBy": app.identity()})
+@@ -292,12 +340,15 @@ def operations(app):
+             return None
+         if not os.path.splitext(p)[1]:
+             p += ".prap"
+-        out = WS.save_workspace(p, b["sheets"], b.get("header") or {},
+-                                retain=1, identity=app.identity())
+-        app.open_ref = out["ref"]
+-        app.settings = PA.add_recent(app.settings, out["ref"], app.app_dir,
+-                                     {"savedBy": app.identity()})
+-        app.save_settings()
++        # The dialog above ran without the lock; everything that touches shared
++        # state is inside it.
++        with app._lock:
++            out = WS.save_workspace(p, b["sheets"], b.get("header") or {},
++                                    retain=1, identity=app.identity())
++            app.open_ref = out["ref"]
++            app.settings = PA.add_recent(app.settings, out["ref"], app.app_dir,
++                                         {"savedBy": app.identity()})
++            app.save_settings()
+         return out
+ 
+     def ws_recent(_):
+@@ -324,11 +375,19 @@ def operations(app):
+         return WS.restore_version(full(b["ref"]), b.get("n", 1))
+ 
+     def ws_stat(b):
+-        return WS.stat(full(b["ref"]))
++        p = full(b["ref"])
++        out = dict(WS.stat(p))
++        # What the file says about ITSELF, which is what a staleness check can trust;
++        # the modification time beside it is only the cheap hint that something moved.
++        out["lastSaved"] = WS.last_saved_of(p)
++        return out
+ 
+     # ---- the claim ------------------------------------------------------
+     def claim_take(b):
+         p = full(b["ref"])
++        # Same rule from the other side: a claim on a new plan gives up the old one.
++        if app.open_ref and os.path.abspath(app.open_ref) != os.path.abspath(p):
++            app.release_open_claim()
+         r = CL.claim(p, app.identity(), app_version=app.version)
+         if r.get("ok"):
+             app.open_ref = p
+@@ -344,8 +403,14 @@ def operations(app):
+                 "message": CL.blocked_message(held, state, CL.free_at(held))}
+ 
+     def claim_release(b):
++        p = full(b["ref"])
+         app.stop_heartbeat()
+-        return CL.release_claim(full(b["ref"]), app.identity())
++        r = CL.release_claim(p, app.identity())
++        # So the claim is not chased again on the way out, and so holds_claim() and
++        # the window agree about what this session is holding.
++        if app.open_ref and os.path.abspath(app.open_ref) == os.path.abspath(p):
++            app.open_ref = None
++        return r
+ 
+     def claim_holds(b):
+         # Also the moment the page learns a heartbeat lost the claim, which is how
+@@ -453,7 +518,18 @@ def operations(app):
+             raise ValueError("no data folder has been settled yet")
+         folder = PA.audit_dir(app.data_root)
+         month = time.strftime("%Y-%m", time.gmtime())      # the file is named in UTC too
+-        path = os.path.join(folder, "PRAP_%s_%s.csv" % (kind, month))
++        # ONE FILE PER PERSON PER MONTH, in the installation's one audit folder.
++        #
++        # The folder stays shared, so "what happened to this plan" is still answerable
++        # by reading a month's files together - every row already carries the time and
++        # who made the change, which is what the ordering needs. What is NOT safe is
++        # two sessions appending to ONE file across a network share: Python buffers
++        # text, SMB does not promise an append is atomic, and a torn line in the file
++        # kept precisely to be trusted is the worst place to have one. Separate files
++        # cannot interleave at all, and the account name is the same key the data
++        # folder is filed under (S-N06), so nothing new has to be decided.
++        path = os.path.join(folder, "PRAP_%s_%s_%s.csv" % (kind, month,
++                                                           PA.account_name()))
+         fresh = not os.path.exists(path) or os.path.getsize(path) == 0
+         # newline="" so csv-shaped text keeps the CRLF the rows already carry, on every
+         # platform; utf-8-sig on a NEW file so Excel opens a Korean name correctly.
+@@ -463,6 +539,7 @@ def operations(app):
+                 fh.write(AUDIT_HEADERS[kind] + "\r\n")
+             for r in rows:
+                 fh.write(str(r) + "\r\n")
++            fh.flush()                    # out of Python's buffer before the call ends
+         return {"ok": True, "written": len(rows), "path": path, "created": fresh}
+ 
+     def audit_where(_):
+@@ -522,6 +599,13 @@ def operations(app):
+ 
+ # ------------------------------------------------------------------- the handler
+ 
++# The operations that can stop and wait for somebody to choose a file. They run
++# WITHOUT the application lock (see do_POST), so each one takes it itself around
++# whatever it changes - which for three of the four is nothing at all: they read a
++# path, or bytes, and hand them back.
++BLOCKING_OPS = {"ws/openDialog", "ws/saveAs", "file/openSource", "file/export"}
++
++
+ def make_handler(app):
+     ops = operations(app)
+ 
+@@ -608,8 +692,16 @@ def make_handler(app):
+                                         "message": "Unreadable request."})
+ 
+             try:
+-                with app._lock:
++                if name in BLOCKING_OPS:
++                    # A dialog waits for a PERSON - up to ten minutes (files.py). Held
++                    # under the one application lock, that queued every other request
++                    # behind it: the page's own claim check, its liveness ping, a second
++                    # window. The window looked frozen because it was. These four take
++                    # the lock themselves, around the part that touches shared state.
+                     result = op(body if isinstance(body, dict) else {})
++                else:
++                    with app._lock:
++                        result = op(body if isinstance(body, dict) else {})
+             except WS.StorageError as e:
+                 return self._json(200, e.as_dict())
+             except OSError as e:
+diff --git a/src/storage/python/workspace.py b/src/storage/python/workspace.py
+index 3e5505e..b9a79f4 100644
+--- a/src/storage/python/workspace.py
++++ b/src/storage/python/workspace.py
+@@ -32,7 +32,9 @@ from . import timefmt
+ APP = "PM_APP"
+ FORMAT = "prap-source-data"
+ FORMAT_VERSION = 1
+-SCHEMA_EXPECTED = 5
++SCHEMA_EXPECTED = 12          # the layout core/ reads; kept in step with
++                              # SCHEMA_EXPECTED in core/00_meta.js, which is the
++                              # one the findings report quotes at the user (V-09)
+ 
+ _version = "1.0"
+ 
+@@ -175,7 +177,26 @@ def open_workspace(ref):
+ 
+ # ------------------------------------------------------------------------ writing
+ 
+-def save_workspace(ref, sheets, header=None, holds_claim=None, retain=1, identity=None):
++def last_saved_of(ref):
++    """What the file itself says it was last saved at, or None if it cannot say.
++
++    A MODIFICATION TIME CANNOT BE TRUSTED FOR THIS. A share may round one to two
++    seconds, so two saves inside the same tick are indistinguishable - and a check
++    that cannot tell them apart is no check at all on the day it matters. The
++    workspace states its own `last_saved` to the millisecond, written by the same
++    code that writes the rest of the file, so it moves exactly when the content
++    moves and never when it does not (NR-STO-16).
++    """
++    try:
++        with open(ref, "r", encoding="utf-8") as f:
++            doc = json.load(f)
++    except (OSError, ValueError):
++        return None
++    return ((doc.get("workspace") or {}) if isinstance(doc, dict) else {}).get("last_saved")
++
++
++def save_workspace(ref, sheets, header=None, holds_claim=None, retain=1, identity=None,
++                   base_saved=None):
+     """The save protocol, specification sheet 06, step for step.
+ 
+     The order is the whole of it. A replace is atomic; a write is not. Power loss at
+@@ -193,6 +214,26 @@ def save_workspace(ref, sheets, header=None, holds_claim=None, retain=1, identit
+                            "working. Nothing has been saved. Save As a copy to keep "
+                            "your changes.")
+ 
++    # NR-STO-16, at the point the bytes are actually written.
++    #
++    # The claim is not enough on its own: a session that has only READ a plan never
++    # took one, so nothing stopped it writing over a colleague's newer save - and the
++    # save reported success while doing it. The caller states which issue of the file
++    # its figures came from; if the file is a different issue now, the save stops and
++    # the colleague's work is still there.
++    #
++    # Optional, because it can only be checked when the caller can state it: a plan
++    # being created has no previous issue to name.
++    if base_saved:
++        current = last_saved_of(ref)
++        if current and current != base_saved:
++            raise StorageError(
++                "superseded",
++                f"{os.path.basename(ref)} was saved by somebody else after you opened "
++                f"it. Nothing has been saved, so their work is intact. Reload the plan "
++                f"and make your change again, or Save As a copy to keep yours.",
++                f"base={base_saved} current={current}")
++
+     now = timefmt.iso()
+     doc = {
+         "format": FORMAT,
+diff --git a/tools/test_python_app.py b/tools/test_python_app.py
+index 1804980..7a6246d 100644
+--- a/tools/test_python_app.py
++++ b/tools/test_python_app.py
+@@ -37,6 +37,16 @@ PKG = ROOT / "dist" / "PM_APP_py"
+ DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.18.xlsx"
+ CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
+ 
++# Enough state for discardEdits() to run: it puts the snapshot back, so there has to
++# be one. Kept out of the call site because it is scaffolding, not the check.
++DISCARD_SETUP = """() => {
++    S.snapshot = {};
++    for (const s of REQUIRED_SHEETS) S.snapshot[s] = S.model.raw[s].map(r => ({...r}));
++    S.pending.push({at: new Date(), sheet: 'Project', row: 1,
++                    col: 'project_name', from: 'x', to: 'y'});
++    renderDirty();
++}"""
++
+ fails = []
+ 
+ 
+@@ -273,6 +283,109 @@ def main():
+             holds = pg.evaluate("(p) => window.__pm.call('claim/holds', {ref: p})", plan)
+             check(holds["holds"], "and the page can see that it holds it")
+ 
++            # ---- THE WIRING ---------------------------------------------------
++            # Three operations existed in the shell, were tested at the storage layer,
++            # and were called by nothing. The storage tests passed and the figures were
++            # right, so nothing failed - which is exactly why these checks are here and
++            # not only there. A function with no caller is a requirement with no
++            # implementation (NR-STO-07, NR-STO-15, NR-STO-16).
++            print("\nthe wiring - an operation nobody calls is a requirement nobody met")
++            page_src = (PKG / "app" / "index.html").read_text(encoding="utf-8")
++            for op in ("ws/stat", "journal/write", "journal/clear", "claim/release"):
++                check(f'"{op}"' in page_src, f"the page actually calls {op}")
++
++            # Release, which NR-STO-15 says happens the moment the holder is finished.
++            pg.evaluate("(p) => window.__pm.call('claim/release', {ref: p})", plan)
++            check(not os.path.exists(plan + ".lock"),
++                  "releasing gives the plan back at once, not at its expiry")
++
++            # Moving to ANOTHER plan is being finished with this one. Until the beat
++            # could be stopped, the old plan stayed claimed for half an hour by a
++            # session that had left it.
++            other = str(home / "PM_APP" / "data" / "other.prap")
++            pg.evaluate("""async (b) => {
++                const sheets = {};
++                for (const s of REQUIRED_SHEETS) sheets[s] = rawToRows(s);
++                await window.__pm.call('ws/saveAs', {sheets, ref: b});
++            }""", other)
++            pg.evaluate("(p) => window.__pm.call('claim/take', {ref: p})", plan)
++            check(os.path.exists(plan + ".lock"), "claimed again, to move away from it")
++            pg.evaluate("(b) => window.__pm.openPlan(b)", other)
++            pg.wait_for_timeout(1500)
++            check(not os.path.exists(plan + ".lock"),
++                  "and opening another plan hands the first one back (NR-STO-15)")
++
++
++            # 'Leave without change' - the path that was quietly broken while this was
++            # a wrapper rather than a listener: shell/web binds the button to the
++            # function itself, so replacing the global afterwards left the button
++            # calling the original and the claim never came back.
++            # Back on `plan`, because the check above left the window on `other` and a
++            # release is about the plan the window actually has open.
++            pg.evaluate("(p) => window.__pm.openPlan(p)", plan)
++            pg.wait_for_timeout(1200)
++            pg.evaluate("(p) => window.__pm.call('claim/take', {ref: p})", plan)
++            pg.evaluate(DISCARD_SETUP)
++            pg.wait_for_timeout(300)
++            pg.evaluate("() => document.getElementById('discardBtn').click()")
++            pg.wait_for_timeout(1500)
++            check(not os.path.exists(plan + ".lock"),
++                  "'Leave without change' hands the plan back too (NR-STO-15)")
++            # ---- the journal: something to recover ---------------------------
++            print("\nwhat a power cut leaves behind")
++            pg.evaluate("(p) => window.__pm.openPlan(p)", plan)
++            pg.wait_for_timeout(1200)
++            pg.evaluate("""() => {
++                S.pending.push({at: new Date(), sheet: 'Project', row: 1,
++                                col: 'project_name', from: 'before', to: 'after'});
++                renderDirty();
++            }""")
++            pg.wait_for_timeout(4000)                 # past the journal watcher
++            jrn = plan + ".journal"
++            check(os.path.exists(jrn),
++                  "a pending edit is written to the journal, so a crash has something "
++                  "to offer back (NR-STO-07)")
++            if os.path.exists(jrn):
++                j = json.loads(pathlib.Path(jrn).read_text(encoding="utf-8"))
++                check(len(j.get("pending") or []) == 1
++                      and j["pending"][0]["col"] == "project_name",
++                      "and it is the edit itself, not a count",
++                      f"{len(j.get('pending') or [])} row(s)")
++            pg.evaluate("() => { S.pending.length = 0; renderDirty(); }")
++            pg.wait_for_timeout(4000)
++            check(not os.path.exists(jrn),
++                  "committing or discarding clears it, so nothing stale is offered back")
++
++            # ---- STALE: the check that prevents the lost update --------------
++            # The one that actually loses work. A session that has only READ a plan
++            # holds no claim, so nothing stops it saving over a colleague's newer save
++            # - and the save reported success while doing it.
++            print("\nwhen somebody else has saved it since you looked")
++            pg.evaluate("(p) => window.__pm.openPlan(p)", plan)
++            pg.wait_for_timeout(1200)
++            doc_before = pathlib.Path(plan).read_text(encoding="utf-8")
++            newer = json.loads(doc_before)
++            newer["sheets"]["Project"] = newer["sheets"]["Project"][:1]
++            # A colleague's save moves the plan's own last_saved, which is what the
++            # check compares - a modification time alone can be rounded by a share.
++            newer["workspace"]["last_saved"] = "2099-01-01T00:00:00.000Z"
++            newer["workspace"]["last_saved_by"] = {"name": "A Colleague",
++                                                   "department": "Elsewhere"}
++            pathlib.Path(plan).write_text(json.dumps(newer), encoding="utf-8")
++            later = time.time() + 30                  # unambiguously after we read it
++            os.utime(plan, (later, later))
++            colleagues = pathlib.Path(plan).read_text(encoding="utf-8")
++
++            check(pg.evaluate("() => window.__pm.superseded()") is True,
++                  "the application notices the plan moved on beneath it (NR-STO-16)")
++            pg.evaluate("() => window.__pm.savePlan(false)")
++            pg.wait_for_timeout(1500)
++            check(pathlib.Path(plan).read_text(encoding="utf-8") == colleagues,
++                  "AND THE SAVE IS REFUSED rather than replacing their work",
++                  "the colleague's file is untouched")
++            check(pg.evaluate("() => window.__pm.state().stale") is True,
++                  "and the window says so, so nobody quotes the figures on screen")
++
+             # ---- export ------------------------------------------------------
+             print("\ngetting data back out")
+             out = str(home / "exported.xlsx")
+diff --git a/tools/test_storage_py.py b/tools/test_storage_py.py
+index f18ee3e..61734e4 100644
+--- a/tools/test_storage_py.py
++++ b/tools/test_storage_py.py
+@@ -19,6 +19,7 @@ it. Run it against the BUILT package, because that is what gets sent:
+ """
+ 
+ import json
++import re
+ import os
+ import shutil
+ import subprocess
+@@ -73,7 +74,14 @@ def test_roundtrip(d):
+     w = WS.open_workspace(ref)
+     check("the sheets come back unchanged", w["sheets"] == sheets())
+     check("who saved it is recorded", w["header"]["last_saved_by"]["name"] == "Tester")
+-    check("the schema version is stamped", w["header"]["schema_version"] == 5)
++    # Against core/00_meta.js rather than against a number typed here. The number
++    # typed here WAS 5 while core/ read 12, so the storage layer stamped a version the
++    # engine had never used - and this check passed, because it was comparing the
++    # mistake with itself.
++    meta = (ROOT / "src" / "core" / "00_meta.js").read_text(encoding="utf-8")
++    core_schema = int(re.search(r"SCHEMA_EXPECTED\s*=\s*(\d+)", meta).group(1))
++    check(f"the schema version is stamped, and it is core/'s ({core_schema})",
++          w["header"]["schema_version"] == WS.SCHEMA_EXPECTED == core_schema)
+     check("the format is the interchange format", True)
+ 
+     # The Electron shell must be able to read it, so the timestamp must be its
+-- 
+2.43.0
+
