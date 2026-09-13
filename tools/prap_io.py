@@ -1124,14 +1124,17 @@ def report_unstaffed(M, rows):
     for r in rows:
         M.findings.append({
             "sev": "information", "rule": "V-36", "sheet": "Project", "row": "",
-            "msg": f"Project {r['pid']} has periods but NOBODY ASSIGNED TO IT, so the "
-                   f"application shows no resource for it anywhere except the timeline. "
-                   f"Its own standard says it needs {r['total']:.2f} FTE-months across "
+            "msg": f"Project {r['pid']} has periods but NOBODY ASSIGNED TO IT. It is "
+                   f"listed in Resource by project and drawn on the timeline, but EVERY "
+                   f"ONE OF ITS MONTHS IS EMPTY, and it adds nothing to the demand "
+                   f"charts - a row of blanks, which reads as a project that costs "
+                   f"nothing rather than one nobody has been put on yet. Its own "
+                   f"standard says it needs {r['total']:.2f} FTE-months across "
                    f"{r['months']} month(s), from {r['first_month']}, peaking at "
                    f"{r['peak']:.2f} FTE in {r['peak_month']}. A project-month IS its "
                    f"standard and the people on it divide it (REQ-CAL-19), so having "
-                   f"nobody on it does not make the figure nought - it makes it "
-                   f"invisible."})
+                   f"nobody on it does not make the figure nought - it leaves it "
+                   f"unstated."})
 
 
 def report_demand_gap(M, proj_gap):

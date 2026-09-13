@@ -238,9 +238,11 @@ document through the manifest rather than by sorting filenames.
 
 - `docs/PRAP_Development_Plan_v2.59.xlsx` — **current.** 85 requirements, 37 live
   validation rules, source schema version 12. The latest change is **R-48 — `V-36`, a
-  project with nobody on it says what it needs**: until its first assignment a project
-  showed no FTE anywhere, while still being drawn on the timeline, so the screen said
-  the project exists and when it runs and then declined to say what it costs. Nothing
+  project with nobody on it says what it needs**: until its first assignment the
+  project is *listed* — a row in Resource by project, a band on the timeline, counted in
+  the projects tile — with every one of its months **empty** and nothing on the demand
+  charts. A row of blanks reads as a project that costs nothing rather than one nobody
+  has been put on yet, which is the same failure `V-34` exists for. Nothing
   reported it either — `V-34` compares demand against applied, but it is built from the
   assignment lines, so the one project short by the *whole* of its standard was the only
   shortfall the shortfall rule could not see. `V-36` is information, classed

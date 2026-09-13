@@ -91,11 +91,14 @@ READ_ME = """PROJECT MANAGEMENT APP - Python edition
 WHAT IS NEW IN 1.21
 
   * A PROJECT WITH NOBODY ON IT NOW TELLS YOU WHAT IT NEEDS. Add a project,
-    lay out its periods, and until you assigned the first person the
-    application showed no FTE for it anywhere - no row in Resource by
-    project, no band on the charts, nothing in the tiles - while still
-    drawing it on the timeline. So the screen told you the project exists
-    and when it runs, and then would not tell you what it costs.
+    lay out its periods, and until you assign the first person the project
+    is listed but EMPTY: it has a row in Resource by project and a band on
+    the timeline, and every single one of its months is blank. Nothing
+    appears on the demand charts for it either.
+
+    A row of blanks looks like a project that costs nothing, rather than
+    one you simply have not put anybody on yet - which is the opposite of
+    what you need to see when you are deciding who to put on it.
 
     It could have done all along: the type, the phase, the scope and the
     periods are everything the standard needs. A project-month IS its

@@ -4056,13 +4056,18 @@ function reportManual(M, lines){
 
 /** V-36: a project that has periods, and nobody assigned to it at all.
  *
- *  WHAT IT IS FOR. A project is created, its periods are laid out, and until the first
- *  assignment exists the application shows NOTHING for it - no row in Resource by
- *  project, no band on either chart, no contribution to any tile. It does draw on the
- *  timeline, because that reads the project's own dates, so the screen says the project
- *  exists and when it runs, and then declines to say what it costs. The figure is fully
- *  computable the whole time: type, phase, scope and periods are all that the standard
- *  needs, and REQ-CAL-19 is explicit that the project-month IS its standard and the
+ *  WHAT IT IS FOR, STATED FROM WHAT THE SCREEN ACTUALLY DOES rather than from what it
+ *  was assumed to do - the first wording of this rule got it wrong and the screenshots
+ *  corrected it. A project created and given its periods IS listed: it has a row in
+ *  Resource by project, it is drawn on the timeline, and it counts in the projects
+ *  tile. What it has is a row of BLANKS - every month empty, nothing on the demand
+ *  charts, no legend entry, and no line in Standard vs staffed.
+ *
+ *  That is worse than being absent, and it is the same failure V-34 was written for: a
+ *  row of blanks reads as a project that costs nothing, exactly as a study needing
+ *  10.00 and staffed at 5.00 read as a study that only ever needed 5.00. The figure is
+ *  computable the whole time - type, phase, scope and periods are all the standard
+ *  needs - and REQ-CAL-19 is explicit that the project-month IS its standard and the
  *  people on it DIVIDE it. A divisor of nobody does not make the demand nought.
  *
  *  AND NOTHING ELSE REPORTED IT. V-34 compares demand against applied, which is exactly
@@ -4093,16 +4098,19 @@ function reportUnstaffed(M, rows){
     if (M.findings[i].rule === "V-36") M.findings.splice(i, 1);
   for (const r of rows){
     M.findings.push({sev:"information", rule:"V-36", sheet:"Project", row:"",
-      msg:`Project ${r.pid} has periods but NOBODY ASSIGNED TO IT, so the application `
-        + `shows no resource for it anywhere except the timeline. Its own standard says `
-        + `it needs ${r.total.toFixed(2)} FTE-months across ${r.months} month(s), from `
-        + `${r.firstMonth}, peaking at ${r.peak.toFixed(2)} FTE in ${r.peakMonth}. That `
-        + `demand is real and unallocated: a project-month IS its standard and the `
-        + `people on it divide it (REQ-CAL-19), so having nobody on it does not make the `
-        + `figure nought - it makes it invisible. Assign somebody and the project takes `
-        + `its place in every table and chart, at exactly these figures. This is a note, `
-        + `not a fault: it is the state every project is in until its first assignment, `
-        + `so it never refuses an edit and never questions a save.`});
+      msg:`Project ${r.pid} has periods but NOBODY ASSIGNED TO IT. It is listed in `
+        + `Resource by project and drawn on the timeline, but EVERY ONE OF ITS MONTHS IS `
+        + `EMPTY, and it adds nothing to the demand charts - a row of blanks, which `
+        + `reads as a project that costs nothing rather than one nobody has been put on `
+        + `yet. Its own standard says it needs ${r.total.toFixed(2)} FTE-months across `
+        + `${r.months} month(s), from ${r.firstMonth}, peaking at `
+        + `${r.peak.toFixed(2)} FTE in ${r.peakMonth}. That demand is real and `
+        + `unallocated: a project-month IS its standard and the people on it divide it `
+        + `(REQ-CAL-19), so having nobody on it does not make the figure nought - it `
+        + `leaves it unstated. Assign somebody and the project fills in across every `
+        + `table and chart, at exactly these figures. This is a note, not a fault: it is `
+        + `the state every project is in until its first assignment, so it never refuses `
+        + `an edit and never questions a save.`});
   }
 }
 
