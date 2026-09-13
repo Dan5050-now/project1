@@ -343,9 +343,53 @@ function calculate(M){
                      dir: cents < 0 ? "short" : "over"});
   }
 
+  /* V-36: what a project with NOBODY on it needs. Worked out here rather than in the
+     validation for the same reason V-34 is - it is a figure, and the figure has to come
+     from the arithmetic that would produce it, not from a second lookup that could
+     drift from it. Every term below is the one an assignment with blank dates would
+     get: projectWindow is what assignmentWindow falls back to, and the product is the
+     one shareOut computes. So the number this rule reports is, to the hundredth, the
+     number the project shows the moment somebody is assigned to it. */
+  /* ASSIGNMENT ROWS, not lines. A project whose only assignments are broken is reported
+     by the rule that broke them; adding this on top would be saying the same thing
+     twice, and V-36 means one thing only - nobody has been assigned. Gathered in ONE
+     pass rather than asked per project: the question is asked once for every project,
+     and scanning the assignments inside that loop would be the product of the two. */
+  const hasAssignment = new Set();
+  for (const a of M.assignments) if (!a.__new) hasAssignment.add(a.project_id);
+
+  const unstaffed = [];
+  for (const [pid, proj] of Object.entries(M.projects || {})){
+    if (proj.__bad || proj.__new) continue;
+    if (hasAssignment.has(pid)) continue;
+    // A project with no periods has no demand to state, and V-12 or V-16 already says
+    // so. Inventing a figure for it would be worse than saying nothing.
+    if (!((M.periods && M.periods[pid]) || []).length) continue;
+    // Completed work that nobody was ever booked to is history, not a gap to fill. The
+    // class of this rule is INCOMPLETE - "still being built, and the finding will
+    // answer itself" - which a finished project will never do.
+    if (String(proj.status || "").trim() === "Completed") continue;
+    const [ps, pe] = projectWindow(M, proj);
+    if (!ps || !pe) continue;
+    let months = 0, total = 0, peak = 0, peakMonth = null, firstMonth = null;
+    for (const [y, m] of monthsBetween(ps, pe)){
+      const cov = coverage(y, m, ps, pe);
+      if (cov <= 0) continue;
+      const seg = periodAt(pid, y, m);
+      const d = fromCents(toCents(stdMonthly(proj, seg ? seg.period_name : null)
+                                 * (seg ? (num(seg.weight) ?? 1) : 1) * cov));
+      if (!(d > 0)) continue;
+      months++; total = fromCents(toCents(total) + toCents(d));
+      if (firstMonth === null) firstMonth = isoOf(monthKey(y, m));
+      if (d > peak){ peak = d; peakMonth = isoOf(monthKey(y, m)); }
+    }
+    if (months) unstaffed.push({pid, months, total, peak, peakMonth, firstMonth});
+  }
+
   reportGaps(M, gaps);
   reportManual(M, lines);
   reportDemandGap(M, projGap);
+  reportUnstaffed(M, unstaffed);
   /* periodAt is handed out for the SAME reason projPeriod is built from the lines: so a
      screen naming the period a month falls in cannot name a different one from the
      period the figure used. projPeriod answers it for every month that produced a
@@ -558,6 +602,58 @@ function reportManual(M, lines){
         + `is not what they are given. Either change the project's figure to one that `
         + `leaves room for this person's, or take this assignment off manual and let it `
         + `take its share.`});
+  }
+}
+
+/** V-36: a project that has periods, and nobody assigned to it at all.
+ *
+ *  WHAT IT IS FOR. A project is created, its periods are laid out, and until the first
+ *  assignment exists the application shows NOTHING for it - no row in Resource by
+ *  project, no band on either chart, no contribution to any tile. It does draw on the
+ *  timeline, because that reads the project's own dates, so the screen says the project
+ *  exists and when it runs, and then declines to say what it costs. The figure is fully
+ *  computable the whole time: type, phase, scope and periods are all that the standard
+ *  needs, and REQ-CAL-19 is explicit that the project-month IS its standard and the
+ *  people on it DIVIDE it. A divisor of nobody does not make the demand nought.
+ *
+ *  AND NOTHING ELSE REPORTED IT. V-34 compares demand against applied, which is exactly
+ *  this gap at its widest - but V-34 is built from projGap, which is built from
+ *  projMonth, which is built from the LINES. No assignment, no line, no entry, no
+ *  finding. The one project that is short by the whole of its standard was the only
+ *  shortfall the shortfall rule could not see.
+ *
+ *  INFORMATION, AND CLASSED INCOMPLETE. Both on purpose. A project with nobody on it
+ *  yet is not a fault - it is the state every project is in for the minute after it is
+ *  created, exactly as a person with no assignment is (plan v2.52) - so it must never
+ *  refuse an edit, never block a save, and never ask a question. `incomplete` is the
+ *  class for a row still being built whose finding will answer itself, and this one
+ *  answers itself the moment anybody is assigned. Information rather than warning for
+ *  the same reason V-29 and V-30 are: the file is not malformed and the application is
+ *  doing the only sensible thing with it.
+ *
+ *  IT CARRIES THE FIGURE, which is the whole point of raising it from the calculation.
+ *  "PRJ-099 has no assignments" tells a planner something they can see; "PRJ-099 needs
+ *  1.86 FTE in 2026-10 and 27.35 FTE-months over 24 months, and none of it is staffed"
+ *  tells them what it will cost them to fix.
+ *
+ *  One finding per PROJECT, like V-34: the months are named inside it, and twenty-four
+ *  findings for one un-started study would bury every other rule in the report. */
+function reportUnstaffed(M, rows){
+  if (!M || !Array.isArray(M.findings)) return;
+  for (let i = M.findings.length - 1; i >= 0; i--)
+    if (M.findings[i].rule === "V-36") M.findings.splice(i, 1);
+  for (const r of rows){
+    M.findings.push({sev:"information", rule:"V-36", sheet:"Project", row:"",
+      msg:`Project ${r.pid} has periods but NOBODY ASSIGNED TO IT, so the application `
+        + `shows no resource for it anywhere except the timeline. Its own standard says `
+        + `it needs ${r.total.toFixed(2)} FTE-months across ${r.months} month(s), from `
+        + `${r.firstMonth}, peaking at ${r.peak.toFixed(2)} FTE in ${r.peakMonth}. That `
+        + `demand is real and unallocated: a project-month IS its standard and the `
+        + `people on it divide it (REQ-CAL-19), so having nobody on it does not make the `
+        + `figure nought - it makes it invisible. Assign somebody and the project takes `
+        + `its place in every table and chart, at exactly these figures. This is a note, `
+        + `not a fault: it is the state every project is in until its first assignment, `
+        + `so it never refuses an edit and never questions a save.`});
   }
 }
 

@@ -236,8 +236,16 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.58.xlsx` — **current.** 85 requirements, source schema
-  version 12. The latest change is **R-47 — `REQ-NFR-03` amended to 100 projects and 150
+- `docs/PRAP_Development_Plan_v2.59.xlsx` — **current.** 85 requirements, 37 live
+  validation rules, source schema version 12. The latest change is **R-48 — `V-36`, a
+  project with nobody on it says what it needs**: until its first assignment a project
+  showed no FTE anywhere, while still being drawn on the timeline, so the screen said
+  the project exists and when it runs and then declined to say what it costs. Nothing
+  reported it either — `V-34` compares demand against applied, but it is built from the
+  assignment lines, so the one project short by the *whole* of its standard was the only
+  shortfall the shortfall rule could not see. `V-36` is information, classed
+  `incomplete`, and carries the figure: *needs 38.05 FTE-months across 24 months,
+  peaking at 1.86 in 2026-10*. Before it, **R-47 — `REQ-NFR-03` amended to 100 projects and 150
   people, measured rather than asserted**, which also withdraws the row-virtualisation
   clause of `REQ-DSH-09`: it was recorded as built for five weeks without existing, and
   measurement put the rendering budget's crossing point at about 400 people, so the
@@ -245,7 +253,8 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.29.xlsx` — **current specification.** Schema 12.
+- `docs/PRAP_Programming_Specification_v1.30.xlsx` — **current specification.** Schema 12.
+  Sheet 07 gains `V-36` (R-48).
   Its `Rendering at the target volume` section is now measurements rather than estimates,
   and states the quantity it had been missing: the Overall tab's cost follows
   `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same

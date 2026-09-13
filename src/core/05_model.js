@@ -92,7 +92,8 @@ function absorbedInto(M, proj, periodName, roleName){
    does - and because the register in the plan is where a reader looks to find out which
    of their errors will stop them. */
 const RULE_CLASS = {"V-03":"conditional", "V-23":"conditional",
-                    "V-12":"incomplete",  "V-16":"incomplete"};
+                    "V-12":"incomplete",  "V-16":"incomplete",
+                    "V-36":"incomplete"};
 function ruleClass(rule){ return RULE_CLASS[rule] || "must"; }
 const isErr = f => f.sev === "error" || f.sev === "fatal";
 /** True when this finding refuses. Fatal is always must: the workbook could not be

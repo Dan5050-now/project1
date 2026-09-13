@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.29"
+DOC_VERSION = "1.30"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.58.xlsx"
+PLAN = "PRAP_Development_Plan_v2.59.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,20 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.30", "2026-09-13", "Claude Code", "Dan",
+         "R-48. Sheet 07 gains V-36: a project that has periods and nobody assigned to "
+         "it at all. INFORMATION, classed INCOMPLETE, raised from the CALCULATION and "
+         "carrying the figure - what the project needs in FTE-months, over how many "
+         "months, and the peak with the month it falls in. Raised from the calculation "
+         "and not from the validation for the reason V-34 is: it states a number, and a "
+         "number has to come from the arithmetic that would produce it rather than from "
+         "a second lookup that could drift from it. Every term is the one an assignment "
+         "with blank dates would get (REQ-CAL-15), so what the rule predicts and what "
+         "the project shows once staffed are the same figure to the hundredth. Skipped "
+         "for a project with no periods - there is no demand to state and V-12 or V-16 "
+         "already reports it - and for a Completed project, whose finding would never "
+         "answer itself and so does not belong in the INCOMPLETE class. No schema "
+         "change, no calculation change, and no existing figure moves.", "Draft"],
         ["1.29", "2026-09-13", "Claude Code", "Dan",
          "R-47. The 'Rendering at the target volume' section is rewritten from ESTIMATES "
          "into MEASUREMENTS, because REQ-NFR-03 has been amended to 100 projects and 150 "
@@ -893,6 +907,7 @@ rules = [
     ["V-22", "Warning", "Person.capacity_fte is below config.under_allocation_fte.", "PSN-018: capacity 0.50 FTE is below the under-allocation floor of 0.60, so this person can never clear it however fully they are booked. Lower the floor or raise the capacity."],
     ["V-31", "Error", "A project or assignment set to estimation_type = 'manual' has months it covers with no MonthlyEstimate row.", "Project PRJ-019 is set to MANUAL but MonthlyEstimate has no figure for 3 of its month(s): 2028-01, 2028-02, 2028-03. Those months are counted as 0.00."],
     ["V-32", "Error", "A manual PROJECT has a figure for a month in which nobody is assigned to it, so there is nobody to share it out to.", "Project PRJ-019 has a manual figure for 2 month(s) in which nobody is assigned to it. It has NOT been applied - the project would otherwise show a total that none of its people account for."],
+    ["V-36", "Information", "A project that has periods and NO assignment rows at all. Raised from the CALCULATION, one finding per project. Classed INCOMPLETE, so it never refuses and never asks. Skipped where the project has no periods (V-12 or V-16 already says so, and there is no demand to state) or where its status is Completed (history, not a gap - a finding that will never answer itself does not belong in the INCOMPLETE class). Every term is the one an assignment with blank dates would get (REQ-CAL-15), so the figure it names is to the hundredth the figure the project shows once somebody is assigned.", "Project PRJ-099 has periods but NOBODY ASSIGNED TO IT, so the application shows no resource for it anywhere except the timeline. Its own standard says it needs 38.05 FTE-months across 24 month(s), from 2025-03, peaking at 1.86 FTE in 2026-10. That demand is real and unallocated: a project-month IS its standard and the people on it divide it (REQ-CAL-19), so having nobody on it does not make the figure nought - it makes it invisible. Assign somebody and the project takes its place in every table and chart, at exactly these figures. This is a note, not a fault: it is the state every project is in until its first assignment, so it never refuses an edit and never questions a save."],
     ["V-35", "Error", "Person.capacity_fte outside 0.00 to 1.00, in either direction. REFUSES - the only rule added this year that does.", "PSN-001: capacity 1.50 FTE is outside 0.00 to 1.00. capacity_fte is how much of ONE PERSON there is, so 1.00 is full-time and 0.50 is half a week - there is no such thing as 1.50 of a person. A figure above 1.00 is usually hours typed into an FTE column: 1.50 hours a month is 0.01 FTE. Somebody who does the work of two people is TWO ASSIGNMENTS, or a person weight above 1.00 on one of them - not a capacity above 1.00."],
     ["V-34", "Warning", "A project-month where what the project NEEDS - standard FTE x period weight x the part of the month it runs - is not what it is being GIVEN, in either direction. Raised from the calculation; one finding per project.", "Project PRJ-019 is not being given what its own standard says it needs: 2 month(s) SHORT of it by up to 5.00 FTE, and 1 month(s) OVER it by up to 3.00 FTE. Worst is 2026-09, which needs 10.00 and is getting 5.00. It is reported because it is otherwise invisible: the charts simply draw a different project."],
     ["V-33", "Warning", "A manual ASSIGNMENT figure that the project's own manual figure overrode. REQ-CAL-18 makes the project month the mother figure, so the stated figure for the person is not what they are given.", "Assignment ASG-001 states a monthly figure that its PROJECT'S own manual figure overrode in 1 month(s) - 2025-03: stated 99.00, applied 9.97. Either change the project's figure to one that leaves room for this person's, or take this assignment off manual and let it take its share."],

@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.20"
+VERSION = "1.21"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -87,6 +87,42 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.21
+
+  * A PROJECT WITH NOBODY ON IT NOW TELLS YOU WHAT IT NEEDS. Add a project,
+    lay out its periods, and until you assigned the first person the
+    application showed no FTE for it anywhere - no row in Resource by
+    project, no band on the charts, nothing in the tiles - while still
+    drawing it on the timeline. So the screen told you the project exists
+    and when it runs, and then would not tell you what it costs.
+
+    It could have done all along: the type, the phase, the scope and the
+    periods are everything the standard needs. A project-month IS its
+    standard and the people on it divide it, so having nobody on it does
+    not make the figure nought - it only made it invisible.
+
+    You will now see a note, on the banner when the file opens and again
+    when you press Save, reading like this:
+
+        Project PRJ-099 has periods but NOBODY ASSIGNED TO IT ... its own
+        standard says it needs 38.05 FTE-months across 24 month(s), from
+        2025-03, peaking at 1.86 FTE in 2026-10.
+
+    Those are the figures the project will show once you assign somebody,
+    to the penny - not an estimate of them. The note disappears by itself
+    the moment the first assignment exists.
+
+  * IT IS A NOTE AND NOTHING MORE. It never refuses an edit, never blocks a
+    Save, and never asks you a question, because a project with nobody on
+    it yet is simply the state every project is in for the minute after you
+    create it. A project you have marked Completed is left alone.
+
+  * The project still does not appear in the tables and charts until it is
+    staffed. That is a larger change and is not in this version.
+
+  * No figure you already have moves. Workbook layout version 12 as before.
+
 
 WHAT IS NEW IN 1.20
 

@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.58"
+DOC_VERSION = "2.59"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,7 +397,60 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
-    [f"{MARK_NEW}2.58", "2026-09-13", "Claude Code", "Pending",
+    [f"{MARK_NEW}2.59", "2026-09-13", "Claude Code", "Pending",
+     "R-48, V-36: A PROJECT WITH NOBODY ON IT NOW SAYS WHAT IT NEEDS. Reported from the "
+     "field: a project is added, and the application shows no FTE for it until somebody "
+     "is assigned - even though the figure is computable from the moment its periods "
+     "exist. "
+     "IT WAS A SILENCE, NOT A WRONG NUMBER, WHICH IS WHY NOTHING CAUGHT IT. Until the "
+     "first assignment the project had no row in Resource by project, no band on either "
+     "chart and no share of any tile - while STILL being drawn on the timeline, which "
+     "reads the project's own dates. So the screen said the project exists and when it "
+     "runs, and then declined to say what it costs. Type, phase, scope and periods are "
+     "all the standard needs; nothing was missing but the asking. "
+     "AND THE RULE THAT SHOULD HAVE CAUGHT IT STRUCTURALLY COULD NOT. V-34 compares "
+     "DEMAND against APPLIED, and a project staffed at nothing is that gap at its "
+     "widest - but V-34 is built from projGap, which is built from projMonth, which is "
+     "built from the LINES, and the lines come from the assignments. No assignment, no "
+     "line, no entry, no finding. The one project short by the whole of its standard was "
+     "the only shortfall the shortfall rule could not see. Measured on a fixture: a "
+     "project needing 38.05 FTE-months produced ZERO calculated rows and ZERO findings "
+     "in both the browser and tools/prap_io.py. "
+     "V-36 IS INFORMATION AND CLASSED INCOMPLETE, and both were chosen rather than "
+     "defaulted. A project with nobody on it yet is not a fault - it is the state every "
+     "project is in for the minute after it is created, exactly as a person with no "
+     "assignment is (v2.52, and the same argument) - so it must never refuse an edit, "
+     "never block a save and never ask a question. INCOMPLETE is the class for a row "
+     "still being built whose finding answers itself, and this one answers itself the "
+     "moment anybody is assigned. "
+     "IT CARRIES THE FIGURE, and that is the whole point of raising it from the "
+     "CALCULATION rather than from the validation. 'PRJ-099 has no assignments' tells a "
+     "planner what they can already see; 'it needs 38.05 FTE-months over 24 months, "
+     "peaking at 1.86 in 2026-10' tells them what it will cost to fix. Every term is the "
+     "one an assignment with blank dates would get (REQ-CAL-15), so the figure is not an "
+     "estimate OF the application's answer - it IS the application's answer, arrived at "
+     "early. tools/test_unstaffed.py asserts exactly that in both directions: the total, "
+     "the span, the peak and the peak month it predicts all equal the project's own once "
+     "one assignment exists, and the finding then disappears. "
+     "WHAT IT DELIBERATELY DOES NOT DO. It does not put the project in Resource by "
+     "project or on the charts. That was the larger option and it was not the one "
+     "chosen: the demand would have to become a property of the project-month rather "
+     "than of the assignments, which is a better answer to the original complaint and a "
+     "much wider change - it also breaks the stated invariant that the project and "
+     "person tables reconcile, unless demand and applied are kept as separate figures. "
+     "Recorded here so the option is not lost: the rule reports the number, the "
+     "dashboard still does not show it. "
+     "TWO OF MY OWN MISTAKES, BOTH CAUGHT BY THE PROJECT'S OWN CONVENTIONS RATHER THAN "
+     "BY TESTING HARDER. The severity was written as 'info' where this application's "
+     "vocabulary is fatal / error / warning / INFORMATION - it would have sorted and "
+     "filtered wrongly everywhere, including in the suite that checks findings. And the "
+     "reference implementation named months one later than the browser, because every "
+     "other call in prap_io.py converts the 1-based month with month_key(y, m - 1) and "
+     "the two new ones did not. The second was found only by running both engines on the "
+     "same fixture and reading the two messages side by side, which is what the "
+     "four-implementation rule is for.",
+     "Issued for review"],
+    [f"{MARK_CHG}2.58", "2026-09-13", "Claude Code", "Pending",
      "R-47: REQ-NFR-03 IS AMENDED TO 100 PROJECTS AND 150 PEOPLE, AND X-04 STOPS BEING A "
      "DEFECT. The decision v2.57 left open is taken, on the measurements v2.56 and v2.57 "
      "produced, and it is taken in the MIDDLE: not the 50 x 100 put forward as today's "
@@ -2372,6 +2425,7 @@ rules = [
     [f"{MARK_CHG}V-28", "RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all.", "Retired - and deliberately not reinstated at a lower severity. What the rule SAID was true; what it did not account for was WHEN it said it. An error refuses the edit that raised it (REQ-IMP-09), and unlike V-23 this one did not need the project to have any periods - so it fired on a project still being built, which is exactly when assignments are being typed in. A user could not record who was on a project until the standing assumptions carried a factor for their role, which is backwards: the plan is the document being written, the assumptions are maintained separately. The gap is not denied - V-03 still refuses a role invalid for the project type, and V-23 still reports a role with no factor for a period the project spans, which is the same finding at the point where it can be acted on. The id is not reused."],
     [f"{MARK_NEW}V-29", "A role that carries a factor, that nobody holds on the project, and that nothing covers for.", "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct."],
     [f"{MARK_NEW}V-31", "A project or assignment set to MANUAL has months it covers that carry no MonthlyEstimate figure. Named, with the months listed.", "Error - those months are counted as 0.00, and a figure silently dropping to zero is the one outcome this feature must never produce quietly. Not a refusal: it is raised from the CALCULATION, like V-23, because it is something that happened to a number rather than a fact about a sheet, and a finding that exists only after the arithmetic cannot refuse the edit that led to it. Switching to manual copies every month across, so a month with no figure is one that has since been removed or a month the thing has grown into - the application offers to fill them from the calculation."],
+    [f"{MARK_NEW}V-36", "A project that has periods and NOBODY ASSIGNED TO IT AT ALL. Raised from the CALCULATION, one finding per project, carrying what the project needs: the total FTE-months, the span, the peak and the month it falls in.", "Information - and classed INCOMPLETE, so it never refuses an edit and never questions a save. A project with nobody on it yet is not a fault: it is the state every project is in for the minute after it is created, exactly as a person with no assignment is (v2.52). WHAT IT FIXES IS AN ABSENCE, NOT AN ERROR. Until the first assignment exists the application showed NOTHING for the project - no row in Resource by project, no band on either chart, no contribution to any tile - while still drawing it on the timeline, which reads the project's own dates. So the screen said the project exists and when it runs, and then declined to say what it costs, although type, phase, scope and periods are all the standard needs to say so. REQ-CAL-19 is explicit that the project-month IS its standard and the people on it DIVIDE it; a divisor of nobody does not make the demand nought. AND NOTHING ELSE REPORTED IT: V-34 compares demand against applied, which is this gap at its widest, but V-34 is built from projGap, which is built from projMonth, which is built from the LINES - so no assignment means no line, no entry and no finding, and the one project short by the whole of its standard was the only shortfall the shortfall rule could not see. IT CARRIES THE FIGURE, which is why it is raised from the calculation rather than from the validation, and why every term is the one an assignment with blank dates would get (REQ-CAL-15): the number it states is to the hundredth the number the project shows the moment somebody is assigned, which tools/test_unstaffed.py asserts in both directions. SKIPPED where there is nothing to say or nothing to do: a project with no periods has no demand to state and V-12 or V-16 already says so, and a Completed project is history rather than a gap to fill - its finding would never answer itself, which is what the INCOMPLETE class promises."],
     [f"{MARK_NEW}V-35", "Person.capacity_fte outside 0.00 to 1.00, in either direction.", "Error - and it REFUSES, which almost nothing else in this application does. capacity_fte is how much of ONE PERSON there is: 1.00 is full-time, 0.50 is half a week, 0.00 is somebody on the books who is not available at all and is therefore allowed. Every other figure here is a judgement somebody is entitled to make - a period weight, a role factor, a stated month - and the rules about those report rather than refuse, because which of two deliberate numbers is wrong is not the application's business. This is not a judgement: there is no such thing as one and a half of a person, the number is in the wrong unit, and the usual cause is hours typed into an FTE column - which the message says, with the arithmetic. Somebody doing the work of two people is TWO ASSIGNMENTS, or a person weight above 1.00 on one of them. A workbook that already breaks it still OPENS: the save and edit checks compare the count of blocking findings before and after, so a rule broken by an incoming file is reported without locking anybody out of their own plan. V-22 stands down on the same row - reporting that 1.50 is also not below the under-allocation floor would be true and useless."],
     [f"{MARK_NEW}V-34", "A project whose month is not what its own standard says it needs - standard FTE x period weight x the part of the month it runs - in either direction. Raised from the CALCULATION, one finding per project, naming the months and the worst of them.", "Warning - it reports and never refuses. refuses() acts only on errors, so this reaches the findings report, the load banner, the archived change log and the results export without gating a save or asking a question. Departing from the standard is the POINT of a manual figure (REQ-CAL-18): a manager part way through a trial knows better than the assumptions, and the application has no business calling that wrong. What it does have business doing is saying so, because the departure is otherwise completely silent - the charts just draw a different project. An all-automatic plan raises nothing at all, which is what keeps the rule worth reading."],
         [f"{MARK_NEW}V-33", "A manual ASSIGNMENT figure that the project's own manual figure overrode. REQ-CAL-18 makes the project figure the mother figure - it is the whole month, and the people on it are scaled so they still add up to it - so somebody can type 2.00 against their own name and be given 1.73, because their figure and a colleague's together had to come to the project's month. That is the specified behaviour and it is what keeps the two utilisation charts agreeing; what was missing is that the application did it SILENTLY, so the sheet said one thing and the chart another with nothing connecting them. Now: a SOFT STOP at the moment the figure is edited, naming both numbers and offering to keep it or put it back; the cell marked; the Monthly estimation panel carrying a table of stated against given; and this finding, which reaches the findings report and the archived change log. WARNING, not error, and it never refuses: both numbers were typed deliberately and which of them is wrong is not the application's judgement.", "Warning", "R-39", "4"],

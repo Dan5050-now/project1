@@ -366,6 +366,12 @@ def month_key(y, m):
     return y * 12 + m
 
 
+def iso_month(k):
+    """isoOf() in core/06_calculate.js. A finding that names a month must name it the
+    way a reader writes it; the internal key is an integer and means nothing to them."""
+    return f"{k // 12}-{k % 12 + 1:02d}"
+
+
 def key_label(k):
     return f"{calendar.month_abbr[k % 12 + 1]} {k // 12}"
 
@@ -1048,11 +1054,84 @@ def calculate(M):
                          "gap": cents / CENTS,
                          "dir": "short" if cents < 0 else "over"}
 
+    # V-36: what a project with NOBODY on it needs. Worked out here, from the same
+    # terms the calculation would use, so the figure this reports is to the hundredth
+    # the figure the project shows the moment somebody is assigned - project_window is
+    # what assignment_window falls back to when an assignment carries no dates of its
+    # own, and the product is the one share_out computes. See reportUnstaffed() in
+    # core/06_calculate.js for why the rule exists at all.
+    # Assignment ROWS, not lines: a project whose only assignments are broken is
+    # reported by whatever broke them, and V-36 means one thing only. One pass, not one
+    # scan per project.
+    has_assignment = {a.get("project_id") for a in M.assignments if not a.get("__new")}
+    unstaffed = []
+    for pid, proj in (M.projects or {}).items():
+        if proj.get("__bad") or proj.get("__new"):
+            continue
+        if pid in has_assignment:
+            continue
+        if not (M.periods or {}).get(pid):
+            continue                       # no periods, no demand - V-12/V-16 say so
+        if str(proj.get("status") or "").strip() == "Completed":
+            continue                       # history, not a gap to fill
+        ps, pe = project_window(M, proj)
+        if not ps or not pe:
+            continue
+        months = total_cents = peak_cents = 0
+        peak_month = first_month = None
+        for y, m in months_between(ps, pe):
+            cov = coverage(y, m, ps, pe)
+            if cov <= 0:
+                continue
+            seg = period_at(pid, y, m)
+            # _as_num, not float(): a weight that will not parse falls back to 1.00 in
+            # the browser (num(...) ?? 1) and must do the same here, or the reference
+            # raises where the application degrades.
+            w = _as_num(seg.get("weight")) if seg else None
+            w = 1.0 if w is None else w
+            d = to_cents(std_monthly(proj, seg["period_name"] if seg else None) * w * cov)
+            if d <= 0:
+                continue
+            months += 1
+            total_cents += d
+            if first_month is None:
+                first_month = iso_month(month_key(y, m - 1))
+            if d > peak_cents:
+                peak_cents, peak_month = d, iso_month(month_key(y, m - 1))
+        if months:
+            unstaffed.append({"pid": pid, "months": months,
+                              "total": total_cents / CENTS, "peak": peak_cents / CENTS,
+                              "peak_month": peak_month, "first_month": first_month})
+
     report_gaps(M, gaps)
     report_demand_gap(M, proj_gap)
+    report_unstaffed(M, unstaffed)
     return {"proj_month": proj_month, "pers_month": pers_month, "pers_proj": pers_proj,
             "cell": cell, "gaps": gaps, "lines": lines, "proj_gap": proj_gap,
             "lo": lo or 0, "hi": hi or 0}
+
+
+def report_unstaffed(M, rows):
+    """V-36, worded as core/06_calculate.js words it. INFORMATION, and classed
+    INCOMPLETE: a project with nobody on it yet is the state every project is in for the
+    minute after it is created, so it never refuses an edit and never questions a save.
+
+    It carries the FIGURE, which is why it is raised from the calculation rather than
+    from the validation. "PRJ-099 has no assignments" tells a planner what they can
+    already see; naming what the project needs tells them what it will cost to fix.
+    """
+    M.findings[:] = [f for f in M.findings if f.get("rule") != "V-36"]
+    for r in rows:
+        M.findings.append({
+            "sev": "information", "rule": "V-36", "sheet": "Project", "row": "",
+            "msg": f"Project {r['pid']} has periods but NOBODY ASSIGNED TO IT, so the "
+                   f"application shows no resource for it anywhere except the timeline. "
+                   f"Its own standard says it needs {r['total']:.2f} FTE-months across "
+                   f"{r['months']} month(s), from {r['first_month']}, peaking at "
+                   f"{r['peak']:.2f} FTE in {r['peak_month']}. A project-month IS its "
+                   f"standard and the people on it divide it (REQ-CAL-19), so having "
+                   f"nobody on it does not make the figure nought - it makes it "
+                   f"invisible."})
 
 
 def report_demand_gap(M, proj_gap):
