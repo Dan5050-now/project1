@@ -1,23 +1,53 @@
-diff -ruN --label v1.21/PM_APP --label v1.21.1/PM_APP v1.21/PM_APP v1.21.1/PM_APP
---- v1.21/PM_APP
-+++ v1.21.1/PM_APP
-@@ -1,6 +1,49 @@
+PM_APP  v1.21 -> v1.21.1   (delivered-folder patch, Python 편)
+==============================================================
+
+이 패치는 "이미 받아 쓰고 있는 PM_APP 폴더"에 적용하는 것입니다.
+v1.21.1 의 정본은 src/ 에 대한 패치
+(0002-v1.21-src-NR-STO-07-15-16.patch) 이며, 아래 내용은 그 src/ 를
+tools/build_python_app.py 로 빌드한 결과와 v1.21 배포 폴더의 차이입니다.
+(v1.21 의 src/ 로 빌드한 폴더가 배포된 v1.21 폴더와 14개 파일 모두
+ sha256 동일함을 먼저 확인했습니다. 즉 아래 차이는 전부 이 수정 때문입니다.)
+
+  적용:   PM_APP 폴더의 부모에서  patch -p1 < 이_파일
+  대상:   version.txt, READ ME FIRST.txt,
+          pmapp/shell/paths.py, pmapp/shell/server.py,
+          pmapp/storage/workspace.py
+
+app/index.html 은 제외했습니다 — 70만 자의 '생성된' 한 덩어리 파일이라
+텍스트 패치로 고칠 대상이 아닙니다. 다음 중 하나로 받으십시오.
+
+  (권장) src/ 에 src 패치를 적용하고  python tools/build_python_app.py
+  (대안) 함께 전달한 PM_APP_python_v1.21.1.zip 의 app/index.html 로 교체
+
+index.html 크기:  696,460 bytes  ->  707,302 bytes
+바뀐 부분은 전부 src/shell/python/{bridge.js,chrome.html} 에서 옵니다.
+
+--------------------------------------------------------------------------------
+diff -ruN '--exclude=index.html' "v1.21/READ ME FIRST.txt" "v1.21.1/READ ME FIRST.txt"
+--- "v1.21/READ ME FIRST.txt"	2026-09-13 15:23:51.617652200 +0000
++++ "v1.21.1/READ ME FIRST.txt"	2026-09-13 15:23:51.621500937 +0000
+@@ -1,6 +1,62 @@
  PROJECT MANAGEMENT APP - Python edition
  =======================================
  
-+WHAT IS NEW IN 1.21.1  (1.21 plus the three storage operations nothing called)
++WHAT IS NEW IN 1.21.1
 +
 +  This is 1.21 with no change to any figure, any chart or any screen it already
 +  had, plus the wiring for three requirements that were specified, agreed at
-+  review and implemented in storage/ - and called by nothing.
++  review and implemented in storage/ - and called by nothing. The functions
++  passed their own tests and the figures were right, so nothing failed; what was
++  missing was a caller.
 +
 +  * A COLLEAGUE'S SAVE CAN NO LONGER BE REPLACED BY YOURS (NR-STO-16).
 +    A session that has only READ a plan never takes the write claim, so nothing
-+    stopped it saving over a newer save - and the save reported success. Now the
-+    plan is checked every ten seconds and again immediately before every save,
-+    and storage/ checks it a third time as the bytes go down. If somebody else
-+    has saved since you opened it you are told, offered File -> Reload plan, and
-+    the save is REFUSED rather than replacing their work.
++    stopped it saving over a newer save - and the save reported success while
++    doing it. The plan is now checked every ten seconds, again immediately
++    before every save, and a third time in storage/ as the bytes go down. If
++    somebody else has saved since you opened it you are told, offered
++    File -> Reload plan, and the save is REFUSED rather than replacing their
++    work. What is compared is the plan's own last_saved rather than its
++    modification time, because a share may round a modification time to two
++    seconds and a check that cannot tell two saves apart is no check.
 +
 +  * UNSAVED EDITS ARE WRITTEN DOWN, SO A CRASH HAS SOMETHING TO GIVE BACK
 +    (NR-STO-07). The journal was being read when a plan opened and never
@@ -26,264 +56,42 @@ diff -ruN --label v1.21/PM_APP --label v1.21.1/PM_APP v1.21/PM_APP v1.21.1/PM_AP
 +  * THE PLAN COMES BACK WHEN YOU ARE FINISHED WITH IT (NR-STO-15). Only closing
 +    the application released the claim. Now 'Leave without change', opening
 +    another plan and New plan release it too - and the heartbeat actually stops,
-+    which it did not before: a plan you had moved away from stayed claimed until
-+    its half-hour expiry.
++    which it did not before: a plan you had moved away from went on being
++    refreshed and stayed claimed until its half-hour expiry.
++    The same requirement's other half is here too: if you were told a plan was
++    read-only because a colleague had it, you are now TOLD WHEN THEY FINISH,
++    within half a minute, without having to close and reopen the plan to find
++    out. Nothing is reloaded when that happens, so the screen you were reading
++    stays exactly as it was - start editing and the plan is yours.
 +
 +  * THE WINDOW NO LONGER FREEZES WHILE A FILE DIALOG IS OPEN. The four
 +    operations that ask you to choose a file held the one application lock while
-+    they waited - up to ten minutes - so every other request queued behind them.
++    they waited - up to ten minutes - so every other request queued behind them,
++    the page's own claim check among them.
 +
 +  * THE CHANGE LOG IS ONE FILE PER PERSON PER MONTH, in the same audit folder.
-+    Two sessions appending to one file across a network share can interleave.
++    Two sessions appending to one file across a network share can interleave:
++    Python buffers text and a share does not promise an atomic append. Every row
++    already names who made the change, so a month still reads as one record.
 +
 +  * PLANS THE TEAM SHARES HAVE A PLACE: data\shared\workspaces\ , created at
-+    launch with a note in it saying which folder is for what.
++    launch with a note in it saying which folder is for what. Sharing is written
++    for several people opening one plan, and the per-person folder is somewhere
++    nobody else can open - where a claim protects nothing.
 +
 +  * The workbook layout version stamped into a saved plan is 12, which is what
-+    the engine reads. It had been 5.
++    the engine reads. It had been 5 - a version the engine had never used.
 +
-+  NOTE ON THIS BUILD. 1.21.1 was produced by applying the fix to the DELIVERED
-+  1.21 folder, because the source for 1.21 was not to hand. It is complete and
-+  tested, but the next build from source will not contain it unless the same
-+  change is made in src/ - see the review notes.
++  * Nothing else moves. Every figure, the unstaffed-project note added at 1.21,
++    the charts and the exports are as they were.
 +
 +
  WHAT IS NEW IN 1.21
  
    * A PROJECT WITH NOBODY ON IT NOW TELLS YOU WHAT IT NEEDS. Add a project,
-diff -ruN --label v1.21/PM_APP --label v1.21.1/PM_APP v1.21/PM_APP v1.21.1/PM_APP
---- v1.21/PM_APP
-+++ v1.21.1/PM_APP
-@@ -1070,6 +1070,7 @@
-       <a data-do="new">New plan</a>
-       <a data-do="open">Open a plan…</a>
-       <a data-do="recent">Open recent…</a>
-+      <a data-do="reload">Reload plan<i>catch up with a colleague's save</i></a>
-       <hr>
-       <a data-do="save">Save<i>Ctrl+S</i></a>
-       <a data-do="saveAs">Save as…</a>
-@@ -11215,6 +11216,12 @@
- 
-   /* ---- the plan this session has open ----------------------------------- */
-   let ref = null, holds = false;
-+  // NR-STO-16. `baseSaved` is the issue of the file this session's figures came from
-+  // - the plan's own last_saved, to the millisecond - and `stale` says the file has
-+  // moved on since. Kept here rather than in ui/ because this is the only layer that
-+  // knows there is a file at all. Not a modification time: a share may round one to
-+  // two seconds, and a check that cannot tell two saves apart is no check.
-+  let baseSaved = "", stale = false;
- 
-   function showFile() {
-     el("pm-file").textContent = ref ? ref.split(/[\\/]/).pop() : "no plan open";
-@@ -11228,8 +11235,139 @@
-     p.textContent = text;
-   }
- 
-+
-+  /* ---- NR-STO-16: the plan can change on disk underneath a reader ---------
-+     Somebody who opened a plan at 09:00 and is still shown 09:00's figures at 11:00,
-+     after two saves by somebody else, may quote them in good faith - and if they then
-+     edit one cell and save, the newer work is replaced by figures that predate it and
-+     the save reports success. The claim does not stop it: a session that has not
-+     edited anything never took one.
-+
-+     So the file is checked every ten seconds (S-N01, AGREED) and once more
-+     immediately before every save, which is the check that actually prevents the
-+     loss - and storage/ checks it again as the bytes go down, because a guard only in
-+     the window is a guard anything else can walk past. What is compared is the plan's
-+     own last_saved rather than its modification time: a share may round a modification
-+     time to two seconds, and a check that cannot tell two saves apart is no check. */
-+  const STALE_MS = 10000;
-+
-+  /** Remember which issue of the file we are looking at. After every open and every
-+   *  save of our own - otherwise our own write reads as somebody else's. */
-+  async function noteBase(savedAt) {
-+    if (savedAt) { baseSaved = savedAt; return; }
-+    if (!ref) { baseSaved = ""; return; }
-+    try { baseSaved = (await call("ws/stat", { ref })).lastSaved || ""; }
-+    catch { baseSaved = ""; }
-+  }
-+
-+  function sayStale(at) {
-+    stale = true;
-+    showHold("read", "Superseded — reload to edit");
-+    showBanner("bad", `Somebody else saved this plan${at ? " at " + at : ""}. The figures `
-+      + `on screen are from when you opened it, so saving now would replace their work. `
-+      + `Use File → Reload plan to catch up.`);
-+  }
-+
-+  /** Has the file moved on since we read it? Reports it, and says so to the caller. */
-+  async function superseded() {
-+    if (!ref || !baseSaved) return false;
-+    let st;
-+    try { st = await call("ws/stat", { ref }); } catch { return false; }
-+    if (!st || !st.exists || !st.lastSaved) return false;
-+    if (st.lastSaved === baseSaved) return false;
-+    sayStale(new Date(st.lastSaved).toLocaleTimeString());
-+    return true;
-+  }
-+
-+  setInterval(() => { if (ref && !stale) superseded(); }, STALE_MS);
-+
-+  /** Read the plan again, from the top. The way out of STALE, and the only one:
-+   *  keeping the screen and saving over the newer file is the thing being prevented. */
-+  async function reloadPlan() {
-+    if (!ref) return;
-+    if (S.pending.length && !confirm(`${S.pending.length} change(s) are not committed. `
-+        + `Reloading this plan discards them. Continue?`)) return;
-+    const p = ref;
-+    stale = false;
-+    await openPlan(p);
-+  }
-+
-+  /* ---- NR-STO-07: pending edits survive a crash ---------------------------
-+     The journal is the record of work that has not been committed, kept APART from
-+     the plan so a half-typed row is never committed data. It was being READ when a
-+     plan opened and never written, so there was never anything to find. How it is
-+     noticed is the paragraph below. */
-+  const JOURNAL_MS = 2000;
-+  let journalled = false, lastPending = -1;
-+
-+  function noteJournal() {
-+    if (!ref || !caps.journal) return;
-+    // `S` is a top-level const, so it is a SCRIPT-scoped binding and not a
-+    // property of window - window.S is undefined however alive S is.
-+    const pending = (typeof S !== "undefined" && S.pending) || [];
-+    if (!pending.length) {
-+      // Committed or discarded: there is nothing to recover, and a journal left behind
-+      // would be offered back on the next open as though there were.
-+      if (journalled) { journalled = false; call("journal/clear", { ref }).catch(() => {}); }
-+      return;
-+    }
-+    journalled = true;
-+    call("journal/write", { ref, pending }).catch(() => {});
-+  }
-+
-+  /* WATCHED, NOT HOOKED. The pending list is changed in a dozen places in ui/ - a cell
-+     edit, a row insert, a row delete, an identifier cascade, Save changes, Leave
-+     without change - and a journal that depends on having wrapped every one of them is
-+     a journal with holes in it, which is worse than none: it would be offered back as
-+     though it were complete. One timer that notices the count has moved cannot have
-+     holes, and it cannot be skipped by an exception raised somewhere else in a render.
-+     Two seconds, because this exists for the power cut rather than for the audit trail
-+     - S.audit is that - and a plan on a share does not want a write per keystroke. */
-+  setInterval(() => {
-+    const n = (typeof S !== "undefined" && S.pending) ? S.pending.length : 0;
-+    if (n === lastPending) return;
-+    lastPending = n;
-+    noteJournal();
-+  }, JOURNAL_MS);
-+
-+  /* ---- NR-STO-15: a claim ends when the holder is finished with the plan --- */
-+  async function releaseClaim() {
-+    // Not guarded on `holds`. That flag is this window's belief about the claim, and
-+    // the whole point of releasing is to be right about the FILE: if the two have
-+    // drifted - a heartbeat lost it, a claim was taken by a path that did not set the
-+    // flag - guarding on the belief would leave the plan locked for half an hour.
-+    // release_claim() in storage/ checks ownership itself and a release of a claim
-+    // that is not ours, or not there, does nothing.
-+    if (!ref || !caps.claims) return;
-+    try { await call("claim/release", { ref }); } catch { /* going anyway */ }
-+    holds = false;
-+    showHold(null);
-+  }
-+
-+  /* 'Leave without change' ends the claim: there is nothing left to protect, and a
-+     colleague waiting should not wait on a session that threw its own edits away
-+     (NR-STO-15).
-+
-+     A LISTENER, NOT A WRAPPER. shell/web/14b_wiring.js does
-+     `el("discardBtn").onclick = discardEdits`, which captures the function ITSELF at
-+     bind time - so replacing window.discardEdits afterwards, the way
-+     beginEditSession() is replaced below, would leave the button calling the original
-+     and the claim would never come back. beginEditSession() is different because its
-+     callers name it at CALL time. addEventListener adds to the button without
-+     depending on which of the two it is, and the menu's 'Leave without change' goes
-+     through the same click. */
-+  el("discardBtn")?.addEventListener("click", () => { releaseClaim(); });
-+
-   /* ---- the claim, taken on the first DATA CHANGE ------------------------- */
-   async function takeClaimOnEdit() {
-+    // Before the claim, because a stale view is refused for a different reason and the
-+    // person needs to hear that one: the claim may well be free, and taking it would
-+    // let them save figures that have already been replaced (NR-STO-16).
-+    if (stale) {
-+      showBanner("bad", "This plan has been saved by somebody else since you opened it. "
-+        + "Use File → Reload plan before editing — saving now would replace their work.");
-+      return false;
-+    }
-     if (!ref || holds || !caps.claims) return true;
-     let r;
-     try { r = await call("claim/take", { ref }); }
-@@ -11356,8 +11494,12 @@
-   /* ---- workspaces -------------------------------------------------------- */
-   async function openPlan(p) {
-     try {
-+      // Finished with the plan we had, so its claim goes back now rather than at its
-+      // half-hour expiry (NR-STO-15). The server does this too; doing it here as well
-+      // keeps `holds` and the window honest even if the open then fails.
-+      if (ref && ref !== p) await releaseClaim();
-       const w = await call("ws/open", { ref: p });
--      ref = w.ref; holds = false;
-+      ref = w.ref; holds = false; stale = false;
-       adopt(w.sheets, ref.split(/[\\/]/).pop());
-       showFile();
-       showHold(w.readOnly ? "read" : null, "Read-only folder");
-@@ -11365,6 +11507,9 @@
-       if (by) showBanner("", `Last saved by ${by.name}`
-         + (by.department ? ` (${by.department})` : "")
-         + `, ${new Date(w.header.last_saved).toLocaleString()}.`);
-+      // The header already says it, so this costs no extra round trip.
-+      await noteBase(w.header.last_saved);           // for NR-STO-16
-+      journalled = false; lastPending = -1;
-       const j = await call("journal/read", { ref });
-       if (j) showBanner("bad", `This plan has ${j.pending?.length || 0} change(s) that `
-         + `were never saved, from ${new Date(j.at).toLocaleString()}.`);
-@@ -11401,8 +11546,16 @@
-         if (!out) return;
-         ref = out.ref;
-       } else {
--        out = await call("ws/save", { ref, sheets: sheetsNow() });
-+        // THE CHECK THAT PREVENTS THE LOSS. Between opening this plan and now,
-+        // somebody else may have saved theirs; writing on top would replace it with
-+        // figures that predate it, and the save would report success (NR-STO-16).
-+        if (await superseded()) return;
-+        // `baseSaved` goes with it: the guard above is this window's, and the one in
-+        // storage/ is the file's. Either alone leaves a way to lose the save.
-+        out = await call("ws/save", { ref, sheets: sheetsNow(), baseSaved });
-       }
-+      await noteBase(out.savedAt);        // our own write is not somebody else's
-+      stale = false;
-       showFile();
-       showBanner("", `Saved to ${out.ref}.`);
-     } catch (e) {
-@@ -11628,7 +11781,9 @@
-     const what = a.dataset.do;
-     if (what.startsWith("tab:")) return showTab(what.slice(4));
-     switch (what) {
--      case "new": ref = null; holds = false; showFile(); showHold(null); return startBlank();
-+      case "new": await releaseClaim(); ref = null; holds = false; stale = false;
-+                  baseSaved = ""; showFile(); showHold(null); return startBlank();
-+      case "reload": return reloadPlan();
-       case "open": {
-         let p = caps.nativeDialogs ? await call("ws/openDialog", {}) : null;
-         if (!caps.nativeDialogs)
-@@ -11815,9 +11970,10 @@
- 
-   showFile();
- 
--  window.__pm = { call, openPlan, savePlan, importSource, adoptBytes, browseFor,
-+  window.__pm = { call, openPlan, savePlan, reloadPlan, releaseClaim, noteJournal,
-+                  superseded, importSource, adoptBytes, browseFor,
-                   takeClaimOnEdit, pageId: PAGE_ID,
--                  state: () => ({ ref, holds, me, caps, where }) };
-+                  state: () => ({ ref, holds, stale, baseSaved, me, caps, where }) };
- })();
- </script>
- </html>
-diff -ruN --label v1.21/PM_APP --label v1.21.1/PM_APP v1.21/PM_APP v1.21.1/PM_APP
---- v1.21/PM_APP
-+++ v1.21.1/PM_APP
+diff -ruN '--exclude=index.html' v1.21/pmapp/shell/paths.py v1.21.1/pmapp/shell/paths.py
+--- v1.21/pmapp/shell/paths.py	2026-09-13 15:23:51.617119519 +0000
++++ v1.21.1/pmapp/shell/paths.py	2026-09-13 15:23:51.620580607 +0000
 @@ -116,14 +116,61 @@
          return False
  
@@ -347,9 +155,9 @@ diff -ruN --label v1.21/PM_APP --label v1.21.1/PM_APP v1.21/PM_APP v1.21.1/PM_AP
  def audit_dir(root):
      """Where the change log accumulates: ONE folder for the installation.
  
-diff -ruN --label v1.21/PM_APP --label v1.21.1/PM_APP v1.21/PM_APP v1.21.1/PM_APP
---- v1.21/PM_APP
-+++ v1.21.1/PM_APP
+diff -ruN '--exclude=index.html' v1.21/pmapp/shell/server.py v1.21.1/pmapp/shell/server.py
+--- v1.21/pmapp/shell/server.py	2026-09-13 15:23:51.617177952 +0000
++++ v1.21.1/pmapp/shell/server.py	2026-09-13 15:23:51.620737965 +0000
 @@ -67,6 +67,12 @@
          self.dialogs = F.DialogPump()
          self.stop = threading.Event()
@@ -591,9 +399,9 @@ diff -ruN --label v1.21/PM_APP --label v1.21.1/PM_APP v1.21/PM_APP v1.21.1/PM_AP
              except WS.StorageError as e:
                  return self._json(200, e.as_dict())
              except OSError as e:
-diff -ruN --label v1.21/PM_APP --label v1.21.1/PM_APP v1.21/PM_APP v1.21.1/PM_APP
---- v1.21/PM_APP
-+++ v1.21.1/PM_APP
+diff -ruN '--exclude=index.html' v1.21/pmapp/storage/workspace.py v1.21.1/pmapp/storage/workspace.py
+--- v1.21/pmapp/storage/workspace.py	2026-09-13 15:23:51.617371823 +0000
++++ v1.21.1/pmapp/storage/workspace.py	2026-09-13 15:23:51.621137529 +0000
 @@ -32,7 +32,9 @@
  APP = "PM_APP"
  FORMAT = "prap-source-data"
@@ -660,9 +468,9 @@ diff -ruN --label v1.21/PM_APP --label v1.21.1/PM_APP v1.21/PM_APP v1.21.1/PM_AP
      now = timefmt.iso()
      doc = {
          "format": FORMAT,
-diff -ruN --label v1.21/PM_APP --label v1.21.1/PM_APP v1.21/PM_APP v1.21.1/PM_APP
---- v1.21/PM_APP
-+++ v1.21.1/PM_APP
+diff -ruN '--exclude=index.html' v1.21/version.txt v1.21.1/version.txt
+--- v1.21/version.txt	2026-09-13 15:23:51.617584115 +0000
++++ v1.21.1/version.txt	2026-09-13 15:23:51.621435511 +0000
 @@ -1 +1 @@
 -1.21
 +1.21.1
