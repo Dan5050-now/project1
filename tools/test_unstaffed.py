@@ -28,9 +28,22 @@ only shortfall the shortfall rule could not see.
      3a. tools/prap_io.py raises V-36 on the same project, at the same severity
      3b. with the same total, peak and months - to the hundredth
 
+  4. AND THE TABLE DRAWS IT (R-49)
+     The rule says what the month needs; this is the half that shows it.
+     4a. a month with demand and nobody on it carries the figure, not a dot
+     4b. it is NOT added to the row total, nor to the grand total
+     4c. so the project table's applied total still equals the person table's -
+         the one reconciliation this screen guarantees (spec sheet 06)
+     4d. the unallocated is totalled on a line of its own instead
+     4e. NOTHING EXISTING MOVES: the delivered fixture gains no unallocated cell
+         and not one of its figures changes
+     4f. and the horizon reaches a project that starts after every assignment
+         ends - otherwise the figure would be drawn in a month off the screen
+
     python tools/test_unstaffed.py
 """
 
+import datetime
 import json
 import pathlib
 import re
@@ -56,7 +69,7 @@ def check(ok, label, detail=""):
         fails.append(label)
 
 
-def make(dst, staffed=False, status=None):
+def make(dst, staffed=False, status=None, shift_years=0):
     """The delivered fixture plus one project cloned from PRJ-001 - same type, phase,
     scope and periods - carrying no assignments unless asked for.
 
@@ -76,11 +89,26 @@ def make(dst, staffed=False, status=None):
         # it. Getting that wrong is why the first version of this test passed a filter
         # it never applied, so the column is looked up strictly rather than guarded.
         row[cols.index("status")] = status
+    if shift_years:
+        # Before the append, not after: openpyxl copies the list into cells, so a list
+        # edited afterwards changes nothing. (It did, silently, on the first try.)
+        for c in ("start_date", "end_date"):
+            if c in cols and isinstance(row[cols.index(c)], datetime.datetime):
+                d = row[cols.index(c)]
+                row[cols.index(c)] = d.replace(year=d.year + shift_years)
     p.append(row)
+    pcols = [c.value for c in per[1]]
     for r in per.iter_rows(min_row=2, values_only=True):
         if r[0] == "PRJ-001":
             nr = list(r)
             nr[0] = "PRJ-099"
+            # Pushed years into the future for 4f: a project that starts after every
+            # assignment in the file has ended, which is where the horizon used to stop.
+            if shift_years:
+                for c in ("period_start", "period_end"):
+                    i = pcols.index(c)
+                    if isinstance(nr[i], datetime.datetime):
+                        nr[i] = nr[i].replace(year=nr[i].year + shift_years)
             per.append(nr)
     if staffed:
         ac = [c.value for c in asg[1]]
@@ -110,11 +138,54 @@ def load(pg, path):
       }
       const iso = k => k === null ? null
         : `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, '0')}`;
+      // Applied against applied: the one reconciliation this screen guarantees.
+      let pm = 0, sm = 0, un = 0;
+      for (const [, v] of S.calc.projMonth) pm += v;
+      for (const [, v] of S.calc.persMonth) sm += v;
+      for (const [, v] of S.calc.projUnallocated) un += v;
       return {n: f.length, sev: f[0] ? f[0].sev : null, msg: f[0] ? f[0].msg : null,
               cls: f[0] ? ruleClass(f[0].rule) : null,
               refuses: f[0] ? refuses(f[0]) : null,
               months: n, total: +tot.toFixed(2), peak: +peak.toFixed(2),
-              peakMonth: iso(peakMonth)};
+              peakMonth: iso(peakMonth),
+              appliedProj: +pm.toFixed(2), appliedPers: +sm.toFixed(2),
+              unalloc: +un.toFixed(2), unallocCells: S.calc.projUnallocated.size,
+              lo: S.calc.lo, hi: S.calc.hi};
+    }""")
+
+
+def tableFacts(pg):
+    """What the Resource by project table actually draws for the new project, read off
+    the rendered DOM rather than off the model - the point of R-49 is the SCREEN."""
+    pg.evaluate("() => { S.from = S.calc.lo; S.to = S.calc.hi; renderKeepingTab(); }")
+    pg.click('nav button[data-tab="t-overall"]')
+    pg.wait_for_timeout(900)
+    return pg.evaluate("""() => {
+      const panel = [...document.querySelectorAll('#t-overall .panel')]
+        .find(e => ((e.querySelector('h2') || {}).textContent || '')
+                     .startsWith('Resource by project'));
+      const rows = [...panel.querySelectorAll('tbody tr')];
+      const mine = rows.find(r => r.innerText.includes('PRJ-099'));
+      const cells = mine ? [...mine.querySelectorAll('td')] : [];
+      const unal = cells.filter(td => td.classList.contains('unal'));
+      const grand = rows.find(r => r.classList.contains('grand')
+                                && !r.classList.contains('unalrow'));
+      const urow = rows.find(r => r.classList.contains('unalrow'));
+      const num = t => {
+        const m = String(t || '').replace(/[^0-9.]/g, '');
+        return m ? +m : 0;
+      };
+      return {
+        unalCells: unal.length,
+        unalGlyph: unal.every(td => td.innerText.includes('\\u25E6')),
+        unalValues: unal.slice(0, 3).map(td => num(td.innerText)),
+        // the row total is the LAST cell of the row
+        rowTotal: cells.length ? num(cells[cells.length - 1].innerText) : null,
+        rowNote: (mine ? (mine.querySelector('.unals') || {}).innerText : '') || '',
+        grandTotal: grand ? num([...grand.querySelectorAll('td')].pop().innerText) : null,
+        hasUnalRow: !!urow,
+        unalRowTotal: urow ? num([...urow.querySelectorAll('td')].pop().innerText) : null
+      };
     }""")
 
 
@@ -126,10 +197,12 @@ def figures(msg):
 
 
 tmp = pathlib.Path(tempfile.mkdtemp())
-bare, staffed, done = tmp / "bare.xlsx", tmp / "staffed.xlsx", tmp / "done.xlsx"
+bare, staffed = tmp / "bare.xlsx", tmp / "staffed.xlsx"
+done, future = tmp / "done.xlsx", tmp / "future.xlsx"
 make(bare)
 make(staffed, staffed=True)
 make(done, status="Completed")
+make(future, shift_years=6)
 
 with sync_playwright() as pw:
     browser = pw.chromium.launch(executable_path=CHROME)
@@ -169,6 +242,40 @@ with sync_playwright() as pw:
               f"said {peak:.2f} in {peak_month}, got {s['peak']:.2f} in {s['peakMonth']}")
     check(s["n"] == 0, "2c. and the finding is gone the moment the assignment exists",
           f"{s['n']} finding(s)")
+
+    print()
+    print("4. AND THE TABLE DRAWS IT")
+    b2 = load(pg, bare)
+    t = tableFacts(pg)
+    check(t["unalCells"] > 0 and t["unalGlyph"],
+          "4a. the months carry the figure, marked with a glyph and not a dot",
+          f"{t['unalCells']} cell(s), first {t['unalValues']}")
+    check(abs(t["rowTotal"]) < 0.005,
+          "4b. and none of it is in the row total, which is what is APPLIED",
+          f"row total {t['rowTotal']}")
+    check(abs(b2["appliedProj"] - b2["appliedPers"]) < 0.005,
+          "4c. so the project table still reconciles with the person table",
+          f"{b2['appliedProj']:.2f} vs {b2['appliedPers']:.2f}")
+    check(t["hasUnalRow"] and t["unalRowTotal"] > 0.004
+          and abs(t["unalRowTotal"] - b2["unalloc"]) < 0.02,
+          "4d. the unallocated is totalled on a line of its own",
+          f"line shows {t['unalRowTotal']}, model says {b2['unalloc']:.2f}")
+
+    clean2 = load(pg, DUMMY)
+    check(clean2["unallocCells"] == 0
+          and abs(clean2["appliedProj"] - clean2["appliedPers"]) < 0.005,
+          "4e. the delivered fixture gains no unallocated cell, and still reconciles",
+          f"{clean2['unallocCells']} cell(s), applied {clean2['appliedProj']:.2f}")
+
+    far = load(pg, future)
+    # The project was pushed 6 years out, past every assignment in the file. Before
+    # R-49 the horizon came only off the assignment lines, so its months were not even
+    # reachable by "show everything" - the figure would have been drawn off-screen.
+    farHi = far["hi"]
+    tf = tableFacts(pg)
+    check(far["unallocCells"] > 0 and tf["unalCells"] > 0,
+          "4f. a project starting after every assignment ends is still reached",
+          f"horizon ends {farHi}, {tf['unalCells']} cell(s) drawn")
 
     check(not errors, "    the page raised no script error", "; ".join(errors[:2]))
     browser.close()

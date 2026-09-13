@@ -501,6 +501,21 @@ table{border-collapse:collapse;width:100%;font-size:var(--t-md)}
 td.over{background:var(--overbg);color:var(--crit);font-weight:590}
 td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .grid-t tr.grand th,.grid-t tr.grand td{font-weight:620;border-top:1.5px solid var(--base)}
+/* NOT STAFFED (R-49): what the project's own standard asks for in a month nobody is on.
+   It is DEMAND, not resource, and it must not be mistaken for a figure somebody is
+   carrying. So it is drawn unlike every applied figure on the table: no filled
+   background - the sequential scale means "this much is being done", and none of it is -
+   an outline instead, and the hollow ring glyph in the cell, which is the carrier that
+   survives a monochrome print and a colour-blind reader (D-04). */
+.grid-t td.unal{color:var(--ink2);font-style:italic;
+  background:repeating-linear-gradient(135deg,transparent,transparent 4px,
+    var(--underbg) 4px,var(--underbg) 5px);
+  outline:1px dashed var(--muted);outline-offset:-2px}
+.grid-t tr.unalrow th,.grid-t tr.unalrow td{border-top:1px dashed var(--muted);
+  font-weight:560}
+.grid-t tr.unalrow th.rh{font-weight:560;color:var(--ink2)}
+.rh .unals{display:block;font-weight:500;font-style:italic;color:var(--ink2);
+  margin-top:2px}
 /* SCOPED TO THE ROW HEADING, and it has to be. This is the little disclosure
    triangle in an expandable table row - but `.exp` is also the class on the export
    MENU in the header, and an unscoped `width:12px` clamped that <details> to 12px.
@@ -1129,7 +1144,7 @@ td.cell.gapnew:focus:empty::before{content:""}
 
 <script>
 "use strict";
-const APP_VERSION = "1.50";
+const APP_VERSION = "1.51";
 const SCHEMA_EXPECTED = 12;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1138,11 +1153,11 @@ const SCHEMA_EXPECTED = 12;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.59.xlsx",          ver:"2.59",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.60.xlsx",          ver:"2.60",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.30.xlsx", ver:"1.30",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.31.xlsx", ver:"1.31",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
-  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.1.xlsx",          ver:"2.1",
+  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.2.xlsx",          ver:"2.2",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
           + "R-13 to R-46, which added 22 components and made five of the old entries wrong; "
           + "v2.1 closes X-04 — row virtualisation is not built and, at the volume REQ-NFR-03 now "
@@ -3807,32 +3822,68 @@ function calculate(M){
   const hasAssignment = new Set();
   for (const a of M.assignments) if (!a.__new) hasAssignment.add(a.project_id);
 
-  const unstaffed = [];
-  for (const [pid, proj] of Object.entries(M.projects || {})){
-    if (proj.__bad || proj.__new) continue;
-    if (hasAssignment.has(pid)) continue;
-    // A project with no periods has no demand to state, and V-12 or V-16 already says
-    // so. Inventing a figure for it would be worse than saying nothing.
-    if (!((M.periods && M.periods[pid]) || []).length) continue;
-    // Completed work that nobody was ever booked to is history, not a gap to fill. The
-    // class of this rule is INCOMPLETE - "still being built, and the finding will
-    // answer itself" - which a finished project will never do.
-    if (String(proj.status || "").trim() === "Completed") continue;
+  /** Every month this project's own plan asks for, and what it asks for - from the
+   *  PERIODS ALONE, with no reference to who is on it (REQ-CAL-19: the project-month IS
+   *  its standard, and the people on it divide it).
+   *
+   *  ONE function, used by the rule that reports the demand and by the table that draws
+   *  it. Two copies would eventually disagree, and the symptom would be a screen whose
+   *  figure contradicts the finding sitting beside it - which is the class of defect
+   *  this whole application is arranged to make impossible. */
+  const projectDemand = (pid, proj) => {
+    const out = [];
     const [ps, pe] = projectWindow(M, proj);
-    if (!ps || !pe) continue;
-    let months = 0, total = 0, peak = 0, peakMonth = null, firstMonth = null;
+    if (!ps || !pe) return out;
     for (const [y, m] of monthsBetween(ps, pe)){
       const cov = coverage(y, m, ps, pe);
       if (cov <= 0) continue;
       const seg = periodAt(pid, y, m);
       const d = fromCents(toCents(stdMonthly(proj, seg ? seg.period_name : null)
                                  * (seg ? (num(seg.weight) ?? 1) : 1) * cov));
-      if (!(d > 0)) continue;
-      months++; total = fromCents(toCents(total) + toCents(d));
-      if (firstMonth === null) firstMonth = isoOf(monthKey(y, m));
-      if (d > peak){ peak = d; peakMonth = isoOf(monthKey(y, m)); }
+      if (d > 0) out.push([monthKey(y, m), d]);
     }
-    if (months) unstaffed.push({pid, months, total, peak, peakMonth, firstMonth});
+    return out;
+  };
+
+  /* WHAT THE PLAN ASKS FOR IN A MONTH NOBODY IS ON (R-49).
+     Filled in ONLY where the calculation produced no figure at all. Where a month HAS
+     lines, its demand is already projDemand, taken off those lines, and that figure
+     stays exactly as it was - the two are not always equal, because the month_run a
+     line carries is the greatest COVERAGE any assignment has in that month, while this
+     is the project's own run. Recomputing a month that already has a figure would move
+     numbers that nobody asked to move; filling in one that has none moves nothing. */
+  const projUnallocated = new Map();          // project|month -> demand nobody is on
+
+  const unstaffed = [];
+  for (const [pid, proj] of Object.entries(M.projects || {})){
+    if (proj.__bad || proj.__new) continue;
+    // A project with no periods has no demand to state, and V-12 or V-16 already says
+    // so. Inventing a figure for it would be worse than saying nothing.
+    if (!((M.periods && M.periods[pid]) || []).length) continue;
+    const months = projectDemand(pid, proj);
+
+    for (const [k, d] of months){
+      const qk = pid + "|" + k;
+      // A month that already carries a figure keeps it, whatever this says.
+      if (toCents(projMonth.get(qk) || 0) > 0) continue;
+      projUnallocated.set(qk, d);
+      lo = Math.min(lo, k); hi = Math.max(hi, k);
+    }
+
+    // ...and V-36 on top, for the project that has nobody on it at ALL.
+    if (hasAssignment.has(pid)) continue;
+    // Completed work that nobody was ever booked to is history, not a gap to fill. The
+    // class of this rule is INCOMPLETE - "still being built, and the finding will
+    // answer itself" - which a finished project will never do.
+    if (String(proj.status || "").trim() === "Completed") continue;
+    let total = 0, peak = 0, peakMonth = null, firstMonth = null;
+    for (const [k, d] of months){
+      total = fromCents(toCents(total) + toCents(d));
+      if (firstMonth === null) firstMonth = isoOf(k);
+      if (d > peak){ peak = d; peakMonth = isoOf(k); }
+    }
+    if (months.length)
+      unstaffed.push({pid, months: months.length, total, peak, peakMonth, firstMonth});
   }
 
   reportGaps(M, gaps);
@@ -3847,6 +3898,7 @@ function calculate(M){
      and no line to read a period off. Two answers from one function rather than one
      answer and a second lookup that could drift from it. */
   return {projMonth, persMonth, persProj, projPers, cell, who, projPeriod, projGap,
+          projUnallocated,
           sharers, periodAt, shareCount, staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }
@@ -5975,15 +6027,44 @@ function tableProjects(pids){
       const gtip = g ? ` data-gap="${att(pid)}" data-gk="${k}"`
         + ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${gapLine(pid, k)}`
         + `<span class="tr">click for the month and the figures behind it</span>`)}"` : "";
-      if (v <= 0.004) return `<td class="c z${mark}"${gtip}>&middot;</td>`;
+      if (v <= 0.004){
+        /* WHAT THE MONTH ASKS FOR WHEN NOBODY IS ON IT (R-49). A dot here used to be
+           the only thing this table said about a month inside the project's own run
+           with no one assigned to it - and a dot reads as "this costs nothing" rather
+           than "nobody has been put on this yet". The two are not the same statement
+           and the difference is the whole point of the screen.
+
+           DRAWN AS DEMAND, NEVER AS RESOURCE. It carries a glyph as well as a colour
+           (D-04), it is never added into the row or column total - those stay the
+           APPLIED figure, so this table and the person table still reconcile - and the
+           unallocated is totalled on its own line instead. Short and over are never
+           netted (V-34) and neither is this. */
+        const u = C.projUnallocated.get(pid + "|" + k) || 0;
+        if (u > 0.004)
+          return `<td class="c unal" data-tip="${att(`<b>${keyToLabel(k)}</b><br>`
+            + `<b>${u.toFixed(2)} FTE</b> is what this project's own standard asks for `
+            + `in this month, and NOBODY IS ASSIGNED to it.<br>`
+            + `It is not counted in any total on this table: the totals are what is `
+            + `being applied, and this is not applied to anybody yet.`
+            + `<span class="tr">assign somebody and the figure moves into the row`
+            + `</span>`)}">&#9702; ${fmt(u)}</td>`;
+        return `<td class="c z${mark}"${gtip}>&middot;</td>`;
+      }
       const i = seqStep(v, vmax);
       return `<td class="c${mark}"${gtip} style="background:${SEQ[i]};`
         + `color:${i>6?"#fff":"var(--ink)"}">${fmt(v)}</td>`;
     }).join("");
+    // The unallocated sum for this row, alongside the applied total and never inside it.
+    let utot = 0;
+    for (const k of G) utot += C.projUnallocated.get(pid + "|" + k) || 0;
+    const usub = utot > 0.004
+      ? `<span class="unals" title="What this project's own standard asks for across `
+        + `these months with nobody assigned to it. Not included in the total beside `
+        + `it.">&#9702; ${fmt(utot)} unstaffed</span>` : "";
     body.push(`<tr class="parent" data-k="p-${esc(pid)}" tabindex="0" role="button" `
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
       + `<span class="nm">${esc(M.projects[pid].project_name)}</span>${typePill(pid)}${phasePill(pid)}`
-      + `<span class="sub">${esc(pid)} &middot; starts ${ymd(M.projects[pid].start_date)}</span></th>`
+      + `<span class="sub">${esc(pid)} &middot; starts ${ymd(M.projects[pid].start_date)}${usub}</span></th>`
       + `${tds}<td>${fmt(tot)}</td></tr>`);
     if (!open) continue;
     const rows = M.assignments.filter(a => a.project_id === pid)
@@ -6007,6 +6088,21 @@ function tableProjects(pids){
     return `<td>${fmt(s)}</td>`;
   }).join("");
   body.push(`<tr class="grand"><th class="rh">All ${listed.length} projects</th>${gtds}<td>${fmt(gt)}</td></tr>`);
+  /* ON ITS OWN LINE, NEVER ADDED TO THE ONE ABOVE. The row above is what is APPLIED,
+     and it is the figure that must equal the person table's grand total (spec sheet 06).
+     Unallocated demand belongs to no person, so adding it there would break the one
+     reconciliation this screen guarantees - and would also assert that the work is being
+     done by somebody, which is the opposite of what it says. */
+  let ut = 0;
+  const utds = G.map(k => {
+    let s = 0; for (const p of listed) s += C.projUnallocated.get(p+"|"+k) || 0; ut += s;
+    return s > 0.004 ? `<td class="unal">${fmt(s)}</td>` : `<td class="z">&middot;</td>`;
+  }).join("");
+  if (ut > 0.004)
+    body.push(`<tr class="grand unalrow"><th class="rh">&#9702; Not staffed — what the `
+      + `standards ask for with nobody on it<span class="sub">not included in the row `
+      + `above; it belongs to no person, and the total above is what the person table `
+      + `reconciles against</span></th>${utds}<td class="unal">${fmt(ut)}</td></tr>`);
   return `<table class="grid-t"><thead><tr><th class="rh">Project</th>${monthHead()}`
     + `<th>Total</th></tr></thead><tbody>${body.join("")}</tbody></table>`;
 }

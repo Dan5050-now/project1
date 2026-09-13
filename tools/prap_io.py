@@ -1064,21 +1064,19 @@ def calculate(M):
     # reported by whatever broke them, and V-36 means one thing only. One pass, not one
     # scan per project.
     has_assignment = {a.get("project_id") for a in M.assignments if not a.get("__new")}
-    unstaffed = []
-    for pid, proj in (M.projects or {}).items():
-        if proj.get("__bad") or proj.get("__new"):
-            continue
-        if pid in has_assignment:
-            continue
-        if not (M.periods or {}).get(pid):
-            continue                       # no periods, no demand - V-12/V-16 say so
-        if str(proj.get("status") or "").strip() == "Completed":
-            continue                       # history, not a gap to fill
+
+    def project_demand(pid, proj):
+        """Every month this project's own plan asks for, from the PERIODS alone.
+
+        One function, used by the rule that reports the demand and by the map the
+        screen draws from - projectDemand() in core/06_calculate.js is its twin. Two
+        copies would eventually disagree, and the symptom would be a screen whose
+        figure contradicts the finding beside it.
+        """
+        out = []
         ps, pe = project_window(M, proj)
         if not ps or not pe:
-            continue
-        months = total_cents = peak_cents = 0
-        peak_month = first_month = None
+            return out
         for y, m in months_between(ps, pe):
             cov = coverage(y, m, ps, pe)
             if cov <= 0:
@@ -1090,16 +1088,42 @@ def calculate(M):
             w = _as_num(seg.get("weight")) if seg else None
             w = 1.0 if w is None else w
             d = to_cents(std_monthly(proj, seg["period_name"] if seg else None) * w * cov)
-            if d <= 0:
+            if d > 0:
+                out.append((month_key(y, m - 1), d))
+        return out
+
+    # R-49: what the plan asks for in a month nobody is on. Filled in ONLY where the
+    # calculation produced no figure at all - a month that already carries one keeps it,
+    # because the month_run on a line is the greatest COVERAGE any assignment has in
+    # that month while this is the project's own run, and the two are not always equal.
+    proj_unallocated = {}
+    unstaffed = []
+    for pid, proj in (M.projects or {}).items():
+        if proj.get("__bad") or proj.get("__new"):
+            continue
+        if not (M.periods or {}).get(pid):
+            continue                       # no periods, no demand - V-12/V-16 say so
+        months = project_demand(pid, proj)
+
+        for k, d in months:
+            if to_cents(proj_month.get((pid, k), 0.0)) > 0:
                 continue
-            months += 1
+            proj_unallocated[(pid, k)] = d / CENTS
+
+        if pid in has_assignment:
+            continue
+        if str(proj.get("status") or "").strip() == "Completed":
+            continue                       # history, not a gap to fill
+        total_cents = peak_cents = 0
+        peak_month = first_month = None
+        for k, d in months:
             total_cents += d
             if first_month is None:
-                first_month = iso_month(month_key(y, m - 1))
+                first_month = iso_month(k)
             if d > peak_cents:
-                peak_cents, peak_month = d, iso_month(month_key(y, m - 1))
+                peak_cents, peak_month = d, iso_month(k)
         if months:
-            unstaffed.append({"pid": pid, "months": months,
+            unstaffed.append({"pid": pid, "months": len(months),
                               "total": total_cents / CENTS, "peak": peak_cents / CENTS,
                               "peak_month": peak_month, "first_month": first_month})
 
@@ -1108,6 +1132,7 @@ def calculate(M):
     report_unstaffed(M, unstaffed)
     return {"proj_month": proj_month, "pers_month": pers_month, "pers_proj": pers_proj,
             "cell": cell, "gaps": gaps, "lines": lines, "proj_gap": proj_gap,
+            "proj_unallocated": proj_unallocated,
             "lo": lo or 0, "hi": hi or 0}
 
 

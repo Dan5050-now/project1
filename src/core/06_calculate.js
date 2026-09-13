@@ -358,32 +358,68 @@ function calculate(M){
   const hasAssignment = new Set();
   for (const a of M.assignments) if (!a.__new) hasAssignment.add(a.project_id);
 
-  const unstaffed = [];
-  for (const [pid, proj] of Object.entries(M.projects || {})){
-    if (proj.__bad || proj.__new) continue;
-    if (hasAssignment.has(pid)) continue;
-    // A project with no periods has no demand to state, and V-12 or V-16 already says
-    // so. Inventing a figure for it would be worse than saying nothing.
-    if (!((M.periods && M.periods[pid]) || []).length) continue;
-    // Completed work that nobody was ever booked to is history, not a gap to fill. The
-    // class of this rule is INCOMPLETE - "still being built, and the finding will
-    // answer itself" - which a finished project will never do.
-    if (String(proj.status || "").trim() === "Completed") continue;
+  /** Every month this project's own plan asks for, and what it asks for - from the
+   *  PERIODS ALONE, with no reference to who is on it (REQ-CAL-19: the project-month IS
+   *  its standard, and the people on it divide it).
+   *
+   *  ONE function, used by the rule that reports the demand and by the table that draws
+   *  it. Two copies would eventually disagree, and the symptom would be a screen whose
+   *  figure contradicts the finding sitting beside it - which is the class of defect
+   *  this whole application is arranged to make impossible. */
+  const projectDemand = (pid, proj) => {
+    const out = [];
     const [ps, pe] = projectWindow(M, proj);
-    if (!ps || !pe) continue;
-    let months = 0, total = 0, peak = 0, peakMonth = null, firstMonth = null;
+    if (!ps || !pe) return out;
     for (const [y, m] of monthsBetween(ps, pe)){
       const cov = coverage(y, m, ps, pe);
       if (cov <= 0) continue;
       const seg = periodAt(pid, y, m);
       const d = fromCents(toCents(stdMonthly(proj, seg ? seg.period_name : null)
                                  * (seg ? (num(seg.weight) ?? 1) : 1) * cov));
-      if (!(d > 0)) continue;
-      months++; total = fromCents(toCents(total) + toCents(d));
-      if (firstMonth === null) firstMonth = isoOf(monthKey(y, m));
-      if (d > peak){ peak = d; peakMonth = isoOf(monthKey(y, m)); }
+      if (d > 0) out.push([monthKey(y, m), d]);
     }
-    if (months) unstaffed.push({pid, months, total, peak, peakMonth, firstMonth});
+    return out;
+  };
+
+  /* WHAT THE PLAN ASKS FOR IN A MONTH NOBODY IS ON (R-49).
+     Filled in ONLY where the calculation produced no figure at all. Where a month HAS
+     lines, its demand is already projDemand, taken off those lines, and that figure
+     stays exactly as it was - the two are not always equal, because the month_run a
+     line carries is the greatest COVERAGE any assignment has in that month, while this
+     is the project's own run. Recomputing a month that already has a figure would move
+     numbers that nobody asked to move; filling in one that has none moves nothing. */
+  const projUnallocated = new Map();          // project|month -> demand nobody is on
+
+  const unstaffed = [];
+  for (const [pid, proj] of Object.entries(M.projects || {})){
+    if (proj.__bad || proj.__new) continue;
+    // A project with no periods has no demand to state, and V-12 or V-16 already says
+    // so. Inventing a figure for it would be worse than saying nothing.
+    if (!((M.periods && M.periods[pid]) || []).length) continue;
+    const months = projectDemand(pid, proj);
+
+    for (const [k, d] of months){
+      const qk = pid + "|" + k;
+      // A month that already carries a figure keeps it, whatever this says.
+      if (toCents(projMonth.get(qk) || 0) > 0) continue;
+      projUnallocated.set(qk, d);
+      lo = Math.min(lo, k); hi = Math.max(hi, k);
+    }
+
+    // ...and V-36 on top, for the project that has nobody on it at ALL.
+    if (hasAssignment.has(pid)) continue;
+    // Completed work that nobody was ever booked to is history, not a gap to fill. The
+    // class of this rule is INCOMPLETE - "still being built, and the finding will
+    // answer itself" - which a finished project will never do.
+    if (String(proj.status || "").trim() === "Completed") continue;
+    let total = 0, peak = 0, peakMonth = null, firstMonth = null;
+    for (const [k, d] of months){
+      total = fromCents(toCents(total) + toCents(d));
+      if (firstMonth === null) firstMonth = isoOf(k);
+      if (d > peak){ peak = d; peakMonth = isoOf(k); }
+    }
+    if (months.length)
+      unstaffed.push({pid, months: months.length, total, peak, peakMonth, firstMonth});
   }
 
   reportGaps(M, gaps);
@@ -398,6 +434,7 @@ function calculate(M){
      and no line to read a period off. Two answers from one function rather than one
      answer and a second lookup that could drift from it. */
   return {projMonth, persMonth, persProj, projPers, cell, who, projPeriod, projGap,
+          projUnallocated,
           sharers, periodAt, shareCount, staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }

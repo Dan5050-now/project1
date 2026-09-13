@@ -51,15 +51,44 @@ function tableProjects(pids){
       const gtip = g ? ` data-gap="${att(pid)}" data-gk="${k}"`
         + ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${gapLine(pid, k)}`
         + `<span class="tr">click for the month and the figures behind it</span>`)}"` : "";
-      if (v <= 0.004) return `<td class="c z${mark}"${gtip}>&middot;</td>`;
+      if (v <= 0.004){
+        /* WHAT THE MONTH ASKS FOR WHEN NOBODY IS ON IT (R-49). A dot here used to be
+           the only thing this table said about a month inside the project's own run
+           with no one assigned to it - and a dot reads as "this costs nothing" rather
+           than "nobody has been put on this yet". The two are not the same statement
+           and the difference is the whole point of the screen.
+
+           DRAWN AS DEMAND, NEVER AS RESOURCE. It carries a glyph as well as a colour
+           (D-04), it is never added into the row or column total - those stay the
+           APPLIED figure, so this table and the person table still reconcile - and the
+           unallocated is totalled on its own line instead. Short and over are never
+           netted (V-34) and neither is this. */
+        const u = C.projUnallocated.get(pid + "|" + k) || 0;
+        if (u > 0.004)
+          return `<td class="c unal" data-tip="${att(`<b>${keyToLabel(k)}</b><br>`
+            + `<b>${u.toFixed(2)} FTE</b> is what this project's own standard asks for `
+            + `in this month, and NOBODY IS ASSIGNED to it.<br>`
+            + `It is not counted in any total on this table: the totals are what is `
+            + `being applied, and this is not applied to anybody yet.`
+            + `<span class="tr">assign somebody and the figure moves into the row`
+            + `</span>`)}">&#9702; ${fmt(u)}</td>`;
+        return `<td class="c z${mark}"${gtip}>&middot;</td>`;
+      }
       const i = seqStep(v, vmax);
       return `<td class="c${mark}"${gtip} style="background:${SEQ[i]};`
         + `color:${i>6?"#fff":"var(--ink)"}">${fmt(v)}</td>`;
     }).join("");
+    // The unallocated sum for this row, alongside the applied total and never inside it.
+    let utot = 0;
+    for (const k of G) utot += C.projUnallocated.get(pid + "|" + k) || 0;
+    const usub = utot > 0.004
+      ? `<span class="unals" title="What this project's own standard asks for across `
+        + `these months with nobody assigned to it. Not included in the total beside `
+        + `it.">&#9702; ${fmt(utot)} unstaffed</span>` : "";
     body.push(`<tr class="parent" data-k="p-${esc(pid)}" tabindex="0" role="button" `
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
       + `<span class="nm">${esc(M.projects[pid].project_name)}</span>${typePill(pid)}${phasePill(pid)}`
-      + `<span class="sub">${esc(pid)} &middot; starts ${ymd(M.projects[pid].start_date)}</span></th>`
+      + `<span class="sub">${esc(pid)} &middot; starts ${ymd(M.projects[pid].start_date)}${usub}</span></th>`
       + `${tds}<td>${fmt(tot)}</td></tr>`);
     if (!open) continue;
     const rows = M.assignments.filter(a => a.project_id === pid)
@@ -83,6 +112,21 @@ function tableProjects(pids){
     return `<td>${fmt(s)}</td>`;
   }).join("");
   body.push(`<tr class="grand"><th class="rh">All ${listed.length} projects</th>${gtds}<td>${fmt(gt)}</td></tr>`);
+  /* ON ITS OWN LINE, NEVER ADDED TO THE ONE ABOVE. The row above is what is APPLIED,
+     and it is the figure that must equal the person table's grand total (spec sheet 06).
+     Unallocated demand belongs to no person, so adding it there would break the one
+     reconciliation this screen guarantees - and would also assert that the work is being
+     done by somebody, which is the opposite of what it says. */
+  let ut = 0;
+  const utds = G.map(k => {
+    let s = 0; for (const p of listed) s += C.projUnallocated.get(p+"|"+k) || 0; ut += s;
+    return s > 0.004 ? `<td class="unal">${fmt(s)}</td>` : `<td class="z">&middot;</td>`;
+  }).join("");
+  if (ut > 0.004)
+    body.push(`<tr class="grand unalrow"><th class="rh">&#9702; Not staffed — what the `
+      + `standards ask for with nobody on it<span class="sub">not included in the row `
+      + `above; it belongs to no person, and the total above is what the person table `
+      + `reconciles against</span></th>${utds}<td class="unal">${fmt(ut)}</td></tr>`);
   return `<table class="grid-t"><thead><tr><th class="rh">Project</th>${monthHead()}`
     + `<th>Total</th></tr></thead><tbody>${body.join("")}</tbody></table>`;
 }

@@ -236,9 +236,18 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.59.xlsx` — **current.** 85 requirements, 37 live
-  validation rules, source schema version 12. The latest change is **R-48 — `V-36`, a
-  project with nobody on it says what it needs**: until its first assignment the
+- `docs/PRAP_Development_Plan_v2.60.xlsx` — **current.** 86 requirements, 37 live
+  validation rules, source schema version 12. The latest change is **R-49 —
+  `REQ-DSH-17`, the dashboard shows what an unstaffed month asks for**: a dot in
+  *Resource by project* was a statement, and the wrong one — it says the month costs
+  nothing, when what it costs is exactly what its standard says. The figure is now drawn
+  in the cell, as **demand and never as resource**: no filled scale, an outline and a
+  hatch, italic, and a `◦` glyph so the difference is not carried by colour alone. It is
+  **never added to any total** — those stay the applied figure, so the project and person
+  tables still reconcile (measured: 713.78 against 713.78 with an unstaffed project
+  present, and 38.05 unallocated beside them) — and is totalled on a line of its own.
+  Filled only where the calculation produced no figure at all, so nothing existing moves.
+  Before it, **R-48 — `V-36`, a project with nobody on it says what it needs**: until its first assignment the
   project is *listed* — a row in Resource by project, a band on the timeline, counted in
   the projects tile — with every one of its months **empty** and nothing on the demand
   charts. A row of blanks reads as a project that costs nothing rather than one nobody
@@ -255,13 +264,13 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.30.xlsx` — **current specification.** Schema 12.
-  Sheet 07 gains `V-36` (R-48).
+- `docs/PRAP_Programming_Specification_v1.31.xlsx` — **current specification.** Schema 12.
+  Sheet 07 gains `V-36` (R-48); sheet 06's Table A gains the unallocated figure (R-49).
   Its `Rendering at the target volume` section is now measurements rather than estimates,
   and states the quantity it had been missing: the Overall tab's cost follows
   `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same
   rendering problem.
-- `docs/PRAP_UI_Component_List_v2.1.xlsx` — **current component list.** 68 components.
+- `docs/PRAP_UI_Component_List_v2.2.xlsx` — **current component list.** 68 components.
   Closes `X-04`, the one item v2.0 left open: row virtualisation is not built and, at the
   volume `REQ-NFR-03` now names, not required — recorded as a decision with its figures
   rather than as a defect.

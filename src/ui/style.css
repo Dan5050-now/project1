@@ -484,6 +484,21 @@ table{border-collapse:collapse;width:100%;font-size:var(--t-md)}
 td.over{background:var(--overbg);color:var(--crit);font-weight:590}
 td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .grid-t tr.grand th,.grid-t tr.grand td{font-weight:620;border-top:1.5px solid var(--base)}
+/* NOT STAFFED (R-49): what the project's own standard asks for in a month nobody is on.
+   It is DEMAND, not resource, and it must not be mistaken for a figure somebody is
+   carrying. So it is drawn unlike every applied figure on the table: no filled
+   background - the sequential scale means "this much is being done", and none of it is -
+   an outline instead, and the hollow ring glyph in the cell, which is the carrier that
+   survives a monochrome print and a colour-blind reader (D-04). */
+.grid-t td.unal{color:var(--ink2);font-style:italic;
+  background:repeating-linear-gradient(135deg,transparent,transparent 4px,
+    var(--underbg) 4px,var(--underbg) 5px);
+  outline:1px dashed var(--muted);outline-offset:-2px}
+.grid-t tr.unalrow th,.grid-t tr.unalrow td{border-top:1px dashed var(--muted);
+  font-weight:560}
+.grid-t tr.unalrow th.rh{font-weight:560;color:var(--ink2)}
+.rh .unals{display:block;font-weight:500;font-style:italic;color:var(--ink2);
+  margin-top:2px}
 /* SCOPED TO THE ROW HEADING, and it has to be. This is the little disclosure
    triangle in an expandable table row - but `.exp` is also the class on the export
    MENU in the header, and an unscoped `width:12px` clamped that <details> to 12px.

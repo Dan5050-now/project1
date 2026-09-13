@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.1.xlsx
+Output: docs/PRAP_UI_Component_List_v2.2.xlsx
 """
 
 from pathlib import Path
@@ -40,7 +40,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.1"
+VERSION = "2.2"
 DATE = "2026-09-13"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
@@ -188,6 +188,7 @@ K = "Keep"
 A = "Added after approval"
 FIX = "[FIXED v2.0] "
 FIX21 = "[FIXED v2.1] "
+FIX22 = "[CHANGED v2.2] "
 C = [
     # id, area, component, what it does, REQ-IDs, your decision, your comment, what was done
     ("G-01", "Global", "Header", "Application name, version, expected schema version.",
@@ -268,9 +269,26 @@ C = [
      "month with their role. Note the knock-on: D-11 argued that identity came from the legend order "
      "because 62 hues cannot be told apart. The tooltip now carries that alone - which is stronger, "
      "since it names one band rather than asking you to match a colour against a list of 62."),
-    ("O-07", "Overall", "Resource by project (table)",
-     "Project x month heatmap. Sorted NewDrug CT, Biosimilar CT, Others, then earliest first.",
-     "REQ-DSH-01", K, "", "Unchanged."),
+    ("O-07", "Overall", FIX22 + "Resource by project (table)",
+     "Project x month heatmap. Sorted NewDrug CT, Biosimilar CT, Others, then earliest first. "
+     + FIX22 + "SINCE R-49 A MONTH INSIDE THE PROJECT'S RUN WITH NOBODY ON IT CARRIES THE "
+     "FIGURE ITS STANDARD ASKS FOR, not a dot. A dot was a statement and it was the wrong one: "
+     "it says the month costs nothing, when what it costs is exactly what the standard for its "
+     "type, phase, scope and period says. Drawn as DEMAND and never as resource - no filled "
+     "sequential scale, an outline and a hatch, italic, and a hollow ring glyph so the "
+     "difference is not carried by colour alone (D-04) - and never added to the row, column or "
+     "grand total, which stay the APPLIED figure so this table still reconciles with O-09. The "
+     "unallocated is totalled on a line of its own and beside each project's applied total. "
+     "Filled only where the calculation produced no figure at all, so nothing existing moves.",
+     "REQ-DSH-01, REQ-DSH-17", "Change (R-49)",
+     "Yes, proceed to the built.",
+     "Done. The figure was computable from the moment the periods existed - REQ-CAL-19 says the "
+     "project-month IS its standard and the people on it divide it, so a divisor of nobody does "
+     "not make it nought. Demand is now a property of the project-month, from one function "
+     "shared with V-36 so the screen cannot contradict the finding beside it. The charts and "
+     "the results export are deliberately NOT changed: a stacked bar mixing allocated and "
+     "unallocated bands would misstate its own total, and REQ-OUT-06 promises every exported "
+     "monthly figure is the sum of its detail rows, which unallocated demand has none of."),
     ("O-07b", "Overall", "Project row expansion",
      "Clicking a project name reveals a row per person and role, each with its own monthly figures.",
      "REQ-DSH-01", K, "", "Unchanged."),

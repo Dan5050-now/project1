@@ -121,8 +121,27 @@ WHAT IS NEW IN 1.21
     it yet is simply the state every project is in for the minute after you
     create it. A project you have marked Completed is left alone.
 
-  * The project still does not appear in the tables and charts until it is
-    staffed. That is a larger change and is not in this version.
+  * AND RESOURCE BY PROJECT NOW FILLS THE MONTHS IN. Instead of a row of
+    blanks you see what each month asks for - drawn so it cannot be
+    mistaken for work somebody is doing: no solid colour block, a hatched
+    outline in italics with a small ring beside the number.
+
+        ZZZ-900 Phase 1    o 1.41  o 1.86  o 1.86  o 1.86 ...
+                           o 10.71 unstaffed
+
+    NONE OF IT IS ADDED TO ANY TOTAL. The row total, the column totals and
+    the grand total all stay what is actually being APPLIED, so the project
+    table and the person table still agree with each other exactly as
+    before. What is not staffed is totalled on its own line at the bottom.
+
+  * Months that already had a figure are untouched - the fill only ever
+    happens where there was nothing at all. Your existing plans show
+    exactly the figures they showed before.
+
+  * The GRAPHS are not changed. A stacked bar mixing staffed and unstaffed
+    bands would give a wrong total, and that needs a separate series rather
+    than a taller stack. The results export is unchanged for the same
+    reason.
 
   * No figure you already have moves. Workbook layout version 12 as before.
 

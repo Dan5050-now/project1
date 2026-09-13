@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.30"
+DOC_VERSION = "1.31"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.59.xlsx"
+PLAN = "PRAP_Development_Plan_v2.60.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,21 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.31", "2026-09-13", "Claude Code", "Dan",
+         "R-49, REQ-DSH-17. Sheet 06's Table A now specifies what a project-month "
+         "inside the project's own run with NOBODY ON IT shows: the figure its standard "
+         "asks for, rather than a dot. Drawn as demand and never as resource - no "
+         "filled sequential scale, an outline and a hatch, italic, and a hollow ring "
+         "glyph so the distinction is not carried by colour alone (D-04) - and never "
+         "added to any total. The reconciliation note above the table is amended to say "
+         "so outright: unallocated demand belongs to no person, so counting it into "
+         "Table A would break the guarantee that its grand total equals Table B's, and "
+         "would assert that somebody is doing the work. It is totalled on a line of its "
+         "own. Filled ONLY where the calculation produced no figure at all - a month "
+         "that already carries one keeps it, because the month_run on a line is the "
+         "greatest coverage any assignment has in that month while this is the "
+         "project's own run, and recomputing would move figures nobody asked to move. "
+         "No schema change and no calculation change.", "Draft"],
         ["1.30", "2026-09-13", "Claude Code", "Dan",
          "R-48. Sheet 07 gains V-36: a project that has periods and nobody assigned to "
          "it at all. INFORMATION, classed INCOMPLETE, raised from the CALCULATION and "
@@ -1332,7 +1347,7 @@ ov = [
     ["Horizon control", "From/to month. Defaults to 24 months from the current month. One control expands it to span every project's dates.", "REQ-CAL-01, REQ-DSH-07"],
     ["Filters", "project type (NewDrug CT / Biosimilar CT / Others), CLINICAL PHASE, project, person, role, department. Multi-select, combined with AND. GLOBAL: one setting drives every tab, not just the Overall tab. Clinical phase sits immediately right of project type, so the two type-ish controls read as a pair.", "REQ-DSH-05"],
     ["Unit toggle", "FTE or hours, seeded from config.capacity_unit. NOT in the filter bar: it changes how every figure is written, not which figures are shown, so it is a setting and lives on the assumptions tab.", "REQ-CAL-08, REQ-DSH-11"],
-    ["Table A - by project", "Rows projects, columns months, cells FTE. Row and column totals. A project row expands to its people.", "REQ-DSH-01"],
+    ["Table A - by project", "Rows projects, columns months, cells FTE. Row and column totals. A project row expands to its people. A MONTH INSIDE THE PROJECT'S RUN WITH NOBODY ON IT carries what the standard asks for rather than a dot (REQ-DSH-17), drawn as demand and not as resource - no filled scale, an outline and a hatch, italic, and a hollow ring glyph (D-04) - and never added to any total. Filled ONLY where the calculation produced no figure at all, so no existing figure moves.", "REQ-DSH-01, REQ-DSH-17"],
     ["Table B - by person", "Rows people, columns months, cells FTE summed across projects. Over-allocated cells red, under-allocation runs amber. A person row expands to their projects.", "REQ-DSH-01, REQ-DSH-08"],
     ["Graph 1", "Stacked bar: total monthly demand, ONE BAND PER PROJECT, ordered by total resource with the largest on the baseline. 'Others' projects are grey; trials take the extended colour set. NO LEGEND - a list of 62 entries cannot be matched against the chart. Identity comes from the hover pop-up, which carries project name and type, that month's FTE and its hour equivalent, its share of the month, the headcount, every person on the project that month with their role, and - under a rule - THE MONTH'S TOTAL ACROSS EVERY PROJECT IN VIEW. The total is what a band on its own cannot give: 4.02 FTE means nothing until you know whether the month came to five or to fifty. It is the same figure Graph 2 states for that month, summed along the other axis, so the two pop-ups are held to agreeing in words as well as in pixels.", "REQ-DSH-02"],
     ["Graph 2", "Monthly FTE per person, with reference lines at the two thresholds - one pair of lines, since both are absolute. Above the bar budget it shows a ranked subset with the rest rolled into one 'others' band, and says which it is showing.", "REQ-DSH-02, REQ-DSH-08, REQ-DSH-09"],
@@ -1348,6 +1363,7 @@ ov = [
     ["Row virtualisation", "NOT BUILT, AND NOT REQUIRED at the volume REQ-NFR-03 names since R-47: both tables render EVERY row, and at 252 rows x 60 months that is 810 ms to draw against a 1,000 ms budget. The property that would have mattered either way holds and is required: sorting, filtering and totals run over the WHOLE MODEL, never over the rendered slice - so adding virtualisation later changes what is drawn and nothing that is computed. If a volume past about 400 people is ever asked for, the build is the visible window plus a small overscan with row height fixed so the scrollbar stays truthful.", "REQ-DSH-09, REQ-NFR-03"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], ov, [24, 90, 20], wrap_cols=(2,))
+r = note(ws, r, "UNALLOCATED DEMAND IS NOT PART OF EITHER TOTAL (REQ-DSH-17). It belongs to no person, so counting it in Table A would break the reconciliation below and would also assert that somebody is doing the work. It is totalled on a line of its own.")
 r = note(ws, r, "Both tables are the same numbers aggregated differently, so they must always reconcile: the grand "
                 "total of table A equals that of table B. Worth asserting in code, not just hoping.")
 
