@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.54"
+DOC_VERSION = "2.55"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
               "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
               "and the delivered default assumptions.")
@@ -397,6 +397,38 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.55", "2026-09-13", "Claude Code", "Pending",
+     "THE UI COMPONENT LIST CATCHES UP, AND ONE REAL FINDING COMES OUT OF IT. Raised at "
+     "review: the application had changed many times while that document stood still. "
+     "It had. v1.0 closed the Step 3 gate against plan v2.0; thirty-four change requests "
+     "later it described an application that no longer existed. Re-issued as v2.0: 22 "
+     "components added, each naming the change request that introduced it, and FIVE "
+     "EXISTING ENTRIES CORRECTED because they had become not merely stale but WRONG - a "
+     "missing entry leaves a reader uninformed, a wrong one leaves them misinformed. "
+     "IT DRIFTED FOR A MECHANICAL REASON. check_consistency.py holds the plan, the "
+     "specification, the template, both dummies and the contract to each other on every "
+     "build, and has been clean throughout - but the component list was not in that set. "
+     "It was the one artefact nothing checked, so it fell behind in silence while "
+     "everything else was kept in step automatically. "
+     "FOUR OF THE FIVE CORRECTIONS ARE EDITORIAL: the export writes eleven sheets and "
+     "the list said ten; there are six summary tiles and it said five; 'No legend' is "
+     "true of the chart it was written about and false of the five others; and the "
+     "'Mean load per person' bar chart it recorded as unchanged does not exist, having "
+     "been replaced by the stacked 'Monthly demand by person'. "
+     "THE FIFTH IS NOT EDITORIAL AND NEEDS A DECISION. X-04 recorded row virtualisation "
+     "as 'Keep - unchanged', which reads as built. It was never built: there is no "
+     "virtualisation anywhere in src/, and both Overall tables render every row. At the "
+     "sizes in use that is fast enough and the chart caps keep the drawing bounded, but "
+     "REQ-DSH-09 and REQ-NFR-03 name a THOUSAND PEOPLE, and at that size this is an open "
+     "performance risk that has been carried as done since August. It is now recorded as "
+     "NOT IMPLEMENTED so it stops passing for finished. The choice is to build it or to "
+     "move the requirement; this entry does neither, because that is not a documentation "
+     "decision. "
+     "No code change, no schema change, no figure moves. The v1.0 review trail is "
+     "preserved exactly - the reviewer's words, the decisions, the confirm marks - and "
+     "the 22 additions carry 'Added after approval' rather than a disposition nobody "
+     "gave them. Component list v2.0.",
+     "Issued for review"],
     [f"{MARK_NEW}2.54", "2026-09-12", "Claude Code", "Pending",
      "R-46: MonthlyEstimate.edited_at IS RETIRED. Schema 11 to 12, and the FIRST column "
      "this schema has removed rather than added or renamed. "

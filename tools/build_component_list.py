@@ -1,12 +1,29 @@
-"""Generate the Step 3 UI component list - the thing being reviewed alongside the prototype.
+"""Generate the UI component list - what the application is made of, screen by screen.
 
-From v0.4 this is a disposition document as well as a review form: it carries the
+From v0.4 this was a disposition document as well as a review form: it carries the
 reviewer's own words against each component, what was done about them, and what is
 left. The review trail lives in the deliverable rather than in a chat log.
 
+v2.0 RE-OPENS A DOCUMENT THAT WAS APPROVED, and the reason is worth stating at the top.
+v1.0 closed the Step 3 gate on 2026-08-02 against plan v2.0. Thirty-four change requests
+later - R-13 to R-46, plan v2.54 - the application had gained about twenty screen
+elements this list had never heard of, and five of its existing entries had quietly
+become WRONG: they described behaviour the application no longer has.
+
+It drifted for a mechanical reason, not a careless one. tools/check_consistency.py holds
+the plan, the specification, the template, the dummies and the machine-readable contract
+to each other on every build. This document was not in that set, so it was the one
+artefact nothing checked, and it fell behind in silence while everything else was kept
+in step automatically.
+
+The v1.0 review trail is preserved exactly as it was - the reviewer's words, the
+decisions, what was done. Nothing there is rewritten. Corrections are marked [FIXED v2.0]
+and say what the entry used to claim; additions are marked [NEW v2.0] and name the change
+request that introduced them.
+
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v0.8.xlsx
+Output: docs/PRAP_UI_Component_List_v2.0.xlsx
 """
 
 from pathlib import Path
@@ -16,9 +33,9 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "1.0"
-DATE = "2026-08-01"
-PROTOTYPE = "app/PRAP_Prototype_v0.8.html"
+VERSION = "2.0"
+DATE = "2026-09-13"
+PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
 FONT = "Arial"
@@ -161,6 +178,8 @@ CONFIRMED = {"G-02", "G-06", "G-07", "O-03", "O-04", "O-06", "O-10", "P-01", "S-
              "D-06", "D-11", "D-15", "D-16", "D-17", "D-18", "D-19"}
 
 K = "Keep"
+A = "Added after approval"
+FIX = "[FIXED v2.0] "
 C = [
     # id, area, component, what it does, REQ-IDs, your decision, your comment, what was done
     ("G-01", "Global", "Header", "Application name, version, expected schema version.",
@@ -175,7 +194,8 @@ C = [
      "KST beside it. Correct me if not."),
     ("G-03", "Global", "Load workbook", "File picker / drag-and-drop. Warns first if edits are unsaved.",
      "REQ-IMP-01, REQ-IMP-08", K, "", "Unchanged."),
-    ("G-04", "Global", "Export", "Writes all ten sheets back in template layout, edits included.",
+    ("G-04", "Global", "Export", "Writes all ELEVEN sheets back in template layout, edits included. " + FIX
+     + "v1.0 said ten; MonthlyEstimate arrived at R-30 (schema 9) and is written too.",
      "REQ-IMP-04, REQ-IMP-07", K, "", "Unchanged."),
     ("G-05", "Global", "Findings banner", "Summary of the last import; opens the full report.",
      "REQ-IMP-02", K, "", "Unchanged."),
@@ -221,10 +241,16 @@ C = [
      "Done. The whole Config sheet is on the new tab, and the display-unit control sits with it, "
      "under a line explaining why it is not in the filter bar."),
     ("O-05", "Overall", "Summary tiles",
-     "Projects, people, total demand, over-allocated months, under-allocation runs.",
+     "Projects, people, total demand, over-allocated months, under-allocation runs, "
+     "and months off their own standard. " + FIX + "v1.0 said five tiles; R-42 added the "
+     "sixth, 'Off their standard', which jumps to the Standard vs staffed panel.",
      "REQ-DSH-08", K, "", "Unchanged."),
     ("O-06", "Overall", "[CHANGED] Demand chart",
-     "Stacked monthly demand, one band per project, largest on the baseline. No legend; hover pop-up instead.",
+     "Stacked monthly demand, one band per project, largest on the baseline. THIS chart still "
+     "has no legend and answers by hover, exactly as you asked. " + FIX + "v1.0's flat 'No "
+     "legend' is no longer true of the application: five other charts DO carry one, and since "
+     "R-45 a legend entry is clickable - it picks that series out across the whole tab. Your "
+     "instruction was about this chart and it still holds here.",
      "REQ-DSH-02", "Change",
      "In 'Monthly demand by project' section, remove legend information on the bottom. Instead, while "
      "hovering over each stack in the graph, provide pop-up information (e.g. project name, project's "
@@ -240,8 +266,14 @@ C = [
     ("O-07b", "Overall", "Project row expansion",
      "Clicking a project name reveals a row per person and role, each with its own monthly figures.",
      "REQ-DSH-01", K, "", "Unchanged."),
-    ("O-08", "Overall", "Mean load per person (chart)",
-     "One bar per person against both absolute thresholds; above the bar budget, a ranked subset.",
+    ("O-08", "Overall", "[FIXED v2.0] Monthly demand by person (chart)",
+     "A STACKED chart, one band per person per month, the 20 most loaded shown individually "
+     "and the rest folded into one band. It totals the same figure every month as 'Monthly "
+     "demand by project' - the same person-months summed the other way. A segment is outlined "
+     "where that person's own month crosses the ceiling or the floor. " + FIX + "v1.0 described "
+     "a bar chart of MEAN load per person and recorded it 'Keep - unchanged'. No such chart "
+     "exists: it was replaced by this one, which answers 'what is this month made of' rather "
+     "than 'what does this person average'.",
      "REQ-DSH-02, REQ-DSH-08, REQ-DSH-09", K, "", "Unchanged."),
     ("O-09", "Overall", "Resource by person (table)",
      "Person x month, summed across projects, over/under flagged.",
@@ -354,7 +386,12 @@ C = [
      "repeated name on import, but a hand-built model could still reach the renderer, and a silent "
      "collision there would be worse than a redundant ten lines."),
     ("X-04", "Layout", "Row virtualisation",
-     "Both Overall tables render only the rows in the viewport plus overscan.",
+     "NOT IMPLEMENTED. " + FIX + "v1.0 recorded this as 'Keep - unchanged', which read as "
+     "built. It never was: there is no virtualisation anywhere in src/. Both Overall "
+     "tables render every row. At the sizes in use that is fast enough, and the chart "
+     "caps (LIMIT 20 bands, 12 lines) keep the drawing bounded - but REQ-DSH-09 and "
+     "REQ-NFR-03 name a thousand people, and at that size this is an open performance "
+     "risk rather than a solved problem. Listed here so it is not mistaken for done.",
      "REQ-DSH-09, REQ-NFR-03", K, "", "Unchanged."),
 
     ("A-01", "Assumptions tab", "[NEW] Standard period weights",
@@ -400,6 +437,134 @@ C = [
      "Added for P-01 and S-01, generalised to 'all sections' as you asked: both source-data tables, "
      "all four sub-tables, and the role-factor and config tables on the new tab. The control leads the "
      "row - see D-18 for why."),
+    # ---------------------------------------------------------------- added since v1.0
+    # Every row below names the change request that introduced it. The decision column
+    # says 'Added after approval' rather than 'Keep' or 'Change', because none of these
+    # was in front of the reviewer at the Step 3 gate - saying otherwise would falsify
+    # a review trail that is otherwise exact.
+    ("O-11", "Overall", "[NEW v2.0] Monthly resource trend (line chart)",
+     "One line per project on a shared baseline, capped at the 12 largest by total. A stack "
+     "answers 'what is this month made of'; only lines answer 'is this one rising or falling', "
+     "because in a stack every band's baseline moves with the bands beneath it. Hover gives "
+     "the line's total, mean and peak month.",
+     "REQ-DSH-02", A, "", "R-38. First panel on Overall, and on both source-data tabs."),
+    ("O-12", "Overall", "[NEW v2.0] Standard vs staffed (panel)",
+     "Every month where a project is not being given what its own standard asks for: what it "
+     "needs, what it is getting, and the gap. Both directions are counted APART and never "
+     "netted off - short of the standard and over it are different facts. Sits second, "
+     "directly under the trend it explains, and always in the same place: a panel that "
+     "appears only when there is something to say is one nobody learns the position of.",
+     "REQ-DSH-15, V-34", A, "", "R-42."),
+    ("O-13", "Overall", "[NEW v2.0] Month detail dialog (from the gap panel)",
+     "Opens the month itself: the project figure, every assigned person's stated figure, and "
+     "the calculated one beside it. EVERY STATED CELL IS EDITABLE HERE, including for somebody "
+     "still on automatic - for whom the application first asks, because switching seeds every "
+     "other month and a lone row would be a figure nothing reads.",
+     "REQ-DSH-15, REQ-CAL-18", A, "", "R-42, extended by R-43."),
+    ("P-07", "Project tab", "[NEW v2.0] Monthly estimation (project level)",
+     "The months of a project whose FTE is STATED rather than calculated, with the automatic "
+     "figure and the difference beside each one, and a derivation column carrying the whole "
+     "expression term by term. Switching to manual is a button, not a cell: it copies every "
+     "calculated month across first, so nothing jumps.",
+     "REQ-CAL-18, REQ-DSH-14", A, "", "R-30, R-40, R-41."),
+    ("S-06", "Person tab", "[NEW v2.0] Monthly estimation (assignment level)",
+     "The same panel for one assignment, with two columns the project's does not have: the "
+     "sharer count, and a second derivation line giving this person's CLAIM on the month - "
+     "role factor / sharers x person weight x coverage, ending in the percentage of the "
+     "month it won. It states the assignment it belongs to under its title.",
+     "REQ-CAL-18, REQ-DSH-14, REQ-DSH-16", A, "", "R-30, R-40, R-41, R-45."),
+    ("S-07", "Person tab", "[NEW v2.0] Switch-estimation dialog",
+     "Asked in both directions, because both lose something: switching to manual stops the "
+     "assumptions reaching these months, and switching back DELETES every stated figure. "
+     "Names how many months are affected before it does anything.",
+     "REQ-CAL-18", A, "", "R-30."),
+    ("E-04", "Editing", "[NEW v2.0] Calendar panel on date cells",
+     "A month opens beside the cell being edited, on that cell's own month. The cell never "
+     "stops accepting keys - what you type moves the calendar. Today, and the month and year "
+     "arrows, all step repeatedly rather than snapping back to the cell's own month.",
+     "REQ-IMP-12", A, "", "R-21, both faults fixed at R-35."),
+    ("E-05", "Editing", "[NEW v2.0] Column filters",
+     "A funnel on each heading of the six wide tables, filtering by value the way a "
+     "spreadsheet does. Filters on different columns narrow together. A row still being "
+     "typed is never filtered out, and the count of what is hidden is stated above the table.",
+     "REQ-DSH-03, REQ-DSH-04", A, "", "R-36."),
+    ("E-06", "Editing", "[NEW v2.0] Change log",
+     "Every edit is recorded in memory with the sheet, the row, the column, the value before "
+     "and after, and who made it. Archived to a shared folder on Save. It is NOT shown in the "
+     "application and cannot be exported from it - the archive is the record.",
+     "REQ-IMP-09", A, "", "R-36, narrowed at R-38 and R-39."),
+    ("G-09", "Global", "[NEW v2.0] Identity prompt",
+     "Who is editing. Asked once in the browser; taken from the Windows account in the desktop "
+     "edition without asking. DECLARED, never verified - there is no authentication anywhere "
+     "in this application, and the change log says so rather than implying otherwise.",
+     "REQ-IMP-09, NR-USR-08", A, "", "R-36."),
+    ("G-10", "Global", "[NEW v2.0] Settings-change notice on import",
+     "A file whose Config differs from the settings in force says so on the banner, and lists "
+     "each setting with what it WAS, what it is now, and what it affects. A threshold that "
+     "moved under a plan is otherwise invisible.",
+     "REQ-IMP-14", A, "", "R-28."),
+    ("G-11", "Global", "[NEW v2.0] Results export",
+     "The calculated monthly FTE, not just the source plan: every person-month with the terms "
+     "behind it. Clearly marked as NOT a source workbook and not importable - a results file "
+     "that pretends to be source data invites somebody to edit a derived column.",
+     "REQ-OUT-06", A, "", "R-29."),
+    ("X-07", "Layout", "[NEW v2.0] Lookup columns",
+     "Where a figure's size was decided somewhere else, the table showing the figure names "
+     "what decided it, in a column that is looked up and cannot be edited: the standard a "
+     "period selects, the whole derivation of a month term by term, and the sharer count. "
+     "Never stored on the sheet, so no save can leave a stale copy of a standard in a file.",
+     "REQ-DSH-14", A, "", "R-40, extended at R-41."),
+    ("X-08", "Layout", "[NEW v2.0] Legend picking",
+     "Clicking a legend entry fades back everything that is not that series; a second click, "
+     "another entry, or Escape brings it home. The pick applies to the WHOLE TAB, because the "
+     "same project is the same id on every chart that knows it. A chart cut along a different "
+     "axis is left alone rather than dimmed to nothing. Marks belonging to the MONTH - "
+     "thresholds, baselines, the V-34 outline - never fade. Keyboard-operable.",
+     "REQ-DSH-16", A, "", "R-45."),
+    ("X-09", "Layout", "[NEW v2.0] Headings say what the column means",
+     "Each heading shows a plain name - 'Share of this person', not person_weight. The "
+     "workbook's own column name is in the heading's pop-up and on the element, not printed "
+     "on the page: it is wanted occasionally and the heading is read on every glance. Nothing "
+     "is renamed; the cell still writes back through the identifier.",
+     "REQ-DSH-16", A, "", "R-45, revised at review on the same day."),
+    ("X-10", "Layout", "[NEW v2.0] Charts grow with the horizon",
+     "A chart whose x axis is the month grid takes its width from the month count and its "
+     "panel scrolls sideways past the point where they all fit. A fixed width is legible only "
+     "over the span it was chosen for and fails SILENTLY outside it - the chart still draws, "
+     "it just stops being readable, on exactly the long plans that most need reading.",
+     "REQ-DSH-16", A, "", "R-45."),
+    ("X-11", "Layout", "[NEW v2.0] Wide panels take the full width",
+     "Two panels share a row only where both are readable in half a screen. Assignments, "
+     "Weight overrides and Monthly estimation are stacked, in the order the work is done in: "
+     "pick the assignment, then its override windows, then its months.",
+     "REQ-DSH-16", A, "", "R-45."),
+    ("X-12", "Layout", "[NEW v2.0] A child panel names its parent",
+     "A panel that is a child of a selection states the selected row under its title - the id, "
+     "the project, the role, the window and the weight. From ONE helper shared by every panel "
+     "that names the same thing, so two statements of it cannot drift apart.",
+     "REQ-DSH-16", A, "", "R-45."),
+    ("P-08", "Project tab", "[NEW v2.0] Period generator that fits the project",
+     "A trial is offered 'Auto derivation' from its milestones; an 'Others' project is offered "
+     "'Standard periods' instead, which lays out Planning / Develop / Close with the dates "
+     "blank. A trial not ready yet keeps the button, greyed, naming the two milestones it needs.",
+     "REQ-CAL-10, V-16", A, "", "R-22, replacing the single button P-04 described."),
+    ("G-12", "Global", "[NEW v2.0] Findings carry a class",
+     "What a rule is ALLOWED to do is a property of the rule, separate from how bad it is: "
+     "'must' refuses the edit, 'conditional' asks at Save and lists what will be left "
+     "unresolved, 'incomplete' reports only. A warning never gates an edit.",
+     "REQ-IMP-13", A, "", "R-25."),
+    ("X-13", "Layout", "[NEW v2.0] The application draws its own scroll bars",
+     "A bounded region is only honest if the reader can SEE there is more and reach it, and "
+     "the browser's overlay bar does not do that - it takes no layout space and fades when "
+     "idle. Drawn bars are always there while there is anywhere to go, and can be dragged. "
+     "The two bars settle against each other before either is drawn, because each costs the "
+     "region space and one can be what pushes the content past the other edge.",
+     "REQ-DSH-13", A, "", "R-23; the settling fix at R-45."),
+    ("G-13", "Global", "[NEW v2.0] Start with no file",
+     "The application opens without a workbook and seeds the delivered defaults - value "
+     "lists, settings, standard period weights and role factors - so a plan can be entered "
+     "from nothing. Saving writes a workbook in the current template layout.",
+     "REQ-IMP-03", A, "", "R-14."),
 ]
 # Derived, not typed: the counts have gone stale twice already.
 SUBTITLE_CELL.value = (
@@ -798,6 +963,75 @@ r = table(ws, 4, ["#", "Area", "What you raised (verbatim)", "What was done", "C
 r = ws.max_row + 2
 ws.cell(r, 1, "Both items carry a judgement call I made rather than guessed at silently. Neither blocks "
               "anything: each is one line to change if I have read you wrong.").font = NOTE_F
+
+# ---- why an approved document was re-opened ------------------------------
+ws = wb.create_sheet("09_Since_v1.0")
+ws.sheet_view.showGridLines = False
+ws["A1"] = "Why v2.0 re-opens a document that was approved"
+ws["A1"].font = TITLE_F
+ws["A2"] = ("v1.0 closed the Step 3 gate on 2026-08-02. This sheet says what changed after that, "
+            "what was wrong, and why nothing caught it.")
+ws["A2"].font = NOTE_F
+ws.column_dimensions["A"].width = 22
+ws.column_dimensions["B"].width = 118
+
+BODY = [
+    ("WHAT HAPPENED", ""),
+    ("", "v1.0 described the application as it stood at plan v2.0. Thirty-four change requests "
+         "later - R-13 to R-46, plan v2.54 - it described an application that no longer existed."),
+    ("", "22 screen elements had been added and were in nobody's list. Five entries had become "
+         "actively WRONG: they described behaviour the application does not have. An entry that is "
+         "merely missing leaves a reader uninformed; an entry that is wrong leaves them misinformed, "
+         "which is worse, and all five read as confident statements of fact."),
+    ("WHY NOTHING CAUGHT IT", ""),
+    ("", "tools/check_consistency.py holds the development plan, the programming specification, the "
+         "source-data template, both dummies and the machine-readable contract to each other on every "
+         "build. It reports a mismatch in any of them and it has been clean throughout."),
+    ("", "THIS DOCUMENT WAS NOT IN THAT SET. It was the one artefact nothing checked, so it fell "
+         "behind in silence while every other document was kept in step automatically. The drift is "
+         "a gap in the guard, not a lapse of attention - which is why the fix is to put this document "
+         "into the checker, not to promise to remember."),
+    ("WHAT WAS CORRECTED", ""),
+    ("G-04", "Said the export writes 'all ten sheets'. It writes ELEVEN - MonthlyEstimate arrived at "
+             "R-30 with schema 9."),
+    ("O-05", "Said five summary tiles. There are SIX: R-42 added 'Off their standard', which jumps to "
+             "the Standard vs staffed panel."),
+    ("O-06", "Said flatly 'No legend; hover pop-up instead'. True of THAT chart, and your instruction "
+             "still holds there - but five other charts carry a legend, and since R-45 a legend entry "
+             "is clickable and picks its series out across the tab. The entry now says which is which."),
+    ("O-08", "Described a bar chart of MEAN load per person, recorded 'Keep - unchanged'. No such "
+             "chart exists. It was replaced by a STACKED 'Monthly demand by person', which answers "
+             "what a month is made of rather than what a person averages."),
+    ("X-04", "Recorded row virtualisation as 'Keep - unchanged', which reads as built. IT WAS NEVER "
+             "BUILT - there is no virtualisation anywhere in src/. Both Overall tables render every "
+             "row. This is the one correction that is not merely editorial: REQ-DSH-09 and REQ-NFR-03 "
+             "name a thousand people, and at that size this is an open performance risk. It is listed "
+             "as NOT IMPLEMENTED so it stops being mistaken for done, and it needs a decision - build "
+             "it, or move the requirement."),
+    ("WHAT IS STILL TRUE", ""),
+    ("", "The v1.0 review trail is preserved exactly: your words against each component, the decision "
+         "you took, and what was done about it. Nothing there is rewritten. The 46 components you "
+         "reviewed keep their ids, their disposition and their confirm marks."),
+    ("", "The 22 additions carry 'Added after approval' in the decision column rather than 'Keep' or "
+         "'Change', because none of them was in front of you at the Step 3 gate. Recording them as "
+         "reviewed would falsify a trail that is otherwise exact. Each names the change request that "
+         "introduced it, so it can be traced back to the conversation it came from."),
+    ("WHAT THIS DOES NOT DO", ""),
+    ("", "It does not re-open the Step 3 GATE. The gate was about whether the component set was the "
+         "right one to build, and it was. This is the list catching up with what was then built on "
+         "your instructions, request by request."),
+]
+r = 4
+for head, text in BODY:
+    if head and not text:
+        ws.cell(r, 1, head).font = H1_F
+        r += 1
+        continue
+    if head:
+        c = ws.cell(r, 1, head); c.font = BOLD_F; c.alignment = WRAP
+    c = ws.cell(r, 2, text); c.font = BODY_F; c.alignment = WRAP
+    ws.row_dimensions[r].height = max(15, 13 * (len(text) // 112 + 1))
+    r += 1
 
 wb.save(OUT)
 print(f"Written: {OUT}  ({len(C)} components, {len(D)} decisions)")
