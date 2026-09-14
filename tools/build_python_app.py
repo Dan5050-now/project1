@@ -85,6 +85,78 @@ if __name__ == "__main__":
     raise SystemExit(main())
 '''
 
+# The launcher. Windows, and written for the case where the person has no Python and
+# no way to install one: if a runtime has been put beside the application it is used,
+# and nothing on the machine is consulted at all.
+#
+# WHY A .cmd AND NOT "double-click PM_APP.py". A .py file only starts if Windows has an
+# association for it, which is exactly what a machine without Python does not have - and
+# when the association is missing the person gets an "open with" dialog listing
+# everything except the answer. A .cmd always runs.
+#
+# CRLF and no BOM, because cmd.exe is the one consumer left that needs both.
+LAUNCHER = """@echo off
+rem  Project Management APP - start here.
+rem
+rem  Looks for a Python to run with, in this order:
+rem      1. runtime\\python.exe beside this file   (nothing is installed on this PC)
+rem      2. the py launcher                        (a normal Python installation)
+rem      3. python on the PATH
+rem  and says so plainly if it finds none.
+
+setlocal
+cd /d "%~dp0"
+
+if exist "%~dp0runtime\\python.exe" (
+  "%~dp0runtime\\python.exe" "%~dp0PM_APP.py" %*
+  goto done
+)
+
+py -3 --version >nul 2>&1
+if not errorlevel 1 (
+  py -3 "%~dp0PM_APP.py" %*
+  goto done
+)
+
+rem  DO NOT JUST RUN `python`. On Windows 10 and 11 an "app execution alias" for
+rem  python.exe exists by DEFAULT at %LOCALAPPDATA%\\Microsoft\\WindowsApps, and running
+rem  it opens the Microsoft Store - on a PC with no Python, which is exactly the PC
+rem  this launcher is for. `where` only LOOKS, so the alias is found and skipped
+rem  without ever being started.
+set "PYEXE="
+for /f "delims=" %%p in ('where python 2^>nul') do if not defined PYEXE set "PYEXE=%%p"
+if defined PYEXE (
+  echo %PYEXE% | find /i "\\WindowsApps\\" >nul && set "PYEXE="
+)
+if defined PYEXE (
+  "%PYEXE%" "%~dp0PM_APP.py" %*
+  goto done
+)
+
+echo.
+echo   This PC has no Python, and no runtime was supplied beside the application.
+echo.
+echo   Either is enough:
+echo     * ask for the folder that has runtime\\ inside it - nothing gets installed
+echo     * or ask IT for Python 3.9 or newer
+echo.
+echo   Nothing has been changed on this PC.
+echo.
+pause
+goto :eof
+
+:done
+rem  A non-zero code here is the application failing to START - a stopped application
+rem  exits cleanly. Without this the window closes on the message explaining why.
+if errorlevel 1 (
+  echo.
+  echo   The application stopped with an error. The lines above say why.
+  echo.
+  pause
+)
+"""
+
+
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
 
@@ -976,17 +1048,37 @@ WHY THIS VERSION EXISTS
 
 WHAT YOU NEED
 
-  Python 3.9 or newer. You said 3.14, which is fine.
+  Python 3.9 or newer - UNLESS a runtime\\ folder came with this one, in which
+  case you need nothing at all and can skip to HOW TO START IT.
   Check with:   python --version
+
+  NO PYTHON ON THIS PC, AND NO WAY TO INSTALL ONE? That is a solved problem and
+  not a blocker. Ask whoever gave you this folder for the version with runtime\\
+  inside it. That folder holds a Python that is UNPACKED rather than installed:
+  it touches no registry key, needs no administrator, changes no PATH, and does
+  not disturb a Python you may already have. Deleting this folder removes it
+  completely. PM_APP.cmd finds it by itself.
+
+  Not sure whether this PC can run it? Ask it:
+
+      PM_APP.cmd is the application; check_pc.py beside it answers this:
+          python check_pc.py                  with a Python you already have
+          runtime\\python.exe check_pc.py      with the one that came along
+
+  It writes nothing and prints about ten lines, naming anything in the way.
 
 
 HOW TO START IT
 
   1. Extract this whole folder somewhere of your own - your Documents folder is
      ideal. Keep the folders inside it as they are.
-  2. Double-click PM_APP.py.
-       If Windows asks what to open it with, choose Python.
-       From a command prompt this also works:   python PM_APP.py
+  2. Double-click PM_APP.cmd.
+       It finds a runtime\\ beside it if one came with this folder, and a Python
+       on the PC otherwise - and says so plainly if there is neither.
+       From a command prompt this also works:   PM_APP.cmd
+       (PM_APP.py still starts it directly, for anyone who prefers that. A .cmd is
+        offered because a .py only opens if Windows has been told what a .py is,
+        which on a PC without Python it has not.)
   3. A black console window appears and your browser opens the application.
   4. KEEP THE CONSOLE WINDOW OPEN while you work. Closing it stops the
      application; that is how you shut it down.
@@ -1074,6 +1166,15 @@ def page():
 
 def build():
     if OUT.exists():
+        # A bundled runtime lives inside this folder, and this is about to delete it.
+        # Silently would be the worst of it: PM_APP.cmd would go on working on THIS
+        # machine, by falling back to the Python here, and would tell somebody with no
+        # Python that none was supplied - long after the person who built it had
+        # stopped looking.
+        if (OUT / "runtime").is_dir():
+            print(f"  note    removing the bundled runtime in {OUT.name}/runtime - "
+                  f"put it back with\n"
+                  f"          python tools/bundle_runtime.py <embeddable zip>")
         shutil.rmtree(OUT)
     (OUT / "app").mkdir(parents=True)
     (OUT / "pmapp" / "shell").mkdir(parents=True)
@@ -1093,6 +1194,14 @@ def build():
         (OUT / pkg / "__init__.py").write_text(f'"""{what}"""\n', encoding="utf-8")
 
     (OUT / "PM_APP.py").write_text(ENTRY, encoding="utf-8")
+    # newline="" keeps the CRLF written above; encoding without a BOM, which cmd.exe
+    # would otherwise echo as a stray character on the first line.
+    with open(OUT / "PM_APP.cmd", "w", encoding="ascii", newline="") as f:
+        f.write(LAUNCHER.replace("\n", "\r\n"))
+    # Ships WITH the application, because the person who needs to ask "can this PC
+    # run it" is precisely the person holding the application folder and nothing else.
+    (OUT / "check_pc.py").write_text(
+        (ROOT / "tools" / "check_pc.py").read_text(encoding="utf-8"), encoding="utf-8")
     (OUT / "version.txt").write_text(VERSION + "\n", encoding="utf-8")
     (OUT / "READ ME FIRST.txt").write_text(READ_ME, encoding="utf-8")
 
