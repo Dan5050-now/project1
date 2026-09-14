@@ -28,6 +28,13 @@ THREE THINGS MAKE THIS WORK, AND ALL THREE ARE ALREADY TRUE:
     python tools/bundle_runtime.py <zip>              into dist/PM_APP_py
     python tools/bundle_runtime.py <zip> --into <dir> into somewhere else
     python tools/bundle_runtime.py <zip> --replace    overwrite a runtime already there
+    python tools/bundle_runtime.py <zip> --zip        and package it for handing out
+
+PACKAGE IT FROM HERE, NOT WITH build_python_app.py --zip. That one REBUILDS before it
+packages, and a rebuild empties the folder - runtime and all - so the zip it writes has
+no runtime in it and says nothing about that. It is the obvious command to reach for and
+it silently produces the wrong thing, which is why the packaging lives here instead: this
+one zips the folder as it stands, with the runtime in it, under a name that says so.
 """
 
 import hashlib
@@ -167,6 +174,21 @@ def main(argv):
     print()
     print("  Give people the whole folder. PM_APP.cmd finds this runtime by itself,")
     print("  and nothing is installed on their PC.")
+    if "--zip" in flags:
+        version = "unknown"
+        vt = app / "version.txt"
+        if vt.is_file():
+            version = vt.read_text(encoding="utf-8").strip() or version
+        out = app.parent / f"PM_APP_python_v{version}_with_runtime.zip"
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+            for f in sorted(q for q in app.rglob("*") if q.is_file()):
+                z.write(f, pathlib.Path("PM_APP") / f.relative_to(app))
+        print()
+        print(f"Packaged  {out.name}")
+        print(f"  size    {out.stat().st_size / 1048576:.1f} MB")
+        print(f"  sha256  {hashlib.sha256(out.read_bytes()).hexdigest()}")
+        print( "  This is the one to hand out - the runtime is inside it.")
+
     print()
     print("  Rebuilding the application empties that folder, runtime and all. Run this")
     print("  again after any  python tools/build_python_app.py .")

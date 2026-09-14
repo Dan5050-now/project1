@@ -142,6 +142,36 @@ check("A REBUILD THAT REMOVES A BUNDLED RUNTIME SAYS SO - silently would leave t
 check("and the runtime really is gone, so the warning is not decoration",
       not (APP / "runtime").exists())
 
+# AND THE ZIP THAT GETS HANDED OUT. `build_python_app.py --zip` is the obvious command
+# for "make me something to give people", and it rebuilds before it packages - so the
+# zip it writes has no runtime in it and says nothing about that. The packaging that
+# keeps the runtime lives in bundle_runtime.py, and the difference is checked here
+# because it is invisible until somebody on a PC with no Python opens the wrong one.
+with tempfile.TemporaryDirectory() as d:
+    z = embeddable_zip(pathlib.Path(d) / "python-3.14.7-embed-amd64.zip")
+    run(str(BUNDLE), str(z), "--into", str(APP), "--replace", "--zip")
+    made = sorted(APP.parent.glob("PM_APP_python_v*_with_runtime.zip"))
+    check("bundle_runtime --zip packages the folder as it stands", len(made) == 1,
+          made[0].name if made else "nothing written")
+    if made:
+        with zipfile.ZipFile(made[0]) as zf:
+            names = zf.namelist()
+        check("AND THE RUNTIME IS INSIDE IT",
+              any(n.startswith("PM_APP/runtime/") for n in names),
+              f"{sum(1 for n in names if 'runtime' in n)} runtime file(s)")
+        check("along with the launcher and the PC check",
+              "PM_APP/PM_APP.cmd" in names and "PM_APP/check_pc.py" in names)
+        made[0].unlink()
+
+rc, _ = run(str(ROOT / "tools" / "build_python_app.py"), "--zip")
+plain = sorted(APP.parent.glob("PM_APP_python_v*.zip"))
+plain = [q for q in plain if "with_runtime" not in q.name]
+if plain:
+    with zipfile.ZipFile(plain[0]) as zf:
+        names = zf.namelist()
+    check("while the plain --zip has none - which is why the two are named apart",
+          not any("runtime" in n for n in names), plain[0].name)
+
 # ---- 3. the PC check -------------------------------------------------------
 rc, out = run(str(CHECK))
 check("the PC check runs and reaches a verdict",
