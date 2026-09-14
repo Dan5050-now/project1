@@ -121,11 +121,29 @@ await WS.saveWorkspace(ref, sheets(9), {}, {});
 check((await WS.readJournal(ref)) === null,
       "a committed save clears them — they are no longer pending");
 
+// SUPERSEDED, not merely older. This check used to backdate the journal's
+// modification time and call that "older than the workspace", because that was what
+// readJournal compared. It compares the plan's own last_saved now, so the condition
+// is driven for real: write a journal, let somebody save over the plan, and the
+// journal must not be offered.
 await WS.writeJournal(ref, [{ sheet: "Project" }]);
-fs.utimesSync(WS.journalPath(ref), new Date(Date.now() - 60_000), new Date(Date.now() - 60_000));
+await WS.saveWorkspace(ref, sheets(9), {}, {});
 check((await WS.readJournal(ref)) === null,
-      "a journal OLDER than its workspace is not offered — those edits were made "
-      + "against figures that have since been replaced");
+      "a journal made against a SUPERSEDED save is not offered — those edits were "
+      + "made against figures that have since been replaced");
+
+// And the case the modification-time rule got wrong, which is why it had to go: a
+// journal written in the same tick as the save it belongs to. On a Windows share
+// every journal written within two seconds of a save looked like this, and all of
+// them were thrown away - so NR-STO-07 recovered nothing exactly when it mattered.
+await WS.writeJournal(ref, [{ sheet: "Project", row: 1 }]);
+const jt = fs.statSync(WS.journalPath(ref)), wt = fs.statSync(ref);
+fs.utimesSync(WS.journalPath(ref), wt.atime, wt.mtime);      // as SMB rounds them
+check((await WS.readJournal(ref))?.pending.length === 1,
+      "and one written in the same tick as its save IS offered, which is when a "
+      + "journal is actually written",
+      `journal ${jt.mtimeMs} → workspace ${wt.mtimeMs}`);
+await WS.clearJournal(ref);
 
 /* ---- 5. a protected file is not a corrupt one ----------------------------- */
 console.log("\nfiles that cannot be read");

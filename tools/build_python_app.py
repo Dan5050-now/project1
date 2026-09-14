@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.21"
+VERSION = "1.21.1"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -87,6 +87,74 @@ if __name__ == "__main__":
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.21.1
+
+  This is 1.21 with no change to any figure, any chart or any screen it already
+  had, plus the wiring for three requirements that were specified, agreed at
+  review and implemented in storage/ - and called by nothing. The functions
+  passed their own tests and the figures were right, so nothing failed; what was
+  missing was a caller.
+
+  * A COLLEAGUE'S SAVE CAN NO LONGER BE REPLACED BY YOURS (NR-STO-16).
+    A session that has only READ a plan never takes the write claim, so nothing
+    stopped it saving over a newer save - and the save reported success while
+    doing it. The plan is now checked every ten seconds, again immediately
+    before every save, and a third time in storage/ as the bytes go down. If
+    somebody else has saved since you opened it you are told, offered
+    File -> Reload plan, and the save is REFUSED rather than replacing their
+    work. What is compared is the plan's own last_saved rather than its
+    modification time, because a share may round a modification time to two
+    seconds and a check that cannot tell two saves apart is no check.
+
+  * UNSAVED EDITS ARE WRITTEN DOWN, SO A CRASH HAS SOMETHING TO GIVE BACK
+    (NR-STO-07). The journal was being read when a plan opened and never
+    written, so there was never anything to find.
+
+  * THE PLAN COMES BACK WHEN YOU ARE FINISHED WITH IT (NR-STO-15). Only closing
+    the application released the claim. Now 'Leave without change', opening
+    another plan and New plan release it too - and the heartbeat actually stops,
+    which it did not before: a plan you had moved away from went on being
+    refreshed and stayed claimed until its half-hour expiry.
+    The same requirement's other half is here too: if you were told a plan was
+    read-only because a colleague had it, you are now TOLD WHEN THEY FINISH,
+    within half a minute, without having to close and reopen the plan to find
+    out. Nothing is reloaded when that happens, so the screen you were reading
+    stays exactly as it was - start editing and the plan is yours.
+
+  * AND THE RECOVERY RECORD IS NO LONGER THROWN AWAY BY THE CLOCK. Whether to
+    offer a journal back was decided by comparing modification times: offer it
+    if it is newer than the plan. Two files written in the same tick have the
+    SAME time, and equal counted as not newer - so a journal written just after
+    a save was discarded, which is exactly when one is written. Measured: 30 of
+    200 on a local disk. On a Windows share it is not a race but the normal
+    case, because a share rounds a modification time to two seconds and every
+    journal written within two seconds of a save then looks equal. A journal now
+    records WHICH SAVE it was made against, and is offered back if that save is
+    still the current one. A folder copied elsewhere keeps its journal too,
+    where the old rule threw it away because copying moves the clock.
+
+  * THE WINDOW NO LONGER FREEZES WHILE A FILE DIALOG IS OPEN. The four
+    operations that ask you to choose a file held the one application lock while
+    they waited - up to ten minutes - so every other request queued behind them,
+    the page's own claim check among them.
+
+  * THE CHANGE LOG IS ONE FILE PER PERSON PER MONTH, in the same audit folder.
+    Two sessions appending to one file across a network share can interleave:
+    Python buffers text and a share does not promise an atomic append. Every row
+    already names who made the change, so a month still reads as one record.
+
+  * PLANS THE TEAM SHARES HAVE A PLACE: data\shared\workspaces\ , created at
+    launch with a note in it saying which folder is for what. Sharing is written
+    for several people opening one plan, and the per-person folder is somewhere
+    nobody else can open - where a claim protects nothing.
+
+  * The workbook layout version stamped into a saved plan is 12, which is what
+    the engine reads. It had been 5 - a version the engine had never used.
+
+  * Nothing else moves. Every figure, the unstaffed-project note added at 1.21,
+    the charts and the exports are as they were.
+
 
 WHAT IS NEW IN 1.21
 

@@ -32,7 +32,9 @@ from . import timefmt
 APP = "PM_APP"
 FORMAT = "prap-source-data"
 FORMAT_VERSION = 1
-SCHEMA_EXPECTED = 5
+SCHEMA_EXPECTED = 12          # the layout core/ reads; kept in step with
+                              # SCHEMA_EXPECTED in core/00_meta.js, which is the
+                              # one the findings report quotes at the user (V-09)
 
 _version = "1.0"
 
@@ -175,7 +177,26 @@ def open_workspace(ref):
 
 # ------------------------------------------------------------------------ writing
 
-def save_workspace(ref, sheets, header=None, holds_claim=None, retain=1, identity=None):
+def last_saved_of(ref):
+    """What the file itself says it was last saved at, or None if it cannot say.
+
+    A MODIFICATION TIME CANNOT BE TRUSTED FOR THIS. A share may round one to two
+    seconds, so two saves inside the same tick are indistinguishable - and a check
+    that cannot tell them apart is no check at all on the day it matters. The
+    workspace states its own `last_saved` to the millisecond, written by the same
+    code that writes the rest of the file, so it moves exactly when the content
+    moves and never when it does not (NR-STO-16).
+    """
+    try:
+        with open(ref, "r", encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, ValueError):
+        return None
+    return ((doc.get("workspace") or {}) if isinstance(doc, dict) else {}).get("last_saved")
+
+
+def save_workspace(ref, sheets, header=None, holds_claim=None, retain=1, identity=None,
+                   base_saved=None):
     """The save protocol, specification sheet 06, step for step.
 
     The order is the whole of it. A replace is atomic; a write is not. Power loss at
@@ -192,6 +213,26 @@ def save_workspace(ref, sheets, header=None, holds_claim=None, retain=1, identit
                            "Your hold on this plan was taken over while you were "
                            "working. Nothing has been saved. Save As a copy to keep "
                            "your changes.")
+
+    # NR-STO-16, at the point the bytes are actually written.
+    #
+    # The claim is not enough on its own: a session that has only READ a plan never
+    # took one, so nothing stopped it writing over a colleague's newer save - and the
+    # save reported success while doing it. The caller states which issue of the file
+    # its figures came from; if the file is a different issue now, the save stops and
+    # the colleague's work is still there.
+    #
+    # Optional, because it can only be checked when the caller can state it: a plan
+    # being created has no previous issue to name.
+    if base_saved:
+        current = last_saved_of(ref)
+        if current and current != base_saved:
+            raise StorageError(
+                "superseded",
+                f"{os.path.basename(ref)} was saved by somebody else after you opened "
+                f"it. Nothing has been saved, so their work is intact. Reload the plan "
+                f"and make your change again, or Save As a copy to keep yours.",
+                f"base={base_saved} current={current}")
 
     now = timefmt.iso()
     doc = {
@@ -286,9 +327,15 @@ def restore_version(ref, n=1):
 # committed data.
 
 def write_journal(ref, pending):
+    """Write down what has not been committed yet, and WHICH SAVE it was made against.
+
+    The version it was made against has to be recorded here, at writing time. A
+    reader cannot work it out afterwards from modification times: see read_journal.
+    """
     tmp = f"{journal_path(ref)}.tmp-{os.getpid()}"
+    body = {"at": timefmt.iso(), "pending": pending, "base_saved": last_saved_of(ref)}
     with open(tmp, "w", encoding="utf-8") as f:
-        json.dump({"at": timefmt.iso(), "pending": pending}, f, ensure_ascii=False)
+        json.dump(body, f, ensure_ascii=False)
         f.flush()
         os.fsync(f.fileno())
     os.replace(tmp, journal_path(ref))
@@ -303,11 +350,27 @@ def read_journal(ref):
         j = json.loads(Path(p).read_text(encoding="utf-8"))
     except (ValueError, OSError):
         return None                           # a torn journal is no journal
-    # Only offer it if it is NEWER than the workspace. Otherwise the edits were made
-    # against figures that have since been replaced, and applying them would put
-    # them somewhere they were never made.
-    if os.path.exists(ref) and os.stat(p).st_mtime <= os.stat(ref).st_mtime:
-        return None
+    # Only offer it if it was made against the plan AS IT STANDS. Otherwise the edits
+    # were made against figures that have since been replaced, and applying them would
+    # put them somewhere they were never made.
+    #
+    # WHAT THIS USED TO COMPARE, AND WHY IT HAD TO CHANGE. It compared modification
+    # times: offer the journal if it is newer than the plan. Two files saved in the
+    # same tick have the SAME time, and `<=` then threw the journal away - so a
+    # journal written just after a save was discarded, which is precisely when one is
+    # written. Measured here: 30 of 200 on a local disk, and on a Windows share it is
+    # not a race at all but the normal case, because SMB rounds a modification time to
+    # two seconds and every journal written within two seconds of a save looks equal.
+    # A share is where this application lives (NR-DEP-09), and a recovery journal that
+    # is thrown away is NR-STO-07 unimplemented rather than implemented. So the plan's
+    # own last_saved is compared instead - the same token, for the same reason, as the
+    # superseded-save check in save_workspace.
+    if os.path.exists(ref):
+        if "base_saved" in j:
+            if j["base_saved"] != last_saved_of(ref):
+                return None
+        elif os.stat(p).st_mtime <= os.stat(ref).st_mtime:
+            return None          # written by an older version: times are all there is
     return j
 
 

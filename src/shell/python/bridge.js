@@ -115,6 +115,14 @@
 
   /* ---- the plan this session has open ----------------------------------- */
   let ref = null, holds = false;
+  // NR-STO-16. `baseSaved` is the issue of the file this session's figures came from
+  // - the plan's own last_saved, to the millisecond - and `stale` says the file has
+  // moved on since. Kept here rather than in ui/ because this is the only layer that
+  // knows there is a file at all. Not a modification time: a share may round one to
+  // two seconds, and a check that cannot tell two saves apart is no check.
+  let baseSaved = "", stale = false;
+  // Who refused us, while we wait for them to finish (NR-STO-15).
+  let blockedBy = null;
 
   function showFile() {
     el("pm-file").textContent = ref ? ref.split(/[\\/]/).pop() : "no plan open";
@@ -128,21 +136,189 @@
     p.textContent = text;
   }
 
+
+  /* ---- NR-STO-16: the plan can change on disk underneath a reader ---------
+     Somebody who opened a plan at 09:00 and is still shown 09:00's figures at 11:00,
+     after two saves by somebody else, may quote them in good faith - and if they then
+     edit one cell and save, the newer work is replaced by figures that predate it and
+     the save reports success. The claim does not stop it: a session that has not
+     edited anything never took one.
+
+     So the file is checked every ten seconds (S-N01, AGREED) and once more
+     immediately before every save, which is the check that actually prevents the
+     loss - and storage/ checks it again as the bytes go down, because a guard only in
+     the window is a guard anything else can walk past. What is compared is the plan's
+     own last_saved rather than its modification time: a share may round a modification
+     time to two seconds, and a check that cannot tell two saves apart is no check. */
+  const STALE_MS = 10000;
+
+  /** Remember which issue of the file we are looking at. After every open and every
+   *  save of our own - otherwise our own write reads as somebody else's. */
+  async function noteBase(savedAt) {
+    if (savedAt) { baseSaved = savedAt; return; }
+    if (!ref) { baseSaved = ""; return; }
+    try { baseSaved = (await call("ws/stat", { ref })).lastSaved || ""; }
+    catch { baseSaved = ""; }
+  }
+
+  function sayStale(at) {
+    stale = true;
+    showHold("read", "Superseded — reload to edit");
+    showBanner("bad", `Somebody else saved this plan${at ? " at " + at : ""}. The figures `
+      + `on screen are from when you opened it, so saving now would replace their work. `
+      + `Use File → Reload plan to catch up.`);
+  }
+
+  /** Has the file moved on since we read it? Reports it, and says so to the caller. */
+  async function superseded() {
+    if (!ref || !baseSaved) return false;
+    let st;
+    try { st = await call("ws/stat", { ref }); } catch { return false; }
+    if (!st || !st.exists || !st.lastSaved) return false;
+    if (st.lastSaved === baseSaved) return false;
+    sayStale(new Date(st.lastSaved).toLocaleTimeString());
+    return true;
+  }
+
+  setInterval(() => { if (ref && !stale) superseded(); }, STALE_MS);
+
+  /** Read the plan again, from the top. The way out of STALE, and the only one:
+   *  keeping the screen and saving over the newer file is the thing being prevented. */
+  async function reloadPlan() {
+    if (!ref) return;
+    if (S.pending.length && !confirm(`${S.pending.length} change(s) are not committed. `
+        + `Reloading this plan discards them. Continue?`)) return;
+    const p = ref;
+    stale = false;
+    await openPlan(p);
+  }
+
+  /* ---- NR-STO-07: pending edits survive a crash ---------------------------
+     The journal is the record of work that has not been committed, kept APART from
+     the plan so a half-typed row is never committed data. It was being READ when a
+     plan opened and never written, so there was never anything to find. How it is
+     noticed is the paragraph below. */
+  const JOURNAL_MS = 2000;
+  let journalled = false, lastPending = -1;
+
+  function noteJournal() {
+    if (!ref || !caps.journal) return;
+    // `S` is a top-level const, so it is a SCRIPT-scoped binding and not a
+    // property of window - window.S is undefined however alive S is.
+    const pending = (typeof S !== "undefined" && S.pending) || [];
+    if (!pending.length) {
+      // Committed or discarded: there is nothing to recover, and a journal left behind
+      // would be offered back on the next open as though there were.
+      if (journalled) { journalled = false; call("journal/clear", { ref }).catch(() => {}); }
+      return;
+    }
+    journalled = true;
+    call("journal/write", { ref, pending }).catch(() => {});
+  }
+
+  /* WATCHED, NOT HOOKED. The pending list is changed in a dozen places in ui/ - a cell
+     edit, a row insert, a row delete, an identifier cascade, Save changes, Leave
+     without change - and a journal that depends on having wrapped every one of them is
+     a journal with holes in it, which is worse than none: it would be offered back as
+     though it were complete. One timer that notices the count has moved cannot have
+     holes, and it cannot be skipped by an exception raised somewhere else in a render.
+     Two seconds, because this exists for the power cut rather than for the audit trail
+     - S.audit is that - and a plan on a share does not want a write per keystroke. */
+  setInterval(() => {
+    const n = (typeof S !== "undefined" && S.pending) ? S.pending.length : 0;
+    if (n === lastPending) return;
+    lastPending = n;
+    noteJournal();
+  }, JOURNAL_MS);
+
+  /* ---- NR-STO-15: a claim ends when the holder is finished with the plan --- */
+  async function releaseClaim() {
+    // Not guarded on `holds`. That flag is this window's belief about the claim, and
+    // the whole point of releasing is to be right about the FILE: if the two have
+    // drifted - a heartbeat lost it, a claim was taken by a path that did not set the
+    // flag - guarding on the belief would leave the plan locked for half an hour.
+    // release_claim() in storage/ checks ownership itself and a release of a claim
+    // that is not ours, or not there, does nothing.
+    if (!ref || !caps.claims) return;
+    try { await call("claim/release", { ref }); } catch { /* going anyway */ }
+    holds = false;
+    showHold(null);
+  }
+
+  /* 'Leave without change' ends the claim: there is nothing left to protect, and a
+     colleague waiting should not wait on a session that threw its own edits away
+     (NR-STO-15).
+
+     A LISTENER, NOT A WRAPPER. shell/web/14b_wiring.js does
+     `el("discardBtn").onclick = discardEdits`, which captures the function ITSELF at
+     bind time - so replacing window.discardEdits afterwards, the way
+     beginEditSession() is replaced below, would leave the button calling the original
+     and the claim would never come back. beginEditSession() is different because its
+     callers name it at CALL time. addEventListener adds to the button without
+     depending on which of the two it is, and the menu's 'Leave without change' goes
+     through the same click. */
+  el("discardBtn")?.addEventListener("click", () => { releaseClaim(); });
+
   /* ---- the claim, taken on the first DATA CHANGE ------------------------- */
   async function takeClaimOnEdit() {
+    // Before the claim, because a stale view is refused for a different reason and the
+    // person needs to hear that one: the claim may well be free, and taking it would
+    // let them save figures that have already been replaced (NR-STO-16).
+    if (stale) {
+      showBanner("bad", "This plan has been saved by somebody else since you opened it. "
+        + "Use File → Reload plan before editing — saving now would replace their work.");
+      return false;
+    }
     if (!ref || holds || !caps.claims) return true;
     let r;
     try { r = await call("claim/take", { ref }); }
     catch (e) { showBanner("bad", e.message); return false; }
     if (r.ok) {
-      holds = true;
+      holds = true; blockedBy = null;
       showHold("hold", "You are editing this plan");
       return true;
     }
-    showHold("read", "Read-only — " + (r.holder?.name || "someone else"));
+    blockedBy = r.holder?.name || "someone else";
+    showHold("read", "Read-only — " + blockedBy);
     showBanner("bad", r.message);
     return false;
   }
+
+  /* NR-STO-15's OTHER HALF: "a session waiting to edit is offered it without having
+     to reopen the workspace". The thirty-second poll below only runs while we HOLD
+     the claim, so a blocked session never learned the plan had freed - the person had
+     to guess and try the edit again. Now the wait is watched, and the offer is made.
+
+     S-N07 decides what the offer does NOT do: a blocked session that later gets the
+     claim keeps whatever it was looking at rather than reloading and losing their
+     place. It reloads only if the plan changed while they waited, and that is the
+     STALE path, which says so itself - so this stays quiet while `stale` is set and
+     lets that message win. */
+  async function offerIfFreed() {
+    if (!ref || holds || !blockedBy || stale || !caps.claims) return false;
+    let held;
+    try { held = await call("claim/read", { ref }); } catch { return false; }
+    // An EXPIRED claim is as takeable as no claim at all (Q-N16), and it is the case
+    // that strands somebody longest: the holder's machine died, so no release is ever
+    // coming. Without this the person waits out the half hour and then has to guess
+    // that guessing again might work. The wording differs because the situations do -
+    // a colleague who finished is not a colleague whose laptop went off mid-sentence,
+    // and the second one may have lost work of their own.
+    if (held && held.state !== "expired") return false;         // still somebody's
+    const who = blockedBy;
+    blockedBy = null;
+    showHold(null);
+    showBanner("", held
+      ? "You can edit this plan now — " + who + " has gone quiet for over half an "
+        + "hour, so the plan no longer counts as theirs. Nothing has been reloaded. "
+        + "Worth a word with them first if their edits mattered."
+      : "This plan is free now — whoever had it has finished with it. "
+        + "Start editing and it is yours. Nothing has been reloaded, so what is on "
+        + "screen is still what you were looking at.");
+    return true;
+  }
+
+  setInterval(offerIfFreed, 30000);
 
   // beginEditSession() is the application's own "a value is about to change" point -
   // the snapshot before the first pending edit. Wrapping it is what makes the claim
@@ -256,8 +432,12 @@
   /* ---- workspaces -------------------------------------------------------- */
   async function openPlan(p) {
     try {
+      // Finished with the plan we had, so its claim goes back now rather than at its
+      // half-hour expiry (NR-STO-15). The server does this too; doing it here as well
+      // keeps `holds` and the window honest even if the open then fails.
+      if (ref && ref !== p) await releaseClaim();
       const w = await call("ws/open", { ref: p });
-      ref = w.ref; holds = false;
+      ref = w.ref; holds = false; stale = false; blockedBy = null;
       adopt(w.sheets, ref.split(/[\\/]/).pop());
       showFile();
       showHold(w.readOnly ? "read" : null, "Read-only folder");
@@ -265,6 +445,9 @@
       if (by) showBanner("", `Last saved by ${by.name}`
         + (by.department ? ` (${by.department})` : "")
         + `, ${new Date(w.header.last_saved).toLocaleString()}.`);
+      // The header already says it, so this costs no extra round trip.
+      await noteBase(w.header.last_saved);           // for NR-STO-16
+      journalled = false; lastPending = -1;
       const j = await call("journal/read", { ref });
       if (j) showBanner("bad", `This plan has ${j.pending?.length || 0} change(s) that `
         + `were never saved, from ${new Date(j.at).toLocaleString()}.`);
@@ -301,8 +484,16 @@
         if (!out) return;
         ref = out.ref;
       } else {
-        out = await call("ws/save", { ref, sheets: sheetsNow() });
+        // THE CHECK THAT PREVENTS THE LOSS. Between opening this plan and now,
+        // somebody else may have saved theirs; writing on top would replace it with
+        // figures that predate it, and the save would report success (NR-STO-16).
+        if (await superseded()) return;
+        // `baseSaved` goes with it: the guard above is this window's, and the one in
+        // storage/ is the file's. Either alone leaves a way to lose the save.
+        out = await call("ws/save", { ref, sheets: sheetsNow(), baseSaved });
       }
+      await noteBase(out.savedAt);        // our own write is not somebody else's
+      stale = false;
       showFile();
       showBanner("", `Saved to ${out.ref}.`);
     } catch (e) {
@@ -528,7 +719,9 @@
     const what = a.dataset.do;
     if (what.startsWith("tab:")) return showTab(what.slice(4));
     switch (what) {
-      case "new": ref = null; holds = false; showFile(); showHold(null); return startBlank();
+      case "new": await releaseClaim(); ref = null; holds = false; stale = false;
+                  baseSaved = ""; showFile(); showHold(null); return startBlank();
+      case "reload": return reloadPlan();
       case "open": {
         let p = caps.nativeDialogs ? await call("ws/openDialog", {}) : null;
         if (!caps.nativeDialogs)
@@ -715,7 +908,9 @@ Account        ${where.account}</pre>
 
   showFile();
 
-  window.__pm = { call, openPlan, savePlan, importSource, adoptBytes, browseFor,
+  window.__pm = { call, openPlan, savePlan, reloadPlan, releaseClaim, noteJournal,
+                  offerIfFreed,
+                  superseded, importSource, adoptBytes, browseFor,
                   takeClaimOnEdit, pageId: PAGE_ID,
-                  state: () => ({ ref, holds, me, caps, where }) };
+                  state: () => ({ ref, holds, stale, baseSaved, blockedBy, me, caps, where }) };
 })();

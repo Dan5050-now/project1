@@ -116,12 +116,59 @@ def writable(d):
         return False
 
 
-def ensure(data_dir):
+def ensure(data_dir, root=None):
     """Create the folders the resolved location needs. Called once at launch."""
     for d in (data_dir, os.path.join(data_dir, "workspaces"),
               os.path.join(data_dir, "backups")):
         os.makedirs(d, exist_ok=True)
+    if root:
+        shared_dir(root)
     return data_dir
+
+
+SHARED_README = """\
+PLANS EVERYONE WORKS ON GO IN HERE
+==================================
+
+  shared\\workspaces\\     a plan the team edits together
+  <your account>\\workspaces\\   your own, which nobody else opens
+
+Why there are two. Each person gets their own folder so that two people cannot
+overwrite each other's settings and so a plan you are only trying out stays yours
+(S-N06). But a plan the TEAM keeps has to sit somewhere everybody can reach, or the
+one-writer-at-a-time rule never comes into play - a claim on a file nobody else opens
+protects nothing.
+
+So: your own folder for your own work, this folder for the team's. One writer at a
+time still applies here, and the application says who is editing before you open
+anything.
+
+Nothing in this folder is created or removed by an update.
+"""
+
+
+def shared_dir(root):
+    """Where plans the whole installation works on live: beside users/, not inside
+    one person's copy.
+
+    The per-user folder at rule 3 is right for settings and for a plan somebody is
+    only trying out, and it is what S-N06 settled. It is the wrong place for a plan a
+    TEAM edits: 07_Sharing is written for several people opening one plan, and two
+    people cannot open one plan that sits in one of their private folders. The write
+    claim, the heartbeat and the who-is-editing message all exist for that case and
+    none of them can fire until the plan is somewhere shared. One folder, and a note
+    in it saying which is which."""
+    d = os.path.join(root, "shared")
+    for sub in (d, os.path.join(d, "workspaces"), os.path.join(d, "backups")):
+        os.makedirs(sub, exist_ok=True)
+    note = os.path.join(d, "READ ME - shared plans.txt")
+    if not os.path.exists(note):
+        try:
+            with open(note, "w", encoding="utf-8") as f:
+                f.write(SHARED_README)
+        except OSError:
+            pass
+    return d
 
 
 def audit_dir(root):

@@ -19,6 +19,7 @@ it. Run it against the BUILT package, because that is what gets sent:
 """
 
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -73,7 +74,14 @@ def test_roundtrip(d):
     w = WS.open_workspace(ref)
     check("the sheets come back unchanged", w["sheets"] == sheets())
     check("who saved it is recorded", w["header"]["last_saved_by"]["name"] == "Tester")
-    check("the schema version is stamped", w["header"]["schema_version"] == 5)
+    # Against core/00_meta.js rather than against a number typed here. The number
+    # typed here WAS 5 while core/ read 12, so the storage layer stamped a version the
+    # engine had never used - and this check passed, because it was comparing the
+    # mistake with itself.
+    meta = (ROOT / "src" / "core" / "00_meta.js").read_text(encoding="utf-8")
+    core_schema = int(re.search(r"SCHEMA_EXPECTED\s*=\s*(\d+)", meta).group(1))
+    check(f"the schema version is stamped, and it is core/'s ({core_schema})",
+          w["header"]["schema_version"] == WS.SCHEMA_EXPECTED == core_schema)
     check("the format is the interchange format", True)
 
     # The Electron shell must be able to read it, so the timestamp must be its
@@ -223,21 +231,46 @@ def test_journal(d):
     WS.save_workspace(ref, sheets(), identity=ME)
     check("nothing pending to start with", WS.read_journal(ref) is None)
 
-    time.sleep(0.02)
+    # No sleep. There WAS one here, to keep the journal's modification time clear of
+    # the save's - which is the tell: the rule being tested could not survive two
+    # files written in the same tick, and a journal is written just after a save.
     WS.write_journal(ref, [{"sheet": "Project", "row": 0, "col": "project_name",
                             "was": "Plan 0", "now": "Plan Zero"}])
     j = WS.read_journal(ref)
     check("a pending edit is offered back", bool(j) and len(j["pending"]) == 1)
     check("with when it was made", bool(j.get("at")))
+    check("and which save it was made against, which is what makes it judgeable",
+          "base_saved" in j)
 
     WS.save_workspace(ref, sheets(), identity=ME)
     check("committing clears it", WS.read_journal(ref) is None)
 
-    # A journal older than the workspace was written against figures that have
+    # A journal made against a SUPERSEDED save was written against figures that have
     # since been replaced. Offering it would put edits somewhere they never were.
     WS.write_journal(ref, [{"stale": True}])
+    WS.save_workspace(ref, sheets(), identity=ME)
+    check("a journal made against a superseded save is not offered",
+          WS.read_journal(ref) is None)
+
+    # And the case the modification-time rule got wrong, which is why it had to go.
+    # A Windows share rounds a modification time to two seconds, so EVERY journal
+    # written within two seconds of its save looked no newer than the save and was
+    # thrown away - NR-STO-07 recovering nothing precisely when it had something to
+    # recover. The rounding is reproduced here rather than described.
+    WS.write_journal(ref, [{"sheet": "Project", "row": 1}])
+    for f in (ref, WS.journal_path(ref)):
+        t = os.stat(f).st_mtime
+        os.utime(f, (t - t % 2, t - t % 2))
+    check("and one written in the same tick as its save IS offered, which is when a "
+          "journal is actually written",
+          (WS.read_journal(ref) or {}).get("pending") is not None)
+    WS.clear_journal(ref)
+    Path(WS.journal_path(ref)).write_text(
+        json.dumps({"at": "2026-01-01T00:00:00.000Z", "pending": [{"stale": True}]}),
+        encoding="utf-8")
     os.utime(WS.journal_path(ref), (time.time() - 600, time.time() - 600))
-    check("a journal older than the plan is not offered", WS.read_journal(ref) is None)
+    check("a journal from an older version, with only times to go on, still obeys them",
+          WS.read_journal(ref) is None)
 
     Path(WS.journal_path(ref)).write_text("{ not json", encoding="utf-8")
     check("a torn journal is no journal", WS.read_journal(ref) is None)

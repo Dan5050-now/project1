@@ -67,6 +67,12 @@ class App:
         self.dialogs = F.DialogPump()
         self.stop = threading.Event()
         self._heartbeat = None
+        # The beat's OWN stop, not the application's. Setting _heartbeat to None
+        # did not end the thread: it waited on the application-wide event, so a
+        # beat started for one plan went on refreshing THAT plan's claim after
+        # the session had moved to another one - and the first plan stayed
+        # claimed until its half-hour expiry, with nobody holding it (NR-STO-15).
+        self._beat_stop = None
         self._lock = threading.RLock()
         self.claim_lost = None                # set when a heartbeat finds it gone
         # WHO IS ACTUALLY LOOKING AT IT (NR-DEP-17). page id -> last seen, monotonic.
@@ -90,11 +96,12 @@ class App:
             else:
                 self.resolved = r
                 return r
-        self.data_dir = PA.ensure(r["dir"])
+        # The installation root first, because the shared folder is created beside
+        # users/ and ensure() needs to be told where that is.
+        self.data_root = r.get("root") or os.path.dirname(os.path.dirname(r["dir"]))
+        self.data_dir = PA.ensure(r["dir"], self.data_root)
         r["dir"] = self.data_dir
-        # The installation root, one level above this person's folder. The change log
-        # lives there so everyone's entries are in one file.
-        self.data_root = r.get("root") or os.path.dirname(os.path.dirname(self.data_dir))
+        # The change log lives at the root so everyone's entries are in one folder.
         self.resolved = r
         WS.sweep_temp(self.data_dir)          # an interrupted save left a .tmp
         WS.sweep_temp(os.path.join(self.data_dir, "workspaces"))
@@ -119,10 +126,16 @@ class App:
         died twenty minutes ago, and say which (N-23)."""
         self.stop_heartbeat()
         self.claim_lost = None
+        stop = threading.Event()          # this beat's own; see _beat_stop above
 
         def beat():
             while not self.stop.is_set():
-                if self.stop.wait(CL.HEARTBEAT_MS / 1000.0):
+                # Waiting on the BEAT's event rather than the application's is what
+                # lets stop_heartbeat() end it at once instead of up to thirty
+                # seconds later.
+                if stop.wait(CL.HEARTBEAT_MS / 1000.0):
+                    return
+                if self.stop.is_set():
                     return
                 try:
                     r = CL.refresh_claim(ref, self.identity())
@@ -132,12 +145,34 @@ class App:
                     self.claim_lost = r.get("holder")
                     return
 
+        self._beat_stop = stop
         self._heartbeat = threading.Thread(target=beat, daemon=True,
                                            name="pm-heartbeat")
         self._heartbeat.start()
 
     def stop_heartbeat(self):
-        self._heartbeat = None                # the thread notices `stop` or a lost claim
+        """Actually stop it, rather than forgetting about it."""
+        beat_stop, self._beat_stop, self._heartbeat = self._beat_stop, None, None
+        if beat_stop is not None:
+            beat_stop.set()
+
+    def release_open_claim(self):
+        """Give the plan this session holds back, and stop beating for it.
+
+        NR-STO-15 ends a claim when the holder saves and closes, discards, or closes
+        the application. Moving to ANOTHER plan is the first of those in everything
+        but name - the session is finished with the old one - and until this existed
+        the old plan stayed claimed for half an hour after the person had left it.
+        release_claim() checks ownership itself, so this is safe to call when the
+        claim is somebody else's or already gone."""
+        self.stop_heartbeat()
+        ref, self.open_ref = self.open_ref, None
+        if not ref:
+            return None
+        try:
+            return CL.release_claim(ref, self.identity())
+        except OSError:
+            return None
 
     # --------------------------------------------------- who has the page open
 
@@ -236,7 +271,12 @@ def operations(app):
         return {"appDir": app.app_dir, "dataDir": app.data_dir,
                 "version": app.version, "rule": app.resolved.get("rule"),
                 "account": PA.account_name(),
-                "workspaces": os.path.join(app.data_dir or "", "workspaces")}
+                "workspaces": os.path.join(app.data_dir or "", "workspaces"),
+                # Where plans the team edits together live. The page offers it as a
+                # place to open from and save to, because a claim on a plan inside one
+                # person's folder protects nothing (NR-STO-10).
+                "shared": (os.path.join(PA.shared_dir(app.data_root), "workspaces")
+                           if app.data_root else None)}
 
     # ---- identity -------------------------------------------------------
     def identity_get(_):
@@ -255,6 +295,10 @@ def operations(app):
     # ---- workspaces -----------------------------------------------------
     def ws_open(b):
         p = full(b["ref"])
+        # Opening another plan finishes with this one, so its claim goes back now
+        # rather than at its expiry (NR-STO-15).
+        if app.open_ref and os.path.abspath(app.open_ref) != os.path.abspath(p):
+            app.release_open_claim()
         out = WS.open_workspace(p)
         app.open_ref = p
         app.settings = PA.add_recent(app.settings, p, app.app_dir,
@@ -273,7 +317,11 @@ def operations(app):
             p, b["sheets"], b.get("header") or {},
             holds_claim=lambda r: CL.may_write(r, app.identity()),
             retain=app.settings.get("preferences", {}).get("retain_versions", 1),
-            identity=app.identity())
+            identity=app.identity(),
+            # Which issue of the file the page's figures came from, so a save cannot
+            # land on top of a newer one (NR-STO-16). Absent for a caller that
+            # cannot say - a plan being created has no previous issue.
+            base_saved=b.get("baseSaved"))
         app.open_ref = p
         app.settings = PA.add_recent(app.settings, p, app.app_dir,
                                      {"savedBy": app.identity()})
@@ -292,12 +340,15 @@ def operations(app):
             return None
         if not os.path.splitext(p)[1]:
             p += ".prap"
-        out = WS.save_workspace(p, b["sheets"], b.get("header") or {},
-                                retain=1, identity=app.identity())
-        app.open_ref = out["ref"]
-        app.settings = PA.add_recent(app.settings, out["ref"], app.app_dir,
-                                     {"savedBy": app.identity()})
-        app.save_settings()
+        # The dialog above ran without the lock; everything that touches shared
+        # state is inside it.
+        with app._lock:
+            out = WS.save_workspace(p, b["sheets"], b.get("header") or {},
+                                    retain=1, identity=app.identity())
+            app.open_ref = out["ref"]
+            app.settings = PA.add_recent(app.settings, out["ref"], app.app_dir,
+                                         {"savedBy": app.identity()})
+            app.save_settings()
         return out
 
     def ws_recent(_):
@@ -324,11 +375,19 @@ def operations(app):
         return WS.restore_version(full(b["ref"]), b.get("n", 1))
 
     def ws_stat(b):
-        return WS.stat(full(b["ref"]))
+        p = full(b["ref"])
+        out = dict(WS.stat(p))
+        # What the file says about ITSELF, which is what a staleness check can trust;
+        # the modification time beside it is only the cheap hint that something moved.
+        out["lastSaved"] = WS.last_saved_of(p)
+        return out
 
     # ---- the claim ------------------------------------------------------
     def claim_take(b):
         p = full(b["ref"])
+        # Same rule from the other side: a claim on a new plan gives up the old one.
+        if app.open_ref and os.path.abspath(app.open_ref) != os.path.abspath(p):
+            app.release_open_claim()
         r = CL.claim(p, app.identity(), app_version=app.version)
         if r.get("ok"):
             app.open_ref = p
@@ -344,8 +403,14 @@ def operations(app):
                 "message": CL.blocked_message(held, state, CL.free_at(held))}
 
     def claim_release(b):
+        p = full(b["ref"])
         app.stop_heartbeat()
-        return CL.release_claim(full(b["ref"]), app.identity())
+        r = CL.release_claim(p, app.identity())
+        # So the claim is not chased again on the way out, and so holds_claim() and
+        # the window agree about what this session is holding.
+        if app.open_ref and os.path.abspath(app.open_ref) == os.path.abspath(p):
+            app.open_ref = None
+        return r
 
     def claim_holds(b):
         # Also the moment the page learns a heartbeat lost the claim, which is how
@@ -453,7 +518,18 @@ def operations(app):
             raise ValueError("no data folder has been settled yet")
         folder = PA.audit_dir(app.data_root)
         month = time.strftime("%Y-%m", time.gmtime())      # the file is named in UTC too
-        path = os.path.join(folder, "PRAP_%s_%s.csv" % (kind, month))
+        # ONE FILE PER PERSON PER MONTH, in the installation's one audit folder.
+        #
+        # The folder stays shared, so "what happened to this plan" is still answerable
+        # by reading a month's files together - every row already carries the time and
+        # who made the change, which is what the ordering needs. What is NOT safe is
+        # two sessions appending to ONE file across a network share: Python buffers
+        # text, SMB does not promise an append is atomic, and a torn line in the file
+        # kept precisely to be trusted is the worst place to have one. Separate files
+        # cannot interleave at all, and the account name is the same key the data
+        # folder is filed under (S-N06), so nothing new has to be decided.
+        path = os.path.join(folder, "PRAP_%s_%s_%s.csv" % (kind, month,
+                                                           PA.account_name()))
         fresh = not os.path.exists(path) or os.path.getsize(path) == 0
         # newline="" so csv-shaped text keeps the CRLF the rows already carry, on every
         # platform; utf-8-sig on a NEW file so Excel opens a Korean name correctly.
@@ -463,6 +539,7 @@ def operations(app):
                 fh.write(AUDIT_HEADERS[kind] + "\r\n")
             for r in rows:
                 fh.write(str(r) + "\r\n")
+            fh.flush()                    # out of Python's buffer before the call ends
         return {"ok": True, "written": len(rows), "path": path, "created": fresh}
 
     def audit_where(_):
@@ -521,6 +598,13 @@ def operations(app):
 
 
 # ------------------------------------------------------------------- the handler
+
+# The operations that can stop and wait for somebody to choose a file. They run
+# WITHOUT the application lock (see do_POST), so each one takes it itself around
+# whatever it changes - which for three of the four is nothing at all: they read a
+# path, or bytes, and hand them back.
+BLOCKING_OPS = {"ws/openDialog", "ws/saveAs", "file/openSource", "file/export"}
+
 
 def make_handler(app):
     ops = operations(app)
@@ -608,8 +692,16 @@ def make_handler(app):
                                         "message": "Unreadable request."})
 
             try:
-                with app._lock:
+                if name in BLOCKING_OPS:
+                    # A dialog waits for a PERSON - up to ten minutes (files.py). Held
+                    # under the one application lock, that queued every other request
+                    # behind it: the page's own claim check, its liveness ping, a second
+                    # window. The window looked frozen because it was. These four take
+                    # the lock themselves, around the part that touches shared state.
                     result = op(body if isinstance(body, dict) else {})
+                else:
+                    with app._lock:
+                        result = op(body if isinstance(body, dict) else {})
             except WS.StorageError as e:
                 return self._json(200, e.as_dict())
             except OSError as e:
