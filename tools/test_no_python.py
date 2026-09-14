@@ -161,6 +161,19 @@ with tempfile.TemporaryDirectory() as d:
               f"{sum(1 for n in names if 'runtime' in n)} runtime file(s)")
         check("along with the launcher and the PC check",
               "PM_APP/PM_APP.cmd" in names and "PM_APP/check_pc.py" in names)
+        # Running the application leaves __pycache__ behind, and this packages the
+        # folder AS IT STANDS - so the droppings go out with it unless they are
+        # excluded. They are worse than clutter here: compiled by whichever Python
+        # the packager used, which is not the one in runtime\ and which nothing on
+        # the far side can use. Made real rather than hoped for.
+        (APP / "pmapp" / "__pycache__").mkdir(parents=True, exist_ok=True)
+        (APP / "pmapp" / "__pycache__" / "junk.cpython-311.pyc").write_bytes(b"x")
+        run(str(BUNDLE), str(z), "--into", str(APP), "--replace", "--zip")
+        with zipfile.ZipFile(made[0]) as zf:
+            after = zf.namelist()
+        check("AND NO BUILD DROPPINGS GO OUT WITH IT",
+              not [n for n in after if "__pycache__" in n or n.endswith(".pyc")],
+              f"{len(after)} files, none of them .pyc")
         made[0].unlink()
 
 rc, _ = run(str(ROOT / "tools" / "build_python_app.py"), "--zip")
