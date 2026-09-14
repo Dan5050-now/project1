@@ -180,12 +180,19 @@ def main(argv):
         if vt.is_file():
             version = vt.read_text(encoding="utf-8").strip() or version
         out = app.parent / f"PM_APP_python_v{version}_with_runtime.zip"
+        skip_dirs = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
+        wanted = [q for q in sorted(app.rglob("*")) if q.is_file()
+                  and not any(part in skip_dirs for part in q.relative_to(app).parts)
+                  and q.suffix not in {".pyc", ".pyo"}]
+        dropped = sum(1 for q in app.rglob("*") if q.is_file()) - len(wanted)
         with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-            for f in sorted(q for q in app.rglob("*") if q.is_file()):
+            for f in wanted:
                 z.write(f, pathlib.Path("PM_APP") / f.relative_to(app))
         print()
         print(f"Packaged  {out.name}")
         print(f"  size    {out.stat().st_size / 1048576:.1f} MB")
+        print(f"  files   {len(wanted)}"
+              + (f", and {dropped} build dropping(s) left out" if dropped else ""))
         print(f"  sha256  {hashlib.sha256(out.read_bytes()).hexdigest()}")
         print( "  This is the one to hand out - the runtime is inside it.")
 

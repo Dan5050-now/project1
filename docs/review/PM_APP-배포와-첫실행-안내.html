@@ -141,6 +141,7 @@
 
 <div class="lede">
   <p><strong>먼저 큰 그림 하나만.</strong> 이 앱은 <strong>각자 PC에서 돌고</strong>, <strong>계획서 파일만 공유 폴더에 둡니다.</strong> 프로그램을 공유 폴더에 놓고 거기서 실행하는 방식이 아닙니다 — 그 이유는 아래 <a href="#warn">주의사항</a>에 있습니다.</p>
+  <p><strong>그리고 파이썬은 따로 손댈 일이 없습니다.</strong> 파이썬 런타임은 <strong>나눠 드리는 압축본 안에 이미 들어 있습니다.</strong> 사용자는 압축을 한 번 풀 뿐, 파이썬을 내려받지도 설치하지도 않습니다 — 내려받는 것은 <strong>준비 담당자가 딱 한 번</strong>입니다.</p>
 </div>
 
 <h2>누가 무엇을 하는가</h2>
@@ -196,6 +197,7 @@
     <b>런타임을 앱 폴더에 넣고 압축본 만들기</b>
     <pre><code>python tools\bundle_runtime.py python-3.14.7-embed-amd64.zip --zip</code></pre>
     <p><code>dist\PM_APP_python_v1.21.1_with_runtime.zip</code> 이 만들어집니다. <strong>이것이 나눠 주실 파일입니다.</strong></p>
+    <p><strong>파이썬 압축을 푸는 일은 여기서 끝납니다.</strong> 이 명령이 1번에서 받은 zip 을 앱 폴더 안 <code>runtime\</code> 으로 풀어 넣고, 그 상태를 통째로 다시 압축합니다. 사용자 PC에서는 파이썬을 다시 풀 일이 없습니다.</p>
     <div class="note stop"><span class="lbl">이 순서를 반드시 지키십시오</span>
     <p><code>build_python_app.py --zip</code> 으로 압축하지 마십시오. 그 명령은 <strong>먼저 다시 빌드</strong>하는데, 다시 빌드하면 앱 폴더가 비워지면서 <strong>런타임도 함께 지워집니다.</strong> 그렇게 만든 압축본에는 런타임이 없고, 아무 경고도 없습니다.</p>
     <p>그래서 압축 기능을 <code>bundle_runtime.py</code> 쪽에 두었고, 파일 이름도 <code>_with_runtime</code> 으로 구분됩니다. <strong>이름에 <code>_with_runtime</code> 이 있는 것을 나눠 주십시오.</strong></p></div>
@@ -244,6 +246,10 @@
   app\
   pmapp\
   runtime\            ← 파이썬이 들어 있는 폴더. 지우지 마십시오</code></pre>
+    <div class="note"><span class="lbl">파이썬 런타임은 따로 풀지 않습니다</span>
+    <p><strong><code>runtime\</code> 은 이 압축본 안에 이미 들어 있습니다.</strong> 파이썬을 따로 내려받거나, 따로 압축을 풀거나, 어딘가에 설치할 일이 <strong>없습니다.</strong> 압축을 한 번 풀면 제자리에 들어갑니다.</p>
+    <p>앱이 찾는 위치는 <strong><code>PM_APP.cmd</code> 와 같은 폴더 안의 <code>runtime\</code></strong> 딱 한 곳입니다. 위 그림의 모양 그대로 두시면 됩니다 — <strong>폴더 안의 구조를 바꾸지 마십시오.</strong></p></div>
+
     <div class="note warn"><span class="lbl">바탕화면·다운로드 폴더는 피하십시오</span>
     <p>회사 PC는 바탕화면과 다운로드 폴더를 정리하거나 동기화하는 경우가 있고, 그러면 <code>data\</code> 안의 작업이 함께 사라질 수 있습니다.</p></div>
   </div></li>
@@ -352,6 +358,11 @@
       <td><code>This PC has no Python...</code></td>
       <td><code>runtime\</code> 이 없는 압축본을 받으신 것</td>
       <td>담당자에게 <strong>이름에 <code>_with_runtime</code> 이 있는 압축본</strong>을 요청하십시오</td>
+    </tr>
+    <tr>
+      <td>파이썬을 어디에 풀어야 하는지 모르겠음</td>
+      <td>풀 필요가 없습니다 — 압축본 안에 이미 들어 있습니다</td>
+      <td>앱 폴더 안에 <code>runtime\</code> 이 보이면 된 것입니다. 없다면 <strong>이름에 <code>_with_runtime</code> 이 없는 압축본</strong>을 받으신 것입니다</td>
     </tr>
     <tr>
       <td>브라우저가 안 열림</td>

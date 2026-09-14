@@ -1,0 +1,49 @@
+diff --git a/tools/bundle_runtime.py b/tools/bundle_runtime.py
+index 432d28e..3144ecd 100644
+--- a/tools/bundle_runtime.py
++++ b/tools/bundle_runtime.py
+@@ -180,12 +180,19 @@ def main(argv):
+         if vt.is_file():
+             version = vt.read_text(encoding="utf-8").strip() or version
+         out = app.parent / f"PM_APP_python_v{version}_with_runtime.zip"
++        skip_dirs = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
++        wanted = [q for q in sorted(app.rglob("*")) if q.is_file()
++                  and not any(part in skip_dirs for part in q.relative_to(app).parts)
++                  and q.suffix not in {".pyc", ".pyo"}]
++        dropped = sum(1 for q in app.rglob("*") if q.is_file()) - len(wanted)
+         with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+-            for f in sorted(q for q in app.rglob("*") if q.is_file()):
++            for f in wanted:
+                 z.write(f, pathlib.Path("PM_APP") / f.relative_to(app))
+         print()
+         print(f"Packaged  {out.name}")
+         print(f"  size    {out.stat().st_size / 1048576:.1f} MB")
++        print(f"  files   {len(wanted)}"
++              + (f", and {dropped} build dropping(s) left out" if dropped else ""))
+         print(f"  sha256  {hashlib.sha256(out.read_bytes()).hexdigest()}")
+         print( "  This is the one to hand out - the runtime is inside it.")
+ 
+diff --git a/tools/test_no_python.py b/tools/test_no_python.py
+index 6130370..f2668f2 100644
+--- a/tools/test_no_python.py
++++ b/tools/test_no_python.py
+@@ -161,6 +161,19 @@ with tempfile.TemporaryDirectory() as d:
+               f"{sum(1 for n in names if 'runtime' in n)} runtime file(s)")
+         check("along with the launcher and the PC check",
+               "PM_APP/PM_APP.cmd" in names and "PM_APP/check_pc.py" in names)
++        # Running the application leaves __pycache__ behind, and this packages the
++        # folder AS IT STANDS - so the droppings go out with it unless they are
++        # excluded. They are worse than clutter here: compiled by whichever Python
++        # the packager used, which is not the one in runtime\ and which nothing on
++        # the far side can use. Made real rather than hoped for.
++        (APP / "pmapp" / "__pycache__").mkdir(parents=True, exist_ok=True)
++        (APP / "pmapp" / "__pycache__" / "junk.cpython-311.pyc").write_bytes(b"x")
++        run(str(BUNDLE), str(z), "--into", str(APP), "--replace", "--zip")
++        with zipfile.ZipFile(made[0]) as zf:
++            after = zf.namelist()
++        check("AND NO BUILD DROPPINGS GO OUT WITH IT",
++              not [n for n in after if "__pycache__" in n or n.endswith(".pyc")],
++              f"{len(after)} files, none of them .pyc")
+         made[0].unlink()
+ 
+ rc, _ = run(str(ROOT / "tools" / "build_python_app.py"), "--zip")
