@@ -306,6 +306,47 @@ def operations(app):
         app.save_settings()
         return out
 
+    def ws_shared_state(b):
+        """Is the open plan somewhere the sharing rules can actually work?
+
+        A claim on a plan inside one person's folder protects nothing (NR-STO-10), so
+        the page needs to be able to say so - and to say it at the moment it matters
+        rather than in a note nobody opens. This answers three things and judges none
+        of them; the page decides what is worth saying.
+        """
+        ref = b.get("ref") or app.open_ref
+        shared = (os.path.join(PA.shared_dir(app.data_root), "workspaces")
+                  if app.data_root else None)
+        if not ref or not shared:
+            return {"private": False, "shared": shared, "target": None}
+        ref = os.path.abspath(full(ref))
+        mine = os.path.abspath(os.path.join(app.data_dir or "", "workspaces"))
+        private = os.path.dirname(ref) == mine
+        target = os.path.join(shared, os.path.basename(ref)) if private else None
+        return {"private": private, "shared": shared, "target": target,
+                "taken": bool(target and os.path.exists(target))}
+
+    def ws_move_to_shared(b):
+        """Move the open plan into the folder the whole team can reach.
+
+        The claim goes back first. It names a machine and a process against a PATH,
+        and the path is about to change - and releasing it is also what lets anybody
+        who was blocked find out, without them reopening anything (NR-STO-15).
+        """
+        if not app.data_root:
+            raise WS.StorageError("noshared", "There is no team folder on this "
+                                              "installation.")
+        src = os.path.abspath(full(b["ref"]))
+        dst = os.path.join(PA.shared_dir(app.data_root), "workspaces",
+                           os.path.basename(src))
+        if app.open_ref and os.path.abspath(app.open_ref) == src:
+            app.release_open_claim()
+        out = WS.move_plan(src, dst)
+        app.open_ref = out["ref"]
+        app.settings = PA.add_recent(app.settings, out["ref"], app.app_dir)
+        app.save_settings()
+        return out
+
     def ws_open_dialog(_):
         return app.dialogs.ask("open", title="Open a plan",
                                initialdir=os.path.join(app.data_dir or "", "workspaces"),
@@ -580,6 +621,8 @@ def operations(app):
         "ws/restore": ws_restore,
         "ws/stat": ws_stat,
         "claim/take": claim_take,
+        "ws/sharedState": ws_shared_state,
+        "ws/moveToShared": ws_move_to_shared,
         "claim/read": claim_read,
         "claim/release": claim_release,
         "claim/holds": claim_holds,

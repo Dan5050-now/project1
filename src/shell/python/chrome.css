@@ -36,6 +36,17 @@
   align-items:center;flex-wrap:wrap;padding:8px 14px;background:var(--surface);
   border-bottom:1px solid var(--grid)}
 
+/* The one-line notice that a plan is somewhere the sharing rules cannot reach. It
+   sits below the pills and above the page, and it is only ever shown when there is
+   something to do about it - a bar that is always there is a bar nobody reads. */
+#pm-share{position:sticky;top:calc(var(--pm-title-h,34px) + var(--pm-strip-h,0px));
+  z-index:64;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:9px 14px;font-size:12.5px;background:var(--underbg);
+  color:var(--underink);border-bottom:1px solid var(--grid)}
+#pm-share[hidden]{display:none}
+#pm-share span{flex:1;min-width:240px}
+#pm-share .btn{font-size:12px;padding:3px 10px}
+
 /* ---- the page underneath ------------------------------------------------
    THE ONE PLACE THIS SHELL HAS TO REACH INTO THE PAGE.
 
@@ -79,6 +90,13 @@ html{scroll-padding-top:calc(var(--pm-chrome,71px) + 8px)}
 .pm-crumb button{font:inherit;font-size:12px;background:var(--fill);border:1px solid var(--grid);
   border-radius:999px;padding:3px 10px;cursor:pointer;color:var(--ink2)}
 .pm-crumb button:hover{color:var(--ink)}
+/* The two places that matter, told apart from the path above them: one folder is
+   yours alone and one is the team's, and a plan in the wrong one loses every
+   sharing rule the application has (NR-STO-10). */
+.pm-crumb button.place{font-weight:600;color:var(--ink)}
+.pm-crumb button.place.on{background:color-mix(in srgb,var(--accent) 18%,transparent);
+  border-color:var(--accent)}
+.pm-crumb .sep{color:var(--ink3);padding:0 2px}
 .pm-list{list-style:none;margin:0;padding:0}
 .pm-list li{display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:8px;
   cursor:pointer;font-size:13px}

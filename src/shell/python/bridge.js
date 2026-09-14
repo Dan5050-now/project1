@@ -123,6 +123,7 @@
   let baseSaved = "", stale = false;
   // Who refused us, while we wait for them to finish (NR-STO-15).
   let blockedBy = null;
+  const hushedShare = new Set();      // plans whose "not now" was meant
 
   function showFile() {
     el("pm-file").textContent = ref ? ref.split(/[\\/]/).pop() : "no plan open";
@@ -447,6 +448,7 @@
         + `, ${new Date(w.header.last_saved).toLocaleString()}.`);
       // The header already says it, so this costs no extra round trip.
       await noteBase(w.header.last_saved);           // for NR-STO-16
+      await checkShared(by);
       journalled = false; lastPending = -1;
       const j = await call("journal/read", { ref });
       if (j) showBanner("bad", `This plan has ${j.pending?.length || 0} change(s) that `
@@ -577,11 +579,102 @@
     }
   }
 
+  /* The notice's own two buttons. Bound once, by listener rather than by onclick -
+     shell/web binds some buttons at load by assigning onclick, and a later assignment
+     replaces a handler somebody else is relying on. */
+  el("pm-share")?.querySelector("[data-move]")
+    ?.addEventListener("click", () => { moveToShared(); });
+  el("pm-share")?.querySelector("[data-dismiss]")
+    ?.addEventListener("click", () => {
+      if (ref) hushedShare.add(ref);      // "Not now" means not again for this plan
+      el("pm-share").hidden = true;
+    });
+
+  /* ---- a plan where the sharing rules cannot reach it ---------------------
+     A claim on a plan inside one person's folder protects nothing (NR-STO-10). The
+     team folder was created at launch and carried a note saying so, and the page
+     never mentioned either - so plans were saved where sharing could not work and
+     the failure was invisible: no error, no warning, just colleagues emailing copies
+     to each other and the application unable to know.
+
+     THE TRIGGER IS NOT "the plan is private". Most private plans are private on
+     purpose and a bar on every one of them would be noise, and then furniture. It is
+     "the plan is private AND SOMEBODY ELSE SAVED IT" - which a plan in your own
+     folder can only be if it was copied there by hand, which is the very failure
+     this is about. Said once per plan; "Not now" means it. */
+  async function checkShared(savedBy) {
+    const bar = el("pm-share");
+    if (!bar) return false;
+    bar.hidden = true;
+    if (!ref || hushedShare.has(ref)) return false;
+    const other = savedBy && savedBy.name && me && savedBy.name !== me.name;
+    if (!other) return false;
+    let st;
+    try { st = await call("ws/sharedState", { ref }); } catch { return false; }
+    if (!st || !st.private || !st.target) return false;
+    bar.querySelector("[data-text]").textContent =
+      `This plan is in your own folder, where nobody else can open it - but `
+      + `${savedBy.name} saved it, so it has been copied around by hand. Move it to `
+      + `the team folder and the application can keep one writer at a time, and say `
+      + `who is editing.`
+      + (st.taken ? "  A plan of this name is already there, so this one would need "
+                  + "renaming first." : "");
+    bar.querySelector("[data-move]").disabled = Boolean(st.taken);
+    bar.hidden = false;
+    return true;
+  }
+
+  /** Move the open plan to where the team can reach it. Also the File menu item, for
+   *  somebody who knows they want to share and has not been asked. */
+  async function moveToShared() {
+    if (!ref) return tell("Move plan", "<p class='pm-note'>No plan is open.</p>");
+    let st;
+    try { st = await call("ws/sharedState", { ref }); }
+    catch (e) { return showBanner("bad", e.message); }
+    if (!st.shared)
+      return tell("Move plan", "<p class='pm-note'>This installation has no team "
+                + "folder.</p>");
+    if (!st.private)
+      return tell("Move plan", "<p class='pm-note'>This plan is not in your own "
+                + "folder, so colleagues can already open it.</p>");
+    let out;
+    try { out = await call("ws/moveToShared", { ref }); }
+    catch (e) { return showBanner("bad", e.message); }
+    el("pm-share").hidden = true;
+    ref = out.ref;
+    holds = false;
+    showFile();
+    showHold(null);
+    showBanner("", "Moved to the team folder. Colleagues can open it now, and the "
+      + "application will keep one writer at a time."
+      + (out.versions ? `  ${out.versions} kept version(s) came with it.` : ""));
+  }
+
   /* ---- the in-page folder browser ---------------------------------------- */
   /* Used when there is no tkinter, and whenever somebody wants to type a path -
      a share, say. It talks to fs/list, which returns names and sizes. No browser
      file interface is involved: nothing here can read a file's contents, and the
      page never asks it to. */
+  /** Windows compares paths without regard to case, and a trailing separator means
+   *  nothing; neither does the browser, so it is done here rather than hoped for. */
+  function sameDir(a, b) {
+    const tidy = x => String(x || "").replace(/[\\/]+$/, "").toLowerCase();
+    return Boolean(a) && tidy(a) === tidy(b);
+  }
+
+  /** Your own folder and the team's, when the installation has both. */
+  function places() {
+    const out = [];
+    if (where.workspaces)
+      out.push({ label: "My plans", path: where.workspaces,
+                 hint: "Your own folder. Nobody else can open what is in here." });
+    if (where.shared)
+      out.push({ label: "Team plans", path: where.shared,
+                 hint: "Everybody can open these, and the application keeps one "
+                     + "writer at a time. A plan the team works on belongs here." });
+    return out;
+  }
+
   function browseFor(opts) {
     return new Promise(resolve => {
       const back = document.createElement("div");
@@ -620,6 +713,26 @@
         catch (e) { q("[data-note]").textContent = e.message; return; }
         here = r.path; picked = null;
         q("[data-crumb]").innerHTML = "";
+        /* THE TWO PLACES THAT DECIDE WHETHER SHARING WORKS AT ALL, one click each.
+           The team folder existed, was created at launch and carried a note saying
+           what it was for - and the page never mentioned it, so every plan was saved
+           into the person's own folder, where a claim protects nothing (NR-STO-10)
+           and the whole one-writer-at-a-time design never comes into play. A folder
+           nobody can find is a folder nobody uses. */
+        for (const place of places()) {
+          const b = document.createElement("button");
+          b.className = "place" + (sameDir(r.path, place.path) ? " on" : "");
+          b.textContent = place.label;
+          b.title = place.hint;
+          b.onclick = () => go(place.path);
+          q("[data-crumb]").appendChild(b);
+        }
+        if (places().length) {
+          const sep = document.createElement("span");
+          sep.className = "sep";
+          sep.textContent = "·";
+          q("[data-crumb]").appendChild(sep);
+        }
         for (const root of r.roots) {
           const b = document.createElement("button");
           b.textContent = root.name;
@@ -722,6 +835,7 @@
       case "new": await releaseClaim(); ref = null; holds = false; stale = false;
                   baseSaved = ""; showFile(); showHold(null); return startBlank();
       case "reload": return reloadPlan();
+      case "moveToShared": return moveToShared();
       case "open": {
         let p = caps.nativeDialogs ? await call("ws/openDialog", {}) : null;
         if (!caps.nativeDialogs)
@@ -909,6 +1023,7 @@ Account        ${where.account}</pre>
   showFile();
 
   window.__pm = { call, openPlan, savePlan, reloadPlan, releaseClaim, noteJournal,
+                  checkShared, moveToShared,
                   offerIfFreed,
                   superseded, importSource, adoptBytes, browseFor,
                   takeClaimOnEdit, pageId: PAGE_ID,

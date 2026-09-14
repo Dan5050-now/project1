@@ -384,6 +384,96 @@ def clear_journal(ref):
 _TMP = re.compile(r"\.tmp-\d+$")
 
 
+def move_plan(src, dst):
+    """Move a plan and everything that belongs to it - or move nothing at all.
+
+    A PLAN IS FOUR KINDS OF FILE, and only the first one has the name people know:
+
+        X.prap                  the plan
+        X.prap.journal          edits made and not yet committed
+        X.prap.lock             who is editing it - NOT moved, see below
+        backups/X.prap.1 ..     the versions kept behind it
+
+    A rename would carry the first and abandon the rest, and the person would find
+    out when they went looking for a previous version they had been told was kept.
+
+    COPY, VERIFY, THEN REMOVE - never rename and hope. The destination is written
+    beside itself and renamed into place, read back, and compared with what was read
+    from the source; the source is deleted only once every piece is known to have
+    arrived. If anything goes wrong at any point, whatever reached the destination is
+    removed again and the source is left exactly as it was: a half-moved plan is
+    worse than one that did not move.
+
+    THE CLAIM IS NOT MOVED. It names a machine and a process against a path, and the
+    path is changing. The caller releases it before calling and takes it again at the
+    new location, which is also what makes the move visible to anybody waiting.
+    """
+    src = os.path.abspath(src)
+    dst = os.path.abspath(dst)
+    if src == dst:
+        raise StorageError("same", "That plan is already there.")
+    if not os.path.exists(src):
+        raise StorageError("missing", f"{os.path.basename(src)} is not there any more.")
+    for occupied in (dst, journal_path(dst)):
+        if os.path.exists(occupied):
+            raise StorageError("exists",
+                f"There is already a plan called {os.path.basename(dst)} in the team "
+                f"folder. Nothing has been moved. Rename yours, or open theirs and "
+                f"check it is not the same plan twice.",
+                occupied)
+
+    body = read_bytes(src)
+    landed = []                       # everything created, in case it must be undone
+
+    def land(target, data):
+        tmp = tmp_path(target)
+        with open(tmp, "wb") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, target)
+        landed.append(target)
+        if open(target, "rb").read() != data:
+            raise StorageError("verify", f"{os.path.basename(target)} did not arrive "
+                                         "intact. Nothing has been moved.")
+
+    try:
+        land(dst, body)
+        jrn = journal_path(src)
+        if os.path.exists(jrn):
+            land(journal_path(dst), open(jrn, "rb").read())
+        kept = []
+        for n in range(1, 21):
+            b = backup_path(src, n)
+            if not os.path.exists(b):
+                break
+            kept.append((n, open(b, "rb").read()))
+        if kept:
+            os.makedirs(backup_dir(dst), exist_ok=True)
+            for n, data in kept:
+                land(backup_path(dst, n), data)
+    except OSError as e:
+        for t in landed:
+            _unlink(t)
+        raise StorageError("copy", "The plan could not be written to the team folder, "
+                                   "so nothing has been moved.", type(e).__name__)
+    except StorageError:
+        for t in landed:
+            _unlink(t)
+        raise
+
+    # Everything is at the destination and verified. Only now does the original go.
+    _unlink(journal_path(src))
+    for n in range(1, 21):
+        b = backup_path(src, n)
+        if not os.path.exists(b):
+            break
+        _unlink(b)
+    _unlink(src)
+    return {"ok": True, "ref": dst, "versions": len(kept),
+            "journal": os.path.exists(journal_path(dst))}
+
+
 def sweep_temp(directory):
     """A leftover .tmp-<pid> means a save was interrupted. The workspace itself is
     intact by construction, so there is nothing to repair and nothing to tell the

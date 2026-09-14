@@ -392,6 +392,90 @@ def main():
                   f"displaced {(held_by.get('displaced') or {}).get('name')}")
             pg.evaluate("() => window.__pm.releaseClaim()")
 
+            # ---- a plan where the sharing rules cannot reach it (defect E) ----
+            # The team folder was created at launch and carried a note saying what it
+            # was for, and the page never mentioned either - so plans went into the
+            # person's own folder, where a claim protects nothing (NR-STO-10) and
+            # every sharing rule in the application is dead code. Checked from the
+            # page, because a folder nobody is shown is a folder nobody uses.
+            print("\na plan nobody else can open")
+            w = pg.evaluate("() => window.__pm.state().where")
+            check(bool(w.get("shared")) and bool(w.get("workspaces")),
+                  "the page is told both places", f"{os.path.basename(w['shared'] or '')}")
+
+            mine_ref = os.path.join(w["workspaces"], "team-copy.prap")
+            pg.evaluate("""async (p) => {
+                const sheets = {};
+                for (const s of REQUIRED_SHEETS) sheets[s] = rawToRows(s);
+                await window.__pm.call('ws/saveAs', {sheets, ref: p});
+                await window.__pm.openPlan(p);
+            }""", mine_ref)
+            pg.wait_for_timeout(1200)
+
+            shown = pg.evaluate("() => window.__pm.checkShared("
+                                "{name: 'A Colleague', department: 'Elsewhere'})")
+            bar = pg.evaluate("() => { const b = document.getElementById('pm-share');"
+                              "return {hidden: b.hidden, text: b.querySelector("
+                              "'[data-text]').textContent}; }")
+            check(shown is True and bar["hidden"] is False,
+                  "A PLAN IN YOUR OWN FOLDER THAT SOMEBODY ELSE SAVED IS FLAGGED - it "
+                  "can only have got there by hand (NR-STO-10)")
+            check("A Colleague" in bar["text"] and "team folder" in bar["text"],
+                  "and it names who, and what to do about it", bar["text"][:80])
+
+            # The trigger is not "private" - most private plans are private on purpose
+            # and a bar on every one of them would be furniture within a week.
+            quiet = pg.evaluate("() => window.__pm.checkShared("
+                                "{name: 'Test Person', department: 'Verification'})")
+            check(quiet is False,
+                  "a plan of your own that only you have saved is NOT nagged about")
+
+            pg.evaluate("() => document.querySelector('#pm-share [data-dismiss]').click()")
+            again = pg.evaluate("() => window.__pm.checkShared({name: 'A Colleague'})")
+            check(again is False
+                  and pg.evaluate("() => document.getElementById('pm-share').hidden"),
+                  "'Not now' means not again for that plan")
+
+            # And the move itself, which is the only thing that actually fixes it.
+            other_ref = os.path.join(w["workspaces"], "team-copy-2.prap")
+            pg.evaluate("""async (p) => {
+                const sheets = {};
+                for (const s of REQUIRED_SHEETS) sheets[s] = rawToRows(s);
+                await window.__pm.call('ws/saveAs', {sheets, ref: p});
+                await window.__pm.openPlan(p);
+            }""", other_ref)
+            pg.wait_for_timeout(1000)
+            pg.evaluate("() => window.__pm.checkShared({name: 'A Colleague'})")
+            pg.evaluate("() => window.__pm.moveToShared()")
+            pg.wait_for_timeout(1500)
+            moved_to = os.path.join(w["shared"], "team-copy-2.prap")
+            check(os.path.exists(moved_to) and not os.path.exists(other_ref),
+                  "MOVING IT PUTS IT WHERE COLLEAGUES CAN OPEN IT, and does not leave "
+                  "a twin behind for somebody to keep editing")
+            check(pg.evaluate("() => window.__pm.state().ref") == moved_to
+                  and pg.evaluate("() => document.getElementById('pm-share').hidden"),
+                  "and the window follows the plan it moved")
+
+            # The other half of the fix: the place is one click away in the browser,
+            # so the right choice can be made before anything goes wrong.
+            pg.evaluate("() => { window.__pm.browseFor({title: 'x'}); }")
+            pg.wait_for_timeout(900)
+            chips = pg.eval_on_selector_all(
+                ".pm-back .pm-crumb button.place", "es => es.map(e => e.textContent)")
+            check(chips == ["My plans", "Team plans"],
+                  "the file browser offers both places by name", ", ".join(chips))
+            pg.evaluate("() => document.querySelector('.pm-back [data-cancel]').click()")
+            pg.wait_for_timeout(300)
+
+            menu2 = pg.eval_on_selector_all(
+                "#pm-title .pm-menu a[data-do]", "es => es.map(e => e.dataset.do)")
+            check("moveToShared" in menu2,
+                  "and the File menu offers the move to somebody who already knows "
+                  "they want it")
+
+            pg.evaluate("(p) => window.__pm.openPlan(p)", plan)
+            pg.wait_for_timeout(1000)
+
             # ---- the journal: something to recover ---------------------------
             print("\nwhat a power cut leaves behind")
             pg.evaluate("(p) => window.__pm.openPlan(p)", plan)

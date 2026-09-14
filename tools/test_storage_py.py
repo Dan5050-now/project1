@@ -223,6 +223,72 @@ def test_versions(d):
     check("retain can be raised without a code change", len(WS.list_versions(ref)) == 3)
 
 
+# -------------------------------------------------- 4b. moving a plan to the team
+
+def test_move(d):
+    """A plan in a private folder is a plan the sharing rules cannot protect, so it
+    has to be possible to move one - and a move that loses a version, or that half
+    happens, is worse than no move at all."""
+    print("\nmoving a plan somewhere everybody can reach it")
+    mine = d / "mine"
+    team = d / "team"
+    for x in (mine, team, mine / "backups"):
+        os.makedirs(x, exist_ok=True)
+    ref = str(mine / "plan.prap")
+
+    WS.save_workspace(ref, sheets(), identity=ME)
+    WS.save_workspace(ref, sheets(), identity=ME)          # leaves one kept version
+    WS.write_journal(ref, [{"sheet": "Project", "row": 1}])
+    body = open(ref, "rb").read()
+    kept_before = len(WS.list_versions(ref))
+    check("a plan with a version behind it and an edit pending", kept_before == 1
+          and WS.read_journal(ref) is not None)
+
+    dst = str(team / "plan.prap")
+    r = WS.move_plan(ref, dst)
+    check("it moves", r["ok"] and r["ref"] == os.path.abspath(dst))
+    check("and arrives byte for byte", open(dst, "rb").read() == body)
+    check("the pending edit comes with it", WS.read_journal(dst) is not None)
+    check("SO DO THE VERSIONS KEPT BEHIND IT", len(WS.list_versions(dst)) == kept_before,
+          f"{len(WS.list_versions(dst))} kept")
+    check("and nothing of it is left where it was",
+          not os.path.exists(ref) and not os.path.exists(WS.journal_path(ref))
+          and not os.path.exists(WS.backup_path(ref, 1)))
+
+    # A name already taken is the case that would quietly destroy somebody's work.
+    WS.save_workspace(str(mine / "plan.prap"), sheets(), identity=ME)
+    theirs = open(dst, "rb").read()
+    try:
+        WS.move_plan(str(mine / "plan.prap"), dst)
+        check("a plan of the same name in the team folder is refused", False)
+    except WS.StorageError as e:
+        check("a plan of the same name in the team folder is REFUSED", e.kind == "exists")
+        check("and theirs is untouched", open(dst, "rb").read() == theirs)
+        check("and mine is still mine", os.path.exists(str(mine / "plan.prap")))
+        check("the refusal says what to do about it",
+              "Rename yours" in e.message and "Nothing has been moved" in e.message)
+
+    # A destination that cannot be written must leave the source alone. Proven by
+    # pointing at a path under a FILE, which no filesystem will accept as a folder.
+    stub = str(d / "a-file.txt")
+    Path(stub).write_text("x", encoding="utf-8")
+    src2 = str(mine / "plan.prap")
+    before2 = open(src2, "rb").read()
+    try:
+        WS.move_plan(src2, os.path.join(stub, "plan.prap"))
+        check("a destination that cannot be written is refused", False)
+    except WS.StorageError as e:
+        check("a destination that cannot be written is refused", e.kind == "copy")
+        check("AND THE PLAN IS STILL WHERE IT WAS", open(src2, "rb").read() == before2)
+    os.unlink(stub)
+
+    try:
+        WS.move_plan(src2, src2)
+        check("moving a plan onto itself is refused", False)
+    except WS.StorageError as e:
+        check("moving a plan onto itself is refused", e.kind == "same")
+
+
 # ------------------------------------------------------------------- 5. journal
 
 def test_journal(d):
@@ -519,6 +585,7 @@ def main():
         test_refusals(d)
         test_kill_mid_save(d)
         test_versions(d)
+        test_move(d)
         test_journal(d)
         test_claim(d)
         test_paths(d)

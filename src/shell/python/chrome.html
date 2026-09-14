@@ -10,6 +10,7 @@
       <hr>
       <a data-do="save">Save<i>Ctrl+S</i></a>
       <a data-do="saveAs">Save as…</a>
+      <a data-do="moveToShared">Move plan to the team folder…<i>so colleagues can open it</i></a>
       <hr>
       <a data-do="import">Import source data…</a>
       <a data-do="importBrowse">Import from a folder…</a>
@@ -62,4 +63,13 @@
   <span class="pm-pill" id="pm-hold" hidden></span>
   <span class="pm-grow"></span>
   <span class="pm-pill" id="pm-where"></span>
+</div>
+
+<!-- A plan in a person's own folder is a plan the sharing rules cannot protect
+     (NR-STO-10). This says so at the moment it matters, and offers the one action
+     that fixes it, rather than leaving it to a note in a folder nobody opens. -->
+<div id="pm-share" hidden>
+  <span data-text></span>
+  <button type="button" class="btn primary" data-move>Move it to the team folder</button>
+  <button type="button" class="btn" data-dismiss>Not now</button>
 </div>
