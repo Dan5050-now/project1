@@ -1,0 +1,552 @@
+diff --git a/src/shell/desktop/paths.js b/src/shell/desktop/paths.js
+index 300847a..d4bf4bc 100644
+--- a/src/shell/desktop/paths.js
++++ b/src/shell/desktop/paths.js
+@@ -81,11 +81,29 @@ function defaultAppDir() {
+             : path.resolve(__dirname, "..", "..", ".."));
+ }
+ 
++/** Can this process actually create a file here? Found out by trying it.
++ *
++ *  IT USED TO ASK fs.accessSync(dir, W_OK), AND ON WINDOWS THAT IS THE WRONG QUESTION.
++ *  There it consults the read-only ATTRIBUTE and not the ACL - and a share's
++ *  permissions are an ACL - so a folder the user cannot write answers yes, and
++ *  NR-DEP-09 is defeated in exactly the case it exists for: the person is told at
++ *  their first Save instead of being asked at launch.
++ *
++ *  A probe file cannot be wrong that way. Whatever decides the answer decides it the
++ *  same way it will decide the real save. EXCL so an existing file is never touched,
++ *  the pid and a timestamp so two sessions cannot collide, and removed either way -
++ *  a folder slowly filling with probes would be a defect of its own. The Python
++ *  shell does the same thing for the same reason. */
+ function writable(dir) {
++  const target = dir;
++  const probe = path.join(target, `.prap-probe-${process.pid}-${Date.now()}`);
++  let fd;
+   try {
+-    fs.accessSync(dir, fs.constants.W_OK);
+-    return true;
++    fd = fs.openSync(probe, "wx");
+   } catch { return false; }
++  try { fs.closeSync(fd); } catch { /* nothing to do */ }
++  try { fs.unlinkSync(probe); } catch { /* nothing to do */ }
++  return true;
+ }
+ 
+ /** Create the folders the resolved location needs. Called once at launch. */
+diff --git a/src/shell/python/paths.py b/src/shell/python/paths.py
+index b3005fe..b4dcd72 100644
+--- a/src/shell/python/paths.py
++++ b/src/shell/python/paths.py
+@@ -107,13 +107,46 @@ def default_app_dir(env=None):
+ 
+ 
+ def writable(d):
++    """Can this process actually create a file here? Found out by trying it.
++
++    IT USED TO ASK os.access(d, os.W_OK), AND ON WINDOWS THAT IS THE WRONG QUESTION.
++    There it consults the read-only ATTRIBUTE and not the ACL - and a share's
++    permissions are an ACL. So a folder the user genuinely cannot write answers YES,
++    and NR-DEP-09's whole purpose is defeated: instead of being asked where to put
++    their data at launch, the person is told at their first Save, after doing the
++    work. The one case the check exists for is the one it got wrong.
++
++    A probe file cannot be wrong in that way. Whatever decides the answer - an ACL, a
++    read-only attribute, a full disk, a quota, a share mounted read-only, a security
++    product sitting in front of the filesystem - it decides this the same way it will
++    decide the real save. O_EXCL so an existing file is never touched, the pid and a
++    timestamp in the name so two sessions cannot collide, and it is removed whether
++    or not the write succeeded.
++
++    This also means the question no longer needs measuring on a company share: there
++    is nothing left to be uncertain about, because the answer is obtained by doing
++    the thing rather than by asking about it.
++    """
++    target = d if os.path.isdir(d) else os.path.dirname(os.path.abspath(d))
++    if not os.path.isdir(target):
++        return False
++    probe = os.path.join(target, ".prap-probe-%d-%d" % (os.getpid(), timefmt.now_ms()))
+     try:
+-        if os.path.isdir(d):
+-            return os.access(d, os.W_OK)
+-        parent = os.path.dirname(os.path.abspath(d))
+-        return os.path.isdir(parent) and os.access(parent, os.W_OK)
++        fd = os.open(probe, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+     except OSError:
+         return False
++    try:
++        os.close(fd)
++    except OSError:
++        pass
++    finally:
++        # Leaving a probe behind would be worse than the check itself: a folder that
++        # slowly fills with them is a defect somebody else has to explain.
++        try:
++            os.unlink(probe)
++        except OSError:
++            pass
++    return True
+ 
+ 
+ def ensure(data_dir, root=None):
+diff --git a/tools/check_share.py b/tools/check_share.py
+new file mode 100644
+index 0000000..be1eb21
+--- /dev/null
++++ b/tools/check_share.py
+@@ -0,0 +1,246 @@
++"""Is this folder safe for several people to keep plans in? Ask the folder, on site.
++
++RUN IT WHERE THE PLANS WILL LIVE:
++
++    python tools/check_share.py \\\\server\\share\\PRAP
++
++WHY IT PRINTS RATHER THAN WRITES. The share that matters is inside a company network,
++and a result file often cannot leave one. So this writes no report: it prints a dozen
++lines to the screen and a short code at the end, and a person can read those out.
++Nothing in the output identifies the company, the share, the machine or the person -
++the path is never printed, only what it did. That is not a courtesy, it is what makes
++the result sayable out loud without anybody having to review it first.
++
++WHAT IT LEAVES BEHIND: nothing. Every file it makes is inside a folder it creates and
++deletes, and it says so at the end. It reads no plan, opens no workbook and touches
++nothing that was already there.
++
++WHAT IT CANNOT TELL YOU. That the share is fast, that backups exist, or that the
++permissions are the ones the company intended. It answers exactly the questions the
++application's own correctness rests on, and no more.
++
++    python tools/check_share.py <folder>          the checks
++    python tools/check_share.py <folder> --keep   leave the scratch folder for
++                                                  inspection instead of removing it
++
++Standard library only, Python 3.9+, one file - so it can be copied to a machine that
++has nothing else on it (NR-DEP-05).
++"""
++
++import hashlib
++import json
++import os
++import sys
++import time
++
++SCRATCH = "prap-share-check"
++FINDINGS = []
++
++
++def say(label, verdict, detail=""):
++    FINDINGS.append((label, verdict, detail))
++    print(f"  {label:<26} {verdict:<9} {detail}")
++
++
++def probe_writable(d):
++    """The predicate the application itself uses, run here against this share."""
++    probe = os.path.join(d, ".prap-probe-%d-%d" % (os.getpid(), int(time.time() * 1000)))
++    try:
++        fd = os.open(probe, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
++    except OSError:
++        return False
++    try:
++        os.close(fd)
++    finally:
++        try:
++            os.unlink(probe)
++        except OSError:
++            pass
++    return True
++
++
++def check_exclusive(work):
++    """One winner. The write claim is an exclusive create and nothing else (NR-STO-10).
++
++    A share that let two callers both create the same name would hand the same plan to
++    two people at once, and neither would be told."""
++    target = os.path.join(work, "claim")
++    won = 0
++    for _ in range(8):
++        try:
++            fd = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
++        except FileExistsError:
++            continue
++        except OSError:
++            return say("exclusive create", "ERROR", "the share refused the call itself")
++        os.close(fd)
++        won += 1
++    os.unlink(target)
++    say("exclusive create", "PASS" if won == 1 else "FAIL", f"{won} winner of 8 attempts")
++
++
++def check_replace(work):
++    """A save lands whole or not at all: written aside, then renamed over."""
++    final = os.path.join(work, "plan")
++    with open(final, "w", encoding="utf-8") as f:
++        f.write("old")
++    tmp = final + ".tmp"
++    with open(tmp, "w", encoding="utf-8") as f:
++        f.write("new")
++    try:
++        os.replace(tmp, final)
++    except OSError as e:
++        return say("rename over existing", "FAIL", type(e).__name__)
++    got = open(final, encoding="utf-8").read()
++    os.unlink(final)
++    say("rename over existing", "PASS" if got == "new" else "FAIL", "" if got == "new"
++        else "the rename reported success and the old content is still there")
++
++
++def check_append(work):
++    """Two writers on one change log. Every row already names who made the change, so
++    the risk is a TORN row rather than an out-of-order one (defect G)."""
++    log = os.path.join(work, "log.csv")
++    rows = 200
++    for who in ("A", "B"):
++        with open(log, "a", encoding="utf-8") as f:
++            for i in range(rows):
++                f.write(f"{who},{i:04d},{'x' * 40}\n")
++                f.flush()
++    lines = open(log, encoding="utf-8").read().splitlines()
++    torn = [ln for ln in lines if len(ln.split(",")) != 3 or len(ln) != 47]
++    os.unlink(log)
++    say("append, 2 writers", "PASS" if not torn and len(lines) == rows * 2 else "FAIL",
++        f"{len(lines)} rows, {len(torn)} torn")
++
++
++def check_mtime(work):
++    """Informational ONLY, and labelled so. The application compares a plan's own
++    last_saved and no longer believes a modification time - a share that rounds one to
++    two seconds cannot tell two saves apart. The number is printed because it explains
++    why, not because anything depends on it."""
++    a = os.path.join(work, "t1")
++    stamps = []
++    for _ in range(3):
++        with open(a, "w", encoding="utf-8") as f:
++            f.write("x")
++        stamps.append(os.stat(a).st_mtime)
++        time.sleep(0.35)
++    os.unlink(a)
++    gaps = [round(stamps[i + 1] - stamps[i], 3) for i in range(len(stamps) - 1)]
++    coarse = all(g == 0 or abs(g - round(g)) < 0.001 for g in gaps)
++    say("mtime granularity", "INFO", f"gaps {gaps} s"
++        + ("  - coarse, as a share often is" if coarse else ""))
++
++
++def check_journal(work):
++    """What a power cut leaves behind must still be there afterwards, and must be
++    judged by the plan's own last_saved rather than by a clock (NR-STO-07)."""
++    ref = os.path.join(work, "p.prap")
++    with open(ref, "w", encoding="utf-8") as f:
++        json.dump({"workspace": {"last_saved": "2026-01-01T00:00:00.000Z"}}, f)
++    jrn = ref + ".journal"
++    tmp = jrn + ".tmp"
++    with open(tmp, "w", encoding="utf-8") as f:
++        json.dump({"pending": [{"col": "project_name"}],
++                   "base_saved": "2026-01-01T00:00:00.000Z"}, f)
++        f.flush()
++        os.fsync(f.fileno())
++    os.replace(tmp, jrn)
++    back = json.load(open(jrn, encoding="utf-8"))
++    same_tick = back.get("base_saved") == json.load(
++        open(ref, encoding="utf-8"))["workspace"]["last_saved"]
++    os.unlink(jrn)
++    os.unlink(ref)
++    say("journal survives", "PASS" if back.get("pending") and same_tick else "FAIL",
++        "written, read back, and still matches its save")
++
++
++def check_listing(work):
++    """A plan nobody can see is a plan nobody can open."""
++    name = os.path.join(work, "visible.prap")
++    with open(name, "w", encoding="utf-8") as f:
++        f.write("{}")
++    seen = "visible.prap" in os.listdir(work)
++    os.unlink(name)
++    say("new file is listed", "PASS" if seen else "FAIL")
++
++
++def main(argv):
++    if len(argv) < 2:
++        print(__doc__.strip().splitlines()[0])
++        print("\n    python tools/check_share.py <folder>")
++        return 2
++    where = argv[1]
++    keep = "--keep" in argv
++
++    print()
++    print("PM_APP  share check".ljust(42) + time.strftime("%Y-%m-%d %H:%M"))
++    print("  " + "-" * 62)
++
++    if not os.path.isdir(where):
++        print("  that folder is not there, or this machine cannot see it.")
++        return 1
++
++    say("writable (probe file)", "PASS" if probe_writable(where) else "FAIL",
++        "this is the application's own check")
++    if FINDINGS[-1][1] == "FAIL":
++        print("\n  Nothing else can be checked in a folder that cannot be written.")
++        print("  verdict  NOT USABLE - choose another folder, or ask for write access.")
++        return 1
++
++    work = os.path.join(where, SCRATCH)
++    try:
++        os.mkdir(work)
++    except FileExistsError:
++        print(f"\n  '{SCRATCH}' is already there - an earlier run was interrupted.")
++        print("  Delete it and run this again.")
++        return 1
++    except OSError as e:
++        print(f"\n  could not make a scratch folder: {type(e).__name__}")
++        return 1
++
++    try:
++        check_exclusive(work)
++        check_replace(work)
++        check_append(work)
++        check_journal(work)
++        check_listing(work)
++        check_mtime(work)
++    finally:
++        if keep:
++            print(f"\n  scratch folder kept: {SCRATCH}")
++        else:
++            for f in os.listdir(work):
++                try:
++                    os.unlink(os.path.join(work, f))
++                except OSError:
++                    pass
++            try:
++                os.rmdir(work)
++                left = "nothing left behind"
++            except OSError:
++                left = f"COULD NOT REMOVE '{SCRATCH}' - please delete it by hand"
++
++    bad = [f for f in FINDINGS if f[1] == "FAIL"]
++    err = [f for f in FINDINGS if f[1] == "ERROR"]
++    print("  " + "-" * 62)
++    verdict = ("SAFE FOR SHARED USE" if not bad and not err
++               else "NOT SAFE - report the FAIL lines above")
++    print(f"  {'verdict':<26} {verdict}")
++    if not keep:
++        print(f"  {'cleanup':<26} {left}")
++
++    # A short code over the verdicts, so six lines read down a telephone can be checked
++    # for a slip. It is a digest of the PASS/FAIL words only - it carries no path, no
++    # name and no timing, and it cannot be turned back into any of them.
++    digest = hashlib.sha256("|".join(f"{a}={b}" for a, b, _ in FINDINGS).encode()).digest()
++    alpha = "0123456789ABCDEFGHJKMNPQRSTUVWXYZ"          # no I, L, O - they misread
++    code = "".join(alpha[b % 33] for b in digest[:12])
++    print(f"  {'code':<26} {code[:4]}-{code[4:8]}-{code[8:12]}")
++    print()
++    return 1 if (bad or err) else 0
++
++
++if __name__ == "__main__":
++    sys.exit(main(sys.argv))
+diff --git a/tools/test_share_check.py b/tools/test_share_check.py
+new file mode 100644
+index 0000000..2059736
+--- /dev/null
++++ b/tools/test_share_check.py
+@@ -0,0 +1,101 @@
++"""tools/check_share.py - the on-site check, checked here.
++
++It exists because a result file cannot always leave a company network, so its whole
++output is a dozen lines somebody reads off a screen. That places two requirements on it
++that are easy to state and easy to break later:
++
++    it must leave the folder exactly as it found it, and
++    it must not print anything that would need clearing before being said out loud -
++    no path, no share name, no machine, no account.
++
++Both are checked here rather than trusted, because the second one is the kind of promise
++that is made once and broken by a helpful debug line six months later.
++
++    python tools/test_share_check.py
++"""
++
++import os
++import pathlib
++import subprocess
++import sys
++import tempfile
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++TOOL = ROOT / "tools" / "check_share.py"
++
++fails = []
++
++
++def check(label, ok, detail=""):
++    print(f"  {'ok  ' if ok else 'FAIL'}  {label}" + (f"   {detail}" if detail else ""))
++    if not ok:
++        fails.append(label)
++
++
++def run(*args):
++    r = subprocess.run([sys.executable, str(TOOL), *args],
++                       capture_output=True, text=True, timeout=120)
++    return r.returncode, r.stdout
++
++
++print("the on-site share check")
++
++with tempfile.TemporaryDirectory() as d:
++    # A path with something identifiable in it, so that if the tool ever prints where
++    # it is looking, this test is what notices.
++    share = os.path.join(d, "ACME-FILESERVER", "Department Plans")
++    os.makedirs(share)
++    before = sorted(os.listdir(share))
++    rc, out = run(share)
++
++    check("a healthy folder passes", rc == 0 and "SAFE FOR SHARED USE" in out)
++    check("every check it makes is reported",
++          all(k in out for k in ("writable", "exclusive create", "rename over existing",
++                                 "append, 2 writers", "journal survives",
++                                 "new file is listed", "mtime granularity")),
++          f"{out.count('PASS')} PASS")
++    check("THE FOLDER IS EXACTLY AS IT WAS", sorted(os.listdir(share)) == before,
++          f"{len(os.listdir(share))} entries")
++    check("and it says so", "nothing left behind" in out)
++
++    # The one that makes the result sayable down a telephone.
++    leaked = [w for w in ("ACME-FILESERVER", "Department Plans", share, d,
++                          os.uname().nodename if hasattr(os, "uname") else "\0")
++              if w and w in out]
++    check("NOTHING IN THE OUTPUT IDENTIFIES THE SITE", not leaked,
++          "leaked: " + ", ".join(leaked) if leaked else "no path, no host, no account")
++
++    code = [ln for ln in out.splitlines() if ln.strip().startswith("code")]
++    check("a transcription code is printed", len(code) == 1 and len(code[0].split()[-1]) == 14,
++          code[0].strip() if code else "none")
++
++    # THE CODE HAS TO BE A FUNCTION OF THE VERDICTS AND OF NOTHING ELSE. It is there so
++    # that six lines read down a telephone can be checked for a slip, which only works
++    # if the same verdicts always give the same code - put a timestamp or a path into
++    # that digest and it becomes a number nobody can verify anything against. Two runs,
++    # same folder, same verdicts.
++    _, out_again = run(share)
++    code_again = [ln for ln in out_again.splitlines() if ln.strip().startswith("code")]
++    check("and the same verdicts give the same code, which is what makes it checkable",
++          bool(code) and code_again == code, code_again[0].strip() if code_again else "none")
++
++    rc2, out2 = run(os.path.join(d, "not-there"))
++    check("a folder that is not there is refused, not guessed at",
++          rc2 == 1 and "not there" in out2)
++
++    os.mkdir(os.path.join(share, "prap-share-check"))
++    rc3, out3 = run(share)
++    check("an interrupted earlier run is noticed rather than written over",
++          rc3 == 1 and "already there" in out3)
++    os.rmdir(os.path.join(share, "prap-share-check"))
++
++    rc4, out4 = run(share, "--keep")
++    kept = os.path.isdir(os.path.join(share, "prap-share-check"))
++    check("--keep leaves the scratch folder for inspection", rc4 == 0 and kept)
++    if kept:
++        for f in os.listdir(os.path.join(share, "prap-share-check")):
++            os.unlink(os.path.join(share, "prap-share-check", f))
++        os.rmdir(os.path.join(share, "prap-share-check"))
++
++print(f"\nFAILURES: {', '.join(fails) if fails else 'none'}")
++sys.exit(1 if fails else 0)
+diff --git a/tools/test_storage.mjs b/tools/test_storage.mjs
+index 2f47c0b..54b61e4 100644
+--- a/tools/test_storage.mjs
++++ b/tools/test_storage.mjs
+@@ -308,6 +308,24 @@ if (asRoot) {
+ }
+ fs.chmodSync(readOnlyDir, 0o700);
+ 
++// writable() asks by DOING it now, not by asking the OS's opinion of it. accessSync
++// on Windows reads the read-only ATTRIBUTE and not the ACL, and a share's permissions
++// are an ACL - so the folder NR-DEP-09 exists for was the folder it got wrong. What is
++// checkable without Windows is that the probe is real and that it cleans up after
++// itself; the ACL case needs no checking any more, because nothing asks about it.
++const beforeProbe = new Set(fs.readdirSync(appDir));
++check(PA.writable(appDir) === true, "a folder this process can write reports writable");
++check(fs.readdirSync(appDir).every(f => beforeProbe.has(f))
++      && fs.readdirSync(appDir).length === beforeProbe.size,
++      "and the probe leaves NOTHING behind");
++check(PA.writable(path.join(appDir, "no", "such", "place")) === false,
++      "a folder that is not there is not writable");
++const stub = path.join(appDir, "not-a-folder.txt");
++fs.writeFileSync(stub, "x");
++check(PA.writable(stub) === false, "and a FILE is not a place to put files - which the "
++      + "probe finds out by failing rather than by being told");
++fs.unlinkSync(stub);
++
+ const st = PA.addRecent({ recent: [] }, path.join(appDir, "data", "users", "kim", "a.prap"), appDir);
+ check(!path.isAbsolute(st.recent[0].ref) && st.recent[0].ref.includes("/"),
+       "a recent plan inside the folder is remembered RELATIVELY, so copying the folder "
+diff --git a/tools/test_storage_py.py b/tools/test_storage_py.py
+index d1b0301..c98536c 100644
+--- a/tools/test_storage_py.py
++++ b/tools/test_storage_py.py
+@@ -398,6 +398,68 @@ def test_paths(d):
+     check("odd account names are made safe for a path",
+           PA.account_name({"USERNAME": "DOMAIN\\kim lee"}) == "DOMAIN_kim_lee")
+ 
++    # ---- writable(): asked by DOING it, not by asking about it ------------------
++    # The predicate behind rule 4. It used to be os.access(W_OK), which on Windows
++    # reads the read-only attribute and not the ACL - so a share folder the user
++    # cannot write answered YES and NR-DEP-09 failed in its own case. It writes a
++    # probe file now. What can be checked here is that the probe is real, that it
++    # leaves nothing behind, and that a folder which is not there is not writable;
++    # the ACL case itself needs Windows, which is the point - the probe removes the
++    # need to know what the ACL says.
++    before = set(os.listdir(app))
++    check("a folder this process can write reports writable", PA.writable(app) is True)
++    check("and the probe leaves NOTHING behind", set(os.listdir(app)) == before)
++    check("a folder that does not exist is not writable",
++          PA.writable(os.path.join(app, "no", "such", "place")) is False)
++    # A path rather than a directory answers for the directory that would hold it,
++    # because that is where the save would land.
++    check("a path answers for the folder that would hold it",
++          PA.writable(os.path.join(app, "would-be.prap")) is True)
++    check("and still leaves nothing behind", set(os.listdir(app)) == before)
++    # The one that proves it is not asking the OS's opinion: a FILE is not a folder
++    # anything can be created in, and the probe finds that out by failing.
++    stub = os.path.join(app, "not-a-folder.txt")
++    Path(stub).write_text("x", encoding="utf-8")
++    check("a file is not a place to put files",
++          PA.writable(os.path.join(stub, "under-a-file.prap")) is False)
++    os.unlink(stub)
++
++    # THE CASE THIS SUITE HAS NEVER BEEN ABLE TO EXERCISE. Every note about NR-DEP-09
++    # here and in test_storage.mjs says the same thing: the process is root, root
++    # writes where the mode forbids it, so the real predicate cannot be made to say
++    # no and the case is reported rather than tested. The probe changes that, because
++    # what it does can be done by somebody else: run the same exclusive create as an
++    # unprivileged user in a folder that user cannot write. It is the mechanism rather
++    # than the module - paths.py cannot be imported standalone from another user, and
++    # a weaker check that is honest about what it proves beats a stronger one that is
++    # not - but it is the first time the no-answer has been produced here at all.
++    ro = os.path.join(d, "readonly")
++    os.makedirs(ro, exist_ok=True)
++    os.chmod(ro, 0o555)
++    can_drop = (hasattr(os, "getuid") and os.getuid() == 0
++                and shutil.which("runuser") is not None)
++    if can_drop:
++        probe = os.path.join(ro, ".prap-probe-test")
++        r = subprocess.run(
++            ["runuser", "-u", "nobody", "--", sys.executable, "-c",
++             "import os,sys\n"
++             "try:\n"
++             "    fd = os.open(sys.argv[1], os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)\n"
++             "except OSError:\n"
++             "    print('REFUSED')\n"
++             "else:\n"
++             "    os.close(fd); os.unlink(sys.argv[1]); print('ALLOWED')\n", probe],
++            capture_output=True, text=True)
++        check("the probe says NO to a folder an unprivileged user cannot write "
++              "(NR-DEP-09, exercised at last)", r.stdout.strip() == "REFUSED",
++              r.stdout.strip() or r.stderr.strip()[:60])
++        check("and it left nothing in a folder it could not write",
++              not os.path.exists(probe))
++    else:
++        print("  --    the unprivileged case is not exercised here: it needs root and "
++              "runuser to drop to. The probe mechanism itself is checked above.")
++    os.chmod(ro, 0o755)
++
+     # NR-DEP-08: recent plans are stored relative, so moving the folder does not
+     # break the list.
+     s = PA.add_recent(dict(PA.DEFAULT_SETTINGS), os.path.join(app, "data", "p.prap"), app)
