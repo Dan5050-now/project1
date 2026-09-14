@@ -1,0 +1,724 @@
+diff --git a/tools/build_python_app.py b/tools/build_python_app.py
+index 6a98578..cac9554 100644
+--- a/tools/build_python_app.py
++++ b/tools/build_python_app.py
+@@ -85,6 +85,78 @@ if __name__ == "__main__":
+     raise SystemExit(main())
+ '''
+ 
++# The launcher. Windows, and written for the case where the person has no Python and
++# no way to install one: if a runtime has been put beside the application it is used,
++# and nothing on the machine is consulted at all.
++#
++# WHY A .cmd AND NOT "double-click PM_APP.py". A .py file only starts if Windows has an
++# association for it, which is exactly what a machine without Python does not have - and
++# when the association is missing the person gets an "open with" dialog listing
++# everything except the answer. A .cmd always runs.
++#
++# CRLF and no BOM, because cmd.exe is the one consumer left that needs both.
++LAUNCHER = """@echo off
++rem  Project Management APP - start here.
++rem
++rem  Looks for a Python to run with, in this order:
++rem      1. runtime\\python.exe beside this file   (nothing is installed on this PC)
++rem      2. the py launcher                        (a normal Python installation)
++rem      3. python on the PATH
++rem  and says so plainly if it finds none.
++
++setlocal
++cd /d "%~dp0"
++
++if exist "%~dp0runtime\\python.exe" (
++  "%~dp0runtime\\python.exe" "%~dp0PM_APP.py" %*
++  goto done
++)
++
++py -3 --version >nul 2>&1
++if not errorlevel 1 (
++  py -3 "%~dp0PM_APP.py" %*
++  goto done
++)
++
++rem  DO NOT JUST RUN `python`. On Windows 10 and 11 an "app execution alias" for
++rem  python.exe exists by DEFAULT at %LOCALAPPDATA%\\Microsoft\\WindowsApps, and running
++rem  it opens the Microsoft Store - on a PC with no Python, which is exactly the PC
++rem  this launcher is for. `where` only LOOKS, so the alias is found and skipped
++rem  without ever being started.
++set "PYEXE="
++for /f "delims=" %%p in ('where python 2^>nul') do if not defined PYEXE set "PYEXE=%%p"
++if defined PYEXE (
++  echo %PYEXE% | find /i "\\WindowsApps\\" >nul && set "PYEXE="
++)
++if defined PYEXE (
++  "%PYEXE%" "%~dp0PM_APP.py" %*
++  goto done
++)
++
++echo.
++echo   This PC has no Python, and no runtime was supplied beside the application.
++echo.
++echo   Either is enough:
++echo     * ask for the folder that has runtime\\ inside it - nothing gets installed
++echo     * or ask IT for Python 3.9 or newer
++echo.
++echo   Nothing has been changed on this PC.
++echo.
++pause
++goto :eof
++
++:done
++rem  A non-zero code here is the application failing to START - a stopped application
++rem  exits cleanly. Without this the window closes on the message explaining why.
++if errorlevel 1 (
++  echo.
++  echo   The application stopped with an error. The lines above say why.
++  echo.
++  pause
++)
++"""
++
++
+ READ_ME = """PROJECT MANAGEMENT APP - Python edition
+ =======================================
+ 
+@@ -976,17 +1048,37 @@ WHY THIS VERSION EXISTS
+ 
+ WHAT YOU NEED
+ 
+-  Python 3.9 or newer. You said 3.14, which is fine.
++  Python 3.9 or newer - UNLESS a runtime\\ folder came with this one, in which
++  case you need nothing at all and can skip to HOW TO START IT.
+   Check with:   python --version
+ 
++  NO PYTHON ON THIS PC, AND NO WAY TO INSTALL ONE? That is a solved problem and
++  not a blocker. Ask whoever gave you this folder for the version with runtime\\
++  inside it. That folder holds a Python that is UNPACKED rather than installed:
++  it touches no registry key, needs no administrator, changes no PATH, and does
++  not disturb a Python you may already have. Deleting this folder removes it
++  completely. PM_APP.cmd finds it by itself.
++
++  Not sure whether this PC can run it? Ask it:
++
++      PM_APP.cmd is the application; check_pc.py beside it answers this:
++          python check_pc.py                  with a Python you already have
++          runtime\\python.exe check_pc.py      with the one that came along
++
++  It writes nothing and prints about ten lines, naming anything in the way.
++
+ 
+ HOW TO START IT
+ 
+   1. Extract this whole folder somewhere of your own - your Documents folder is
+      ideal. Keep the folders inside it as they are.
+-  2. Double-click PM_APP.py.
+-       If Windows asks what to open it with, choose Python.
+-       From a command prompt this also works:   python PM_APP.py
++  2. Double-click PM_APP.cmd.
++       It finds a runtime\\ beside it if one came with this folder, and a Python
++       on the PC otherwise - and says so plainly if there is neither.
++       From a command prompt this also works:   PM_APP.cmd
++       (PM_APP.py still starts it directly, for anyone who prefers that. A .cmd is
++        offered because a .py only opens if Windows has been told what a .py is,
++        which on a PC without Python it has not.)
+   3. A black console window appears and your browser opens the application.
+   4. KEEP THE CONSOLE WINDOW OPEN while you work. Closing it stops the
+      application; that is how you shut it down.
+@@ -1074,6 +1166,15 @@ def page():
+ 
+ def build():
+     if OUT.exists():
++        # A bundled runtime lives inside this folder, and this is about to delete it.
++        # Silently would be the worst of it: PM_APP.cmd would go on working on THIS
++        # machine, by falling back to the Python here, and would tell somebody with no
++        # Python that none was supplied - long after the person who built it had
++        # stopped looking.
++        if (OUT / "runtime").is_dir():
++            print(f"  note    removing the bundled runtime in {OUT.name}/runtime - "
++                  f"put it back with\n"
++                  f"          python tools/bundle_runtime.py <embeddable zip>")
+         shutil.rmtree(OUT)
+     (OUT / "app").mkdir(parents=True)
+     (OUT / "pmapp" / "shell").mkdir(parents=True)
+@@ -1093,6 +1194,14 @@ def build():
+         (OUT / pkg / "__init__.py").write_text(f'"""{what}"""\n', encoding="utf-8")
+ 
+     (OUT / "PM_APP.py").write_text(ENTRY, encoding="utf-8")
++    # newline="" keeps the CRLF written above; encoding without a BOM, which cmd.exe
++    # would otherwise echo as a stray character on the first line.
++    with open(OUT / "PM_APP.cmd", "w", encoding="ascii", newline="") as f:
++        f.write(LAUNCHER.replace("\n", "\r\n"))
++    # Ships WITH the application, because the person who needs to ask "can this PC
++    # run it" is precisely the person holding the application folder and nothing else.
++    (OUT / "check_pc.py").write_text(
++        (ROOT / "tools" / "check_pc.py").read_text(encoding="utf-8"), encoding="utf-8")
+     (OUT / "version.txt").write_text(VERSION + "\n", encoding="utf-8")
+     (OUT / "READ ME FIRST.txt").write_text(READ_ME, encoding="utf-8")
+ 
+diff --git a/tools/bundle_runtime.py b/tools/bundle_runtime.py
+new file mode 100644
+index 0000000..4a371a8
+--- /dev/null
++++ b/tools/bundle_runtime.py
+@@ -0,0 +1,178 @@
++"""Put a Python beside the application, so a PC that has none can still run it.
++
++    python tools/bundle_runtime.py python-3.14.7-embed-amd64.zip
++
++WHAT THIS IS FOR. Some staff PCs have no Python and no way to get one without a
++request to IT. Windows publishes an EMBEDDABLE PACKAGE for exactly this: a zip of
++python.exe, its DLLs and the standard library, which is unpacked rather than
++installed. It touches no registry key, needs no administrator, changes no PATH, and
++does not disturb a Python already on the machine. Deleting the folder removes it.
++
++    https://www.python.org/downloads/windows/   ->  "Windows embeddable package"
++
++The zip is not downloaded here. It comes through whatever channel the company allows,
++and this tool takes the file once it has arrived.
++
++THREE THINGS MAKE THIS WORK, AND ALL THREE ARE ALREADY TRUE:
++
++  * The application imports nothing but the standard library (NR-DEP-05, enforced by
++    tools/test_layers.py), so the missing pip does not matter.
++  * The embeddable package HAS NO TKINTER - and the shell already expects that, and
++    serves its own folder browser in the page instead. Nothing is lost but the
++    Windows file dialog.
++  * The embeddable package fixes sys.path with a ._pth file and ignores PYTHONPATH,
++    which normally breaks `import pmapp`. PM_APP.py inserts its own folder itself, so
++    it does not. That line is CHECKED below rather than assumed - it is load-bearing
++    from a distance, and the kind of thing a tidy-up removes.
++
++    python tools/bundle_runtime.py <zip>              into dist/PM_APP_py
++    python tools/bundle_runtime.py <zip> --into <dir> into somewhere else
++    python tools/bundle_runtime.py <zip> --replace    overwrite a runtime already there
++"""
++
++import hashlib
++import os
++import pathlib
++import re
++import shutil
++import subprocess
++import sys
++import zipfile
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++DEFAULT_APP = ROOT / "dist" / "PM_APP_py"
++NEEDED_LINE = "sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))"
++
++
++def die(*lines):
++    print()
++    for ln in lines:
++        print("  " + ln)
++    print()
++    raise SystemExit(1)
++
++
++def looks_embeddable(names):
++    """An embeddable package, and not one of the things people reach for instead.
++
++    The full installer is an .exe; the "Windows installer" zip and a source tarball
++    both carry a Lib\\ tree. Saying which of those arrived is the difference between
++    one more download and half an hour."""
++    has_exe = any(n.lower() == "python.exe" for n in names)
++    has_stdlib_zip = any(re.fullmatch(r"python\d+\.zip", n.lower()) for n in names)
++    has_pth = any(n.lower().endswith("._pth") for n in names)
++    has_lib_tree = any(n.lower().startswith(("lib/", "lib\\")) for n in names)
++    return has_exe and has_stdlib_zip and has_pth and not has_lib_tree
++
++
++def version_of(names):
++    for n in names:
++        m = re.fullmatch(r"python(\d)(\d+)\.zip", n.lower())
++        if m:
++            return f"{m.group(1)}.{m.group(2)}"
++    return None
++
++
++def main(argv):
++    rest, flags, app = [], set(), DEFAULT_APP
++    it = iter(argv[1:])
++    for a in it:
++        if a == "--into":
++            nxt = next(it, None)
++            if nxt is None:
++                die("--into needs a folder after it.")
++            app = pathlib.Path(nxt)
++        elif a.startswith("--"):
++            flags.add(a)
++        else:
++            rest.append(a)
++    if not rest:
++        print(__doc__.strip().splitlines()[0])
++        print("\n    python tools/bundle_runtime.py <embeddable zip>")
++        return 2
++    src = pathlib.Path(rest[0])
++
++    if not src.is_file():
++        die(f"{src} is not there.")
++    if not zipfile.is_zipfile(src):
++        die(f"{src.name} is not a zip file.",
++            "The embeddable package is a .zip - the one whose name ends -embed-amd64.zip.",
++            "The .exe on that page is the installer, which is the other thing.")
++    if not app.is_dir():
++        die(f"{app} is not there. Build the application first:",
++            "    python tools/build_python_app.py")
++    if not (app / "PM_APP.py").is_file():
++        die(f"{app} does not look like the application - no PM_APP.py in it.")
++
++    entry = (app / "PM_APP.py").read_text(encoding="utf-8")
++    if NEEDED_LINE not in entry:
++        die("PM_APP.py no longer puts its own folder on sys.path.",
++            "An embeddable Python fixes sys.path from its ._pth file and ignores",
++            "PYTHONPATH, so without that line `import pmapp` fails and the",
++            "application does not start. Nothing has been unpacked.",
++            "",
++            f"    expected: {NEEDED_LINE}")
++
++    with zipfile.ZipFile(src) as z:
++        names = [n for n in z.namelist() if not n.endswith("/")]
++        if not looks_embeddable(names):
++            die(f"{src.name} is not a Windows embeddable package.",
++                "It should contain python.exe, pythonXY.zip and a ._pth file, and no",
++                "Lib\\ folder. What arrived has:",
++                "    " + ", ".join(sorted(names)[:6]) + (" ..." if len(names) > 6 else ""))
++        ver = version_of(names)
++        runtime = app / "runtime"
++        if runtime.exists():
++            if "--replace" not in flags:
++                die(f"{runtime} is already there.",
++                    "Run again with --replace to overwrite it.")
++            shutil.rmtree(runtime)
++        runtime.mkdir(parents=True)
++        z.extractall(runtime)
++
++    digest = hashlib.sha256(src.read_bytes()).hexdigest()
++    files = sorted(p for p in runtime.rglob("*") if p.is_file())
++    size = sum(p.stat().st_size for p in files)
++
++    print()
++    print(f"Runtime bundled into {runtime}")
++    print(f"  from      {src.name}")
++    print(f"  sha256    {digest}")
++    print(f"  python    {ver or 'unknown'}   (the application needs 3.9 or newer)")
++    print(f"  files     {len(files)}, {size / 1048576:.1f} MB")
++
++    # If this IS Windows, do not describe the result - run it.
++    exe = runtime / "python.exe"
++    if os.name == "nt" and exe.is_file():
++        def ran(*a):
++            r = subprocess.run([str(exe), *a], capture_output=True, text=True, timeout=120)
++            return r.returncode == 0, (r.stdout or r.stderr).strip()
++        ok, out = ran("-c", "import sys; print('.'.join(map(str, sys.version_info[:3])))")
++        print(f"  it runs   {out if ok else 'NO - ' + out}")
++        mods = ("base64 datetime errno getpass http json os pathlib queue re secrets "
++                "shutil socket string sys threading time urllib webbrowser").split()
++        ok2, out2 = ran("-c", "import " + ", ".join(mods) + "; print('all present')")
++        print(f"  stdlib    {out2 if ok2 else 'MISSING - ' + out2}")
++        ok3, _ = ran("-c", "import tkinter")
++        print("  tkinter   " + ("present" if ok3 else
++              "absent - the app serves its own folder browser instead, as expected"))
++        ok4, out4 = ran(str(app / "PM_APP.py"), "--version")
++        if not ok4:
++            print(f"  START     NO - {out4.splitlines()[-1] if out4 else 'no output'}")
++    else:
++        print( "  not run   this is not Windows, so python.exe was unpacked and")
++        print( "            checked for shape only. Run tools/check_pc.py with it on")
++        print(f"            a Windows PC:  runtime\\python.exe tools\\check_pc.py")
++
++    print()
++    print("  Give people the whole folder. PM_APP.cmd finds this runtime by itself,")
++    print("  and nothing is installed on their PC.")
++    print()
++    print("  Rebuilding the application empties that folder, runtime and all. Run this")
++    print("  again after any  python tools/build_python_app.py .")
++    print()
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main(sys.argv))
+diff --git a/tools/check_pc.py b/tools/check_pc.py
+new file mode 100644
+index 0000000..d967857
+--- /dev/null
++++ b/tools/check_pc.py
+@@ -0,0 +1,199 @@
++"""Can this PC run the application? Ask the PC, on site.
++
++    python tools\\check_pc.py                 with whatever Python started it
++    runtime\\python.exe tools\\check_pc.py     with the runtime bundled beside the app
++
++WHY IT PRINTS RATHER THAN WRITES, same as tools/check_share.py: the machine that has
++to answer is inside a company network, and a result file often cannot leave one. So
++this writes no report. A dozen lines on the screen and a short code, and a person can
++read those out. Nothing in the output names the machine, the account, the domain or
++any path - not as a courtesy, but because that is what makes the answer sayable out
++loud without anybody having to review it first.
++
++WHAT IT ANSWERS. Everything the application needs from a PC, and nothing else:
++
++    a Python new enough                       3.9 or newer
++    the standard library it uses              nineteen modules, no pip, no wheel
++    a loopback socket it can listen on        the shell serves the page on 127.0.0.1
++    a browser it can open                     the page has to appear somewhere
++    somewhere to write beside itself          data\\ lives next to the application
++
++A FAIL is something that stops the application. A WARN is something that does not -
++the application runs, and one named thing about it is worse. They are reported apart
++because a check that calls a survivable thing fatal is a check people learn to argue
++with.
++
++It does NOT answer whether the shared folder works - tools/check_share.py does that,
++and the two are separate because they fail for different reasons and are fixed by
++different people.
++
++    python tools/check_pc.py                 the checks
++    python tools/check_pc.py --where <dir>   also: can it write in THAT folder
++"""
++
++import hashlib
++import os
++import socket
++import sys
++import time
++
++FINDINGS = []
++NEEDED = ("base64 datetime errno getpass http json os pathlib queue re secrets shutil "
++          "socket string sys threading time urllib webbrowser").split()
++
++
++# FAIL means THE APPLICATION WILL NOT RUN. WARN means it runs and something is worse
++# in a way worth naming. Keeping them apart matters more than it looks: the first
++# version of this called a missing browser a FAIL, while its own explanation said the
++# address can be pasted into one by hand - a check that contradicts itself teaches
++# people to read past its verdict, and then the real FAIL goes past too.
++def say(label, verdict, detail=""):
++    FINDINGS.append((label, verdict, detail))
++    print(f"  {label:<26} {verdict:<9} {detail}")
++
++
++def check_python():
++    v = sys.version_info
++    ok = v >= (3, 9)
++    say("python version", "PASS" if ok else "FAIL", f"{v[0]}.{v[1]}.{v[2]}")
++    # Which Python this is matters more than it looks: if the answer is "the bundled
++    # one" then nothing had to be installed here, which is the whole question.
++    here = os.path.dirname(os.path.abspath(sys.executable)).replace("\\", "/")
++    bundled = here.rstrip("/").endswith("/runtime")
++    say("which python", "INFO",
++        "the runtime bundled beside the application - nothing is installed on this PC"
++        if bundled else "one already on this PC")
++
++
++def check_stdlib():
++    missing = []
++    for m in NEEDED:
++        try:
++            __import__(m)
++        except ImportError:
++            missing.append(m)
++    say("standard library", "PASS" if not missing else "FAIL",
++        f"{len(NEEDED)} modules needed" if not missing else "missing " + ", ".join(missing))
++    try:
++        __import__("tkinter")
++        say("tkinter", "INFO", "present - Windows file dialogs will be used")
++    except ImportError:
++        say("tkinter", "INFO",
++            "absent - the application serves its own folder browser, which is expected "
++            "with a bundled runtime and costs nothing")
++
++
++def check_loopback():
++    """The shell serves the page to the browser on 127.0.0.1. Endpoint security that
++    forbids a local listening socket is the one failure that stops everything, and it
++    is invisible until the application is run."""
++    try:
++        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
++        s.bind(("127.0.0.1", 0))
++        s.listen(1)
++        port = s.getsockname()[1]
++    except OSError as e:
++        return say("loopback socket", "FAIL", f"refused ({type(e).__name__})")
++    try:
++        c = socket.create_connection(("127.0.0.1", port), timeout=5)
++        conn, _ = s.accept()
++        conn.close()
++        c.close()
++        say("loopback socket", "PASS", "listened on 127.0.0.1 and connected to it")
++    except OSError as e:
++        say("loopback socket", "FAIL", f"could listen but not connect ({type(e).__name__})")
++    finally:
++        s.close()
++
++
++def check_browser():
++    """Something has to open the page. This asks whether a browser is REGISTERED, and
++    does not open one - a check that launches a window is a check nobody runs twice."""
++    try:
++        import webbrowser
++        b = webbrowser.get()
++        say("a browser to open", "PASS", type(b).__name__.replace("Windows", "the Windows default"))
++    except Exception:
++        say("a browser to open", "WARN",
++            "none registered - the application still runs and prints its address, "
++            "which can be pasted into a browser by hand")
++
++
++def check_write(where, label):
++    probe = os.path.join(where, ".prap-probe-%d-%d" % (os.getpid(), int(time.time() * 1000)))
++    try:
++        fd = os.open(probe, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
++    except OSError as e:
++        # Not fatal, and saying so is the point: NR-DEP-09 has the application ASK
++        # where to put data when it cannot write beside itself, at launch rather than
++        # at the first Save.
++        return say(label, "WARN", f"refused ({type(e).__name__}) - the application "
++                                  "will ask where to keep data instead")
++    try:
++        os.close(fd)
++    finally:
++        try:
++            os.unlink(probe)
++        except OSError:
++            pass
++    say(label, "PASS", "created a file and removed it")
++
++
++def app_folder():
++    """The folder holding PM_APP.py: this one, or the one above it."""
++    here = os.path.dirname(os.path.abspath(__file__))
++    for cand in (here, os.path.dirname(here)):
++        if os.path.isfile(os.path.join(cand, "PM_APP.py")):
++            return cand
++    return here            # not beside the application: answer for where we are
++
++
++def main(argv):
++    where = None
++    if "--where" in argv:
++        i = argv.index("--where")
++        if i + 1 >= len(argv):
++            print("\n  --where needs a folder after it.\n")
++            return 2
++        where = argv[i + 1]
++
++    print()
++    print("PM_APP  PC check".ljust(42) + time.strftime("%Y-%m-%d %H:%M"))
++    print("  " + "-" * 62)
++
++    check_python()
++    check_stdlib()
++    check_loopback()
++    check_browser()
++    # Where data\ goes, which is beside PM_APP.py. This file ships in two places -
++    # tools\ in the repository, and the top of the application folder, where the
++    # person who actually needs it will be - so the folder is FOUND rather than
++    # computed from a fixed depth.
++    app = app_folder()
++    check_write(app, "write beside the app")
++    if where:
++        if os.path.isdir(where):
++            check_write(where, "write in that folder")
++        else:
++            say("write in that folder", "FAIL", "it is not there, or not reachable")
++
++    bad = [f for f in FINDINGS if f[1] == "FAIL"]
++    warn = [f for f in FINDINGS if f[1] == "WARN"]
++    print("  " + "-" * 62)
++    if bad:
++        verdict = "NO - see the FAIL lines above"
++    elif warn:
++        verdict = f"YES, with {len(warn)} thing(s) worth knowing (WARN above)"
++    else:
++        verdict = "YES - this PC can run it"
++    print(f"  {'verdict':<26} {verdict}")
++    digest = hashlib.sha256("|".join(f"{a}={b}" for a, b, _ in FINDINGS).encode()).digest()
++    alpha = "0123456789ABCDEFGHJKMNPQRSTUVWXYZ"          # no I, L, O - they misread
++    code = "".join(alpha[b % 33] for b in digest[:12])
++    print(f"  {'code':<26} {code[:4]}-{code[4:8]}-{code[8:12]}")
++    print()
++    return 1 if bad else 0
++
++
++if __name__ == "__main__":
++    sys.exit(main(sys.argv))
+diff --git a/tools/test_no_python.py b/tools/test_no_python.py
+new file mode 100644
+index 0000000..26675cc
+--- /dev/null
++++ b/tools/test_no_python.py
+@@ -0,0 +1,173 @@
++"""The three pieces that let a PC with no Python run the application - checked.
++
++Some staff PCs have no Python and no way to get one without a request to IT. The
++answer is not to install anything: Windows publishes an EMBEDDABLE PACKAGE, which is
++unpacked rather than installed, and the application's own design already suits it -
++standard library only, and a folder browser of its own where there is no tkinter.
++
++Three things carry that, and each of them fails silently if it drifts:
++
++    PM_APP.cmd              finds a runtime beside the app, or Python on the PC,
++                            and says so plainly when there is neither
++    bundle_runtime.py       puts the runtime there, and refuses the wrong file
++    check_pc.py             answers "can this PC run it" on screen, with nothing
++                            in the output that would need clearing first
++
++    python tools/test_no_python.py
++"""
++
++import os
++import pathlib
++import re
++import subprocess
++import sys
++import tempfile
++import zipfile
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++APP = ROOT / "dist" / "PM_APP_py"
++BUNDLE = ROOT / "tools" / "bundle_runtime.py"
++CHECK = ROOT / "tools" / "check_pc.py"
++
++fails = []
++
++
++def check(label, ok, detail=""):
++    print(f"  {'ok  ' if ok else 'FAIL'}  {label}" + (f"   {detail}" if detail else ""))
++    if not ok:
++        fails.append(label)
++
++
++def run(*args, **kw):
++    r = subprocess.run([sys.executable, *args], capture_output=True, text=True,
++                       timeout=180, **kw)
++    return r.returncode, r.stdout + r.stderr
++
++
++def embeddable_zip(path, ver="314"):
++    with zipfile.ZipFile(path, "w") as z:
++        z.writestr("python.exe", b"MZ")
++        z.writestr(f"python{ver}.zip", b"stdlib")
++        z.writestr(f"python{ver}._pth", f"python{ver}.zip\n.\n")
++        z.writestr("python3.dll", b"dll")
++    return path
++
++
++print("a PC with no Python")
++
++# ---- 1. the launcher -------------------------------------------------------
++cmd = APP / "PM_APP.cmd"
++check("the build ships a launcher", cmd.is_file(), cmd.name)
++if cmd.is_file():
++    raw = cmd.read_bytes()
++    text = raw.decode("ascii", "replace")
++    check("cmd.exe can read it: CRLF and no BOM",
++          b"\r\n" in raw and not raw.startswith(b"\xef\xbb\xbf"))
++    # The order is the whole design: a runtime beside the app means nothing on this
++    # PC is consulted, so it has to be looked at FIRST.
++    order = [m for m in re.findall(r"runtime\\python\.exe|py -3|python --version", text)]
++    check("it looks for the bundled runtime BEFORE anything installed",
++          order[:1] == ["runtime\\python.exe"], " then ".join(dict.fromkeys(order)))
++    check("every path is anchored to the launcher's own folder, not the working "
++          "directory", text.count("%~dp0") >= 4 and "cd /d \"%~dp0\"" in text)
++    check("and it pauses when there is no Python, instead of flashing shut",
++          "pause" in text and "no Python" in text)
++    # THE ONE THAT BITES THE TARGET USER. Windows 10 and 11 ship an app execution
++    # alias for python.exe by default, and RUNNING it opens the Microsoft Store - on
++    # a PC with no Python, which is the PC this launcher exists for. `where` looks
++    # without starting anything, so the alias can be found and skipped.
++    check("it never STARTS `python` to find out whether it is real - it looks first, "
++          "or the Microsoft Store opens on the very PC this is for",
++          "where python" in text and "WindowsApps" in text
++          and not re.search(r"^\s*python --version", text, re.M))
++
++# ---- 2. the bundler --------------------------------------------------------
++with tempfile.TemporaryDirectory() as d:
++    d = pathlib.Path(d)
++    app = d / "PM_APP_py"
++    app.mkdir()
++    (app / "PM_APP.py").write_text(
++        "import os, sys\n"
++        "sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\n",
++        encoding="utf-8")
++
++    good = embeddable_zip(d / "python-3.14.7-embed-amd64.zip")
++    rc, out = run(str(BUNDLE), str(good), "--into", str(app))
++    check("an embeddable package is unpacked beside the application",
++          rc == 0 and (app / "runtime" / "python.exe").is_file())
++    check("and it reports which Python, for the version rule", "3.14" in out)
++
++    rc2, _ = run(str(BUNDLE), str(good), "--into", str(app))
++    check("a runtime already there is not overwritten by accident", rc2 == 1)
++    rc3, _ = run(str(BUNDLE), str(good), "--into", str(app), "--replace")
++    check("--replace overwrites it on purpose", rc3 == 0)
++
++    # The two things people reach for instead, both of which look plausible.
++    full = d / "python-3.14.7-full.zip"
++    with zipfile.ZipFile(full, "w") as z:
++        z.writestr("python.exe", b"MZ")
++        z.writestr("Lib/os.py", "x")
++    rc4, out4 = run(str(BUNDLE), str(full), "--into", str(app), "--replace")
++    check("the full distribution is refused, and named", rc4 == 1
++          and "not a Windows embeddable package" in out4)
++    exe = d / "python-3.14.7-amd64.exe"
++    exe.write_bytes(b"MZ installer")
++    rc5, out5 = run(str(BUNDLE), str(exe), "--into", str(app))
++    check("so is the installer, with the difference explained", rc5 == 1
++          and "the installer" in out5)
++
++    # THE LOAD-BEARING LINE. An embeddable Python fixes sys.path from its ._pth and
++    # ignores PYTHONPATH, so PM_APP.py putting its own folder on the path is what
++    # makes `import pmapp` work at all - and it is one tidy-up away from being gone.
++    (app / "PM_APP.py").write_text("import os, sys\n", encoding="utf-8")
++    rc6, out6 = run(str(BUNDLE), str(good), "--into", str(app), "--replace")
++    check("IT REFUSES TO BUNDLE AGAINST A LAUNCHER THAT LOST ITS sys.path LINE",
++          rc6 == 1 and "sys.path" in out6 and "Nothing has been unpacked" in out6)
++
++# ---- 2b. the trap between the two -----------------------------------------
++# Rebuilding the application empties its folder, runtime and all. Silently would be
++# the worst of it: the launcher goes on working on the machine that built it, by
++# falling back to the Python there, and tells somebody with no Python that none was
++# supplied - long after anyone is still looking.
++with tempfile.TemporaryDirectory() as d:
++    z = embeddable_zip(pathlib.Path(d) / "python-3.14.7-embed-amd64.zip")
++    run(str(BUNDLE), str(z), "--into", str(APP), "--replace")
++check("a runtime can be bundled into the real application folder",
++      (APP / "runtime" / "python.exe").is_file())
++rc, out = run(str(ROOT / "tools" / "build_python_app.py"))
++check("A REBUILD THAT REMOVES A BUNDLED RUNTIME SAYS SO - silently would leave the "
++      "launcher working here and failing on a PC with no Python",
++      rc == 0 and "runtime" in out and "bundle_runtime" in out,
++      [ln.strip() for ln in out.splitlines() if "runtime" in ln][:1])
++check("and the runtime really is gone, so the warning is not decoration",
++      not (APP / "runtime").exists())
++
++# ---- 3. the PC check -------------------------------------------------------
++rc, out = run(str(CHECK))
++check("the PC check runs and reaches a verdict",
++      "verdict" in out and rc in (0, 1))
++check("it checks what the application actually needs",
++      all(k in out for k in ("python version", "standard library", "loopback socket",
++                             "a browser to open", "write beside the app")))
++check("FAIL and WARN are told apart, so a survivable thing does not read as fatal",
++      "WARN" in out or "PASS" in out)
++
++leaked = [w for w in (os.environ.get("USER", ""), os.environ.get("USERNAME", ""),
++                      str(ROOT), os.uname().nodename if hasattr(os, "uname") else "")
++          if w and w in out]
++check("NOTHING IN THE OUTPUT IDENTIFIES THE PC", not leaked,
++      "leaked: " + ", ".join(leaked) if leaked else "no path, no host, no account")
++
++code = [ln for ln in out.splitlines() if ln.strip().startswith("code")]
++check("a transcription code is printed", len(code) == 1)
++_, again = run(str(CHECK))
++code2 = [ln for ln in again.splitlines() if ln.strip().startswith("code")]
++check("and the same verdicts give the same code", code == code2,
++      code[0].strip() if code else "none")
++
++rc7, out7 = run(str(CHECK), "--where", str(ROOT / "definitely-not-here"))
++check("a folder it cannot reach is a FAIL, not a shrug",
++      rc7 == 1 and "not there" in out7)
++
++print(f"\nFAILURES: {', '.join(fails) if fails else 'none'}")
++sys.exit(1 if fails else 0)
