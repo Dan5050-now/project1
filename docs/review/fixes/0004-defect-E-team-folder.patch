@@ -1,0 +1,625 @@
+diff --git a/src/shell/python/bridge.js b/src/shell/python/bridge.js
+index 5546f91..17f8da9 100644
+--- a/src/shell/python/bridge.js
++++ b/src/shell/python/bridge.js
+@@ -123,6 +123,7 @@
+   let baseSaved = "", stale = false;
+   // Who refused us, while we wait for them to finish (NR-STO-15).
+   let blockedBy = null;
++  const hushedShare = new Set();      // plans whose "not now" was meant
+ 
+   function showFile() {
+     el("pm-file").textContent = ref ? ref.split(/[\\/]/).pop() : "no plan open";
+@@ -447,6 +448,7 @@
+         + `, ${new Date(w.header.last_saved).toLocaleString()}.`);
+       // The header already says it, so this costs no extra round trip.
+       await noteBase(w.header.last_saved);           // for NR-STO-16
++      await checkShared(by);
+       journalled = false; lastPending = -1;
+       const j = await call("journal/read", { ref });
+       if (j) showBanner("bad", `This plan has ${j.pending?.length || 0} change(s) that `
+@@ -577,11 +579,102 @@
+     }
+   }
+ 
++  /* The notice's own two buttons. Bound once, by listener rather than by onclick -
++     shell/web binds some buttons at load by assigning onclick, and a later assignment
++     replaces a handler somebody else is relying on. */
++  el("pm-share")?.querySelector("[data-move]")
++    ?.addEventListener("click", () => { moveToShared(); });
++  el("pm-share")?.querySelector("[data-dismiss]")
++    ?.addEventListener("click", () => {
++      if (ref) hushedShare.add(ref);      // "Not now" means not again for this plan
++      el("pm-share").hidden = true;
++    });
++
++  /* ---- a plan where the sharing rules cannot reach it ---------------------
++     A claim on a plan inside one person's folder protects nothing (NR-STO-10). The
++     team folder was created at launch and carried a note saying so, and the page
++     never mentioned either - so plans were saved where sharing could not work and
++     the failure was invisible: no error, no warning, just colleagues emailing copies
++     to each other and the application unable to know.
++
++     THE TRIGGER IS NOT "the plan is private". Most private plans are private on
++     purpose and a bar on every one of them would be noise, and then furniture. It is
++     "the plan is private AND SOMEBODY ELSE SAVED IT" - which a plan in your own
++     folder can only be if it was copied there by hand, which is the very failure
++     this is about. Said once per plan; "Not now" means it. */
++  async function checkShared(savedBy) {
++    const bar = el("pm-share");
++    if (!bar) return false;
++    bar.hidden = true;
++    if (!ref || hushedShare.has(ref)) return false;
++    const other = savedBy && savedBy.name && me && savedBy.name !== me.name;
++    if (!other) return false;
++    let st;
++    try { st = await call("ws/sharedState", { ref }); } catch { return false; }
++    if (!st || !st.private || !st.target) return false;
++    bar.querySelector("[data-text]").textContent =
++      `This plan is in your own folder, where nobody else can open it - but `
++      + `${savedBy.name} saved it, so it has been copied around by hand. Move it to `
++      + `the team folder and the application can keep one writer at a time, and say `
++      + `who is editing.`
++      + (st.taken ? "  A plan of this name is already there, so this one would need "
++                  + "renaming first." : "");
++    bar.querySelector("[data-move]").disabled = Boolean(st.taken);
++    bar.hidden = false;
++    return true;
++  }
++
++  /** Move the open plan to where the team can reach it. Also the File menu item, for
++   *  somebody who knows they want to share and has not been asked. */
++  async function moveToShared() {
++    if (!ref) return tell("Move plan", "<p class='pm-note'>No plan is open.</p>");
++    let st;
++    try { st = await call("ws/sharedState", { ref }); }
++    catch (e) { return showBanner("bad", e.message); }
++    if (!st.shared)
++      return tell("Move plan", "<p class='pm-note'>This installation has no team "
++                + "folder.</p>");
++    if (!st.private)
++      return tell("Move plan", "<p class='pm-note'>This plan is not in your own "
++                + "folder, so colleagues can already open it.</p>");
++    let out;
++    try { out = await call("ws/moveToShared", { ref }); }
++    catch (e) { return showBanner("bad", e.message); }
++    el("pm-share").hidden = true;
++    ref = out.ref;
++    holds = false;
++    showFile();
++    showHold(null);
++    showBanner("", "Moved to the team folder. Colleagues can open it now, and the "
++      + "application will keep one writer at a time."
++      + (out.versions ? `  ${out.versions} kept version(s) came with it.` : ""));
++  }
++
+   /* ---- the in-page folder browser ---------------------------------------- */
+   /* Used when there is no tkinter, and whenever somebody wants to type a path -
+      a share, say. It talks to fs/list, which returns names and sizes. No browser
+      file interface is involved: nothing here can read a file's contents, and the
+      page never asks it to. */
++  /** Windows compares paths without regard to case, and a trailing separator means
++   *  nothing; neither does the browser, so it is done here rather than hoped for. */
++  function sameDir(a, b) {
++    const tidy = x => String(x || "").replace(/[\\/]+$/, "").toLowerCase();
++    return Boolean(a) && tidy(a) === tidy(b);
++  }
++
++  /** Your own folder and the team's, when the installation has both. */
++  function places() {
++    const out = [];
++    if (where.workspaces)
++      out.push({ label: "My plans", path: where.workspaces,
++                 hint: "Your own folder. Nobody else can open what is in here." });
++    if (where.shared)
++      out.push({ label: "Team plans", path: where.shared,
++                 hint: "Everybody can open these, and the application keeps one "
++                     + "writer at a time. A plan the team works on belongs here." });
++    return out;
++  }
++
+   function browseFor(opts) {
+     return new Promise(resolve => {
+       const back = document.createElement("div");
+@@ -620,6 +713,26 @@
+         catch (e) { q("[data-note]").textContent = e.message; return; }
+         here = r.path; picked = null;
+         q("[data-crumb]").innerHTML = "";
++        /* THE TWO PLACES THAT DECIDE WHETHER SHARING WORKS AT ALL, one click each.
++           The team folder existed, was created at launch and carried a note saying
++           what it was for - and the page never mentioned it, so every plan was saved
++           into the person's own folder, where a claim protects nothing (NR-STO-10)
++           and the whole one-writer-at-a-time design never comes into play. A folder
++           nobody can find is a folder nobody uses. */
++        for (const place of places()) {
++          const b = document.createElement("button");
++          b.className = "place" + (sameDir(r.path, place.path) ? " on" : "");
++          b.textContent = place.label;
++          b.title = place.hint;
++          b.onclick = () => go(place.path);
++          q("[data-crumb]").appendChild(b);
++        }
++        if (places().length) {
++          const sep = document.createElement("span");
++          sep.className = "sep";
++          sep.textContent = "·";
++          q("[data-crumb]").appendChild(sep);
++        }
+         for (const root of r.roots) {
+           const b = document.createElement("button");
+           b.textContent = root.name;
+@@ -722,6 +835,7 @@
+       case "new": await releaseClaim(); ref = null; holds = false; stale = false;
+                   baseSaved = ""; showFile(); showHold(null); return startBlank();
+       case "reload": return reloadPlan();
++      case "moveToShared": return moveToShared();
+       case "open": {
+         let p = caps.nativeDialogs ? await call("ws/openDialog", {}) : null;
+         if (!caps.nativeDialogs)
+@@ -909,6 +1023,7 @@ Account        ${where.account}</pre>
+   showFile();
+ 
+   window.__pm = { call, openPlan, savePlan, reloadPlan, releaseClaim, noteJournal,
++                  checkShared, moveToShared,
+                   offerIfFreed,
+                   superseded, importSource, adoptBytes, browseFor,
+                   takeClaimOnEdit, pageId: PAGE_ID,
+diff --git a/src/shell/python/chrome.css b/src/shell/python/chrome.css
+index 9a048b0..32791c6 100644
+--- a/src/shell/python/chrome.css
++++ b/src/shell/python/chrome.css
+@@ -36,6 +36,17 @@
+   align-items:center;flex-wrap:wrap;padding:8px 14px;background:var(--surface);
+   border-bottom:1px solid var(--grid)}
+ 
++/* The one-line notice that a plan is somewhere the sharing rules cannot reach. It
++   sits below the pills and above the page, and it is only ever shown when there is
++   something to do about it - a bar that is always there is a bar nobody reads. */
++#pm-share{position:sticky;top:calc(var(--pm-title-h,34px) + var(--pm-strip-h,0px));
++  z-index:64;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
++  padding:9px 14px;font-size:12.5px;background:var(--underbg);
++  color:var(--underink);border-bottom:1px solid var(--grid)}
++#pm-share[hidden]{display:none}
++#pm-share span{flex:1;min-width:240px}
++#pm-share .btn{font-size:12px;padding:3px 10px}
++
+ /* ---- the page underneath ------------------------------------------------
+    THE ONE PLACE THIS SHELL HAS TO REACH INTO THE PAGE.
+ 
+@@ -79,6 +90,13 @@ html{scroll-padding-top:calc(var(--pm-chrome,71px) + 8px)}
+ .pm-crumb button{font:inherit;font-size:12px;background:var(--fill);border:1px solid var(--grid);
+   border-radius:999px;padding:3px 10px;cursor:pointer;color:var(--ink2)}
+ .pm-crumb button:hover{color:var(--ink)}
++/* The two places that matter, told apart from the path above them: one folder is
++   yours alone and one is the team's, and a plan in the wrong one loses every
++   sharing rule the application has (NR-STO-10). */
++.pm-crumb button.place{font-weight:600;color:var(--ink)}
++.pm-crumb button.place.on{background:color-mix(in srgb,var(--accent) 18%,transparent);
++  border-color:var(--accent)}
++.pm-crumb .sep{color:var(--ink3);padding:0 2px}
+ .pm-list{list-style:none;margin:0;padding:0}
+ .pm-list li{display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:8px;
+   cursor:pointer;font-size:13px}
+diff --git a/src/shell/python/chrome.html b/src/shell/python/chrome.html
+index ec35681..300df8c 100644
+--- a/src/shell/python/chrome.html
++++ b/src/shell/python/chrome.html
+@@ -10,6 +10,7 @@
+       <hr>
+       <a data-do="save">Save<i>Ctrl+S</i></a>
+       <a data-do="saveAs">Save as…</a>
++      <a data-do="moveToShared">Move plan to the team folder…<i>so colleagues can open it</i></a>
+       <hr>
+       <a data-do="import">Import source data…</a>
+       <a data-do="importBrowse">Import from a folder…</a>
+@@ -63,3 +64,12 @@
+   <span class="pm-grow"></span>
+   <span class="pm-pill" id="pm-where"></span>
+ </div>
++
++<!-- A plan in a person's own folder is a plan the sharing rules cannot protect
++     (NR-STO-10). This says so at the moment it matters, and offers the one action
++     that fixes it, rather than leaving it to a note in a folder nobody opens. -->
++<div id="pm-share" hidden>
++  <span data-text></span>
++  <button type="button" class="btn primary" data-move>Move it to the team folder</button>
++  <button type="button" class="btn" data-dismiss>Not now</button>
++</div>
+diff --git a/src/shell/python/server.py b/src/shell/python/server.py
+index 1f5a0c2..6485495 100644
+--- a/src/shell/python/server.py
++++ b/src/shell/python/server.py
+@@ -306,6 +306,47 @@ def operations(app):
+         app.save_settings()
+         return out
+ 
++    def ws_shared_state(b):
++        """Is the open plan somewhere the sharing rules can actually work?
++
++        A claim on a plan inside one person's folder protects nothing (NR-STO-10), so
++        the page needs to be able to say so - and to say it at the moment it matters
++        rather than in a note nobody opens. This answers three things and judges none
++        of them; the page decides what is worth saying.
++        """
++        ref = b.get("ref") or app.open_ref
++        shared = (os.path.join(PA.shared_dir(app.data_root), "workspaces")
++                  if app.data_root else None)
++        if not ref or not shared:
++            return {"private": False, "shared": shared, "target": None}
++        ref = os.path.abspath(full(ref))
++        mine = os.path.abspath(os.path.join(app.data_dir or "", "workspaces"))
++        private = os.path.dirname(ref) == mine
++        target = os.path.join(shared, os.path.basename(ref)) if private else None
++        return {"private": private, "shared": shared, "target": target,
++                "taken": bool(target and os.path.exists(target))}
++
++    def ws_move_to_shared(b):
++        """Move the open plan into the folder the whole team can reach.
++
++        The claim goes back first. It names a machine and a process against a PATH,
++        and the path is about to change - and releasing it is also what lets anybody
++        who was blocked find out, without them reopening anything (NR-STO-15).
++        """
++        if not app.data_root:
++            raise WS.StorageError("noshared", "There is no team folder on this "
++                                              "installation.")
++        src = os.path.abspath(full(b["ref"]))
++        dst = os.path.join(PA.shared_dir(app.data_root), "workspaces",
++                           os.path.basename(src))
++        if app.open_ref and os.path.abspath(app.open_ref) == src:
++            app.release_open_claim()
++        out = WS.move_plan(src, dst)
++        app.open_ref = out["ref"]
++        app.settings = PA.add_recent(app.settings, out["ref"], app.app_dir)
++        app.save_settings()
++        return out
++
+     def ws_open_dialog(_):
+         return app.dialogs.ask("open", title="Open a plan",
+                                initialdir=os.path.join(app.data_dir or "", "workspaces"),
+@@ -580,6 +621,8 @@ def operations(app):
+         "ws/restore": ws_restore,
+         "ws/stat": ws_stat,
+         "claim/take": claim_take,
++        "ws/sharedState": ws_shared_state,
++        "ws/moveToShared": ws_move_to_shared,
+         "claim/read": claim_read,
+         "claim/release": claim_release,
+         "claim/holds": claim_holds,
+diff --git a/src/storage/python/workspace.py b/src/storage/python/workspace.py
+index be8eada..252b09e 100644
+--- a/src/storage/python/workspace.py
++++ b/src/storage/python/workspace.py
+@@ -384,6 +384,96 @@ def clear_journal(ref):
+ _TMP = re.compile(r"\.tmp-\d+$")
+ 
+ 
++def move_plan(src, dst):
++    """Move a plan and everything that belongs to it - or move nothing at all.
++
++    A PLAN IS FOUR KINDS OF FILE, and only the first one has the name people know:
++
++        X.prap                  the plan
++        X.prap.journal          edits made and not yet committed
++        X.prap.lock             who is editing it - NOT moved, see below
++        backups/X.prap.1 ..     the versions kept behind it
++
++    A rename would carry the first and abandon the rest, and the person would find
++    out when they went looking for a previous version they had been told was kept.
++
++    COPY, VERIFY, THEN REMOVE - never rename and hope. The destination is written
++    beside itself and renamed into place, read back, and compared with what was read
++    from the source; the source is deleted only once every piece is known to have
++    arrived. If anything goes wrong at any point, whatever reached the destination is
++    removed again and the source is left exactly as it was: a half-moved plan is
++    worse than one that did not move.
++
++    THE CLAIM IS NOT MOVED. It names a machine and a process against a path, and the
++    path is changing. The caller releases it before calling and takes it again at the
++    new location, which is also what makes the move visible to anybody waiting.
++    """
++    src = os.path.abspath(src)
++    dst = os.path.abspath(dst)
++    if src == dst:
++        raise StorageError("same", "That plan is already there.")
++    if not os.path.exists(src):
++        raise StorageError("missing", f"{os.path.basename(src)} is not there any more.")
++    for occupied in (dst, journal_path(dst)):
++        if os.path.exists(occupied):
++            raise StorageError("exists",
++                f"There is already a plan called {os.path.basename(dst)} in the team "
++                f"folder. Nothing has been moved. Rename yours, or open theirs and "
++                f"check it is not the same plan twice.",
++                occupied)
++
++    body = read_bytes(src)
++    landed = []                       # everything created, in case it must be undone
++
++    def land(target, data):
++        tmp = tmp_path(target)
++        with open(tmp, "wb") as f:
++            f.write(data)
++            f.flush()
++            os.fsync(f.fileno())
++        os.replace(tmp, target)
++        landed.append(target)
++        if open(target, "rb").read() != data:
++            raise StorageError("verify", f"{os.path.basename(target)} did not arrive "
++                                         "intact. Nothing has been moved.")
++
++    try:
++        land(dst, body)
++        jrn = journal_path(src)
++        if os.path.exists(jrn):
++            land(journal_path(dst), open(jrn, "rb").read())
++        kept = []
++        for n in range(1, 21):
++            b = backup_path(src, n)
++            if not os.path.exists(b):
++                break
++            kept.append((n, open(b, "rb").read()))
++        if kept:
++            os.makedirs(backup_dir(dst), exist_ok=True)
++            for n, data in kept:
++                land(backup_path(dst, n), data)
++    except OSError as e:
++        for t in landed:
++            _unlink(t)
++        raise StorageError("copy", "The plan could not be written to the team folder, "
++                                   "so nothing has been moved.", type(e).__name__)
++    except StorageError:
++        for t in landed:
++            _unlink(t)
++        raise
++
++    # Everything is at the destination and verified. Only now does the original go.
++    _unlink(journal_path(src))
++    for n in range(1, 21):
++        b = backup_path(src, n)
++        if not os.path.exists(b):
++            break
++        _unlink(b)
++    _unlink(src)
++    return {"ok": True, "ref": dst, "versions": len(kept),
++            "journal": os.path.exists(journal_path(dst))}
++
++
+ def sweep_temp(directory):
+     """A leftover .tmp-<pid> means a save was interrupted. The workspace itself is
+     intact by construction, so there is nothing to repair and nothing to tell the
+diff --git a/tools/test_layers.py b/tools/test_layers.py
+index e2598d7..735e8ca 100644
+--- a/tools/test_layers.py
++++ b/tools/test_layers.py
+@@ -155,21 +155,6 @@ check(not orphans,
+ # shell must run on a machine where nobody may install anything. One import of a
+ # package that is not in the standard library turns "double-click it" into "raise a
+ # ticket", so the imports are read rather than promised.
+-STDLIB = set(getattr(sys, "stdlib_module_names", ())) | {"pmapp"}
+-third_party = []
+-for rel in sorted(build_python_app.MODULES):
+-    src_text = (SRC / rel).read_text(encoding="utf-8")
+-    for m in re.finditer(r"^\s*(?:from|import)\s+([A-Za-z_][A-Za-z0-9_]*)", src_text,
+-                         re.M):
+-        mod = m.group(1)
+-        if mod not in STDLIB and not src_text[m.start():m.end()].lstrip().startswith(
+-                ("from .", "from ..")):
+-            third_party.append(f"{rel} imports {mod}")
+-check(not third_party,
+-      "the Python shell imports nothing but the standard library (NR-DEP-05)",
+-      "; ".join(third_party[:3]) if third_party else
+-      f"{len(build_python_app.MODULES)} modules, no pip install")
+-
+ def code_only(text):
+     """The module with its comments and string literals BLANKED OUT, in place.
+ 
+@@ -204,6 +189,29 @@ def code_only(text):
+     return "".join(lines)
+ 
+ 
++STDLIB = set(getattr(sys, "stdlib_module_names", ())) | {"pmapp"}
++third_party = []
++for rel in sorted(build_python_app.MODULES):
++    # READ THE CODE, NOT THE PROSE. This scanned the raw text and so matched a
++    # docstring line beginning "from the source; ..." as an import of a package
++    # called `the`. code_only() is directly below and was written for exactly this
++    # ("a check a comment can fail is one people learn to word around rather than one
++    # they trust") - this check simply was not using it. Wording the sentence
++    # differently would have fixed the symptom and left the trap for the next person.
++    src_text = code_only((SRC / rel).read_text(encoding="utf-8"))
++    for m in re.finditer(r"^\s*(?:from|import)\s+([A-Za-z_][A-Za-z0-9_]*)", src_text,
++                         re.M):
++        mod = m.group(1)
++        if mod not in STDLIB and not src_text[m.start():m.end()].lstrip().startswith(
++                ("from .", "from ..")):
++            third_party.append(f"{rel} imports {mod}")
++check(not third_party,
++      "the Python shell imports nothing but the standard library (NR-DEP-05)",
++      "; ".join(third_party[:3]) if third_party else
++      f"{len(build_python_app.MODULES)} modules, no pip install")
++
++
++
+ py_dom = [rel for rel in build_python_app.MODULES
+           if re.search(r"\bdocument\.|\bwindow\.",
+                        code_only((SRC / rel).read_text(encoding="utf-8")))]
+diff --git a/tools/test_python_app.py b/tools/test_python_app.py
+index 8908387..b4d36cf 100644
+--- a/tools/test_python_app.py
++++ b/tools/test_python_app.py
+@@ -392,6 +392,90 @@ def main():
+                   f"displaced {(held_by.get('displaced') or {}).get('name')}")
+             pg.evaluate("() => window.__pm.releaseClaim()")
+ 
++            # ---- a plan where the sharing rules cannot reach it (defect E) ----
++            # The team folder was created at launch and carried a note saying what it
++            # was for, and the page never mentioned either - so plans went into the
++            # person's own folder, where a claim protects nothing (NR-STO-10) and
++            # every sharing rule in the application is dead code. Checked from the
++            # page, because a folder nobody is shown is a folder nobody uses.
++            print("\na plan nobody else can open")
++            w = pg.evaluate("() => window.__pm.state().where")
++            check(bool(w.get("shared")) and bool(w.get("workspaces")),
++                  "the page is told both places", f"{os.path.basename(w['shared'] or '')}")
++
++            mine_ref = os.path.join(w["workspaces"], "team-copy.prap")
++            pg.evaluate("""async (p) => {
++                const sheets = {};
++                for (const s of REQUIRED_SHEETS) sheets[s] = rawToRows(s);
++                await window.__pm.call('ws/saveAs', {sheets, ref: p});
++                await window.__pm.openPlan(p);
++            }""", mine_ref)
++            pg.wait_for_timeout(1200)
++
++            shown = pg.evaluate("() => window.__pm.checkShared("
++                                "{name: 'A Colleague', department: 'Elsewhere'})")
++            bar = pg.evaluate("() => { const b = document.getElementById('pm-share');"
++                              "return {hidden: b.hidden, text: b.querySelector("
++                              "'[data-text]').textContent}; }")
++            check(shown is True and bar["hidden"] is False,
++                  "A PLAN IN YOUR OWN FOLDER THAT SOMEBODY ELSE SAVED IS FLAGGED - it "
++                  "can only have got there by hand (NR-STO-10)")
++            check("A Colleague" in bar["text"] and "team folder" in bar["text"],
++                  "and it names who, and what to do about it", bar["text"][:80])
++
++            # The trigger is not "private" - most private plans are private on purpose
++            # and a bar on every one of them would be furniture within a week.
++            quiet = pg.evaluate("() => window.__pm.checkShared("
++                                "{name: 'Test Person', department: 'Verification'})")
++            check(quiet is False,
++                  "a plan of your own that only you have saved is NOT nagged about")
++
++            pg.evaluate("() => document.querySelector('#pm-share [data-dismiss]').click()")
++            again = pg.evaluate("() => window.__pm.checkShared({name: 'A Colleague'})")
++            check(again is False
++                  and pg.evaluate("() => document.getElementById('pm-share').hidden"),
++                  "'Not now' means not again for that plan")
++
++            # And the move itself, which is the only thing that actually fixes it.
++            other_ref = os.path.join(w["workspaces"], "team-copy-2.prap")
++            pg.evaluate("""async (p) => {
++                const sheets = {};
++                for (const s of REQUIRED_SHEETS) sheets[s] = rawToRows(s);
++                await window.__pm.call('ws/saveAs', {sheets, ref: p});
++                await window.__pm.openPlan(p);
++            }""", other_ref)
++            pg.wait_for_timeout(1000)
++            pg.evaluate("() => window.__pm.checkShared({name: 'A Colleague'})")
++            pg.evaluate("() => window.__pm.moveToShared()")
++            pg.wait_for_timeout(1500)
++            moved_to = os.path.join(w["shared"], "team-copy-2.prap")
++            check(os.path.exists(moved_to) and not os.path.exists(other_ref),
++                  "MOVING IT PUTS IT WHERE COLLEAGUES CAN OPEN IT, and does not leave "
++                  "a twin behind for somebody to keep editing")
++            check(pg.evaluate("() => window.__pm.state().ref") == moved_to
++                  and pg.evaluate("() => document.getElementById('pm-share').hidden"),
++                  "and the window follows the plan it moved")
++
++            # The other half of the fix: the place is one click away in the browser,
++            # so the right choice can be made before anything goes wrong.
++            pg.evaluate("() => { window.__pm.browseFor({title: 'x'}); }")
++            pg.wait_for_timeout(900)
++            chips = pg.eval_on_selector_all(
++                ".pm-back .pm-crumb button.place", "es => es.map(e => e.textContent)")
++            check(chips == ["My plans", "Team plans"],
++                  "the file browser offers both places by name", ", ".join(chips))
++            pg.evaluate("() => document.querySelector('.pm-back [data-cancel]').click()")
++            pg.wait_for_timeout(300)
++
++            menu2 = pg.eval_on_selector_all(
++                "#pm-title .pm-menu a[data-do]", "es => es.map(e => e.dataset.do)")
++            check("moveToShared" in menu2,
++                  "and the File menu offers the move to somebody who already knows "
++                  "they want it")
++
++            pg.evaluate("(p) => window.__pm.openPlan(p)", plan)
++            pg.wait_for_timeout(1000)
++
+             # ---- the journal: something to recover ---------------------------
+             print("\nwhat a power cut leaves behind")
+             pg.evaluate("(p) => window.__pm.openPlan(p)", plan)
+diff --git a/tools/test_storage_py.py b/tools/test_storage_py.py
+index c98536c..00a48c8 100644
+--- a/tools/test_storage_py.py
++++ b/tools/test_storage_py.py
+@@ -223,6 +223,72 @@ def test_versions(d):
+     check("retain can be raised without a code change", len(WS.list_versions(ref)) == 3)
+ 
+ 
++# -------------------------------------------------- 4b. moving a plan to the team
++
++def test_move(d):
++    """A plan in a private folder is a plan the sharing rules cannot protect, so it
++    has to be possible to move one - and a move that loses a version, or that half
++    happens, is worse than no move at all."""
++    print("\nmoving a plan somewhere everybody can reach it")
++    mine = d / "mine"
++    team = d / "team"
++    for x in (mine, team, mine / "backups"):
++        os.makedirs(x, exist_ok=True)
++    ref = str(mine / "plan.prap")
++
++    WS.save_workspace(ref, sheets(), identity=ME)
++    WS.save_workspace(ref, sheets(), identity=ME)          # leaves one kept version
++    WS.write_journal(ref, [{"sheet": "Project", "row": 1}])
++    body = open(ref, "rb").read()
++    kept_before = len(WS.list_versions(ref))
++    check("a plan with a version behind it and an edit pending", kept_before == 1
++          and WS.read_journal(ref) is not None)
++
++    dst = str(team / "plan.prap")
++    r = WS.move_plan(ref, dst)
++    check("it moves", r["ok"] and r["ref"] == os.path.abspath(dst))
++    check("and arrives byte for byte", open(dst, "rb").read() == body)
++    check("the pending edit comes with it", WS.read_journal(dst) is not None)
++    check("SO DO THE VERSIONS KEPT BEHIND IT", len(WS.list_versions(dst)) == kept_before,
++          f"{len(WS.list_versions(dst))} kept")
++    check("and nothing of it is left where it was",
++          not os.path.exists(ref) and not os.path.exists(WS.journal_path(ref))
++          and not os.path.exists(WS.backup_path(ref, 1)))
++
++    # A name already taken is the case that would quietly destroy somebody's work.
++    WS.save_workspace(str(mine / "plan.prap"), sheets(), identity=ME)
++    theirs = open(dst, "rb").read()
++    try:
++        WS.move_plan(str(mine / "plan.prap"), dst)
++        check("a plan of the same name in the team folder is refused", False)
++    except WS.StorageError as e:
++        check("a plan of the same name in the team folder is REFUSED", e.kind == "exists")
++        check("and theirs is untouched", open(dst, "rb").read() == theirs)
++        check("and mine is still mine", os.path.exists(str(mine / "plan.prap")))
++        check("the refusal says what to do about it",
++              "Rename yours" in e.message and "Nothing has been moved" in e.message)
++
++    # A destination that cannot be written must leave the source alone. Proven by
++    # pointing at a path under a FILE, which no filesystem will accept as a folder.
++    stub = str(d / "a-file.txt")
++    Path(stub).write_text("x", encoding="utf-8")
++    src2 = str(mine / "plan.prap")
++    before2 = open(src2, "rb").read()
++    try:
++        WS.move_plan(src2, os.path.join(stub, "plan.prap"))
++        check("a destination that cannot be written is refused", False)
++    except WS.StorageError as e:
++        check("a destination that cannot be written is refused", e.kind == "copy")
++        check("AND THE PLAN IS STILL WHERE IT WAS", open(src2, "rb").read() == before2)
++    os.unlink(stub)
++
++    try:
++        WS.move_plan(src2, src2)
++        check("moving a plan onto itself is refused", False)
++    except WS.StorageError as e:
++        check("moving a plan onto itself is refused", e.kind == "same")
++
++
+ # ------------------------------------------------------------------- 5. journal
+ 
+ def test_journal(d):
+@@ -519,6 +585,7 @@ def main():
+         test_refusals(d)
+         test_kill_mid_save(d)
+         test_versions(d)
++        test_move(d)
+         test_journal(d)
+         test_claim(d)
+         test_paths(d)
