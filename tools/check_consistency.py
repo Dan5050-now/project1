@@ -644,6 +644,61 @@ for stem, what in FAMILIES.items():
 notes.append(f"README 'current' labels: {len(FAMILIES)} document families agree with "
              f"docs/PRAP_Manifest.json")
 
+# ---- 12. the FILENAMES the documents claim to describe ----------------------
+#
+# ALSO FOUND BY BREACH, and by the worst one so far. The specification's preamble, its
+# Source documents table and sheet 03's own heading all said the parse contract
+# documents PRAP_SourceData_Template_v1.6.xlsx, and the plan's deliverable 4.8 named the
+# same file as the template it ships. That file is SEVEN VERSIONS OLD: schema 5, ten data
+# sheets, 81 columns, and two errors when the current validator reads it - one a [must],
+# which the application refuses the row for. Sheet 03 was in fact documenting v1.16 all
+# along; it describes MonthlyEstimate and PeriodFTEStandard, neither of which exists in
+# v1.6. And a document that says what ships is how the wrong file comes to ship: v1.6 was
+# handed out with the application.
+#
+# EVERY OTHER CHECK IN THIS FILE PASSED THROUGHOUT. They compare the documented CONTENT
+# against the current template and find it agrees, which it does - so a seven-version
+# drift sat inside the one tool written to catch exactly this ("nothing stops those three
+# drifting apart except a check, so this is the check"). Content was checked; the NAME
+# the documents put on it never was.
+#
+# A version-history sheet is the one place an old filename belongs: "issued as
+# Dummy_10x10_v1.0.xlsx on schema 5" is a true statement about the past and must not be
+# rewritten. Everywhere else, naming a superseded fixture is a claim that is false today.
+SOURCE_FILE = re.compile(r"PRAP_SourceData_(Template|Dummy_10x10|Dummy)_v[\d.]+\.xlsx")
+CURRENT = {"Template": TEMPLATE.name, "Dummy": DUMMY.name, "Dummy_10x10": DUMMY_SMALL.name}
+HISTORY_SHEET = "01_Version_History"
+NAMING = [PLAN, SPEC,
+          ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.14.xlsx",
+          ROOT / "docs" / "PRAP_NewApp_Specification_v1.6.xlsx"]
+named = 0
+for path in NAMING:
+    if not path.exists():
+        continue                      # its absence is already reported by check 10
+    wbn = load_workbook(path, data_only=True)
+    for ws in wbn.worksheets:
+        if ws.title == HISTORY_SHEET:
+            continue                  # the past is allowed to name the past
+        for row in ws.iter_rows():
+            for c in row:
+                if not isinstance(c.value, str):
+                    continue
+                for m in SOURCE_FILE.finditer(c.value):
+                    named += 1
+                    want = CURRENT[m.group(1)]
+                    if m.group(0) != want:
+                        problems.append(
+                            f"{path.name} {ws.title}!{c.coordinate} names "
+                            f"{m.group(0)}, which is not the current fixture - the "
+                            f"repository ships {want}. A document that names a "
+                            f"superseded file is how a superseded file gets handed out; "
+                            f"if the reference is deliberately historical it belongs on "
+                            f"{HISTORY_SHEET}")
+notes.append(f"fixture filenames named outside a version history: {named}, all of them "
+             f"the current {', '.join(sorted(CURRENT.values()))}"
+             if not any("is not the current fixture" in x for x in problems)
+             else f"fixture filenames named outside a version history: {named}")
+
 # ---- report ---------------------------------------------------------------
 print(f"plan       {PLAN.name}")
 print(f"spec       {SPEC.name}")

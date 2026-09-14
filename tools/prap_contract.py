@@ -292,31 +292,79 @@ BLANK_START = {
     "placeholders": "Every seeded weight and role factor is 1.00 and says so in its note. "
                     "They are NOT a company standard. If a user hands you a plan started "
                     "this way, check whether those figures are still 1.00 before reading "
-                    "the FTE totals as real - until they are set, the load reduces to "
-                    "person_weight x month_coverage.",
+                    "the FTE totals as real - until they are set, a project's month "
+                    "reduces to its own period_weight x month_run, and the people on it "
+                    "still divide that between them. The figures then have a relative "
+                    "shape with no resourced magnitude behind them.",
     "both_end_the_same": "A plan started blank exports to the same .xlsx and the same "
                          ".prap.json as any other, so nothing downstream needs to know "
                          "which way it began.",
 }
 
 CALCULATION = {
-    "statement": "monthly_load_fte = period_weight x role_factor x person_weight x month_coverage",
+    # WHAT THIS USED TO SAY, AND WHY IT HAD TO CHANGE. It said
+    #     monthly_load_fte = period_weight x role_factor x person_weight x month_coverage
+    # which is the engine as it was BEFORE REQ-CAL-19 was amended by R-32. The four
+    # factors no longer give a load; they decide a SHARE of a month whose size is set by
+    # the standard. Anyone computing that product and calling it FTE gets a different
+    # number from the application - on the shipped 10x10 dummy, PRJ-008 in 2029-03 comes
+    # out at 0.005 that way where the application says 0.06. The specification (sheet 05,
+    # "Stated figures, and the decimal rule") has carried the correct three lines since
+    # R-32; this contract had not been brought into step, and this file is the one a
+    # program or an agent reads.
+    "statement": "A project's month is its OWN demand, and the people on it divide that "
+                 "month between them (REQ-CAL-19 as amended by R-32). The four "
+                 "per-assignment factors decide a SHARE, never a total.",
+    "formula": [
+        "demand(project, month)   = standard_fte( project, month ) x period_weight x month_run",
+        "claim(assignment, month) = ( role_factor / sharers ) x person_weight x coverage",
+        "fte(assignment, month)   = demand x claim / SUM( claims on that project-month )",
+    ],
+    "do_not": "Do NOT multiply period_weight x role_factor x person_weight x coverage and "
+              "call the result FTE. That product is the CLAIM - a share weight, not a "
+              "workload - and using it as a load is the single most common way to arrive "
+              "at figures the application does not agree with. If you need a number, run "
+              "tools/prap_io.py calculate rather than re-deriving it.",
+    "conserved": "Because the shares are normalised, a project-month equals the sum of "
+                 "its own people to the hundredth, however many people are on it - and "
+                 "changing one person's assignment changes everyone else's share of that "
+                 "project-month. The shares are handed out in whole cents by largest "
+                 "remainder, so the parts cannot come to anything but the whole.",
     "unit": "FTE. 1.00 FTE is fte_hours_per_month hours (Config, default 160 = 8 h/day x "
             "5 days/week x 4 weeks). The dashboard can show hours instead; the stored "
             "numbers are always FTE.",
     "evaluated_for": "every (assignment, calendar month) pair the assignment covers",
     "terms": {
+        "standard_fte": "PeriodFTEStandard.standard_fte for (project_type, "
+                        "clinical_phase, scope, period_name). THIS IS WHAT SETS THE SIZE "
+                        "of the project's month - a monthly FTE for a project of this "
+                        "type, phase and scope in this period. Missing, it falls back to "
+                        "1.00 and V-19 reports it, which degrades the month to its own "
+                        "period weight. Omitting this term is what makes a re-derived "
+                        "figure disagree with the application.",
         "period_weight": "ProjectPeriod.weight of the period containing the FIRST DAY of "
-                         "the month, for the assignment's project. A month in no period "
-                         "uses 1.00 and is reported under V-12.",
+                         "the month, for the assignment's project. It ADJUSTS the "
+                         "standard up or down for this particular study; it is not the "
+                         "size on its own. A month in no period uses 1.00 and is reported "
+                         "under V-12.",
+        "month_run": "the part of the calendar month the PROJECT runs - the largest "
+                     "coverage among that project-month's assignments. It scales the "
+                     "demand, so a month the project only half occupies asks for half.",
         "role_factor": "RoleFactor.role_factor for (project_type, clinical_phase, "
                        "period_name, role_name). clinical_phase is null for 'Others' "
-                       "projects. A missing factor is an error under V-23 - the "
-                       "calculation would otherwise silently use 1.00.",
+                       "projects. It DIVIDES the month's demand between the roles "
+                       "actually staffed rather than adding to it. A missing factor is an "
+                       "error under V-23 - the calculation would otherwise silently use "
+                       "1.00.",
+        "sharers": "how many people hold that role on that project in that month. The "
+                   "role's factor is divided among them, so two people in one role each "
+                   "claim half of it and the total is conserved; when one of them leaves, "
+                   "the other returns to a full share by themselves, with nobody editing "
+                   "anything.",
         "person_weight": "Assignment.person_weight, UNLESS a PersonPeriodWeight window "
                          "contains the first day of the month, in which case "
                          "weight_override REPLACES it. It does not multiply it.",
-        "month_coverage": "the fraction of that calendar month's days the assignment "
+        "coverage": "the fraction of that calendar month's days the ASSIGNMENT "
                           "actually spans, inclusive of both end dates: "
                           "(min(month_end, assign_end) - max(month_start, assign_start) "
                           "+ 1 days) / days_in_month.",
@@ -502,9 +550,10 @@ RECIPES = [
             "Check the reference tables FIRST: python tools/prap_io.py to-json <file.xlsx> "
             "-o plan.prap.json, then look at PeriodFTEStandard and RoleFactor. A plan "
             "started blank seeds every one of them at 1.00 with a note saying so.",
-            "If they are still 1.00, say so before quoting any figure. The load formula "
-            "then reduces to person_weight x month_coverage, which is a real number but "
-            "not a resourced estimate.",
+            "If they are still 1.00, say so before quoting any figure. Each project's "
+            "month then reduces to its own period_weight x month_run, which is a real "
+            "number but not a resourced estimate - the shape is the user's, the "
+            "magnitude is a placeholder.",
             "Offer to fill them in from whatever the user can tell you about their own "
             "standards, one (type, phase, period) at a time. Do not invent them.",
             "Everything else is an ordinary workbook - the same schema, the same rules.",

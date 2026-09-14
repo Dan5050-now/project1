@@ -279,11 +279,18 @@ def guide_markdown(C):
     w("")
     w("### 5.1 The formula")
     w("")
-    w("```")
     w(C["calculation"]["statement"])
+    w("")
+    w("```")
+    for line in C["calculation"]["formula"]:
+        w(line)
     w("```")
     w("")
     w(f"Evaluated for {C['calculation']['evaluated_for']}, in FTE.")
+    w("")
+    w(f"> **{C['calculation']['do_not']}**")
+    w("")
+    w(C["calculation"]["conserved"])
     w("")
     w(md_table(["Term", "Where it comes from"],
                [[f"`{k}`", v] for k, v in C["calculation"]["terms"].items()]))
@@ -297,18 +304,39 @@ def guide_markdown(C):
     w("")
     w("### 5.2 Worked example")
     w("")
-    w("A person on `Phase 2` `NewDrug CT`, role `Lead data manager`, "
-      "`person_weight` 0.40, assigned 2026-03-10 to 2026-12-31, in a month whose period "
-      "carries weight 1.20 and whose role factor is 0.90:")
+    w("Taken from the dummy workbook shipped beside this guide, so it can be checked "
+      "rather than believed: `PRJ-009` (`Others`, *CDISC library migration*) in "
+      "**2027-02**, a `Planning` month with three people on it. Two of them hold the "
+      "same role.")
     w("")
     w("```")
-    w("March 2026    coverage = (31 − 10 + 1) / 31 = 0.7097")
-    w("              load     = 1.20 × 0.90 × 0.40 × 0.7097 = 0.3066 FTE")
-    w("April 2026    coverage = 1.0")
-    w("              load     = 1.20 × 0.90 × 0.40 × 1.0    = 0.4320 FTE")
+    w("THE MONTH'S DEMAND - what a project of this type asks for, adjusted for this one")
+    w("  standard_fte 1.39 × period_weight 0.93 × month_run 1.0   =  1.29 FTE")
+    w("")
+    w("EACH PERSON'S CLAIM - a share weight, NOT an FTE")
+    w("  PSN-001  Project lead   rf 1.10 / 1 sharer  × pw 0.39 × cov 1.0  =  0.4290")
+    w("  PSN-006  Other staff    rf 0.42 / 2 sharers × pw 0.28 × cov 1.0  =  0.0588")
+    w("  PSN-010  Other staff    rf 0.42 / 2 sharers × pw 0.18 × cov 1.0  =  0.0378")
+    w("                                                      SUM of claims  =  0.5256")
+    w("")
+    w("THE MONTH, DIVIDED BY THOSE CLAIMS")
+    w("  PSN-001  1.29 × 0.4290/0.5256 = 1.0529  →  1.05 FTE")
+    w("  PSN-006  1.29 × 0.0588/0.5256 = 0.1443  →  0.15 FTE   ← gets the odd cent")
+    w("  PSN-010  1.29 × 0.0378/0.5256 = 0.0928  →  0.09 FTE")
+    w("                                                          TOTAL  =  1.29 FTE")
     w("```")
     w("")
-    w("Both endpoints are inclusive, which is why March counts 22 days and not 21.")
+    w("Three things in that example are worth keeping hold of. **The two `Other staff` "
+      "divide one role factor** — 0.42 between them, not 0.42 each — so the month does "
+      "not grow because a second person was added. **The people sum to the project-month "
+      "exactly**: the demand is rounded to whole cents once and those cents are handed "
+      "out by largest remainder, which is why `PSN-006` is given 0.15 rather than the "
+      "0.14 a plain rounding of 0.1443 would produce. And **had you multiplied the four "
+      "per-assignment factors** for `PSN-001` you would have reported 0.43 FTE where the "
+      "application says 1.05.")
+    w("")
+    w("Reproduce it with "
+      "`python tools/prap_io.py calculate templates/PRAP_SourceData_Dummy_10x10_v1.10.xlsx`.")
     w("")
     w("### 5.3 Periods")
     w("")
@@ -556,7 +584,12 @@ def guide_workbook(C, path):
     sheet(wb, "04_Calculation", "How the numbers are produced",
           calc["statement"] + "   —   " + calc["unit"],
           ["Term", "Where it comes from"],
-          [[k, v] for k, v in calc["terms"].items()]
+          # The three lines come FIRST, before the terms they use. A reader who takes one
+          # row out of this sheet should take the formula, not a factor.
+          [["formula", "\n".join(calc["formula"])],
+           ["DO NOT", calc["do_not"]],
+           ["conserved", calc["conserved"]]]
+          + [[k, v] for k, v in calc["terms"].items()]
           + [["assignment window", calc["assignment_window"]],
              ["thresholds", calc["thresholds"]],
              ["rows excluded", calc["rows_excluded"]]],

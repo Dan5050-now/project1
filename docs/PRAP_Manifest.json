@@ -21,8 +21,8 @@
    "what": "programming_specification",
    "path": "docs/PRAP_Programming_Specification_v1.31.xlsx",
    "exists": true,
-   "bytes": 77078,
-   "sha256": "c1db2c9460fb22322c73550647021405df71e4e95008a0cbfb1cd5ebdb2b8312"
+   "bytes": 77097,
+   "sha256": "53faf2f126136409833cd51bba8da6f8460aa1664ec2a14af1cba8e0a58890b5"
   },
   {
    "what": "ui_component_list",
@@ -56,8 +56,8 @@
    "what": "agent_guide",
    "path": "docs/PRAP_AI_Agent_Guide.md",
    "exists": true,
-   "bytes": 41994,
-   "sha256": "3b81368a6a7d40da4e8a53ece50d4fa7a4b35e1ca9a9e711021dab745227aa4b"
+   "bytes": 45630,
+   "sha256": "e418087d2c5678bc91cacc8580358d4fbbeba56fc76a8fc5f6d9d130245110cd"
   },
   {
    "what": "application",
@@ -70,8 +70,8 @@
    "what": "machine_readable_contract",
    "path": "docs/prap_contract.json",
    "exists": true,
-   "bytes": 58213,
-   "sha256": "b918962ec8830063534d968fdd07758a966ea58787d256673eb0013f96783f5a"
+   "bytes": 60641,
+   "sha256": "2e53571bf3889bc9d060fff7eb66571fef2bf2db2ffeb8f776c38adaf457684d"
   },
   {
    "what": "interchange_tool",
@@ -84,8 +84,8 @@
    "what": "agent_guide_workbook",
    "path": "docs/PRAP_AI_Agent_Guide_v1.0.xlsx",
    "exists": true,
-   "bytes": 34918,
-   "sha256": "6f7a8bbf491cd6ff749e96f21832016fa0aebc139c3a60d924a11d82155e1bbf"
+   "bytes": 36048,
+   "sha256": "dcecc867a6d7ee55a0adefd4aef22952376876f9433943c71ae508fb4a09ef9b"
   }
  ]
 }

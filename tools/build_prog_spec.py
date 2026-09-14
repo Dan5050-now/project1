@@ -647,7 +647,7 @@ r = section(ws, r, "Source documents")
 src = [
     [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes APPROVED BASELINE 2026-08-02. 70 requirements, 24 validation rules, 11 decisions, source schema version 5.", "Governs this document"],
     ["templates/PRAP_SourceData_Template_v1.16.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
-    ["templates/PRAP_SourceData_Dummy_v1.8.xlsx", "34 NewDrug CT + 16 Biosimilar CT + 12 'Others', 20 people, 289 assignments over 73 months.", "The acceptance data for sheet 05"],
+    ["templates/PRAP_SourceData_Dummy_v1.18.xlsx", "16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12 'Others', 20 people, 277 assignments over 74 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
     ["docs/STEP2_OPEN_POINTS.md", "Points raised while building the template.", "Carried into sheet 10"],
 ]
@@ -1320,8 +1320,8 @@ ex = [
 ]
 r = table(ws, r, ["Element", "Value", "Note"], ex, [22, 62, 44], wrap_cols=(2, 3))
 r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workbook.py against "
-                "PRAP_SourceData_Dummy_v1.8.xlsx must give no errors and no warnings, across 62 projects, "
-                "20 people, 289 assignments and 308 periods spanning 73 months. Every period set must be "
+                "PRAP_SourceData_Dummy_v1.18.xlsx must give no errors and no warnings, across 62 projects, "
+                "20 people, 277 assignments and 308 periods spanning 74 months. Every period set must be "
                 "contiguous, all 50 trials must carry 'Conduct (final)', 30 must also carry "
                 "'Conduct (interim)', and 12 must carry the final inspection period. No project may carry "
                 "a repeated period name. Those figures are the regression baseline for Step 4.")
