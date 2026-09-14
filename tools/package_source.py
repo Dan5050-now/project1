@@ -91,11 +91,29 @@ def collect():
     return out
 
 
+# A fixed timestamp for every entry, so the archive is REPRODUCIBLE: the same source
+# tree gives the same bytes and therefore the same sha256, on any machine and after any
+# checkout. Without it the zip carries each file's mtime, which a fresh clone or a
+# container restart rewrites - so two archives of identical content hashed differently
+# and the hash said nothing about the content. It happened between two builds of this
+# very file, one sha quoted to the reviewer and a different one produced an hour later
+# from the same commit. 1980-01-01 is the earliest a zip can store.
+EPOCH = (1980, 1, 1, 0, 0, 0)
+
+
 def write(files, dst):
     with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-        z.writestr("READ ME FIRST.txt", NOTE)
-        for p in files:
-            z.write(p, str(p.relative_to(ROOT)))
+        def add(name, data):
+            info = zipfile.ZipInfo(name, date_time=EPOCH)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16          # and fixed permissions with it
+            # compresslevel HERE, not on the ZipFile: writestr() with a ZipInfo ignores
+            # the archive's setting and falls back to the default, which cost 3 KB.
+            z.writestr(info, data, compresslevel=9)
+
+        add("READ ME FIRST.txt", NOTE.encode("utf-8"))
+        for p in files:                                # collect() already sorts
+            add(str(p.relative_to(ROOT)), p.read_bytes())
 
 
 def verify(dst):
