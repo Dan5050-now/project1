@@ -23,10 +23,23 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 DOC_VERSION = "1.6"
-DOC_STATUS = ("v1.2 APPROVED 2026-08-13 and still governing. THIS ISSUE, v1.3, adds change C-N02 - the "
-              "Python shell - and AWAITS APPROVAL. Nothing already approved is withdrawn by it: the "
-              "Electron shell stays specified and stays the better application wherever it can be "
+# THE STATUS LINE HAD STOPPED MOVING. It still read "THIS ISSUE, v1.3 ... AWAITS APPROVAL"
+# while the issue on the cover was v1.6, so the cover named one version and the status
+# another - and a reader who trusted it would conclude the Python shell was being built on
+# an unapproved revision. It was not: v1.3 to v1.6 are approved, confirmed by the requester
+# on 2026-09-14. The four version-history rows below said "Awaiting approval" too and have
+# been brought into step; the cover and the history have to agree or neither can be relied
+# on. The issue date follows the v1.6 history row rather than v1.2's.
+DOC_STATUS = ("THIS ISSUE, v1.6, is APPROVED - the requester confirmed v1.3 to v1.6 on "
+              "2026-09-14, C-N02 (the Python shell) among them. v1.2 was the previous "
+              "approved baseline. Nothing already approved is withdrawn: the Electron shell "
+              "stays specified and stays the better application wherever it can be "
               "delivered.")
+# DOC_DATE is the date this document was FIRST issued, which is what the cover's "Issue
+# date" carries in all four documents of both families - and it is also the date rows 0.1
+# to 1.2 were issued, because they all went out that same day. Do not move it to the
+# current version's date: the cover field is not "date of this issue", and changing it
+# here would silently re-date those four history rows as well.
 DOC_DATE = "2026-08-13"
 PLAN = "PRAP_NewApp_Development_Plan_v1.14.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
@@ -171,7 +184,7 @@ r = lines(ws, r, [
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
-          [["1.6", "2026-09-13", "Claude Code", "Awaiting approval",
+          [["1.6", "2026-09-13", "Claude Code", "APPROVED 2026-09-14",
             "RE-PINNED TO DESKTOP PLAN v1.14, and v1.5 is back-filled below. No NR-id is "
             "added, removed or reworded and no behaviour changes - sheet 11's traceability "
             "matrix is READ from the plan when this workbook is generated, so it now reads "
@@ -188,7 +201,7 @@ r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
             "that made them rather than from memory, and check_consistency.py now requires "
             "every controlled document to carry a history row for the version it calls "
             "itself, so neither gap can reopen in silence."],
-           ["1.5", "2026-09-11", "Claude Code", "Awaiting approval",
+           ["1.5", "2026-09-11", "Claude Code", "APPROVED 2026-09-14",
             "BACK-FILLED AT v1.6 - this version was issued without a history row, which "
             "REQ-VC-04 requires. Recorded now from the change that produced it: NR-DEP-17, "
             "CLOSING THE BROWSER CLOSES THE CONSOLE WINDOW TOO. The console window that IS "
@@ -204,7 +217,7 @@ r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
             "looking at, so anything brisk would shut down on a user who had merely "
             "switched tabs. --keep-running opts out. Python package v1.17, desktop plan "
             "v1.13, tools/test_shutdown.py new."],
-           ["1.4", "2026-08-22", "Claude Code", "Awaiting approval",
+           ["1.4", "2026-08-22", "Claude Code", "APPROVED 2026-09-14",
             "THE DIFFERENCE REPORT IS BUILT - task N4.5, NR-IMP-02, the last unbuilt piece of "
             "this specification. Sheet 09 gains an 'As BUILT' section recording the six "
             "decisions inside it that could each have gone another way, and what proves each. "
@@ -213,7 +226,7 @@ r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
             "what N-06 asked for and what it has no workspace to do otherwise. Also records "
             "Gate N4a: the shell arrived by e-mail, ran on the company PC, imported and "
             "exported - so R-N21's impact falls to Low."],
-           ["1.3", "2026-08-18", "Claude Code", "Awaiting approval",
+           ["1.3", "2026-08-18", "Claude Code", "APPROVED 2026-09-14",
             "A SECOND SHELL, under the same page. Change C-N02: the two company controls are now measured "
             "rather than feared - an executable may run but may not arrive (R-N20), and data may not enter "
             "a browser page through the file picker (R-N21). Neither is worked around. A Python shell "
