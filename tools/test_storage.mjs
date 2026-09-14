@@ -308,6 +308,24 @@ if (asRoot) {
 }
 fs.chmodSync(readOnlyDir, 0o700);
 
+// writable() asks by DOING it now, not by asking the OS's opinion of it. accessSync
+// on Windows reads the read-only ATTRIBUTE and not the ACL, and a share's permissions
+// are an ACL - so the folder NR-DEP-09 exists for was the folder it got wrong. What is
+// checkable without Windows is that the probe is real and that it cleans up after
+// itself; the ACL case needs no checking any more, because nothing asks about it.
+const beforeProbe = new Set(fs.readdirSync(appDir));
+check(PA.writable(appDir) === true, "a folder this process can write reports writable");
+check(fs.readdirSync(appDir).every(f => beforeProbe.has(f))
+      && fs.readdirSync(appDir).length === beforeProbe.size,
+      "and the probe leaves NOTHING behind");
+check(PA.writable(path.join(appDir, "no", "such", "place")) === false,
+      "a folder that is not there is not writable");
+const stub = path.join(appDir, "not-a-folder.txt");
+fs.writeFileSync(stub, "x");
+check(PA.writable(stub) === false, "and a FILE is not a place to put files - which the "
+      + "probe finds out by failing rather than by being told");
+fs.unlinkSync(stub);
+
 const st = PA.addRecent({ recent: [] }, path.join(appDir, "data", "users", "kim", "a.prap"), appDir);
 check(!path.isAbsolute(st.recent[0].ref) && st.recent[0].ref.includes("/"),
       "a recent plan inside the folder is remembered RELATIVELY, so copying the folder "

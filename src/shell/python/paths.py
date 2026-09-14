@@ -107,13 +107,46 @@ def default_app_dir(env=None):
 
 
 def writable(d):
+    """Can this process actually create a file here? Found out by trying it.
+
+    IT USED TO ASK os.access(d, os.W_OK), AND ON WINDOWS THAT IS THE WRONG QUESTION.
+    There it consults the read-only ATTRIBUTE and not the ACL - and a share's
+    permissions are an ACL. So a folder the user genuinely cannot write answers YES,
+    and NR-DEP-09's whole purpose is defeated: instead of being asked where to put
+    their data at launch, the person is told at their first Save, after doing the
+    work. The one case the check exists for is the one it got wrong.
+
+    A probe file cannot be wrong in that way. Whatever decides the answer - an ACL, a
+    read-only attribute, a full disk, a quota, a share mounted read-only, a security
+    product sitting in front of the filesystem - it decides this the same way it will
+    decide the real save. O_EXCL so an existing file is never touched, the pid and a
+    timestamp in the name so two sessions cannot collide, and it is removed whether
+    or not the write succeeded.
+
+    This also means the question no longer needs measuring on a company share: there
+    is nothing left to be uncertain about, because the answer is obtained by doing
+    the thing rather than by asking about it.
+    """
+    target = d if os.path.isdir(d) else os.path.dirname(os.path.abspath(d))
+    if not os.path.isdir(target):
+        return False
+    probe = os.path.join(target, ".prap-probe-%d-%d" % (os.getpid(), timefmt.now_ms()))
     try:
-        if os.path.isdir(d):
-            return os.access(d, os.W_OK)
-        parent = os.path.dirname(os.path.abspath(d))
-        return os.path.isdir(parent) and os.access(parent, os.W_OK)
+        fd = os.open(probe, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except OSError:
         return False
+    try:
+        os.close(fd)
+    except OSError:
+        pass
+    finally:
+        # Leaving a probe behind would be worse than the check itself: a folder that
+        # slowly fills with them is a defect somebody else has to explain.
+        try:
+            os.unlink(probe)
+        except OSError:
+            pass
+    return True
 
 
 def ensure(data_dir, root=None):

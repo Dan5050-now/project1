@@ -81,11 +81,29 @@ function defaultAppDir() {
             : path.resolve(__dirname, "..", "..", ".."));
 }
 
+/** Can this process actually create a file here? Found out by trying it.
+ *
+ *  IT USED TO ASK fs.accessSync(dir, W_OK), AND ON WINDOWS THAT IS THE WRONG QUESTION.
+ *  There it consults the read-only ATTRIBUTE and not the ACL - and a share's
+ *  permissions are an ACL - so a folder the user cannot write answers yes, and
+ *  NR-DEP-09 is defeated in exactly the case it exists for: the person is told at
+ *  their first Save instead of being asked at launch.
+ *
+ *  A probe file cannot be wrong that way. Whatever decides the answer decides it the
+ *  same way it will decide the real save. EXCL so an existing file is never touched,
+ *  the pid and a timestamp so two sessions cannot collide, and removed either way -
+ *  a folder slowly filling with probes would be a defect of its own. The Python
+ *  shell does the same thing for the same reason. */
 function writable(dir) {
+  const target = dir;
+  const probe = path.join(target, `.prap-probe-${process.pid}-${Date.now()}`);
+  let fd;
   try {
-    fs.accessSync(dir, fs.constants.W_OK);
-    return true;
+    fd = fs.openSync(probe, "wx");
   } catch { return false; }
+  try { fs.closeSync(fd); } catch { /* nothing to do */ }
+  try { fs.unlinkSync(probe); } catch { /* nothing to do */ }
+  return true;
 }
 
 /** Create the folders the resolved location needs. Called once at launch. */

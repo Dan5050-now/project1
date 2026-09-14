@@ -398,6 +398,68 @@ def test_paths(d):
     check("odd account names are made safe for a path",
           PA.account_name({"USERNAME": "DOMAIN\\kim lee"}) == "DOMAIN_kim_lee")
 
+    # ---- writable(): asked by DOING it, not by asking about it ------------------
+    # The predicate behind rule 4. It used to be os.access(W_OK), which on Windows
+    # reads the read-only attribute and not the ACL - so a share folder the user
+    # cannot write answered YES and NR-DEP-09 failed in its own case. It writes a
+    # probe file now. What can be checked here is that the probe is real, that it
+    # leaves nothing behind, and that a folder which is not there is not writable;
+    # the ACL case itself needs Windows, which is the point - the probe removes the
+    # need to know what the ACL says.
+    before = set(os.listdir(app))
+    check("a folder this process can write reports writable", PA.writable(app) is True)
+    check("and the probe leaves NOTHING behind", set(os.listdir(app)) == before)
+    check("a folder that does not exist is not writable",
+          PA.writable(os.path.join(app, "no", "such", "place")) is False)
+    # A path rather than a directory answers for the directory that would hold it,
+    # because that is where the save would land.
+    check("a path answers for the folder that would hold it",
+          PA.writable(os.path.join(app, "would-be.prap")) is True)
+    check("and still leaves nothing behind", set(os.listdir(app)) == before)
+    # The one that proves it is not asking the OS's opinion: a FILE is not a folder
+    # anything can be created in, and the probe finds that out by failing.
+    stub = os.path.join(app, "not-a-folder.txt")
+    Path(stub).write_text("x", encoding="utf-8")
+    check("a file is not a place to put files",
+          PA.writable(os.path.join(stub, "under-a-file.prap")) is False)
+    os.unlink(stub)
+
+    # THE CASE THIS SUITE HAS NEVER BEEN ABLE TO EXERCISE. Every note about NR-DEP-09
+    # here and in test_storage.mjs says the same thing: the process is root, root
+    # writes where the mode forbids it, so the real predicate cannot be made to say
+    # no and the case is reported rather than tested. The probe changes that, because
+    # what it does can be done by somebody else: run the same exclusive create as an
+    # unprivileged user in a folder that user cannot write. It is the mechanism rather
+    # than the module - paths.py cannot be imported standalone from another user, and
+    # a weaker check that is honest about what it proves beats a stronger one that is
+    # not - but it is the first time the no-answer has been produced here at all.
+    ro = os.path.join(d, "readonly")
+    os.makedirs(ro, exist_ok=True)
+    os.chmod(ro, 0o555)
+    can_drop = (hasattr(os, "getuid") and os.getuid() == 0
+                and shutil.which("runuser") is not None)
+    if can_drop:
+        probe = os.path.join(ro, ".prap-probe-test")
+        r = subprocess.run(
+            ["runuser", "-u", "nobody", "--", sys.executable, "-c",
+             "import os,sys\n"
+             "try:\n"
+             "    fd = os.open(sys.argv[1], os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)\n"
+             "except OSError:\n"
+             "    print('REFUSED')\n"
+             "else:\n"
+             "    os.close(fd); os.unlink(sys.argv[1]); print('ALLOWED')\n", probe],
+            capture_output=True, text=True)
+        check("the probe says NO to a folder an unprivileged user cannot write "
+              "(NR-DEP-09, exercised at last)", r.stdout.strip() == "REFUSED",
+              r.stdout.strip() or r.stderr.strip()[:60])
+        check("and it left nothing in a folder it could not write",
+              not os.path.exists(probe))
+    else:
+        print("  --    the unprivileged case is not exercised here: it needs root and "
+              "runuser to drop to. The probe mechanism itself is checked above.")
+    os.chmod(ro, 0o755)
+
     # NR-DEP-08: recent plans are stored relative, so moving the folder does not
     # break the list.
     s = PA.add_recent(dict(PA.DEFAULT_SETTINGS), os.path.join(app, "data", "p.prap"), app)
