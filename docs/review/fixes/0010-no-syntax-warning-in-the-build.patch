@@ -1,0 +1,177 @@
+From 47d64671b2203c2287d1ad50d51823743c261a00 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 15 Sep 2026 08:32:23 +0000
+Subject: [PATCH] A build the preparer is told to trust must not print a
+ warning
+
+Reported from the preparer's PC, on python 3.13:
+
+  tools\build_python_app.py:219: SyntaxWarning: invalid escape sequence '\s'
+     * PLANS THE TEAM SHARES HAVE A PLACE: data\shared\workspaces\ , created at
+
+Nothing is wrong with what it built. "\s" starts no escape python knows, so
+python keeps the two characters as they are and the notice reads exactly as
+intended; the 16 files of dist/PM_APP_py are byte-for-byte identical before
+and after this change, sha256 compared.
+
+It still had to go, for two reasons. It appears in the middle of a build the
+runbook tells the preparer to trust, and a warning there stops a hand that
+should be moving. And python has been escalating this since 3.6 - a
+DeprecationWarning then, a SyntaxWarning from 3.12, an error in some later
+version - so this is a build that will one day refuse to run.
+
+Why it reached them and not me is the part worth naming: this interpreter is
+3.11, where the warning is a DeprecationWarning and hidden by default. That
+is the third finding in a row that could not be seen from here - after a
+windows-only branch and a linux-only browser path - so the fix is a check,
+not a habit. test_layers.py now compiles every .py under src/ and tools/ and
+fails on any warning at all, whatever python is running it. Proven by
+reintroducing one: caught, named with file and line.
+
+The spelling changed; no value did. One notice in build_python_app.py and six
+regex literals in test_charts.py now double the backslash (\\s, \\d, \\/),
+which is how python spells what it was already doing. All 428 string
+constants across the two files compare equal to their old values.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_015uUAZtqavUrwFq3tABxWDZ
+---
+ tools/build_python_app.py |  2 +-
+ tools/test_charts.py      | 20 ++++++++++----------
+ tools/test_layers.py      | 29 +++++++++++++++++++++++++++++
+ 3 files changed, 40 insertions(+), 11 deletions(-)
+
+diff --git a/tools/build_python_app.py b/tools/build_python_app.py
+index 1a247dd..8181b11 100644
+--- a/tools/build_python_app.py
++++ b/tools/build_python_app.py
+@@ -219,7 +219,7 @@ WHAT IS NEW IN 1.21.1
+     Python buffers text and a share does not promise an atomic append. Every row
+     already names who made the change, so a month still reads as one record.
+ 
+-  * PLANS THE TEAM SHARES HAVE A PLACE: data\shared\workspaces\ , created at
++  * PLANS THE TEAM SHARES HAVE A PLACE: data\\shared\\workspaces\\ , created at
+     launch with a note in it saying which folder is for what. Sharing is written
+     for several people opening one plan, and the per-person folder is somewhere
+     nobody else can open - where a claim protects nothing.
+diff --git a/tools/test_charts.py b/tools/test_charts.py
+index 9bc8341..0db013f 100644
+--- a/tools/test_charts.py
++++ b/tools/test_charts.py
+@@ -107,7 +107,7 @@ with sync_playwright() as pw:
+         || Math.abs(a[x] - b[x]) > 0.6).map(x => [x, a[x], b[x]]);
+       const perPerson = {};
+       for (const r of seg){
+-        const nm = /^<b>(.*?)<\/b>/.exec(r.dataset.tip)[1];
++        const nm = /^<b>(.*?)<\\/b>/.exec(r.dataset.tip)[1];
+         (perPerson[nm] ||= new Set()).add(r.getAttribute('fill'));
+       }
+       return {segments: seg.length, months: Object.keys(A).length,
+@@ -212,7 +212,7 @@ with sync_playwright() as pw:
+       };
+       const out = {};
+       out.overallProject = has('#t-overall', 'Monthly demand by project', /Project period:/);
+-      out.overallPerson  = has('#t-overall', 'Monthly demand by person', /&#215;\d/);
++      out.overallPerson  = has('#t-overall', 'Monthly demand by person', /&#215;\\d/);
+       showTab('t-proj');
+       out.projectUtil = has('#t-proj', 'Utilisation', /Project period:/);
+       showTab('t-pers');
+@@ -265,14 +265,14 @@ with sync_playwright() as pw:
+         (by[(+r.getAttribute('x')).toFixed(1)] ||= []).push(r);
+       const bad = [];
+       for (const col of Object.values(by)){
+-        const m = /<br>([A-Z][a-z]{2} \d{4}) &middot;|<br>([A-Z][a-z]{2} \d{4}) \u00b7/
++        const m = /<br>([A-Z][a-z]{2} \\d{4}) &middot;|<br>([A-Z][a-z]{2} \\d{4}) \u00b7/
+           .exec(col[0].dataset.tip);
+-        const month = /([A-Z][a-z]{2} \d{4})/.exec(col[0].dataset.tip);
++        const month = /([A-Z][a-z]{2} \\d{4})/.exec(col[0].dataset.tip);
+         const k = grid().find(g => keyToLabel(g) === month[1]);
+         const real = S.calc.projMonth.get(S.selProj + '|' + k) || 0;
+         let sum = 0;
+         for (const r of col){
+-          const own = /<b>([\d.]+) FTE<\/b> on this project/.exec(r.dataset.tip);
++          const own = /<b>([\\d.]+) FTE<\\/b> on this project/.exec(r.dataset.tip);
+           if (own) sum += parseFloat(own[1]);
+         }
+         if (Math.abs(sum - real) > 0.02) bad.push([month[1], sum, real]);
+@@ -475,7 +475,7 @@ with sync_playwright() as pw:
+              "#t-pers .data-t[data-sheet='Assignment'] tbody tr.sel");
+           return {selAsg: S.selAsg, shown, real,
+                   line: (panel.querySelector('.asgline')||{}).textContent
+-                          .replace(/\s+/g, " ").trim(),
++                          .replace(/\\s+/g, " ").trim(),
+                   highlighted: sel ? sel.dataset.id : null};
+         }""")
+         seen += 1
+@@ -490,7 +490,7 @@ with sync_playwright() as pw:
+       const panel = [...document.querySelectorAll('#t-pers .panel')]
+         .find(e => (e.querySelector('h2')||{}).textContent.startsWith('Weight overrides'));
+       const a = S.model.raw.Assignment.find(x => x.assignment_id === S.selAsg);
+-      return {line: (panel.querySelector('.asgline')||{}).textContent.replace(/\s+/g, " ").trim(),
++      return {line: (panel.querySelector('.asgline')||{}).textContent.replace(/\\s+/g, " ").trim(),
+               project: (S.model.projects[a.project_id]||{}).project_name, role: a.role_name,
+               weight: a.person_weight === null ? null : Number(a.person_weight).toFixed(2)};
+     }""")
+@@ -525,9 +525,9 @@ with sync_playwright() as pw:
+           const bad = [];
+           for (const h of hits){
+             const t = h.dataset.tip;
+-            const name = /^<b>(.*?)<\/b>/.exec(t)[1];
+-            const total = parseFloat(/<b>(?:.*?)<\/b><br>([\d.]+) /.exec(t)[1]);
+-            const peakM = /peak [\d.]+ in ([A-Z][a-z]{2} \d{4})/.exec(t)[1];
++            const name = /^<b>(.*?)<\\/b>/.exec(t)[1];
++            const total = parseFloat(/<b>(?:.*?)<\\/b><br>([\\d.]+) /.exec(t)[1]);
++            const peakM = /peak [\\d.]+ in ([A-Z][a-z]{2} \\d{4})/.exec(t)[1];
+             const id = kind === "project"
+               ? Object.keys(S.model.projects).find(q =>
+                   S.model.projects[q].project_name === name)
+diff --git a/tools/test_layers.py b/tools/test_layers.py
+index 735e8ca..e52179e 100644
+--- a/tools/test_layers.py
++++ b/tools/test_layers.py
+@@ -19,6 +19,7 @@ import importlib.util
+ import pathlib
+ import re
+ import sys
++import warnings
+ 
+ ROOT = pathlib.Path(__file__).resolve().parents[1]
+ SRC = ROOT / "src"
+@@ -231,6 +232,34 @@ check(layers == {"core", "ui", "storage", "shell"},
+       "and the four layers the plan names are the four that exist",
+       ", ".join(sorted(layers)))
+ 
++# ---- every python file compiles quietly, on any python -------------------------
++# A backslash that starts no known escape - "data\\shared" written as "data\shared" -
++# is kept as-is by Python, so the text is right and nothing misbehaves. But it is a
++# SyntaxWarning from 3.12 and an error in some later version, and the warning appears
++# ON THE PREPARER'S SCREEN, in the middle of a build they are told to trust. Caught
++# here rather than by whoever runs a newer Python than this: the warning is only
++# raised when the file is compiled fresh, so a cached .pyc hides it too.
++print("\nevery python file, compiled")
++noisy = []
++for q in sorted(list(SRC.rglob("*.py")) + list((ROOT / "tools").rglob("*.py"))):
++    if "__pycache__" in q.parts:
++        continue
++    with warnings.catch_warnings(record=True) as caught:
++        warnings.simplefilter("always")
++        try:
++            compile(q.read_text(encoding="utf-8"), str(q), "exec")
++        except SyntaxError as e:                                     # noqa: PERF203
++            noisy.append(f"{q.relative_to(ROOT)}: {e}")
++            continue
++    for m in caught:
++        if "escape sequence" in str(m.message) or issubclass(m.category, SyntaxWarning):
++            noisy.append(f"{q.relative_to(ROOT)}:{m.lineno}: {m.message}")
++check(not noisy,
++      "NO FILE COMPILES WITH A WARNING - a build the preparer is told to trust must "
++      "not print one",
++      "; ".join(noisy[:3]) if noisy else
++      f"{len(list(SRC.rglob('*.py'))) + len(list((ROOT / 'tools').glob('*.py')))} files, quiet")
++
+ print()
+ print("FAILURES: " + (", ".join(fails) if fails else "none"))
+ sys.exit(1 if fails else 0)
+-- 
+2.43.0
+
