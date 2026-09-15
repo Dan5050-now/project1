@@ -67,6 +67,9 @@ does not, and neither does closing one of two windows.
 
     python PM_APP.py --keep-running     leave this window open after the page
                                         is closed, and close it yourself
+    python PM_APP.py --version          print the version and stop, starting
+                                        nothing - a way to test that this PC can
+                                        run the application without running it
 """
 
 import os

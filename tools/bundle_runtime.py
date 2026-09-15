@@ -29,6 +29,19 @@ THREE THINGS MAKE THIS WORK, AND ALL THREE ARE ALREADY TRUE:
     python tools/bundle_runtime.py <zip> --into <dir> into somewhere else
     python tools/bundle_runtime.py <zip> --replace    overwrite a runtime already there
     python tools/bundle_runtime.py <zip> --zip        and package it for handing out
+    python tools/bundle_runtime.py <zip> --check-with <python>
+                                                     ask THAT interpreter the checks,
+                                                     instead of the bundled python.exe
+                                                     - which is how they get run at
+                                                     all on anything but Windows
+
+EVERY CHECK BELOW HAS TO COME BACK BY ITSELF. Starting the application is not a
+check: it serves a page, opens a browser and then waits for a person, so it never
+returns - and a check that never returns takes the packaging down with it. That is
+not hypothetical. An earlier version of this file asked the application for its
+version before the option existed; the application ignored the unknown word, started
+normally, and the run died on a timeout with no zip written and a login page on the
+screen. Ask questions that answer and stop: -c one-liners, and PM_APP.py --version.
 
 PACKAGE IT FROM HERE, NOT WITH build_python_app.py --zip. That one REBUILDS before it
 packages, and a rebuild empties the folder - runtime and all - so the zip it writes has
@@ -80,8 +93,69 @@ def version_of(names):
     return None
 
 
+CHECK_TIMEOUT = 60
+STDLIB = ("base64 datetime errno getpass http json os pathlib queue re secrets "
+          "shutil socket string sys threading time urllib webbrowser").split()
+
+
+def run_one(exe, args, timeout=CHECK_TIMEOUT):
+    """Run one question and always come back - with an answer, or with why not.
+
+    Nothing a check does may end the run. A hang, a missing DLL, a file that is not
+    an executable at all: each of those is something to PRINT, not something to fall
+    over on, because the packaging below still has to happen either way."""
+    try:
+        r = subprocess.run([str(exe), *args], capture_output=True, text=True,
+                           timeout=timeout, stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        return False, (f"no answer in {timeout} seconds - it did not stop by itself, "
+                       f"so it was stopped")
+    except OSError as e:
+        return False, f"could not be run - {e}"
+    out = (r.stdout or "").strip() or (r.stderr or "").strip()
+    return r.returncode == 0, out or "(no output)"
+
+
+def verify(exe, app):
+    """Four questions for an interpreter, as a list of (label, what to print, passed).
+
+    THE INTERPRETER IS AN ARGUMENT so that this can be run anywhere. main() passes
+    the bundled python.exe, on Windows, where that is the only thing worth asking;
+    the tests pass the Python they are running on, on any machine. The check that
+    shipped broken was inside `if os.name == "nt"`, so no test on this side could
+    ever reach it - being callable is the point of this function, not tidiness.
+
+    tkinter is asked about but never counted as a failure: the embeddable package
+    has none, the shell knows that and serves its own folder browser instead."""
+    out = []
+
+    ok, txt = run_one(exe, ["-c",
+                            "import sys; print('.'.join(map(str, sys.version_info[:3])))"])
+    out.append(("it runs", txt if ok else "NO - " + txt, ok))
+
+    ok, txt = run_one(exe, ["-c", "import " + ", ".join(STDLIB) + "; print('all present')"])
+    out.append(("stdlib", txt if ok else "MISSING - " + txt, ok))
+
+    ok, _ = run_one(exe, ["-c", "import tkinter"])
+    out.append(("tkinter", "present" if ok else
+                "absent - the app serves its own folder browser instead, as expected",
+                True))
+
+    entry = app / "PM_APP.py"
+    launch = app / "pmapp" / "shell" / "launch.py"
+    if not launch.is_file() or "--version" not in launch.read_text(encoding="utf-8"):
+        # Older build in the folder. Asking anyway would START it and hang, which is
+        # the very thing this file exists to not do.
+        out.append(("START", "not checked - this build has no --version to ask with; "
+                             "rebuild with tools/build_python_app.py", True))
+        return out
+    ok, txt = run_one(exe, [str(entry), "--version"])
+    out.append(("START", txt if ok else "NO - " + (txt.splitlines()[-1] if txt else txt), ok))
+    return out
+
+
 def main(argv):
-    rest, flags, app = [], set(), DEFAULT_APP
+    rest, flags, app, check_with = [], set(), DEFAULT_APP, None
     it = iter(argv[1:])
     for a in it:
         if a == "--into":
@@ -89,6 +163,11 @@ def main(argv):
             if nxt is None:
                 die("--into needs a folder after it.")
             app = pathlib.Path(nxt)
+        elif a == "--check-with":
+            nxt = next(it, None)
+            if nxt is None:
+                die("--check-with needs the path of a python after it.")
+            check_with = pathlib.Path(nxt)
         elif a.startswith("--"):
             flags.add(a)
         else:
@@ -148,24 +227,17 @@ def main(argv):
     print(f"  python    {ver or 'unknown'}   (the application needs 3.9 or newer)")
     print(f"  files     {len(files)}, {size / 1048576:.1f} MB")
 
-    # If this IS Windows, do not describe the result - run it.
+    # If this IS Windows, do not describe the result - ask it. --check-with names a
+    # different interpreter to ask, which is the only way these checks can be run at
+    # all on a machine where the bundled python.exe is just a file sitting there.
     exe = runtime / "python.exe"
-    if os.name == "nt" and exe.is_file():
-        def ran(*a):
-            r = subprocess.run([str(exe), *a], capture_output=True, text=True, timeout=120)
-            return r.returncode == 0, (r.stdout or r.stderr).strip()
-        ok, out = ran("-c", "import sys; print('.'.join(map(str, sys.version_info[:3])))")
-        print(f"  it runs   {out if ok else 'NO - ' + out}")
-        mods = ("base64 datetime errno getpass http json os pathlib queue re secrets "
-                "shutil socket string sys threading time urllib webbrowser").split()
-        ok2, out2 = ran("-c", "import " + ", ".join(mods) + "; print('all present')")
-        print(f"  stdlib    {out2 if ok2 else 'MISSING - ' + out2}")
-        ok3, _ = ran("-c", "import tkinter")
-        print("  tkinter   " + ("present" if ok3 else
-              "absent - the app serves its own folder browser instead, as expected"))
-        ok4, out4 = ran(str(app / "PM_APP.py"), "--version")
-        if not ok4:
-            print(f"  START     NO - {out4.splitlines()[-1] if out4 else 'no output'}")
+    failed = []
+    asking = check_with or (exe if os.name == "nt" and exe.is_file() else None)
+    if asking:
+        for label, text, ok in verify(asking, app):
+            print(f"  {label:<9} {text}")
+            if not ok:
+                failed.append(label)
     else:
         print( "  not run   this is not Windows, so python.exe was unpacked and")
         print( "            checked for shape only. Run tools/check_pc.py with it on")
@@ -200,6 +272,14 @@ def main(argv):
     print("  Rebuilding the application empties that folder, runtime and all. Run this")
     print("  again after any  python tools/build_python_app.py .")
     print()
+    if failed:
+        # Said last, and after the packaging, because the packaging is the part that
+        # must not be skipped - and because the last line is the one that gets read.
+        print(f"  NOT READY TO HAND OUT: {', '.join(failed)} did not pass. The folder")
+        print( "  and any zip above were still written, so nothing is lost - but find")
+        print( "  out what that answer means before anybody else is given this.")
+        print()
+        return 1
     return 0
 
 

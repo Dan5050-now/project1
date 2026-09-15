@@ -70,6 +70,17 @@ def main(argv=None):
     argv = sys.argv if argv is None else argv
     app_dir = PA.default_app_dir()
     version = read_version(app_dir)
+
+    # --version answers and stops. Nothing is served, no browser is opened and no
+    # data folder is touched, so it is safe to run anywhere - including from a
+    # script that only wants to know whether this Python can run this application
+    # at all (tools/bundle_runtime.py asks exactly that, on a PC with no Python of
+    # its own). Anything that STARTS the application cannot answer that question,
+    # because starting it means waiting for a person, which never ends.
+    if "--version" in argv:
+        print(f"Project Management APP {version}")
+        return 0
+
     app = SV.App(app_dir=app_dir, version=version, page=read_page(app_dir))
 
     r = app.settle_data_dir()
