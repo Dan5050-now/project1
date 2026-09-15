@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PRAP — Project Resource Assignment Program</title>
+<!--
+  PRAP — Project Resource Assignment Program
+  Step 4 deliverable. Built from PRAP_Programming_Specification_v1.0.xlsx,
+  which governs, against PRAP_Development_Plan_v2.0.xlsx (approved baseline).
+
+  Single file, offline, no network. The .xlsx reader and writer below are written
+  from scratch for that reason: an .xlsx is a ZIP of XML, the browser has
+  DecompressionStream for the deflate entries and DOMParser for the XML, and a ZIP
+  written with STORED entries needs only a CRC32. Vendoring a spreadsheet library
+  would have been quicker and would have cost the single-file property (D-01).
+-->
+<style>

@@ -1,0 +1,402 @@
+<title>PM_APP 배포와 첫 실행</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#EEF1F5; --card:#FFFFFF; --sunk:#E4E9F0;
+    --ink:#141A21; --ink2:#4A5565; --ink3:#77838F;
+    --rule:#D3DAE3; --rule2:#E6EAF0;
+    --navy:#1F3864; --navy-soft:#E1E8F4;
+    --warn:#8A5A00; --warn-soft:#FBF0DA;
+    --stop:#95241D; --stop-soft:#FAE7E5;
+    --go:#1F5E42; --go-soft:#E0EFE7;
+    --f-body:"IBM Plex Sans KR",'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+    --f-mono:"IBM Plex Mono",'Cascadia Mono',Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#10151B; --card:#171D25; --sunk:#1E252E;
+      --ink:#E4E9EF; --ink2:#A7B2BF; --ink3:#7C8795;
+      --rule:#2B333D; --rule2:#222A33;
+      --navy:#8FB4DE; --navy-soft:#182740;
+      --warn:#E0AC55; --warn-soft:#2E2413;
+      --stop:#EE8C83; --stop-soft:#341C1A;
+      --go:#7CC49F; --go-soft:#152A20;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#10151B; --card:#171D25; --sunk:#1E252E;
+    --ink:#E4E9EF; --ink2:#A7B2BF; --ink3:#7C8795;
+    --rule:#2B333D; --rule2:#222A33;
+    --navy:#8FB4DE; --navy-soft:#182740;
+    --warn:#E0AC55; --warn-soft:#2E2413;
+    --stop:#EE8C83; --stop-soft:#341C1A;
+    --go:#7CC49F; --go-soft:#152A20;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);
+    font-size:15.5px;line-height:1.75;word-break:keep-all;overflow-wrap:anywhere;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px;margin:0 auto;padding-inline:20px;padding-block:0 90px}
+
+  header{padding-block:46px 26px;border-bottom:2px solid var(--ink)}
+  .kicker{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--navy);margin:0 0 12px}
+  h1{font-size:clamp(28px,5vw,44px);font-weight:700;letter-spacing:-.02em;line-height:1.15;
+    margin:0 0 14px;text-wrap:balance}
+  .dek{margin:0;color:var(--ink2);font-size:clamp(15px,2vw,17px);max-width:62ch}
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:2px 24px;
+    margin-top:24px;padding-top:16px;border-top:1px solid var(--rule)}
+  .facts div{padding-block:5px}
+  .facts dt{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--ink3)}
+  .facts dd{margin:2px 0 0;font-size:14px;font-weight:500}
+
+  h2{font-size:clamp(20px,3vw,26px);font-weight:700;letter-spacing:-.01em;line-height:1.3;
+    margin:56px 0 6px;padding-bottom:11px;border-bottom:1px solid var(--ink);text-wrap:balance}
+  h3{font-size:17px;font-weight:600;margin:34px 0 10px;text-wrap:balance}
+  h4{font-family:var(--f-mono);font-size:11.5px;font-weight:500;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--ink3);margin:26px 0 8px}
+  p{margin:0 0 14px;max-width:68ch}
+  ul,ol{max-width:68ch;margin:0 0 14px;padding-left:1.25em}
+  li{margin-bottom:6px}
+  strong{font-weight:600}
+  code{font-family:var(--f-mono);font-size:.86em;background:var(--sunk);padding:.1em .36em;
+    border-radius:3px}
+  a{color:var(--navy)}
+
+  .lede{background:var(--card);border:1px solid var(--rule);border-left:3px solid var(--navy);
+    padding:22px 24px;margin-top:30px}
+  .lede p:last-child{margin-bottom:0}
+
+  /* who does what */
+  .roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:24px 0}
+  .role{background:var(--card);border:1px solid var(--rule);padding:20px 22px}
+  .role .tag{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--navy);display:block;margin-bottom:7px}
+  .role b{display:block;font-size:16.5px;margin-bottom:4px}
+  .role p{font-size:13.5px;color:var(--ink2);margin:0}
+  .role .when{font-family:var(--f-mono);font-size:11.5px;color:var(--ink3);margin-top:10px;display:block}
+
+  /* numbered procedure - the order genuinely carries meaning here */
+  ol.steps{list-style:none;padding:0;margin:22px 0;counter-reset:s}
+  ol.steps>li{counter-increment:s;display:grid;grid-template-columns:32px minmax(0,1fr);
+    gap:0 16px;padding:18px 0;border-bottom:1px solid var(--rule2)}
+  ol.steps>li::before{content:counter(s);font-family:var(--f-mono);font-size:13px;font-weight:600;
+    color:var(--navy);border:1px solid var(--rule);border-radius:50%;width:28px;height:28px;
+    display:grid;place-items:center;line-height:1;margin-top:2px}
+  ol.steps>li>div{min-width:0}
+  ol.steps b{display:block;font-size:15.5px;margin-bottom:5px}
+  ol.steps p{font-size:14px;color:var(--ink2);margin:0 0 9px}
+  ol.steps p:last-child{margin-bottom:0}
+
+  pre{font-family:var(--f-mono);font-size:12.5px;line-height:1.65;background:var(--card);
+    border:1px solid var(--rule);border-left:3px solid var(--navy);padding:14px 16px;
+    overflow-x:auto;margin:14px 0;border-radius:2px}
+  pre code{background:none;padding:0;font-size:inherit}
+  pre.tree{border-left-color:var(--ink3)}
+  pre.out{border-left-color:var(--go);background:var(--go-soft)}
+
+  .tw{overflow-x:auto;margin:18px 0;border:1px solid var(--rule);background:var(--card)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;line-height:1.6;min-width:560px}
+  th,td{padding:10px 13px;text-align:left;vertical-align:top;border-bottom:1px solid var(--rule2)}
+  thead th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink3);font-weight:500;background:var(--sunk);border-bottom:1px solid var(--rule)}
+  tbody tr:last-child td{border-bottom:0}
+  td.mono{font-family:var(--f-mono);font-size:12.5px}
+
+  /* warnings, by what happens if you ignore them */
+  .note{border:1px solid var(--rule);border-left:4px solid var(--ink3);background:var(--card);
+    padding:16px 20px;margin:16px 0}
+  .note.stop{border-left-color:var(--stop);background:var(--stop-soft)}
+  .note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+  .note .lbl{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+    display:block;margin-bottom:6px}
+  .note.stop .lbl{color:var(--stop)}
+  .note.warn .lbl{color:var(--warn)}
+  .note p{margin:0 0 9px;font-size:14px}
+  .note p:last-child{margin-bottom:0}
+
+  footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--rule);
+    font-size:13px;color:var(--ink3);max-width:68ch}
+  :focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="kicker">PM_APP 1.21.1 · Windows</p>
+  <h1>PM_APP 배포와 첫 실행</h1>
+  <p class="dek">어느 PC에 어떤 폴더를 두고, 어떤 순서로 실행하는지. <strong>사용자 PC에는 아무것도 설치하지 않습니다</strong> — 파이썬이 없는 PC도 포함해서입니다.</p>
+  <dl class="facts">
+    <div><dt>사용자 PC에 설치</dt><dd>없음 (폴더 복사만)</dd></div>
+    <div><dt>관리자 권한</dt><dd>필요 없음</dd></div>
+    <div><dt>준비 담당자</dt><dd>1명, 버전마다 한 번</dd></div>
+    <div><dt>사용자 1인 소요</dt><dd>2~3분</dd></div>
+  </dl>
+</header>
+
+<div class="lede">
+  <p><strong>먼저 큰 그림 하나만.</strong> 이 앱은 <strong>각자 PC에서 돌고</strong>, <strong>계획서 파일만 공유 폴더에 둡니다.</strong> 프로그램을 공유 폴더에 놓고 거기서 실행하는 방식이 아닙니다 — 그 이유는 아래 <a href="#warn">주의사항</a>에 있습니다.</p>
+  <p><strong>그리고 파이썬은 따로 손댈 일이 없습니다.</strong> 파이썬 런타임은 <strong>나눠 드리는 압축본 안에 이미 들어 있습니다.</strong> 사용자는 압축을 한 번 풀 뿐, 파이썬을 내려받지도 설치하지도 않습니다 — 내려받는 것은 <strong>준비 담당자가 딱 한 번</strong>입니다.</p>
+</div>
+
+<h2>누가 무엇을 하는가</h2>
+
+<div class="roles">
+  <div class="role">
+    <span class="tag">역할 A</span>
+    <b>준비 담당자</b>
+    <p>파이썬이 있는 PC에서 배포용 압축본을 한 번 만들고, 공유 폴더를 준비합니다. 이후 새 버전이 나올 때만 다시 합니다.</p>
+    <span class="when">버전마다 한 번 · 15분</span>
+  </div>
+  <div class="role">
+    <span class="tag">역할 B</span>
+    <b>일반 사용자</b>
+    <p>압축본을 자기 PC로 복사해 풀고 더블클릭합니다. 설치도, 설정도, 관리자 권한도 없습니다.</p>
+    <span class="when">각자 한 번 · 2~3분</span>
+  </div>
+</div>
+
+<h2>준비하기 전에 정할 것 하나</h2>
+
+<p><strong>계획서를 어디에 둘 것인가.</strong> 이것만 정하면 나머지는 따라옵니다. 두 가지이고, 섞어 쓸 수도 있습니다.</p>
+
+<div class="tw"><table>
+  <thead><tr><th>방식</th><th>계획서가 사는 곳</th><th>같이 볼 수 있는가</th><th>설정</th></tr></thead>
+  <tbody>
+    <tr><td><b>혼자 쓰기</b></td><td class="mono">앱 폴더\data\</td><td>안 됩니다 — 본인만</td><td>없음. 그냥 실행</td></tr>
+    <tr><td><b>팀과 함께</b></td><td class="mono">\\서버\공유\PRAP\데이터\</td><td><strong>됩니다</strong> — 한 번에 한 사람이 편집, 나머지는 열람</td><td>바로가기 한 줄 (아래 B-5)</td></tr>
+  </tbody>
+</table></div>
+
+<p>팀과 함께 쓰실 계획이면 <strong>공유 폴더 경로를 먼저 정해 두십시오.</strong> 아래 절차에서 계속 쓰입니다. 이 안내서에서는 <code>\\서버\공유\PRAP\</code> 로 적겠습니다.</p>
+
+<h2>A. 준비 담당자 — 버전마다 한 번</h2>
+
+<p>파이썬이 설치된 PC에서 합니다. 개발용 PC든 담당자 PC든 상관없습니다.</p>
+
+<ol class="steps">
+  <li><div>
+    <b>파이썬 런타임 내려받기</b>
+    <p><a href="https://www.python.org/downloads/windows/">python.org/downloads/windows</a> 에서 <strong>Windows embeddable package (64-bit)</strong> 를 받으십시오. 파일 이름이 <code>-embed-amd64.zip</code> 으로 끝나는 것입니다.</p>
+    <div class="note warn"><span class="lbl">헷갈리기 쉬운 지점</span>
+    <p>같은 페이지의 <strong>Windows installer (64-bit)</strong> 는 <strong>다른 물건</strong>입니다 — 그것은 설치 프로그램이고, 우리가 피하려는 바로 그것입니다. 잘못 받으셔도 다음 단계에서 도구가 이름을 대며 거부하니 안심하십시오.</p></div>
+  </div></li>
+
+  <li><div>
+    <b>앱 빌드하기</b>
+    <pre><code>python tools\build_python_app.py</code></pre>
+    <p><code>dist\PM_APP_py\</code> 폴더가 만들어집니다.</p>
+  </div></li>
+
+  <li><div>
+    <b>런타임을 앱 폴더에 넣고 압축본 만들기</b>
+    <pre><code>python tools\bundle_runtime.py python-3.14.7-embed-amd64.zip --zip</code></pre>
+    <p><code>dist\PM_APP_python_v1.21.1_with_runtime.zip</code> 이 만들어집니다. <strong>이것이 나눠 주실 파일입니다.</strong></p>
+    <p><strong>파이썬 압축을 푸는 일은 여기서 끝납니다.</strong> 이 명령이 1번에서 받은 zip 을 앱 폴더 안 <code>runtime\</code> 으로 풀어 넣고, 그 상태를 통째로 다시 압축합니다. 사용자 PC에서는 파이썬을 다시 풀 일이 없습니다.</p>
+    <div class="note stop"><span class="lbl">이 순서를 반드시 지키십시오</span>
+    <p><code>build_python_app.py --zip</code> 으로 압축하지 마십시오. 그 명령은 <strong>먼저 다시 빌드</strong>하는데, 다시 빌드하면 앱 폴더가 비워지면서 <strong>런타임도 함께 지워집니다.</strong> 그렇게 만든 압축본에는 런타임이 없고, 아무 경고도 없습니다.</p>
+    <p>그래서 압축 기능을 <code>bundle_runtime.py</code> 쪽에 두었고, 파일 이름도 <code>_with_runtime</code> 으로 구분됩니다. <strong>이름에 <code>_with_runtime</code> 이 있는 것을 나눠 주십시오.</strong></p></div>
+  </div></li>
+
+  <li><div>
+    <b>공유 폴더 두 개 만들기</b>
+    <pre class="tree"><code>\\서버\공유\PRAP\
+  배포\      ← 3번에서 만든 zip 을 여기 둡니다
+  데이터\    ← 계획서가 사는 곳. 비워 두십시오. 앱이 알아서 채웁니다</code></pre>
+    <p><strong>데이터 폴더는 직접 만들지 마십시오</strong> — 빈 폴더 하나만 만들고 두십시오. 안의 구조는 앱이 처음 실행될 때 스스로 만듭니다.</p>
+  </div></li>
+
+  <li><div>
+    <b>공유 폴더가 쓸 만한지 확인하기 (권장)</b>
+    <pre><code>python tools\check_share.py \\서버\공유\PRAP\데이터</code></pre>
+    <p>파일을 만들지 않고 화면에 열두 줄로 답합니다. 동시 편집 잠금, 저장 중 끼어듦, 변경 이력 이어쓰기가 이 공유 폴더에서 제대로 동작하는지 봅니다.</p>
+    <pre class="out"><code>  writable (probe file)      PASS
+  exclusive create           PASS      1 winner of 8 attempts
+  rename over existing       PASS
+  append, 2 writers          PASS      400 rows, 0 torn
+  journal survives           PASS
+  verdict                    SAFE FOR SHARED USE
+  cleanup                    nothing left behind</code></pre>
+    <p><code>verdict</code> 가 <code>SAFE FOR SHARED USE</code> 가 아니면 <strong>그 폴더를 팀 공유에 쓰지 마십시오.</strong> FAIL 줄을 알려 주시면 원인을 찾아 드리겠습니다.</p>
+  </div></li>
+</ol>
+
+<h2>B. 일반 사용자 — 각자 한 번</h2>
+
+<ol class="steps">
+  <li><div>
+    <b>압축본을 내 PC로 복사</b>
+    <p><code>\\서버\공유\PRAP\배포\</code> 에서 <code>PM_APP_python_v1.21.1_with_runtime.zip</code> 을 <strong>자기 PC로 복사</strong>하십시오.</p>
+  </div></li>
+
+  <li><div>
+    <b>압축 풀기</b>
+    <p><strong>내 문서</strong> 아래가 가장 좋습니다. 예를 들어 이렇게 됩니다.</p>
+    <pre class="tree"><code>C:\Users\&lt;내계정&gt;\Documents\PM_APP\
+  PM_APP.cmd          ← 실행할 파일
+  PM_APP.py
+  check_pc.py
+  READ ME FIRST.txt
+  version.txt
+  app\
+  pmapp\
+  runtime\            ← 파이썬이 들어 있는 폴더. 지우지 마십시오</code></pre>
+    <div class="note"><span class="lbl">파이썬 런타임은 따로 풀지 않습니다</span>
+    <p><strong><code>runtime\</code> 은 이 압축본 안에 이미 들어 있습니다.</strong> 파이썬을 따로 내려받거나, 따로 압축을 풀거나, 어딘가에 설치할 일이 <strong>없습니다.</strong> 압축을 한 번 풀면 제자리에 들어갑니다.</p>
+    <p>앱이 찾는 위치는 <strong><code>PM_APP.cmd</code> 와 같은 폴더 안의 <code>runtime\</code></strong> 딱 한 곳입니다. 위 그림의 모양 그대로 두시면 됩니다 — <strong>폴더 안의 구조를 바꾸지 마십시오.</strong></p></div>
+
+    <div class="note warn"><span class="lbl">바탕화면·다운로드 폴더는 피하십시오</span>
+    <p>회사 PC는 바탕화면과 다운로드 폴더를 정리하거나 동기화하는 경우가 있고, 그러면 <code>data\</code> 안의 작업이 함께 사라질 수 있습니다.</p></div>
+  </div></li>
+
+  <li><div>
+    <b>이 PC가 돌릴 수 있는지 확인 (선택)</b>
+    <pre><code>runtime\python.exe check_pc.py</code></pre>
+    <p>열두 줄로 답합니다. <code>verdict</code> 가 <code>YES</code> 면 다음으로 가십시오. 파일을 만들지 않고, 경로·계정·기계 이름도 출력하지 않으므로 결과를 그대로 말씀해 주셔도 됩니다.</p>
+  </div></li>
+
+  <li><div>
+    <b>PM_APP.cmd 더블클릭</b>
+    <p>검은 창이 뜨고 브라우저가 열립니다. 창에는 이렇게 나옵니다.</p>
+    <pre class="out"><code>  version      1.21.1
+  application  C:\Users\...\Documents\PM_APP
+  your data    C:\Users\...\Documents\PM_APP\data\users\&lt;내계정&gt;
+  chosen by    3 - writable data\ beside the application
+  listening    127.0.0.1:34769  (this machine only)</code></pre>
+    <p><code>your data</code> 가 <strong>내 계획서가 저장되는 곳</strong>이고, <code>chosen by</code> 는 <strong>앱이 왜 그곳을 골랐는지</strong>입니다. 나중에 문제가 생기면 이 두 줄이 답을 갖고 있습니다.</p>
+    <div class="note"><span class="lbl">검은 창은 닫지 마십시오</span>
+    <p>그 창이 프로그램 본체입니다. <strong>닫으면 앱이 멈춥니다</strong> — 그것이 정상적인 종료 방법이기도 합니다. 브라우저 탭만 닫아도 몇 초 뒤 함께 멈춥니다. 새로고침은 괜찮습니다.</p></div>
+    <p>처음 한 번 <strong>이름과 부서</strong>를 묻습니다. 이것은 동료가 <em>"누가 편집 중인지"</em> 볼 때 쓰는 이름입니다.</p>
+  </div></li>
+
+  <li><div>
+    <b>팀과 함께 쓰려면 — 바로가기 하나 (팀 공유를 쓸 때만)</b>
+    <p><code>PM_APP.cmd</code> 를 오른쪽 클릭 → <strong>바로 가기 만들기</strong> → 만들어진 바로가기를 오른쪽 클릭 → <strong>속성</strong> → <strong>대상</strong> 칸 끝에 공유 폴더를 덧붙이십시오.</p>
+    <pre><code>"C:\Users\&lt;내계정&gt;\Documents\PM_APP\PM_APP.cmd" "--data=\\서버\공유\PRAP\데이터"</code></pre>
+    <p>따옴표까지 그대로 넣으십시오. 경로에 공백이 있어도 이 형태면 동작합니다. 이제 <strong>그 바로가기로 실행</strong>하면 팀 폴더를 쓰고, 창에 이렇게 나옵니다.</p>
+    <pre class="out"><code>  your data    \\서버\공유\PRAP\데이터\users\&lt;내계정&gt;
+  chosen by    1 - the --data argument</code></pre>
+    <p><strong>담당자가 대신 만들어 배포해도 됩니다.</strong> 아래 한 줄을 메모장에 붙여 <code>PM_APP_팀.cmd</code> 로 앱 폴더에 저장하면, 사용자는 그것만 더블클릭하면 됩니다.</p>
+    <pre><code>@echo off
+"%~dp0PM_APP.cmd" "--data=\\서버\공유\PRAP\데이터"</code></pre>
+  </div></li>
+</ol>
+
+<h2>계획서는 어디에 저장되는가</h2>
+
+<p>팀 공유로 실행했을 때 공유 폴더가 실제로 이렇게 됩니다. 사람이 만드는 것이 아니라 <strong>앱이 스스로 만든 구조</strong>입니다.</p>
+
+<pre class="tree"><code>\\서버\공유\PRAP\데이터\
+  shared\                          ← 팀이 함께 보는 계획서
+    workspaces\
+      팀계획.prap
+    backups\
+    READ ME - shared plans.txt
+  users\
+    kim\                           ← 각자의 개인 공간
+      workspaces\
+        kim-개인계획.prap
+      backups\
+      settings.json
+    lee\
+      workspaces\
+        lee-개인계획.prap
+      backups\
+      settings.json
+  audit\                           ← 변경 이력 (설치 전체에 하나)</code></pre>
+
+<p>앱 안에서 파일을 열거나 저장할 때 <strong><code>My plans</code> / <code>Team plans</code></strong> 두 칸이 보입니다. <strong>팀이 함께 볼 계획서는 <code>Team plans</code> 에 두십시오.</strong> 개인 폴더는 다른 사람이 열 수 없어서, 거기 둔 계획서는 동시 편집 보호가 아예 작동하지 않습니다.</p>
+
+<div class="note"><span class="lbl">앱이 알아서 잡아 줍니다</span>
+<p>개인 폴더에 있는 계획서를 <strong>다른 사람이 저장한 흔적</strong>이 있으면(= 손으로 복사해 온 것), 앱이 한 줄로 알려 주고 <strong>「팀 폴더로 옮기기」 버튼</strong>을 내어 줍니다. 계획서와 이전 판본까지 함께 옮겨집니다.</p></div>
+
+<h2 id="warn">주의사항</h2>
+
+<div class="note stop">
+  <span class="lbl">하지 마십시오 — 공유 폴더에서 직접 실행</span>
+  <p><code>\\서버\공유\...\PM_APP.cmd</code> 를 공유 폴더에 두고 거기서 바로 실행하는 방식은 권하지 않습니다. 실측으로 확인된 것은 <strong>"사용자 폴더에서 실행 허용"</strong> 이고, <strong>네트워크 경로(UNC)에서 실행파일을 돌리는 것은 별개의 통제</strong>라 막혀 있는 경우가 흔합니다.</p>
+  <p><strong>앱은 각자 PC, 계획서만 공유 폴더</strong> — 이 형태가 이미 허용으로 확인된 상황과 정확히 같습니다.</p>
+</div>
+
+<div class="note stop">
+  <span class="lbl">하지 마십시오 — 새 버전을 덮어쓸 때 data\ 까지</span>
+  <p>새 버전을 받으면 <strong>앱 폴더의 내용만 교체</strong>하십시오. <code>data\</code> 폴더는 <strong>그대로 두셔야 합니다</strong> — 배포 압축본에는 들어 있지 않으니, 폴더를 통째로 지우고 다시 푸는 방식만 피하시면 됩니다.</p>
+  <p>안전한 방법: 압축을 <strong>새 폴더</strong>에 풀고, 이전 폴더의 <code>data\</code> 를 새 폴더로 옮기십시오.</p>
+</div>
+
+<div class="note warn">
+  <span class="lbl">담당자용 — 다시 빌드하면 런타임이 사라집니다</span>
+  <p><code>build_python_app.py</code> 를 다시 돌리면 앱 폴더가 비워지고 <code>runtime\</code> 도 함께 지워집니다. 빌드가 그 사실을 화면에 알려 주지만, <strong>빌드 → 번들 → 압축</strong> 순서를 기억해 두시는 편이 낫습니다.</p>
+</div>
+
+<div class="note warn">
+  <span class="lbl">알아 두실 것 — 이름은 신원 확인이 아닙니다</span>
+  <p>처음에 입력하는 이름과 부서는 <strong>동료에게 보여 주기 위한 것</strong>이지 로그인이 아닙니다. 누가 무엇을 했는지에 대한 증거로 쓰지 마십시오. 파일이 저장되는 폴더는 이름이 아니라 <strong>윈도우 계정</strong> 기준으로 나뉩니다.</p>
+</div>
+
+<div class="note">
+  <span class="lbl">같은 이름의 계획서</span>
+  <p>팀 폴더에 이미 같은 이름의 계획서가 있으면 <strong>옮기기가 거부됩니다.</strong> 남의 작업을 덮어쓰지 않기 위해서입니다. 내 것의 이름을 바꾸시거나, 상대의 것을 먼저 열어 <strong>같은 계획서가 두 벌인 것은 아닌지</strong> 확인하십시오.</p>
+</div>
+
+<h2>문제가 생기면</h2>
+
+<div class="tw"><table>
+  <thead><tr><th>증상</th><th>원인</th><th>조치</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>검은 창이 번쩍 뜨고 사라짐</td>
+      <td>앱이 시작에 실패했고 메시지가 창과 함께 사라짐</td>
+      <td>정상이라면 창이 <strong>멈춰 서서</strong> 이유를 보여 줍니다. 그래도 사라지면 <code>runtime\python.exe check_pc.py</code> 를 돌려 보십시오</td>
+    </tr>
+    <tr>
+      <td><code>This PC has no Python...</code></td>
+      <td><code>runtime\</code> 이 없는 압축본을 받으신 것</td>
+      <td>담당자에게 <strong>이름에 <code>_with_runtime</code> 이 있는 압축본</strong>을 요청하십시오</td>
+    </tr>
+    <tr>
+      <td>파이썬을 어디에 풀어야 하는지 모르겠음</td>
+      <td>풀 필요가 없습니다 — 압축본 안에 이미 들어 있습니다</td>
+      <td>앱 폴더 안에 <code>runtime\</code> 이 보이면 된 것입니다. 없다면 <strong>이름에 <code>_with_runtime</code> 이 없는 압축본</strong>을 받으신 것입니다</td>
+    </tr>
+    <tr>
+      <td>브라우저가 안 열림</td>
+      <td>기본 브라우저가 등록되어 있지 않음</td>
+      <td>앱은 정상 동작 중입니다. 검은 창의 <code>http://127.0.0.1:...</code> 주소를 복사해 브라우저에 붙여 넣으십시오</td>
+    </tr>
+    <tr>
+      <td>팀 계획서가 안 보임</td>
+      <td>공유 폴더를 지정하지 않고 실행한 것</td>
+      <td>창의 <code>chosen by</code> 줄을 보십시오. <code>1 - the --data argument</code> 가 아니면 <strong>B-5의 바로가기</strong>로 실행하고 계신 것이 아닙니다</td>
+    </tr>
+    <tr>
+      <td><code>읽기 전용 — OOO님이 편집 중</code></td>
+      <td>정상입니다. 한 번에 한 사람만 편집합니다</td>
+      <td>기다리시면 됩니다. <strong>상대가 끝내면 30초 안에 앱이 알려 줍니다</strong> — 다시 열 필요 없습니다</td>
+    </tr>
+    <tr>
+      <td><code>somebody else saved this plan...</code></td>
+      <td>내가 연 뒤에 동료가 저장했습니다. 저장은 <strong>거부되었고 동료의 작업은 무사합니다</strong></td>
+      <td><strong>File → Reload plan</strong> 으로 최신 내용을 불러온 뒤 다시 수정하십시오</td>
+    </tr>
+    <tr>
+      <td>Microsoft Store 가 열림</td>
+      <td><code>PM_APP.py</code> 를 직접 실행하셨을 때 생길 수 있습니다</td>
+      <td><code>PM_APP.cmd</code> 로 실행하십시오. 그쪽은 이 현상을 피하도록 되어 있습니다</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<h2>지울 때</h2>
+<p><strong>폴더를 지우면 끝입니다.</strong> 레지스트리에 남는 것도, PATH에 더해진 것도, 시작 프로그램에 등록된 것도 없습니다. 공유 폴더의 계획서는 그대로 남습니다.</p>
+
+<footer>
+  <p>이 안내서의 경로·화면 출력·폴더 구조는 모두 PM_APP 1.21.1 을 실제로 실행해 얻은 것입니다. 버전이 올라가면 <code>version.txt</code> 와 압축본 이름이 달라집니다.</p>
+</footer>
+
+</div>
