@@ -372,7 +372,20 @@ python tools\test_python_app.py</code></pre>
     <pre class="out"><code>ok   EVERY FIGURE EQUALS THE PYTHON REFERENCE IMPLEMENTATION
      1227 person-months compared, worst difference 0.00e+00
 0 failed</code></pre>
-    <p>세 번째는 브라우저가 필요합니다. 담당자 PC에서 돌지 않으면 건너뛰되, <strong>그 경우 1·2번은 반드시 돌리십시오.</strong></p>
+
+    <div class="note warn"><span class="lbl">세 번째에서 <code>No module named 'playwright'</code> 가 나오면</span>
+    <p><strong>앱의 문제가 아닙니다.</strong> 세 번째 시험은 절반이 <strong>진짜 브라우저를 몰아서</strong> 화면의 숫자를 대조하는 것이라, 그 브라우저를 다루는 도구(<code>playwright</code>)가 담당자 PC에 필요합니다. <strong>앱 자체는 파이썬 표준 라이브러리 외에 아무것도 요구하지 않습니다</strong> — 사용자 PC에는 이런 것이 일절 필요 없습니다.</p>
+    <p><strong>설치가 가능한 환경이라면</strong> 두 줄이면 됩니다.</p>
+    <pre><code>pip install playwright
+playwright install chromium</code></pre>
+    <p><strong>사내 정책상 <code>pip</code> 을 쓸 수 없다면</strong> 아래처럼 <strong>절반만</strong> 돌리십시오. 소켓·키·외부 접근 거부·디스크 노출 검사는 브라우저 없이 그대로 수행됩니다.</p>
+    <pre><code>python tools\test_python_app.py --no-browser-checks</code></pre>
+    <pre class="out"><code>  ok   no key, no answer                      HTTP 403
+  ok   nothing is served from disk: ...        HTTP 404
+  SKIP every check below needs a browser
+  ------------------------------------------------------------------
+  PARTIAL RUN. ... 종료 코드 2</code></pre>
+    <p><strong>종료 코드 2 는 실패가 아니라 "일부만 수행"</strong>이라는 뜻입니다. 이 경우 <strong>1·2번은 반드시 돌리십시오</strong> — 저장·잠금·복구(104건)와 의존성 규칙은 브라우저 없이도 전부 확인됩니다.</p></div>
   </div></li>
 
   <li><div>
