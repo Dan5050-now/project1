@@ -19,6 +19,7 @@ import importlib.util
 import pathlib
 import re
 import sys
+import warnings
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -230,6 +231,34 @@ layers = {n.split("/")[0] for n in build_app.PARTS}
 check(layers == {"core", "ui", "storage", "shell"},
       "and the four layers the plan names are the four that exist",
       ", ".join(sorted(layers)))
+
+# ---- every python file compiles quietly, on any python -------------------------
+# A backslash that starts no known escape - "data\\shared" written as "data\shared" -
+# is kept as-is by Python, so the text is right and nothing misbehaves. But it is a
+# SyntaxWarning from 3.12 and an error in some later version, and the warning appears
+# ON THE PREPARER'S SCREEN, in the middle of a build they are told to trust. Caught
+# here rather than by whoever runs a newer Python than this: the warning is only
+# raised when the file is compiled fresh, so a cached .pyc hides it too.
+print("\nevery python file, compiled")
+noisy = []
+for q in sorted(list(SRC.rglob("*.py")) + list((ROOT / "tools").rglob("*.py"))):
+    if "__pycache__" in q.parts:
+        continue
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        try:
+            compile(q.read_text(encoding="utf-8"), str(q), "exec")
+        except SyntaxError as e:                                     # noqa: PERF203
+            noisy.append(f"{q.relative_to(ROOT)}: {e}")
+            continue
+    for m in caught:
+        if "escape sequence" in str(m.message) or issubclass(m.category, SyntaxWarning):
+            noisy.append(f"{q.relative_to(ROOT)}:{m.lineno}: {m.message}")
+check(not noisy,
+      "NO FILE COMPILES WITH A WARNING - a build the preparer is told to trust must "
+      "not print one",
+      "; ".join(noisy[:3]) if noisy else
+      f"{len(list(SRC.rglob('*.py'))) + len(list((ROOT / 'tools').glob('*.py')))} files, quiet")
 
 print()
 print("FAILURES: " + (", ".join(fails) if fails else "none"))

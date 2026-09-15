@@ -219,7 +219,7 @@ WHAT IS NEW IN 1.21.1
     Python buffers text and a share does not promise an atomic append. Every row
     already names who made the change, so a month still reads as one record.
 
-  * PLANS THE TEAM SHARES HAVE A PLACE: data\shared\workspaces\ , created at
+  * PLANS THE TEAM SHARES HAVE A PLACE: data\\shared\\workspaces\\ , created at
     launch with a note in it saying which folder is for what. Sharing is written
     for several people opening one plan, and the per-person folder is somewhere
     nobody else can open - where a claim protects nothing.

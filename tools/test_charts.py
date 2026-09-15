@@ -107,7 +107,7 @@ with sync_playwright() as pw:
         || Math.abs(a[x] - b[x]) > 0.6).map(x => [x, a[x], b[x]]);
       const perPerson = {};
       for (const r of seg){
-        const nm = /^<b>(.*?)<\/b>/.exec(r.dataset.tip)[1];
+        const nm = /^<b>(.*?)<\\/b>/.exec(r.dataset.tip)[1];
         (perPerson[nm] ||= new Set()).add(r.getAttribute('fill'));
       }
       return {segments: seg.length, months: Object.keys(A).length,
@@ -212,7 +212,7 @@ with sync_playwright() as pw:
       };
       const out = {};
       out.overallProject = has('#t-overall', 'Monthly demand by project', /Project period:/);
-      out.overallPerson  = has('#t-overall', 'Monthly demand by person', /&#215;\d/);
+      out.overallPerson  = has('#t-overall', 'Monthly demand by person', /&#215;\\d/);
       showTab('t-proj');
       out.projectUtil = has('#t-proj', 'Utilisation', /Project period:/);
       showTab('t-pers');
@@ -265,14 +265,14 @@ with sync_playwright() as pw:
         (by[(+r.getAttribute('x')).toFixed(1)] ||= []).push(r);
       const bad = [];
       for (const col of Object.values(by)){
-        const m = /<br>([A-Z][a-z]{2} \d{4}) &middot;|<br>([A-Z][a-z]{2} \d{4}) \u00b7/
+        const m = /<br>([A-Z][a-z]{2} \\d{4}) &middot;|<br>([A-Z][a-z]{2} \\d{4}) \u00b7/
           .exec(col[0].dataset.tip);
-        const month = /([A-Z][a-z]{2} \d{4})/.exec(col[0].dataset.tip);
+        const month = /([A-Z][a-z]{2} \\d{4})/.exec(col[0].dataset.tip);
         const k = grid().find(g => keyToLabel(g) === month[1]);
         const real = S.calc.projMonth.get(S.selProj + '|' + k) || 0;
         let sum = 0;
         for (const r of col){
-          const own = /<b>([\d.]+) FTE<\/b> on this project/.exec(r.dataset.tip);
+          const own = /<b>([\\d.]+) FTE<\\/b> on this project/.exec(r.dataset.tip);
           if (own) sum += parseFloat(own[1]);
         }
         if (Math.abs(sum - real) > 0.02) bad.push([month[1], sum, real]);
@@ -475,7 +475,7 @@ with sync_playwright() as pw:
              "#t-pers .data-t[data-sheet='Assignment'] tbody tr.sel");
           return {selAsg: S.selAsg, shown, real,
                   line: (panel.querySelector('.asgline')||{}).textContent
-                          .replace(/\s+/g, " ").trim(),
+                          .replace(/\\s+/g, " ").trim(),
                   highlighted: sel ? sel.dataset.id : null};
         }""")
         seen += 1
@@ -490,7 +490,7 @@ with sync_playwright() as pw:
       const panel = [...document.querySelectorAll('#t-pers .panel')]
         .find(e => (e.querySelector('h2')||{}).textContent.startsWith('Weight overrides'));
       const a = S.model.raw.Assignment.find(x => x.assignment_id === S.selAsg);
-      return {line: (panel.querySelector('.asgline')||{}).textContent.replace(/\s+/g, " ").trim(),
+      return {line: (panel.querySelector('.asgline')||{}).textContent.replace(/\\s+/g, " ").trim(),
               project: (S.model.projects[a.project_id]||{}).project_name, role: a.role_name,
               weight: a.person_weight === null ? null : Number(a.person_weight).toFixed(2)};
     }""")
@@ -525,9 +525,9 @@ with sync_playwright() as pw:
           const bad = [];
           for (const h of hits){
             const t = h.dataset.tip;
-            const name = /^<b>(.*?)<\/b>/.exec(t)[1];
-            const total = parseFloat(/<b>(?:.*?)<\/b><br>([\d.]+) /.exec(t)[1]);
-            const peakM = /peak [\d.]+ in ([A-Z][a-z]{2} \d{4})/.exec(t)[1];
+            const name = /^<b>(.*?)<\\/b>/.exec(t)[1];
+            const total = parseFloat(/<b>(?:.*?)<\\/b><br>([\\d.]+) /.exec(t)[1]);
+            const peakM = /peak [\\d.]+ in ([A-Z][a-z]{2} \\d{4})/.exec(t)[1];
             const id = kind === "project"
               ? Object.keys(S.model.projects).find(q =>
                   S.model.projects[q].project_name === name)
