@@ -38,3 +38,6 @@ tools/probe/*.exe
 output/deck/deck.js
 output/deck/icons/
 output/deck/_icons.js
+output/deck/_fte/
+output/deck/fte_doc.html
+output/deck/fte_examples.json
