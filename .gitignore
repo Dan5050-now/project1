@@ -36,3 +36,5 @@ tools/probe/*.exe
 
 # The deck's generated intermediate - build_deck.py writes it on every run.
 output/deck/deck.js
+output/deck/icons/
+output/deck/_icons.js
