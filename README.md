@@ -1,0 +1,28 @@
+# Clinical Trial Progress Management App
+
+임상시험의 데이터, 검체, 영상, SDV, 프로젝트 타임라인 진척을 **예측하고 추적**하는 통합 관리 앱입니다.
+
+여러 시스템에 흩어진 "실제로 들어온 것"을 모으는 데 그치지 않고, 프로토콜 가정과 RTSM 실적에서 **"들어왔어야 하는 것"을 생성**하여 둘을 대조하는 것이 이 앱의 핵심입니다.
+
+## 현재 상태
+
+**개념 설계 단계.** 구현 코드는 아직 없습니다.
+
+개념 문서는 [`docs/concept/`](docs/concept/README.md)에 있습니다. 검토와 수정을 거쳐 상세 사양으로 발전시킬 예정입니다.
+
+## 다루는 범위
+
+| 도메인 | 집계 레벨 |
+|---|---|
+| EDC 데이터 진척 (입력 → SDV → 리뷰 → 코딩 → 서명 → freeze → lock) | trial / country / site / subject |
+| RTSM 시험 현황 (피험자 상태, 층화, 방문 윈도우 준수) | trial / country / site / subject |
+| SDV 방문 계획 관리 (계획·실적·CRA 리소스·적정성 평가) | trial / country / site |
+| 검체 진척 관리 (채취 → 배송 → 도착 → 대조 → 분석) | trial / country / site / subject |
+| 영상 진척 관리 (획득 → 업로드 → QC → 배정 → 판독) | trial / country / site / subject |
+| 프로젝트 타임라인 (마일스톤, 상세 task) | trial |
+
+## 문서
+
+시작점은 [`docs/concept/README.md`](docs/concept/README.md)입니다.
+
+핵심 설계를 빠르게 파악하려면 [`03-core-concept-model.md`](docs/concept/03-core-concept-model.md)를 먼저 보시면 됩니다. 여섯 도메인을 네 개의 아키타입으로 정리한 문서이며, 나머지 문서는 모두 그 개념의 적용입니다.
