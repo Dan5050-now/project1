@@ -257,6 +257,34 @@ with tempfile.TemporaryDirectory() as d:
           rc == 1 and "NOT READY TO HAND OUT" in out and "START" in out,
           [ln.strip() for ln in out.splitlines() if "NOT READY" in ln][:1])
 
+# ---- 2d. the verification a preparer can actually run on their own PC -------
+# The runbook tells the preparer to run three suites before handing anything out, and
+# the third one ended in a traceback on a company PC: ModuleNotFoundError, playwright.
+# That reads as "the application is broken" when it means "this PC has no test
+# browser" - and it stopped the half of that file which needs no browser at all from
+# ever running. It also named a Linux Chromium path, so on Windows it could not have
+# worked even with playwright installed.
+APPTEST = ROOT / "tools" / "test_python_app.py"
+src = APPTEST.read_text(encoding="utf-8")
+check("the browser test IMPORTS PLAYWRIGHT LAZILY - a missing test tool is not a "
+      "broken application",
+      "except ImportError" in src and "sync_playwright = None" in src)
+check("and it does not hardcode one machine's browser path",
+      "def chromium_path" in src and "PM_APP_CHROME" in src
+      and src.count('"/opt/pw-browsers') <= 1)
+
+rc, out = run(str(APPTEST), "--no-browser-checks")
+check("WITHOUT A BROWSER THE REST STILL RUNS - the socket, the key, the refusals",
+      "no key, no answer" in out and "nothing is served from disk" in out
+      and "FAILED" not in out,
+      f"{out.count('  ok  ')} checks ran")
+check("the skipped half is named, not silently dropped",
+      "SKIP" in out and "PARTIAL RUN" in out)
+check("and a partial run is neither a pass nor a failure: exit code 2", rc == 2,
+      f"exit {rc}")
+check("it says how to run the rest, and what to run instead where pip is not allowed",
+      "pip install playwright" in out and "test_storage_py.py" in out)
+
 # ---- 3. the PC check -------------------------------------------------------
 rc, out = run(str(CHECK))
 check("the PC check runs and reaches a verdict",

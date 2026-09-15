@@ -17,6 +17,16 @@ than argued for:
     difference. 1,225 person-months, compared one at a time.
 
     python tools/build_python_app.py && python tools/test_python_app.py
+
+HALF OF IT NEEDS PLAYWRIGHT, and half of it does not. The socket, the key, the
+refusals and the "nothing is served from disk" checks need nothing but Python; the
+figures on screen need a real browser. Where playwright is not installed - a company
+PC where pip is not allowed, say - the first half still runs and the run ends with
+PARTIAL and exit code 2: nothing failed, but not everything ran. Say so plainly
+rather than reporting a pass.
+
+    pip install playwright && playwright install chromium    to run all of it
+    python tools/test_python_app.py --no-browser-checks      to ask for half on purpose
 """
 
 import json
@@ -30,12 +40,41 @@ import time
 import urllib.error
 import urllib.request
 
-from playwright.sync_api import sync_playwright
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:                     # playwright is a TEST dependency, not the app's
+    sync_playwright = None
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PKG = ROOT / "dist" / "PM_APP_py"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.18.xlsx"
-CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
+# WHERE CHROMIUM IS, or None to let playwright find its own. A hardcoded path is how
+# this file used to mean "runs on my machine": it named a Linux build, so on the
+# Windows PC that actually prepares the release it could not have worked even with
+# playwright installed.
+KNOWN_CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
+
+
+def chromium_path():
+    p = os.environ.get("PM_APP_CHROME")
+    if p:
+        return p
+    return KNOWN_CHROME if os.path.isfile(KNOWN_CHROME) else None
+
+
+def why_no_browser(argv):
+    """Empty string when the browser half can run; otherwise why it cannot.
+
+    HALF OF THIS FILE NEEDS A BROWSER AND HALF DOES NOT, and the half that does not
+    is the half that answers "is this package sound" on the machine that builds the
+    release. Missing playwright used to end the run with a traceback before either
+    half ran, which reads as "the application is broken" when it means "this PC has
+    no test browser"."""
+    if "--no-browser-checks" in argv:
+        return "asked for with --no-browser-checks"
+    if sync_playwright is None:
+        return "playwright is not installed on this PC"
+    return ""
 
 # Enough state for discardEdits() to run: it puts the snapshot back, so there has to
 # be one. Kept out of the call site because it is scaffolding, not the check.
@@ -72,10 +111,16 @@ def post(url, op, body, key=None, headers=None):
 
 
 def main():
+    no_browser = why_no_browser(sys.argv)
+
     if not (PKG / "PM_APP.py").exists():
         raise SystemExit("Build it first:  python tools/build_python_app.py")
-    if not DUMMY.exists():
-        raise SystemExit(f"missing {DUMMY}")
+    # The workbook is what the figures are compared against, so it is only needed by
+    # the half that compares them. Demanding it up front would stop a run that was
+    # never going to read it.
+    if not DUMMY.exists() and not no_browser:
+        raise SystemExit(f"missing {DUMMY}\n"
+                         f"Make it with:  python tools/build_source_workbook.py")
 
     home = pathlib.Path(tempfile.mkdtemp(prefix="pm-run-"))
     app_dir = home / "PM_APP"
@@ -105,11 +150,13 @@ def main():
     print(f"listening at {url}\n")
 
     # ---- the reference figures, from the independent implementation --------
-    sys.path.insert(0, str(ROOT / "tools"))
-    import prap_io                                                   # noqa: E402
-    M = prap_io.Model(prap_io.read_xlsx(DUMMY))
-    C = prap_io.calculate(M)
-    ref = {f"{sid}|{k}": v for (sid, k), v in C["pers_month"].items()}
+    ref = {}
+    if not no_browser:
+        sys.path.insert(0, str(ROOT / "tools"))
+        import prap_io                                               # noqa: E402
+        M = prap_io.Model(prap_io.read_xlsx(DUMMY))
+        C = prap_io.calculate(M)
+        ref = {f"{sid}|{k}": v for (sid, k), v in C["pers_month"].items()}
 
     try:
         print("the socket, and who may talk to it")
@@ -160,9 +207,41 @@ def main():
             check(code == 404, f"nothing is served from disk: {probe}", f"HTTP {code}")
 
         # ---- the page ------------------------------------------------------
+        if no_browser:
+            print("\nthe page")
+            print(f"  SKIP  every check below needs a browser - {no_browser}")
+            # Still worth saying, and it needs no browser: starting the application
+            # scattered nothing across the machine.
+            stray = [q for q in home.rglob("*") if q.is_file()
+                     and not str(q).startswith(str(app_dir))]
+            check(not stray, "starting it wrote nothing outside its own folder",
+                  "; ".join(str(q) for q in stray[:3]))
+            check((app_dir / "data").is_dir(),
+                  "the data folder is beside the application")
+            print()
+            print("  " + "-" * 66)
+            print("  PARTIAL RUN. The checks above are real and they passed, but the")
+            print("  figures on screen were NOT compared against the reference")
+            print(f"  implementation: {no_browser}.")
+            print()
+            print("  To run them here:   pip install playwright")
+            print("                      playwright install chromium")
+            print("  Where pip is not allowed, this is the expected result. Run these")
+            print("  two instead, which need nothing but Python and cover the storage")
+            print("  and dependency rules:")
+            print("      python tools/test_layers.py")
+            print("      python tools/test_storage_py.py")
+            print("  " + "-" * 66)
+            print(f"\n{len(fails)} failed")
+            for f in fails:
+                print(f"  FAILED  {f}")
+            # 2, not 0 and not 1: nothing failed, but not everything ran.
+            return 1 if fails else 2
         print("\nthe page")
         with sync_playwright() as pw:
-            browser = pw.chromium.launch(executable_path=CHROME)
+            where = chromium_path()
+            browser = (pw.chromium.launch(executable_path=where) if where
+                       else pw.chromium.launch())
             pg = browser.new_page(viewport={"width": 1500, "height": 1000})
             errors = []
             pg.on("pageerror", lambda e: errors.append(str(e)))
