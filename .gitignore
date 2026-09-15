@@ -33,3 +33,6 @@ dist/
 # The compiled launch probe. Its source is tools/probe/PM_APP_Probe.c and one
 # command rebuilds it; a checked-in binary is a thing nobody can review.
 tools/probe/*.exe
+
+# The deck's generated intermediate - build_deck.py writes it on every run.
+output/deck/deck.js
