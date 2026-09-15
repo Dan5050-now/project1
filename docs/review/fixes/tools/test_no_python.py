@@ -22,6 +22,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -184,6 +185,77 @@ if plain:
         names = zf.namelist()
     check("while the plain --zip has none - which is why the two are named apart",
           not any("runtime" in n for n in names), plain[0].name)
+
+# ---- 2c. the checks the bundler makes, which were the bug --------------------
+# A shipped version of bundle_runtime.py asked the application for its version before
+# --version existed. The application ignores words it does not know, so it STARTED:
+# served a page, opened a browser, waited for a person. subprocess then timed out and
+# threw, the run died before the packaging, and what the operator saw was a login
+# screen and no zip. Two things let that out of the door, and both are checked here:
+# the check started something that never returns, and it sat inside `if os.name ==
+# "nt"`, where nothing on this side could ever run it.
+sys.path.insert(0, str(ROOT / "tools"))
+import bundle_runtime as BR                                          # noqa: E402
+
+t0 = time.monotonic()
+rows = BR.verify(sys.executable, APP)
+elapsed = time.monotonic() - t0
+by = {label: (text, ok) for label, text, ok in rows}
+
+check("THE CHECKS CAN BE RUN FROM HERE AT ALL - they take the interpreter as an "
+      "argument, instead of hiding on a Windows-only branch",
+      len(rows) == 4 and all(by.values()))
+check("EVERY ONE OF THEM COMES BACK BY ITSELF, and quickly - a check that starts the "
+      "application never returns, and takes the packaging down with it",
+      elapsed < 20, f"all four in {elapsed:.1f}s")
+check("the start check asks PM_APP.py --version, and gets a version",
+      by["START"][1] and "1." in by["START"][0], by["START"][0])
+check("the application really does stop after --version rather than serving",
+      run(str(APP / "PM_APP.py"), "--version")[0] == 0)
+
+# A hang is reported, not raised. This is the exact shape of the failure that got out.
+t0 = time.monotonic()
+ok, txt = BR.run_one(sys.executable, ["-c", "import time; time.sleep(120)"], timeout=2)
+check("AND IF SOMETHING DOES HANG, IT IS AN ANSWER, NOT AN EXCEPTION",
+      ok is False and "did not stop by itself" in txt and time.monotonic() - t0 < 20,
+      txt)
+
+with tempfile.TemporaryDirectory() as d:
+    d = pathlib.Path(d)
+    old = d / "PM_APP_py"
+    (old / "pmapp" / "shell").mkdir(parents=True)
+    (old / "PM_APP.py").write_text(
+        "import os, sys\n"
+        "sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\n"
+        "import time; time.sleep(600)\n", encoding="utf-8")
+    (old / "pmapp" / "shell" / "launch.py").write_text("def main(argv=None):\n    pass\n",
+                                                       encoding="utf-8")
+    t0 = time.monotonic()
+    rows = BR.verify(sys.executable, old)
+    check("an older build with no --version is NOT asked - asking would start it",
+          "not checked" in dict((a, b) for a, b, _ in rows)["START"]
+          and time.monotonic() - t0 < 20)
+
+    # And the packaging is not hostage to any of it. A check that fails has to leave
+    # the zip written and say so, because being told at the end is worth more than
+    # being told instead.
+    bad = d / "bad_app"
+    (bad / "pmapp" / "shell").mkdir(parents=True)
+    (bad / "PM_APP.py").write_text(
+        "import os, sys\n"
+        "sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\n"
+        "raise SystemExit('this build is broken')\n", encoding="utf-8")
+    (bad / "pmapp" / "shell" / "launch.py").write_text(
+        'if "--version" in argv:\n    pass\n', encoding="utf-8")
+    (bad / "version.txt").write_text("9.9.9", encoding="utf-8")
+    z = embeddable_zip(d / "python-3.14.7-embed-amd64.zip")
+    rc, out = run(str(BUNDLE), str(z), "--into", str(bad), "--zip",
+                  "--check-with", sys.executable)
+    made = bad.parent / "PM_APP_python_v9.9.9_with_runtime.zip"
+    check("A FAILED CHECK STILL LEAVES THE ZIP WRITTEN", made.is_file())
+    check("and says, last, that it is not ready to hand out",
+          rc == 1 and "NOT READY TO HAND OUT" in out and "START" in out,
+          [ln.strip() for ln in out.splitlines() if "NOT READY" in ln][:1])
 
 # ---- 3. the PC check -------------------------------------------------------
 rc, out = run(str(CHECK))
