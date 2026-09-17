@@ -186,33 +186,72 @@ tr:last-child td{border-bottom:0}
   font-size:11.5px; color:var(--muted); display:flex; flex-wrap:wrap; gap:6px 20px}
 </style>
 
-<div class="banner"><strong>Design mockup</strong> — illustrative layout for the Tumor Evaluation Profile. All subject data below is fabricated sample data, not real patient data.</div>
+<style>
+/* ---- product chrome added in v0.2 ---- */
+.appbar{background:var(--ink); color:#fff; padding:7px 20px}
+.appbar-in{max-width:1180px; margin:0 auto; display:flex; gap:14px 20px; align-items:center; flex-wrap:wrap}
+.appbar .brand{font-size:12px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; opacity:.72}
+.appbar label{font-size:11px; letter-spacing:.06em; text-transform:uppercase; opacity:.62; margin-right:5px}
+.appbar select{
+  font:inherit; font-size:12.5px; background:rgba(255,255,255,.10); color:#fff;
+  border:1px solid rgba(255,255,255,.22); border-radius:4px; padding:3px 7px; cursor:pointer}
+.appbar select option{color:#101820; background:#fff}
+.appbar .spacer{flex:1}
+.badge-unval{
+  font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  background:var(--s-warn); color:#2b1d00; border-radius:3px; padding:3px 8px}
+.fresh{display:flex; gap:3px; align-items:center; flex-wrap:wrap}
+.fresh .f{display:flex; align-items:center; gap:3px; font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px; padding:1px 5px; border-radius:3px; background:var(--surface-2);
+  border:1px solid var(--hair); color:var(--ink-2)}
+.fresh .f.stale{border-color:var(--s-warn); color:var(--ink)}
+.fresh .f.stale::before{content:"▲"; color:var(--s-warn); font-size:9px}
+.cov{font-size:12px; color:var(--ink-2)}
+.cov b{color:var(--ink); font-weight:600}
+.cov.warn{color:var(--ink)}
+.cov.warn::before{content:"▲ "; color:var(--s-warn); font-weight:700}
+.cfgline{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted)}
+.cfgtbl{display:flex; flex-direction:column; gap:8px}
+.cfgrow{display:flex; flex-direction:column; gap:1px}
+.cfgtbl .k{font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--muted); overflow-wrap:anywhere}
+.cfgtbl .v{font-size:13px; font-weight:500; font-variant-numeric:tabular-nums; overflow-wrap:anywhere}
+.disc{font-size:12px; padding:7px 10px; background:var(--surface-2); border:1px solid var(--hair);
+  border-left:2px solid var(--s-warn); margin:0 16px 12px}
+.disc b{font-weight:600}
+</style>
+<div class="appbar">
+  <div class="appbar-in">
+    <span class="brand">Tumor Evaluation Profile</span>
+    <span><label for="selStudy">Study</label><select id="selStudy"></select></span>
+    <span><label for="selSubject">Subject</label><select id="selSubject"></select></span>
+    <span class="spacer"></span>
+    <span class="badge-unval">Review only · unvalidated</span>
+  </div>
+</div>
+
+<div class="banner"><strong>Design mockup</strong> — illustrative layout for a multi-study Tumor Evaluation Profile. Two studies are configured to show that criteria, schedule and assessor model are configuration, not code. All subject data is fabricated.</div>
 
 <header class="hdr">
   <div class="hdr-in">
     <div class="idblock">
-      <span class="eyebrow">Tumor Evaluation Profile</span>
-      <span class="subjid mono">ONC-1042-004-0017</span>
-      <span class="subline">Site 004 · Ph1b dose expansion · NSCLC, adenocarcinoma</span>
+      <span class="eyebrow" id="hStudy">—</span>
+      <span class="subjid mono" id="hSubj">—</span>
+      <span class="subline" id="hSubline">—</span>
     </div>
     <div class="facts">
-      <div class="fact"><span class="k">Cohort / dose</span><span class="v mono">C3 — 600 mg QD</span></div>
-      <div class="fact"><span class="k">Status</span><span class="v"><span class="chip off"><span class="dot"></span>Off treatment · D256</span></span></div>
-      <div class="fact"><span class="k">Best overall response</span><span class="v"><span class="chip pr">PR — confirmed</span></span></div>
-      <div class="fact"><span class="k">Criteria</span><span class="v">RECIST 1.1</span></div>
-      <div class="fact"><span class="k">Data cut</span><span class="v mono">2026-08-28 · ADaM</span></div>
+      <div class="fact"><span class="k">Cohort / dose</span><span class="v mono" id="hCohort">—</span></div>
+      <div class="fact"><span class="k">Status</span><span class="v" id="hStatus">—</span></div>
+      <div class="fact"><span class="k">Best overall response</span><span class="v" id="hBor">—</span></div>
+      <div class="fact"><span class="k">Criteria in force</span><span class="v" id="hCriteria">—</span></div>
+      <div class="fact" style="min-width:230px"><span class="k">Data freshness by domain</span><span class="v fresh" id="hFresh"></span></div>
     </div>
   </div>
 </header>
 
 <div class="controls">
   <div class="controls-in">
-    <div class="ctl"><span>Assessor</span>
-      <div class="seg" id="segAssessor">
-        <button data-v="INV" aria-pressed="true">Investigator</button>
-        <button data-v="BICR" aria-pressed="false">Central</button>
-        <button data-v="BOTH" aria-pressed="false">Both</button>
-      </div>
+    <div class="ctl" id="ctlAssessorWrap"><span>Assessor</span>
+      <div class="seg" id="segAssessor"></div>
     </div>
     <div class="ctl"><span>Burden metric</span>
       <div class="seg" id="segMetric">
@@ -223,114 +262,35 @@ tr:last-child td{border-bottom:0}
     </div>
     <div class="ctl"><span>Adverse events</span>
       <div class="seg" id="segAe">
-        <button data-v="rel" aria-pressed="true">Grade ≥2, serious or DLT</button>
+        <button data-v="rel" aria-pressed="true">Relevant</button>
         <button data-v="all" aria-pressed="false">All</button>
       </div>
     </div>
+    <div class="ctl"><span id="covLabel" class="cov">—</span></div>
   </div>
 </div>
 
 <div class="wrap">
 
-  <!-- ============ BAND 1 ============ -->
   <section class="band">
     <div class="band-hd">
       <span class="band-n">BAND 1</span>
       <span class="band-t">Patient characteristics</span>
       <span class="band-s">Descriptive context for interpreting the burden curve — no time axis.</span>
     </div>
-    <div class="cards">
-      <div class="card">
-        <h3>Demographics &amp; visit progress</h3>
-        <dl class="kv">
-          <dt>Age at consent</dt><dd class="mono">61 y</dd>
-          <dt>Sex</dt><dd>Male</dd>
-          <dt>Race / country</dt><dd>Asian · Korea, Republic of</dd>
-          <dt>Weight / BSA</dt><dd class="mono">68.4 kg · 1.78 m²</dd>
-          <dt>Baseline ECOG</dt><dd class="mono">1</dd>
-          <dt>Cycles started</dt><dd class="mono">13 of 21-day cycles</dd>
-          <dt>Days on treatment</dt><dd class="mono">256</dd>
-          <dt>Days on study</dt><dd class="mono">262</dd>
-          <dt>End of treatment</dt><dd>Day 256 — progressive disease</dd>
-          <dt>Follow-up</dt><dd>Survival follow-up, next contact Day 340</dd>
-        </dl>
-      </div>
-      <div class="card">
-        <h3>Primary cancer history</h3>
-        <dl class="kv">
-          <dt>Diagnosis</dt><dd>NSCLC, adenocarcinoma</dd>
-          <dt>Date of dx</dt><dd class="mono">2023-11-14 (25 mo before C1D1)</dd>
-          <dt>Stage at dx</dt><dd class="mono">IIIB (T3 N2 M0)</dd>
-          <dt>Stage at entry</dt><dd class="mono">IVB</dd>
-          <dt>Biomarkers</dt><dd>KRAS G12C mutant · EGFR wild-type · PD-L1 TPS 15%</dd>
-        </dl>
-        <div class="tags">
-          <span class="tag">Met: lung</span><span class="tag">Met: liver</span>
-          <span class="tag">Met: mediastinal nodes</span><span class="tag">Met: left adrenal</span>
-          <span class="tag">Met: bone (T8)</span>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Prior anti-cancer therapy — 2 lines</h3>
-        <div class="stack">
-          <div class="line-item">
-            <div class="t">1L · Carboplatin + pemetrexed + pembrolizumab</div>
-            <div class="m mono">2024-03-11 → 2024-09-26 · 6 cycles</div>
-            <div class="m">Best response PR · discontinued for progression</div>
-          </div>
-          <div class="line-item">
-            <div class="t">2L · Docetaxel + ramucirumab</div>
-            <div class="m mono">2024-11-18 → 2025-04-30 · 7 cycles</div>
-            <div class="m">Best response SD · discontinued for progression</div>
-          </div>
-        </div>
-        <dl class="kv" style="margin-top:11px">
-          <dt>Time since dx</dt><dd class="mono">25.0 months</dd>
-          <dt>Prior lines</dt><dd class="mono">2</dd>
-        </dl>
-      </div>
-      <div class="card">
-        <h3>Surgical, radiotherapy &amp; medical history</h3>
-        <div class="stack">
-          <div class="line-item">
-            <div class="t">VATS wedge resection, right upper lobe</div>
-            <div class="m mono">2023-12-02 · diagnostic intent</div>
-          </div>
-          <div class="line-item">
-            <div class="t">External beam RT, mediastinum — 30 Gy / 10 fx</div>
-            <div class="m mono">2025-06-04 → 2025-06-18 · palliative intent</div>
-          </div>
-        </div>
-        <div class="flag">
-          <span>▲</span>
-          <span><b>Irradiated site selected for follow-up.</b> Target lesion <span class="mono">TL03</span> (mediastinal node) lies within the June 2025 RT field — shrinkage at this site may not be drug-attributable.</span>
-        </div>
-        <div class="tags">
-          <span class="tag">Hypertension</span><span class="tag">Type 2 diabetes</span>
-          <span class="tag">Hypothyroidism</span><span class="tag">Prior Gr2 immune hepatitis</span>
-        </div>
-      </div>
-    </div>
+    <div class="cards" id="band1"></div>
   </section>
 
-  <!-- ============ BAND 2 ============ -->
   <section class="band">
     <div class="band-hd">
       <span class="band-n">BAND 2</span>
       <span class="band-t">Disposition &amp; exposure</span>
-      <span class="band-s">Treatment period, cycles, dose modifications, DLT window and assessment schedule.</span>
+      <span class="band-s" id="band2sub">—</span>
     </div>
     <div class="band-b plotwrap"><svg id="svgExp" class="plot" viewBox="0 0 1000 176" role="img" aria-label="Exposure swimmer plot"></svg></div>
-    <div class="legend">
-      <span class="lg"><i class="sw sq" style="background:var(--accent)"></i>600 mg QD</span>
-      <span class="lg"><i class="sw sq" style="background:var(--d-n1)"></i>450 mg QD (reduced)</span>
-      <span class="lg"><i class="sw sq" style="background:var(--s-serious)"></i>Dose interrupted</span>
-      <span class="lg"><i class="sw fill" style="background:var(--ink-2)"></i>Assessment performed</span>
-      <span class="lg"><i class="sw ring" style="border-color:var(--ne)"></i>Performed, not evaluable</span>
-    </div>
+    <div class="legend" id="legExp"></div>
   </section>
 
-  <!-- ============ BAND 3 ============ -->
   <section class="band">
     <div class="band-hd">
       <span class="band-n">BAND 3a</span>
@@ -338,21 +298,17 @@ tr:last-child td{border-bottom:0}
       <span class="band-s">Sum of diameters over time. Click any timepoint marker to open its derivation.</span>
     </div>
     <div class="band-b plotwrap"><svg id="svgBurden" class="plot" viewBox="0 0 1000 320" role="img" aria-label="Tumor burden curve"></svg></div>
-    <div class="legend">
-      <span class="lg"><i class="sw fill" style="background:var(--accent)"></i>Confirmed response</span>
-      <span class="lg"><i class="sw ring"></i>Unconfirmed response</span>
-      <span class="lg"><i class="sw sq" style="background:var(--s-crit)"></i>PD</span>
-      <span class="lg"><i class="sw ring" style="border-color:var(--ne)"></i>NE — curve broken, never interpolated</span>
-    </div>
+    <div class="legend" id="legBurden"></div>
+    <div id="discBox"></div>
     <div id="derivPanel" class="deriv"></div>
-    <p class="hint">Reference rails sit at −30% (PR) and +20% (PD). Note that PD is defined against <em>nadir</em>, not baseline — switch the burden metric to “% from nadir” to see the rail that actually governs.</p>
+    <p class="hint" id="burdenHint"></p>
   </section>
 
   <section class="band">
     <div class="band-hd">
       <span class="band-n">BAND 3b</span>
       <span class="band-t">Per-lesion trend</span>
-      <span class="band-s">Where aggregate SOD hides heterogeneous response. Sparkline shows absolute diameter; cells show change from that lesion's own baseline.</span>
+      <span class="band-s">Where aggregate SOD hides heterogeneous response. Sparkline shows absolute measurement; cells show change from that lesion's own baseline.</span>
     </div>
     <div class="band-b plotwrap"><svg id="svgLesion" class="plot" viewBox="0 0 1000 300" role="img" aria-label="Per-lesion change heat strip"></svg></div>
     <div class="legend">
@@ -364,30 +320,29 @@ tr:last-child td{border-bottom:0}
       <span class="lg"><i class="sw sq" style="background:var(--d-p1)"></i>+10 to +20%</span>
       <span class="lg"><i class="sw sq" style="background:var(--d-p2)"></i>+20 to +50%</span>
       <span class="lg"><i class="sw sq" style="background:var(--d-p3)"></i>≥ +50%</span>
-      <span class="lg"><i class="sw sq" style="background:var(--ne)"></i>NE</span>
+      <span class="lg"><i class="sw sq" style="background:var(--ne)"></i>NE / not read</span>
     </div>
-    <p class="note"><b>Read the divergence:</b> TL01 and TL02 responded deeply and held, while TL04 (left adrenal) never fell below −17% and grew +22% over its own baseline by Day 252. A single SOD line reports −25% at that visit; the lesion rows report a mixed response with a growing site.</p>
+    <p class="note" id="lesionNote"></p>
   </section>
 
   <section class="band">
     <div class="band-hd">
       <span class="band-n">BAND 3c</span>
       <span class="band-t">Baseline lesion inventory</span>
-      <span class="band-s">Screening assessment 2025-12-09 · investigator read · CT chest/abdomen/pelvis.</span>
+      <span class="band-s" id="invSub">—</span>
     </div>
     <div class="tblwrap">
       <table>
         <thead><tr>
           <th>Lesion</th><th>Type</th><th>Site</th><th>Method</th><th>Measure</th>
-          <th class="num">Baseline</th><th class="num">Day 252</th><th class="num">Δ</th><th>Data quality</th>
+          <th class="num">Baseline</th><th class="num">Latest</th><th class="num">Δ</th><th>Data quality</th>
         </tr></thead>
         <tbody id="invBody"></tbody>
       </table>
     </div>
-    <p class="hint">Baseline SOD <b class="mono">118 mm</b> across 4 target lesions — within the RECIST 1.1 limits of ≤5 total and ≤2 per organ.</p>
+    <p class="hint" id="invHint"></p>
   </section>
 
-  <!-- ============ BAND 4 ============ -->
   <section class="band">
     <div class="band-hd">
       <span class="band-n">BAND 4</span>
@@ -403,223 +358,449 @@ tr:last-child td{border-bottom:0}
       <span class="lg"><b style="color:var(--s-crit)">◆ DLT</b></span>
       <span class="lg"><b style="color:var(--ink-2)">▲ Serious</b></span>
     </div>
-    <p class="note"><b>Concurrency worth noting:</b> the Day 252 progression follows palliative radiotherapy to T8 (Days 180–190) and a grade 3 diarrhoea event with drug interruption (Days 200–215) — both confound attribution of the burden rise and both are visible only because the bands share one axis.</p>
+    <p class="note" id="aeNote"></p>
   </section>
 
-  <div class="foot">
-    <span>Mockup for design review · fabricated data</span>
-    <span>CDISC SDTM TU/TR/RS + ADaM ADTR/ADRS</span>
-    <span>Response derived per RECIST 1.1</span>
-    <span>Data cut 2026-08-28</span>
-  </div>
+  <section class="band">
+    <div class="band-hd">
+      <span class="band-n">CONFIG</span>
+      <span class="band-t">Study configuration in force</span>
+      <span class="band-s">The values below come from this study's configuration file, not from application code. Onboarding a study means writing this, not changing the app.</span>
+    </div>
+    <div class="cards" id="cfgCards"></div>
+  </section>
+
+  <div class="foot" id="foot"></div>
 </div>
 
 <div class="tip" id="tip"></div>
-
 <script>
 (function(){
 "use strict";
 
-/* ---------------- sample data (fabricated) ---------------- */
-const D1 = new Date(Date.UTC(2025,11,15));               // Cycle 1 Day 1
-const dstr = d => { const t=new Date(D1.getTime()+(d-1)*864e5);
-  return t.toISOString().slice(0,10); };
+/* ===================== configured studies (fabricated sample data) ===================== */
 
-const TP = [
-  {day:-6,  sod:118, sodB:120, resp:'BL', conf:null},
-  {day:42,  sod:92,  sodB:95,  resp:'SD', conf:null},
-  {day:84,  sod:74,  sodB:78,  resp:'PR', conf:false},
-  {day:126, sod:71,  sodB:73,  resp:'PR', conf:true},
-  {day:168, sod:68,  sodB:70,  resp:'PR', conf:true},
-  {day:210, sod:null,sodB:null,resp:'NE', conf:null},
-  {day:252, sod:88,  sodB:91,  resp:'PD', conf:null}
+const STUDIES = [
+{
+  id:'ONC-1042',
+  title:'Phase 1b dose expansion — advanced solid tumors',
+  day1:'2025-12-15', axis:[-16,278],
+  cfg:{ criteria:'RECIST 1.1', pr:-30, pd:20, pdmm:5,
+        confirmFor:'CR, PR', confirmDays:28, sdMinDays:42,
+        nadirInclBaseline:true, maxTargets:5, maxPerOrgan:2,
+        cycleDays:21, dltDays:28, schedInterval:42, schedTol:7,
+        aeRelevance:'Grade ≥2, serious, DLT or AESI', hash:'7f3a91c' },
+  assessors:[{code:'INV',label:'Investigator'},{code:'BICR',label:'Central review'}],
+  fresh:[['DM',3],['EX',3],['AE',4],['CM',4],['TU',11],['TR',11],['RS',81]],
+  freshWarn:{DM:24,EX:24,AE:12,CM:24,TU:72,TR:72,RS:72},
+  build:'2026-08-28 06:00 UTC',
+  subject:{
+    id:'ONC-1042-004-0017', site:'Site 004 · Seoul, KR',
+    line:'NSCLC, adenocarcinoma', cohort:'C3 — 600 mg QD',
+    status:'Off treatment · D256', statusKind:'off',
+    demo:[['Age at consent','61 y'],['Sex','Male'],['Race / country','Asian · Korea, Republic of'],
+          ['Weight / BSA','68.4 kg · 1.66 m²'],['Baseline ECOG','1'],['Cycles started','13 of 21-day cycles'],
+          ['Days on treatment','256'],['Days on study','262'],
+          ['End of treatment','Day 256 — progressive disease'],['Follow-up','Survival follow-up, next contact Day 340']],
+    cancer:[['Diagnosis','NSCLC, adenocarcinoma'],['Date of dx','2023-11-14 (25 mo before C1D1)'],
+            ['Stage at dx','IIIB (T3 N2 M0)'],['Stage at entry','IVB'],
+            ['Biomarkers','KRAS G12C mutant · EGFR wild-type · PD-L1 TPS 15%']],
+    mets:['lung','liver','mediastinal nodes','left adrenal','bone (T8)'],
+    priorTx:[{t:'1L · Carboplatin + pemetrexed + pembrolizumab', m:'2024-03-11 → 2024-09-26 · 6 cycles', n:'Best response PR · discontinued for progression'},
+             {t:'2L · Docetaxel + ramucirumab', m:'2024-11-18 → 2025-04-30 · 7 cycles', n:'Best response SD · discontinued for progression'}],
+    priorSummary:[['Time since dx','25.0 months'],['Prior lines','2']],
+    surg:[{t:'VATS wedge resection, right upper lobe', m:'2023-12-02 · diagnostic intent'}],
+    rt:[{t:'External beam RT, mediastinum — 30 Gy / 10 fx', m:'2025-06-04 → 2025-06-18 · palliative intent'}],
+    rtFlag:'<b>Irradiated site selected for follow-up.</b> Target lesion <span class="mono">TL03</span> (mediastinal node) lies within the June 2025 RT field — shrinkage at this site may not be drug-attributable.',
+    mh:['Hypertension','Type 2 diabetes','Hypothyroidism','Prior Gr2 immune hepatitis']
+  },
+  tp:[-6,42,84,126,168,210,252],
+  lesions:[
+    {id:'TL01',kind:'target',site:'Lung, right upper lobe',method:'CT',meas:'Longest diameter',
+     v:{INV:[42,30,22,20,19,null,24], BICR:[44,31,24,27,20,null,null]}},
+    {id:'TL02',kind:'target',site:'Liver, segment VII',method:'CT',meas:'Longest diameter',
+     v:{INV:[31,24,18,17,16,null,22], BICR:[32,25,19,22,17,null,null]}},
+    {id:'TL03',kind:'target',site:'Node, mediastinal 4R',method:'CT',meas:'Short axis',
+     v:{INV:[27,22,19,19,18,null,20], BICR:[26,23,20,21,18,null,null]}, qc:'Within prior RT field'},
+    {id:'TL04',kind:'target',site:'Adrenal, left',method:'CT',meas:'Longest diameter',
+     v:{INV:[18,16,15,15,15,null,22], BICR:[18,16,15,15,15,null,null]}, qc:'MRI at D252 — method change'},
+    {id:'NT01',kind:'nontarget',site:'Pleural effusion, right',method:'CT',meas:'Qualitative',
+     s:{INV:['Present','Present','Present','Absent','Absent',null,'Present'],
+        BICR:['Present','Present','Present','Present','Absent',null,null]}},
+    {id:'NT02',kind:'nontarget',site:'Bone, T8 vertebral body',method:'CT',meas:'Qualitative',
+     s:{INV:['Present','Present','Present','Present','Present',null,'Present'],
+        BICR:['Present','Present','Present','Present','Present',null,null]}},
+    {id:'NL01',kind:'new',site:'Liver, segment III',method:'CT',meas:'New lesion',
+     s:{INV:[null,null,null,null,null,null,'Equivocal'], BICR:[null,null,null,null,null,null,null]}}
+  ],
+  reads:{
+    INV: {resp:['BL','SD','PR','PR','PR','NE','PD'], conf:[null,null,false,true,true,null,null], coverIdx:6, bor:'PR — confirmed'},
+    BICR:{resp:['BL','SD','PR','SD','PR','NE','UNREAD'], conf:[null,null,false,null,false,null,null], coverIdx:5, bor:'PR — unconfirmed'}
+  },
+  dose:[{s:1,e:21,mg:600,kind:'on'},{s:22,e:40,mg:0,kind:'hold',why:'Grade 3 rash (DLT)'},{s:41,e:256,mg:450,kind:'on'}],
+  eot:{day:256,reason:'Progressive disease'},
+  aes:[
+    {pt:'Rash maculo-papular',soc:'Skin and subcutaneous',g:3,s:22,e:40,rel:'Related',act:'Drug interrupted',out:'Recovered',dlt:true,ser:false},
+    {pt:'Fatigue',soc:'General disorders',g:2,s:8,e:65,rel:'Related',act:'None',out:'Recovered'},
+    {pt:'Neutrophil count decreased',soc:'Investigations',g:3,s:96,e:110,rel:'Related',act:'Dose reduced',out:'Recovered'},
+    {pt:'ALT increased',soc:'Investigations',g:2,s:130,e:145,rel:'Related',act:'None',out:'Recovered'},
+    {pt:'Diarrhoea',soc:'Gastrointestinal',g:3,s:200,e:215,rel:'Related',act:'Drug interrupted',out:'Recovered',ser:true},
+    {pt:'Back pain',soc:'Musculoskeletal',g:2,s:230,e:256,rel:'Not related',act:'None',out:'Ongoing'},
+    {pt:'Nausea',soc:'Gastrointestinal',g:1,s:10,e:18,rel:'Related',act:'None',out:'Recovered'},
+    {pt:'Cough',soc:'Respiratory',g:1,s:60,e:75,rel:'Not related',act:'None',out:'Recovered'}
+  ],
+  conmed:[{t:'Palliative radiotherapy — T8 spine, 20 Gy / 5 fx',lab:'Palliative radiotherapy',sub:'T8 spine · confounds attribution',s:180,e:190,kind:'rt',note:'20 Gy / 5 fx to T8'},
+          {t:'Dexamethasone 4 mg — for rash',lab:'Corticosteroid',sub:'Dexamethasone 4 mg',s:23,e:38,kind:'cm'}],
+  notes:{
+    lesion:'<b>Read the divergence:</b> under the investigator read TL01 and TL02 responded deeply and held, while TL04 (left adrenal) never fell below −17% and grew +22% over its own baseline by Day 252. A single SOD line reports −25% at that visit; the lesion rows report a mixed response with a growing site.',
+    ae:'<b>Concurrency worth noting:</b> the Day 252 progression follows palliative radiotherapy to T8 (Days 180–190) and a grade 3 diarrhoea event with drug interruption (Days 200–215) — both confound attribution of the burden rise and both are visible only because the bands share one axis.',
+    inv:'Screening assessment 2025-12-09 · CT chest/abdomen/pelvis.'
+  }
+},
+{
+  id:'ONC-2088',
+  title:'Phase 1b — advanced melanoma, anti-PD-1 combination',
+  day1:'2026-01-20', axis:[-26,318],
+  cfg:{ criteria:'iRECIST', pr:-30, pd:20, pdmm:5,
+        confirmFor:'CR, PR', confirmDays:28, sdMinDays:null,
+        irecistMin:28, irecistMax:56,
+        nadirInclBaseline:true, maxTargets:5, maxPerOrgan:2,
+        cycleDays:28, dltDays:42, schedInterval:56, schedTol:7,
+        aeRelevance:'Grade ≥2, serious, DLT or immune-related', hash:'b1d4e07' },
+  assessors:[{code:'INV',label:'Investigator'}],
+  fresh:[['DM',2],['EX',2],['AE',3],['CM',3],['TU',9],['TR',9],['RS',9]],
+  freshWarn:{DM:24,EX:24,AE:12,CM:24,TU:72,TR:72,RS:72},
+  build:'2026-09-16 22:00 UTC',
+  subject:{
+    id:'ONC-2088-011-0042', site:'Site 011 · Sydney, AU',
+    line:'Cutaneous melanoma', cohort:'C2 — 200 mg Q4W',
+    status:'Off treatment · D294', statusKind:'off',
+    demo:[['Age at consent','54 y'],['Sex','Female'],['Race / country','White · Australia'],
+          ['Weight / BSA','62.1 kg · 1.66 m²'],['Baseline ECOG','0'],['Cycles started','11 of 28-day cycles'],
+          ['Days on treatment','294'],['Days on study','304'],
+          ['End of treatment','Day 294 — confirmed progression (iCPD)'],['Follow-up','Survival follow-up, next contact Day 380']],
+    cancer:[['Diagnosis','Cutaneous melanoma'],['Date of dx','2024-05-22 (20 mo before C1D1)'],
+            ['Stage at dx','IIIC'],['Stage at entry','IV (M1c)'],
+            ['Biomarkers','BRAF V600E mutant · LDH 1.4 × ULN · PD-L1 TPS 40%']],
+    mets:['lung','subcutaneous','axillary nodes','liver'],
+    priorTx:[{t:'1L · Ipilimumab + nivolumab', m:'2025-01-14 → 2025-06-02 · 4 cycles', n:'Best response SD · discontinued for progression'}],
+    priorSummary:[['Time since dx','20.0 months'],['Prior lines','1']],
+    surg:[{t:'Wide local excision + sentinel node biopsy', m:'2024-06-10 · curative intent'}],
+    rt:null,
+    rtNote:'Prior radiotherapy is not collected in this study, so the irradiated-lesion check is unavailable.',
+    mh:['Vitiligo','Hypertension']
+  },
+  tp:[-10,56,112,168,224,280],
+  lesions:[
+    {id:'TL01',kind:'target',site:'Lung, left lower lobe',method:'CT',meas:'Longest diameter',
+     v:{INV:[40,52,34,26,34,38]}},
+    {id:'TL02',kind:'target',site:'Subcutaneous, back',method:'CT',meas:'Longest diameter',
+     v:{INV:[32,40,28,22,28,31]}},
+    {id:'TL03',kind:'target',site:'Node, left axillary',method:'CT',meas:'Short axis',
+     v:{INV:[24,26,20,16,21,22]}},
+    {id:'NT01',kind:'nontarget',site:'Liver, segment V',method:'CT',meas:'Qualitative',
+     s:{INV:['Present','Present','Present','Present','Present','Present']}}
+  ],
+  reads:{
+    INV:{resp:['BL','iUPD','iSD','iPR','iUPD','iCPD'], conf:[null,null,null,false,null,null],
+         episode:[null,1,null,null,2,2], coverIdx:5, bor:'iPR — unconfirmed'}
+  },
+  dose:[{s:1,e:95,mg:200,kind:'on'},{s:96,e:118,mg:0,kind:'hold',why:'Grade 3 colitis'},
+        {s:119,e:199,mg:200,kind:'on'},{s:200,e:230,mg:0,kind:'hold',why:'Grade 2 pneumonitis'},
+        {s:231,e:294,mg:200,kind:'on'}],
+  eot:{day:294,reason:'Confirmed progression (iCPD)'},
+  aes:[
+    {pt:'Infusion related reaction',soc:'Injury and procedural',g:2,s:1,e:2,rel:'Related',act:'Infusion slowed',out:'Recovered'},
+    {pt:'Rash',soc:'Skin and subcutaneous',g:2,s:14,e:40,rel:'Related',act:'None',out:'Recovered'},
+    {pt:'Hypothyroidism',soc:'Endocrine',g:2,s:62,e:294,rel:'Related',act:'None',out:'Ongoing'},
+    {pt:'Colitis',soc:'Gastrointestinal',g:3,s:96,e:118,rel:'Related',act:'Drug interrupted',out:'Recovered',ser:true},
+    {pt:'Pneumonitis',soc:'Respiratory',g:2,s:200,e:230,rel:'Related',act:'Drug interrupted',out:'Recovered'},
+    {pt:'Arthralgia',soc:'Musculoskeletal',g:1,s:150,e:170,rel:'Not related',act:'None',out:'Recovered'}
+  ],
+  conmed:[{t:'Prednisolone 1 mg/kg — for immune colitis',lab:'Systemic corticosteroid',sub:'Prednisolone 1 mg/kg tapering',s:96,e:130,kind:'cm',note:'immunosuppression during colitis'}],
+  notes:{
+    lesion:'<b>Pseudoprogression, seen per lesion:</b> every target lesion grew at Day 56 and every one fell back by Day 112 — a uniform rise and fall across all three sites, which is what distinguishes pseudoprogression from a genuinely mixed response. The second rise at Day 224 is equally uniform, but it does not fall back.',
+    ae:'<b>Concurrency worth noting:</b> the Day 56 iUPD sits inside the period of grade 2 rash and precedes the grade 3 colitis; the corticosteroid course for colitis (Days 96–130) overlaps the Day 112 assessment that reset the progression call. Immunosuppression during a scan that determines pseudoprogression is worth a reviewer’s attention.',
+    inv:'Screening assessment 2026-01-10 · CT chest/abdomen/pelvis.'
+  }
+}
 ];
 
-const LES = [
-  {id:'TL01', kind:'target', site:'Lung, right upper lobe', method:'CT', meas:'Longest diameter',
-   v:[42,30,22,20,19,null,24]},
-  {id:'TL02', kind:'target', site:'Liver, segment VII', method:'CT', meas:'Longest diameter',
-   v:[31,24,18,17,16,null,22]},
-  {id:'TL03', kind:'target', site:'Node, mediastinal 4R', method:'CT', meas:'Short axis',
-   v:[27,22,19,19,18,null,20], qc:'Within prior RT field'},
-  {id:'TL04', kind:'target', site:'Adrenal, left', method:'CT', meas:'Longest diameter',
-   v:[18,16,15,15,15,null,22], qc:'MRI at D252 — method change'},
-  {id:'NT01', kind:'nontarget', site:'Pleural effusion, right', method:'CT', meas:'Qualitative',
-   s:['Present','Present','Present','Absent','Absent',null,'Present']},
-  {id:'NT02', kind:'nontarget', site:'Bone, T8 vertebral body', method:'CT', meas:'Qualitative',
-   s:['Present','Present','Present','Present','Present',null,'Present']},
-  {id:'NL01', kind:'new', site:'Liver, segment III', method:'CT', meas:'New lesion',
-   s:[null,null,null,null,null,null,'Equivocal']}
-];
+/* ===================== state ===================== */
+let S = STUDIES[0];
+let state = {assessor:'INV', metric:'base', ae:'rel', selected:4};
 
-const AES = [
-  {pt:'Rash maculo-papular', soc:'Skin and subcutaneous', g:3, s:22, e:40, rel:'Related', act:'Drug interrupted', out:'Recovered', dlt:true, ser:false},
-  {pt:'Fatigue', soc:'General disorders', g:2, s:8, e:65, rel:'Related', act:'None', out:'Recovered', dlt:false, ser:false},
-  {pt:'Neutrophil count decreased', soc:'Investigations', g:3, s:96, e:110, rel:'Related', act:'Dose reduced', out:'Recovered', dlt:false, ser:false},
-  {pt:'ALT increased', soc:'Investigations', g:2, s:130, e:145, rel:'Related', act:'None', out:'Recovered', dlt:false, ser:false},
-  {pt:'Diarrhoea', soc:'Gastrointestinal', g:3, s:200, e:215, rel:'Related', act:'Drug interrupted', out:'Recovered', dlt:false, ser:true},
-  {pt:'Back pain', soc:'Musculoskeletal', g:2, s:230, e:256, rel:'Not related', act:'None', out:'Ongoing', dlt:false, ser:false},
-  {pt:'Nausea', soc:'Gastrointestinal', g:1, s:10, e:18, rel:'Related', act:'None', out:'Recovered', dlt:false, ser:false},
-  {pt:'Cough', soc:'Respiratory', g:1, s:60, e:75, rel:'Not related', act:'None', out:'Recovered', dlt:false, ser:false}
-];
-
-const CONMED = [
-  {t:'Palliative radiotherapy — T8 spine, 20 Gy / 5 fx', s:180, e:190, kind:'rt'},
-  {t:'Dexamethasone 4 mg — for rash', s:23, e:38, kind:'cm'}
-];
-
-const DOSE = [
-  {s:1,   e:21,  mg:600, kind:'on'},
-  {s:22,  e:40,  mg:0,   kind:'hold'},
-  {s:41,  e:256, mg:450, kind:'on'}
-];
-const CYCLES = [1,22,43,64,85,106,127,148,169,190,211,232,253];
-
-/* ---------------- scale ---------------- */
-const X0=-16, X1=278, PX0=200, PX1=944;
-const sx = d => PX0 + (d-X0)/(X1-X0)*(PX1-PX0);
+/* ===================== helpers ===================== */
 const NS='http://www.w3.org/2000/svg';
 const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
 const txt=(x,y,s,cls,extra)=>{const t=el('text',Object.assign({x,y,class:cls||''},extra||{}));t.textContent=s;return t;};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function dstr(d){ const b=new Date(S.day1+'T00:00:00Z'); const t=new Date(b.getTime()+(d-1)*864e5);
+  return t.toISOString().slice(0,10); }
 
-let state={assessor:'INV', metric:'base', ae:'rel', selected:4};
+const PX0=200, PX1=944;
+const sx = d => PX0 + (d-S.axis[0])/(S.axis[1]-S.axis[0])*(PX1-PX0);
 
-/* ---------------- shared chrome ---------------- */
-function gridlines(g,y0,y1){
-  TP.forEach(tp=>{ if(tp.day<0) return;
-    g.appendChild(el('line',{x1:sx(tp.day),x2:sx(tp.day),y1:y0,y2:y1,stroke:'var(--grid)','stroke-width':1}));
+const RESP_META = {
+  BL:{lab:'BL', kind:'bl'},
+  CR:{lab:'CR', kind:'resp', fill:'var(--accent-deep)'},
+  PR:{lab:'PR', kind:'resp', fill:'var(--accent)'},
+  SD:{lab:'SD', kind:'resp', fill:'var(--d-n1)'},
+  PD:{lab:'PD', kind:'pd'},
+  NE:{lab:'NE', kind:'ne'},
+  UNREAD:{lab:'not read', kind:'unread'},
+  iCR:{lab:'iCR', kind:'resp', fill:'var(--accent-deep)'},
+  iPR:{lab:'iPR', kind:'resp', fill:'var(--accent)'},
+  iSD:{lab:'iSD', kind:'resp', fill:'var(--d-n1)'},
+  iUPD:{lab:'iUPD', kind:'iupd'},
+  iCPD:{lab:'iCPD', kind:'pd'}
+};
+
+/* ===================== derivation ===================== */
+function sodAt(code,i){
+  const tg=S.lesions.filter(l=>l.kind==='target'&&l.v&&l.v[code]);
+  if(!tg.length) return null;
+  let sum=0;
+  for(const l of tg){ const v=l.v[code][i]; if(v===null||v===undefined) return null; sum+=v; }
+  return sum;
+}
+function series(code){
+  const read=S.reads[code]; if(!read) return [];
+  const base=sodAt(code,0);
+  const out=[];
+  let nadirPrev=S.cfg.nadirInclBaseline?base:null;
+  S.tp.forEach((day,i)=>{
+    const unread = i>read.coverIdx;
+    const sod = unread?null:sodAt(code,i);
+    const o={i,day,sod,base,resp:unread?'UNREAD':read.resp[i],conf:read.conf?read.conf[i]:null,
+             episode:read.episode?read.episode[i]:null,unread};
+    if(sod!==null){
+      o.pchg=100*(sod-base)/base;
+      o.nadirPrev = (nadirPrev===null?sod:nadirPrev);
+      o.pchgnad=100*(sod-o.nadirPrev)/o.nadirPrev;
+      o.absnad=sod-o.nadirPrev;
+      o.y = state.metric==='base'?o.pchg : state.metric==='nadir'?o.pchgnad : sod;
+      if(i>0) nadirPrev = (nadirPrev===null)?sod:Math.min(nadirPrev,sod);
+      else if(S.cfg.nadirInclBaseline) nadirPrev=sod;
+    } else { o.y=null; }
+    out.push(o);
   });
-  g.appendChild(el('line',{x1:sx(-6),x2:sx(-6),y1:y0,y2:y1,stroke:'var(--rule)','stroke-width':1}));
+  return out;
+}
+
+/* ===================== tooltip ===================== */
+const tip=document.getElementById('tip');
+function showTip(evt,html){ tip.innerHTML=html; tip.classList.add('on');
+  const r=tip.getBoundingClientRect();
+  let x=evt.clientX+14,y=evt.clientY+14;
+  if(x+r.width>window.innerWidth-8) x=evt.clientX-r.width-14;
+  if(y+r.height>window.innerHeight-8) y=evt.clientY-r.height-14;
+  tip.style.left=x+'px'; tip.style.top=y+'px'; }
+function hideTip(){ tip.classList.remove('on'); }
+function bindTip(node,html){ node.addEventListener('mousemove',e=>showTip(e,html));
+  node.addEventListener('mouseleave',hideTip); }
+
+/* ===================== shared chrome ===================== */
+function defsHatch(svg){
+  const defs=el('defs',{});
+  const pat=el('pattern',{id:'hatch',width:6,height:6,patternUnits:'userSpaceOnUse',patternTransform:'rotate(45)'});
+  pat.appendChild(el('rect',{width:6,height:6,fill:'var(--surface-2)'}));
+  pat.appendChild(el('line',{x1:0,y1:0,x2:0,y2:6,stroke:'var(--ne)','stroke-width':1.6,opacity:.55}));
+  defs.appendChild(pat); svg.appendChild(defs);
+}
+function gridlines(g,y0,y1){
+  S.tp.forEach((d,i)=>{ if(i===0) return;
+    g.appendChild(el('line',{x1:sx(d),x2:sx(d),y1:y0,y2:y1,stroke:'var(--grid)','stroke-width':1})); });
+  g.appendChild(el('line',{x1:sx(S.tp[0]),x2:sx(S.tp[0]),y1:y0,y2:y1,stroke:'var(--rule)','stroke-width':1}));
 }
 function axisStrip(g,y){
   g.appendChild(el('line',{x1:PX0,x2:PX1,y1:y,y2:y,stroke:'var(--rule)','stroke-width':1}));
-  [0,42,84,126,168,210,252].forEach(d=>{
+  const ticks=[0].concat(S.tp.filter(d=>d>0));
+  ticks.forEach(d=>{
     g.appendChild(el('line',{x1:sx(d),x2:sx(d),y1:y,y2:y+4,stroke:'var(--rule)','stroke-width':1}));
     g.appendChild(txt(sx(d),y+15,'D'+d,'tk',{'text-anchor':'middle'}));
-    g.appendChild(txt(sx(d),y+26,dstr(d===0?1:d),'tk',{'text-anchor':'middle','opacity':'.7'}));
+    g.appendChild(txt(sx(d),y+26,dstr(d===0?1:d),'tk',{'text-anchor':'middle',opacity:'.7'}));
   });
   g.appendChild(txt(PX0-8,y+15,'Study day','tk',{'text-anchor':'end'}));
 }
 function crosshair(svg,y0,y1){
   const l=el('line',{x1:0,x2:0,y1:y0,y2:y1,stroke:'var(--accent)','stroke-width':1,opacity:0,'pointer-events':'none'});
-  l.classList.add('xh'); svg.appendChild(l); return l;
+  l.classList.add('xh'); svg.appendChild(l); }
+
+/* ===================== header ===================== */
+function drawHeader(){
+  const sub=S.subject, read=S.reads[state.assessor]||S.reads[S.assessors[0].code];
+  document.getElementById('hStudy').textContent=S.id+' — '+S.title;
+  document.getElementById('hSubj').textContent=sub.id;
+  document.getElementById('hSubline').textContent=sub.site+' · '+sub.line;
+  document.getElementById('hCohort').textContent=sub.cohort;
+  document.getElementById('hStatus').innerHTML=`<span class="chip off"><span class="dot"></span>${esc(sub.status)}</span>`;
+  const borConf = /confirmed/.test(read.bor) && !/unconfirmed/.test(read.bor);
+  document.getElementById('hBor').innerHTML=
+    `<span class="chip ${borConf?'pr':'off'}">${esc(read.bor)}</span>`;
+  document.getElementById('hCriteria').textContent =
+    S.cfg.criteria + (S.assessors.length>1 ? ' · '+state.assessor : '');
+  document.getElementById('hFresh').innerHTML = S.fresh.map(([d,h])=>{
+    const warn = h > (S.freshWarn[d]||24);
+    return `<span class="f${warn?' stale':''}" title="${d} extracted ${h} h ago">${d}&nbsp;${h}h</span>`;
+  }).join('');
+
+  // assessor control
+  const wrap=document.getElementById('ctlAssessorWrap');
+  if(S.assessors.length<2){ wrap.style.display='none'; }
+  else{
+    wrap.style.display='';
+    const segs=S.assessors.map(a=>`<button data-v="${a.code}" aria-pressed="${state.assessor===a.code}">${esc(a.label)}</button>`).join('')
+      + `<button data-v="BOTH" aria-pressed="${state.assessor==='BOTH'}">Both</button>`;
+    document.getElementById('segAssessor').innerHTML=segs;
+  }
+
+  // coverage
+  const cov=document.getElementById('covLabel');
+  if(state.assessor==='BOTH'){
+    const d=discordance();
+    cov.className='cov'+(d.length?' warn':'');
+    cov.innerHTML=`Overlay · <b>${d.length}</b> timepoint${d.length===1?'':'s'} where the two reads disagree`;
+  } else {
+    const r=S.reads[state.assessor];
+    const outstanding=S.tp.length-1-r.coverIdx;
+    cov.className='cov'+(outstanding>0?' warn':'');
+    cov.innerHTML= outstanding>0
+      ? `Read coverage: through <b>Day ${S.tp[r.coverIdx]}</b> · <b>${outstanding}</b> assessment${outstanding===1?'':'s'} not yet read`
+      : `Read coverage: through <b>Day ${S.tp[r.coverIdx]}</b> · up to date`;
+  }
+
+  document.getElementById('foot').innerHTML=
+    [`Mockup for design review · fabricated data`,
+     `Study ${S.id} · config <span class="mono">${S.cfg.hash}</span>`,
+     `Review layer built ${S.build}`,
+     `Criteria ${S.cfg.criteria}`,
+     `Review only — unvalidated`].map(x=>`<span>${x}</span>`).join('');
 }
 
-/* ---------------- tooltip ---------------- */
-const tip=document.getElementById('tip');
-function showTip(evt,html){ tip.innerHTML=html; tip.classList.add('on');
-  const r=tip.getBoundingClientRect();
-  let x=evt.clientX+14, y=evt.clientY+14;
-  if(x+r.width>window.innerWidth-8) x=evt.clientX-r.width-14;
-  if(y+r.height>window.innerHeight-8) y=evt.clientY-r.height-14;
-  tip.style.left=x+'px'; tip.style.top=y+'px';
-}
-function hideTip(){ tip.classList.remove('on'); }
-function bindTip(node,html){
-  node.addEventListener('mousemove',e=>showTip(e,html));
-  node.addEventListener('mouseleave',hideTip);
+function discordance(){
+  if(S.assessors.length<2) return [];
+  const a=series(S.assessors[0].code), b=series(S.assessors[1].code), out=[];
+  a.forEach((p,i)=>{ const q=b[i]; if(!q) return;
+    if(p.resp!==q.resp) out.push({day:p.day, a:p.resp, b:q.resp}); });
+  return out.filter(d=>d.a!=='BL');
 }
 
-/* ---------------- BAND 2 : exposure ---------------- */
+/* ===================== band 1 ===================== */
+function drawBand1(){
+  const sub=S.subject;
+  const kv=rows=>`<dl class="kv">${rows.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
+  const items=list=>`<div class="stack">${list.map(i=>
+    `<div class="line-item"><div class="t">${esc(i.t)}</div><div class="m mono">${esc(i.m)}</div>${i.n?`<div class="m">${esc(i.n)}</div>`:''}</div>`).join('')}</div>`;
+  document.getElementById('band1').innerHTML=`
+    <div class="card"><h3>Demographics &amp; visit progress</h3>${kv(sub.demo)}</div>
+    <div class="card"><h3>Primary cancer history</h3>${kv(sub.cancer)}
+      <div class="tags">${sub.mets.map(m=>`<span class="tag">Met: ${esc(m)}</span>`).join('')}</div></div>
+    <div class="card"><h3>Prior anti-cancer therapy — ${sub.priorTx.length} line${sub.priorTx.length===1?'':'s'}</h3>
+      ${items(sub.priorTx)}<div style="margin-top:11px">${kv(sub.priorSummary)}</div></div>
+    <div class="card"><h3>Surgical, radiotherapy &amp; medical history</h3>
+      ${items(sub.surg.concat(sub.rt||[]))}
+      ${sub.rtFlag?`<div class="flag"><span>▲</span><span>${sub.rtFlag}</span></div>`:''}
+      ${sub.rtNote?`<div class="flag" style="border-left-color:var(--rule)"><span>·</span><span>${esc(sub.rtNote)}</span></div>`:''}
+      <div class="tags">${sub.mh.map(m=>`<span class="tag">${esc(m)}</span>`).join('')}</div></div>`;
+}
+
+/* ===================== band 2 ===================== */
 function drawExposure(){
   const svg=document.getElementById('svgExp'); svg.textContent='';
   const g=el('g',{}); svg.appendChild(g);
   gridlines(g,12,132);
+  document.getElementById('band2sub').textContent =
+    `Treatment period, ${S.cfg.cycleDays}-day cycles, dose modifications, ${S.cfg.dltDays}-day DLT window and the q${Math.round(S.cfg.schedInterval/7)}w assessment schedule.`;
 
-  // DLT window
-  g.appendChild(el('rect',{x:sx(1),y:12,width:sx(28)-sx(1),height:120,fill:'var(--accent-soft)',opacity:.55}));
-  g.appendChild(txt(sx(1)+4,24,'DLT window D1–D28','annot'));
+  g.appendChild(el('rect',{x:sx(1),y:12,width:sx(S.cfg.dltDays)-sx(1),height:120,fill:'var(--accent-soft)',opacity:.55}));
+  g.appendChild(txt(sx(1)+4,24,`DLT window D1–D${S.cfg.dltDays}`,'annot'));
 
-  // row: treatment
   g.appendChild(txt(8,36,'Study treatment','rowlab'));
-  g.appendChild(txt(8,48,'ONC-1042 QD','rowsub'));
-  DOSE.forEach(d=>{
-    const fill = d.kind==='hold' ? 'var(--s-serious)' : (d.mg===600?'var(--accent)':'var(--d-n1)');
-    const r=el('rect',{x:sx(d.s),y:30,width:Math.max(2,sx(d.e)-sx(d.s)-2),height:16,rx:2,fill:fill});
+  g.appendChild(txt(8,48,S.subject.cohort,'rowsub'));
+  S.dose.forEach(d=>{
+    const maxMg=Math.max(...S.dose.map(x=>x.mg));
+    const fill = d.kind==='hold'?'var(--s-serious)':(d.mg===maxMg?'var(--accent)':'var(--d-n1)');
+    const r=el('rect',{x:sx(d.s),y:30,width:Math.max(2,sx(d.e)-sx(d.s)-2),height:16,rx:2,fill});
     g.appendChild(r);
-    bindTip(r,`<div class="th">${d.kind==='hold'?'Dose interrupted':d.mg+' mg QD'}</div>
+    bindTip(r,`<div class="th">${d.kind==='hold'?'Dose interrupted':d.mg+' mg'}</div>
       <div class="tr"><span>Days</span><b>D${d.s} – D${d.e}</b></div>
       <div class="tr"><span>Dates</span><b>${dstr(d.s)} → ${dstr(d.e)}</b></div>
-      ${d.kind==='hold'?'<div class="tr"><span>Reason</span><b>Grade 3 rash (DLT)</b></div>':''}`);
-    if(d.kind!=='hold') g.appendChild(txt(sx(d.s)+4,42,d.mg+' mg','annot',{fill:'#fff'}));
+      ${d.why?`<div class="tr"><span>Reason</span><b>${esc(d.why)}</b></div>`:''}`);
+    if(d.kind!=='hold' && sx(d.e)-sx(d.s)>42) g.appendChild(txt(sx(d.s)+4,42,d.mg+' mg','annot',{fill:'#fff'}));
   });
-  // end of treatment cap
-  g.appendChild(el('rect',{x:sx(256)-1,y:24,width:3,height:28,fill:'var(--ink)'}));
-  g.appendChild(txt(sx(256)+6,34,'EOT D256','annot'));
-  g.appendChild(txt(sx(256)+6,45,'Progressive disease','rowsub'));
+  g.appendChild(el('rect',{x:sx(S.eot.day)-1,y:24,width:3,height:28,fill:'var(--ink)'}));
+  const eotRight = sx(S.eot.day) > 860;
+  const eotX = eotRight ? sx(S.eot.day)-6 : sx(S.eot.day)+6;
+  const eotAnchor = eotRight ? 'end' : 'start';
+  g.appendChild(txt(eotX,18,'EOT D'+S.eot.day,'annot',{'text-anchor':eotAnchor}));
+  g.appendChild(txt(eotX,29,S.eot.reason,'rowsub',{'text-anchor':eotAnchor}));
 
-  // row: cycles
-  g.appendChild(txt(8,72,'Cycles (21-day)','rowlab'));
-  CYCLES.forEach((c,i)=>{
+  g.appendChild(txt(8,72,`Cycles (${S.cfg.cycleDays}-day)`,'rowlab'));
+  let c=1,n=1;
+  while(c<=S.eot.day){
     g.appendChild(el('line',{x1:sx(c),x2:sx(c),y1:62,y2:74,stroke:'var(--rule)','stroke-width':1}));
-    if(i%2===0) g.appendChild(txt(sx(c),84,'C'+(i+1),'tk',{'text-anchor':'middle'}));
-  });
+    if(n%2===1) g.appendChild(txt(sx(c),84,'C'+n,'tk',{'text-anchor':'middle'}));
+    c+=S.cfg.cycleDays; n++;
+  }
 
-  // row: assessments
   g.appendChild(txt(8,106,'Tumor assessments','rowlab'));
-  g.appendChild(txt(8,118,'q6w per protocol','rowsub'));
-  g.appendChild(el('line',{x1:sx(-6),x2:sx(252),y1:104,y2:104,stroke:'var(--grid)','stroke-width':2}));
-  TP.forEach(tp=>{
-    const x=sx(tp.day), ne=tp.sod===null;
-    const m=el('path',{d:`M ${x} ${97} L ${x+6} ${104} L ${x} ${111} L ${x-6} ${104} Z`,
-      fill: ne?'none':'var(--ink-2)', stroke: ne?'var(--ne)':'none','stroke-width':1.5});
+  g.appendChild(txt(8,118,`q${Math.round(S.cfg.schedInterval/7)}w per protocol`,'rowsub'));
+  g.appendChild(el('line',{x1:sx(S.tp[0]),x2:sx(S.tp[S.tp.length-1]),y1:104,y2:104,stroke:'var(--grid)','stroke-width':2}));
+  const code = state.assessor==='BOTH'?S.assessors[0].code:state.assessor;
+  const ser=series(code);
+  S.tp.forEach((day,i)=>{
+    const x=sx(day), p=ser[i], hollow = !p || p.sod===null;
+    const m=el('path',{d:`M ${x} 97 L ${x+6} 104 L ${x} 111 L ${x-6} 104 Z`,
+      fill:hollow?'none':'var(--ink-2)', stroke:hollow?'var(--ne)':'none','stroke-width':1.5});
     g.appendChild(m);
-    bindTip(m,`<div class="th">${tp.day<0?'Baseline / screening':'Assessment D'+tp.day}</div>
-      <div class="tr"><span>Date</span><b>${dstr(tp.day)}</b></div>
-      <div class="tr"><span>SOD</span><b>${tp.sod===null?'Not evaluable':tp.sod+' mm'}</b></div>
-      <div class="tr"><span>Response</span><b>${tp.resp}</b></div>`);
+    bindTip(m,`<div class="th">${i===0?'Baseline / screening':'Assessment D'+day}</div>
+      <div class="tr"><span>Date</span><b>${dstr(day)}</b></div>
+      <div class="tr"><span>SOD (${esc(code)})</span><b>${p&&p.sod!==null?p.sod+' mm':(p&&p.unread?'Not yet read':'Not evaluable')}</b></div>
+      <div class="tr"><span>Response</span><b>${p?RESP_META[p.resp].lab:'—'}</b></div>`);
   });
-  g.appendChild(txt(sx(-6),126,'Baseline','annot',{'text-anchor':'middle'}));
-  const neTp=TP[5];
-  g.appendChild(txt(sx(neTp.day),126,'NE','annot',{'text-anchor':'middle',fill:'var(--s-serious)'}));
+  g.appendChild(txt(sx(S.tp[0]),126,'Baseline','annot',{'text-anchor':'middle'}));
+  ser.forEach(p=>{ if(p.i>0 && p.sod===null)
+    g.appendChild(txt(sx(p.day),126,p.unread?'not read':'NE','annot',
+      {'text-anchor':'middle',fill:p.unread?'var(--muted)':'var(--s-serious)'})); });
 
-  axisStrip(g,140);
-  crosshair(svg,12,140);
+  axisStrip(g,140); crosshair(svg,12,140);
+  document.getElementById('legExp').innerHTML=`
+    <span class="lg"><i class="sw sq" style="background:var(--accent)"></i>Full dose</span>
+    <span class="lg"><i class="sw sq" style="background:var(--d-n1)"></i>Reduced dose</span>
+    <span class="lg"><i class="sw sq" style="background:var(--s-serious)"></i>Dose interrupted</span>
+    <span class="lg"><i class="sw fill" style="background:var(--ink-2)"></i>Assessment performed</span>
+    <span class="lg"><i class="sw ring" style="border-color:var(--ne)"></i>Not evaluable / not yet read</span>`;
 }
 
-/* ---------------- BAND 3a : burden ---------------- */
-function burdenSeries(which){
-  const key = which==='BICR' ? 'sodB' : 'sod';
-  const base = TP[0][key];
-  let nadir = base;
-  return TP.map((tp,i)=>{
-    const v=tp[key];
-    if(v===null) return {day:tp.day,y:null,resp:'NE',conf:null,sod:null,nadir:nadir,i};
-    if(i>0) nadir=Math.min(nadir,v);
-    const o={day:tp.day,sod:v,base:base,nadir:nadir,resp:tp.resp,conf:tp.conf,i,
-      pchg:100*(v-base)/base};
-    // nadir excluding current visit
-    let nPrev=base; for(let j=1;j<i;j++){ const pv=TP[j][key]; if(pv!==null) nPrev=Math.min(nPrev,pv); }
-    o.nadirPrev=nPrev;
-    o.pchgnad=100*(v-nPrev)/nPrev;
-    o.absnad=v-nPrev;
-    o.y = state.metric==='base'? o.pchg : state.metric==='nadir'? o.pchgnad : v;
-    return o;
-  });
-}
+/* ===================== band 3a ===================== */
 function drawBurden(){
   const svg=document.getElementById('svgBurden'); svg.textContent='';
+  defsHatch(svg);
   const g=el('g',{}); svg.appendChild(g);
-  const Y0=22, Y1=250;
-  const abs = state.metric==='abs';
-  const dom = abs ? [0,130] : state.metric==='nadir' ? [-30,40] : [-60,40];
-  const sy = v => Y1 - (v-dom[0])/(dom[1]-dom[0])*(Y1-Y0);
+  const Y0=22,Y1=250, abs=state.metric==='abs';
+  const codes = state.assessor==='BOTH'?S.assessors.map(a=>a.code):[state.assessor];
+  const all = codes.map(series);
+  const vals=[].concat(...all).filter(p=>p.y!==null).map(p=>p.y);
+  let dom;
+  if(abs){ dom=[0, Math.ceil(Math.max(...vals)*1.15/10)*10]; }
+  else if(state.metric==='nadir'){ dom=[Math.min(-30,Math.floor(Math.min(...vals)/10)*10-5), Math.max(40,Math.ceil(Math.max(...vals)/10)*10+5)]; }
+  else { dom=[Math.min(-60,Math.floor(Math.min(...vals)/10)*10-5), Math.max(40,Math.ceil(Math.max(...vals)/10)*10+5)]; }
+  const sy=v=>Y1-(v-dom[0])/(dom[1]-dom[0])*(Y1-Y0);
 
   gridlines(g,Y0,Y1);
-
-  // y ticks
-  const ticks = abs ? [0,30,60,90,120] : state.metric==='nadir' ? [-30,-20,-10,0,10,20,30,40] : [-60,-40,-20,0,20,40];
-  ticks.forEach(t=>{
+  const step = abs?Math.ceil((dom[1]-dom[0])/5/10)*10:20;
+  for(let t=Math.ceil(dom[0]/step)*step;t<=dom[1];t+=step){
     g.appendChild(el('line',{x1:PX0,x2:PX1,y1:sy(t),y2:sy(t),stroke:'var(--grid)','stroke-width':1}));
     g.appendChild(txt(PX0-8,sy(t)+3.5,abs?t:(t>0?'+'+t:t),'tk',{'text-anchor':'end'}));
-  });
-  g.appendChild(txt(8,Y0+10, abs?'Sum of diameters':'Change in sum of diameters','rowlab'));
-  g.appendChild(txt(8,Y0+22, abs?'millimetres':(state.metric==='nadir'?'% from nadir':'% from baseline'),'rowsub'));
+  }
+  g.appendChild(txt(8,Y0+10,abs?'Sum of diameters':'Change in sum of diameters','rowlab'));
+  g.appendChild(txt(8,Y0+22,abs?'millimetres':(state.metric==='nadir'?'% from nadir':'% from baseline'),'rowsub'));
 
-  // rails
   if(!abs){
-    const rails = state.metric==='nadir' ? [[20,'PD  +20%',true]] :
-      [[-30,'PR  −30%',false],[20,'PD  +20%',false]];
+    const rails = state.metric==='nadir'
+      ? [[S.cfg.pd,`PD  +${S.cfg.pd}%`,true]]
+      : [[S.cfg.pr,`PR  ${S.cfg.pr}%`,false],[S.cfg.pd,`PD  +${S.cfg.pd}%`,false]];
     rails.forEach(([v,label,strong])=>{
       g.appendChild(el('line',{x1:PX0,x2:PX1,y1:sy(v),y2:sy(v),stroke:strong?'var(--s-crit)':'var(--rule)','stroke-width':strong?1.5:1}));
       g.appendChild(txt(PX1+5,sy(v)+3.5,label,'railtx',{fill:strong?'var(--s-crit)':'var(--muted)'}));
@@ -627,115 +808,164 @@ function drawBurden(){
     g.appendChild(el('line',{x1:PX0,x2:PX1,y1:sy(0),y2:sy(0),stroke:'var(--rule)','stroke-width':1}));
   }
 
-  const draw = (which,color,dash)=>{
-    const S=burdenSeries(which);
-    // segments, broken at NE
+  // "not yet read" spans, drawn first so lines sit on top
+  codes.forEach(code=>{
+    const r=S.reads[code];
+    if(r.coverIdx >= S.tp.length-1) return;
+    const x0=sx(S.tp[r.coverIdx]), x1=sx(S.tp[S.tp.length-1]);
+    g.appendChild(el('rect',{x:x0,y:Y0,width:x1-x0,height:Y1-Y0,fill:'url(#hatch)',opacity:.85}));
+    g.appendChild(el('line',{x1:x0,x2:x0,y1:Y0,y2:Y1,stroke:'var(--ne)','stroke-width':1.5}));
+    g.appendChild(txt((x0+x1)/2,Y0+13,'not yet read','annot',{'text-anchor':'middle',fill:'var(--ink-2)','font-weight':'600'}));
+    g.appendChild(txt((x0+x1)/2,Y0+25,
+      `${S.assessors.find(a=>a.code===code).label} · ${S.tp.length-1-r.coverIdx} outstanding`,'annot',
+      {'text-anchor':'middle',fill:'var(--muted)'}));
+  });
+
+  // NE gaps
+  all[0].forEach(p=>{ if(p.sod===null && !p.unread){
+    g.appendChild(el('rect',{x:sx(p.day)-13,y:Y0,width:26,height:Y1-Y0,fill:'var(--ne)',opacity:.13}));
+    g.appendChild(txt(sx(p.day),Y1-8,'NE','annot',{'text-anchor':'middle',fill:'var(--s-serious)'}));
+  }});
+
+  // lines
+  all.forEach((Sr,si)=>{
+    const color = si===0?'var(--accent)':'var(--d-n1)';
+    const dash = si===0?null:'5 3';
     let run=[];
-    const flush=()=>{ if(run.length>1){
-        g.appendChild(el('polyline',{points:run.map(p=>sx(p.day)+','+sy(p.y)).join(' '),
-          fill:'none',stroke:color,'stroke-width':2,'stroke-linejoin':'round',
-          'stroke-dasharray':dash||'none'}));
-      } run=[]; };
-    S.forEach(p=>{ if(p.y===null){ flush(); } else run.push(p); });
+    const flush=()=>{ if(run.length>1) g.appendChild(el('polyline',{
+        points:run.map(p=>sx(p.day)+','+sy(p.y)).join(' '),fill:'none',stroke:color,
+        'stroke-width':2,'stroke-linejoin':'round','stroke-dasharray':dash||'none'})); run=[]; };
+    Sr.forEach(p=>{ if(p.y===null) flush(); else run.push(p); });
     flush();
-    return S;
-  };
+    // open cap at the coverage edge when unread follows
+    const r=S.reads[codes[si]];
+    if(r.coverIdx<S.tp.length-1){
+      const last=Sr.slice(0,r.coverIdx+1).filter(p=>p.y!==null).pop();
+      if(last) g.appendChild(el('circle',{cx:sx(last.day),cy:sy(last.y),r:7,fill:'none',stroke:color,'stroke-width':2}));
+    }
+  });
 
-  let series=[];
-  if(state.assessor==='INV' || state.assessor==='BOTH') series=draw('INV','var(--accent)',null);
-  if(state.assessor==='BICR'){ series=draw('BICR','var(--accent)',null); }
-  if(state.assessor==='BOTH'){ draw('BICR','var(--d-n1)','5 3'); }
-
-  // nadir reference
-  const S=series;
-  const nad=S.filter(p=>p.y!==null).reduce((a,p)=>p.sod<a.sod?p:a,S[0]);
-  if(abs || state.metric==='base'){
-    const yv = abs ? sy(nad.sod) : sy(100*(nad.sod-nad.base)/nad.base);
+  // nadir reference (primary series)
+  const P=all[0];
+  const withV=P.filter(p=>p.sod!==null);
+  if(withV.length && (abs||state.metric==='base')){
+    const nad=withV.reduce((a,p)=>p.sod<a.sod?p:a,withV[0]);
+    const yv = abs?sy(nad.sod):sy(100*(nad.sod-nad.base)/nad.base);
     g.appendChild(el('line',{x1:PX0,x2:PX1,y1:yv,y2:yv,stroke:'var(--accent-deep)','stroke-width':1,opacity:.55}));
     g.appendChild(txt(PX0+6,yv-5,`Nadir ${nad.sod} mm · D${nad.day} · ${dstr(nad.day)}`,'railtx',{fill:'var(--accent-deep)'}));
   }
 
-  // NE gap band
-  const neP=TP[5];
-  g.appendChild(el('rect',{x:sx(neP.day)-13,y:Y0,width:26,height:Y1-Y0,fill:'var(--ne)',opacity:.13}));
-  g.appendChild(txt(sx(neP.day),Y0+12,'NE','annot',{'text-anchor':'middle',fill:'var(--s-serious)'}));
-  g.appendChild(txt(sx(neP.day),Y0+23,'gap','annot',{'text-anchor':'middle',fill:'var(--muted)'}));
-
   // markers
-  S.forEach(p=>{
-    if(p.y===null) return;
-    const x=sx(p.day), y=sy(p.y);
-    let node;
-    if(p.resp==='PD'){
-      node=el('rect',{x:x-5.5,y:y-5.5,width:11,height:11,fill:'var(--s-crit)',stroke:'var(--surface)','stroke-width':2});
-    } else if(p.resp==='NE'){
-      node=el('circle',{cx:x,cy:y,r:5,fill:'none',stroke:'var(--ne)','stroke-width':2});
-    } else if(p.conf===false){
-      node=el('circle',{cx:x,cy:y,r:5.5,fill:'var(--surface)',stroke:'var(--accent)','stroke-width':2});
-    } else {
-      node=el('circle',{cx:x,cy:y,r:5.5,fill:'var(--accent)',stroke:'var(--surface)','stroke-width':2});
-    }
-    node.style.cursor='pointer';
-    g.appendChild(node);
-    const lab=p.resp + (p.conf===false?' (unconf.)':'');
-    g.appendChild(txt(x, y-13, lab, 'annot', {'text-anchor':'middle',
-      fill: p.resp==='PD'?'var(--s-crit)':'var(--ink)'}));
-    if(state.metric!=='abs'){
-      g.appendChild(txt(x, y+20, (p.y>0?'+':'')+p.y.toFixed(1)+'%', 'tk', {'text-anchor':'middle'}));
-    } else {
-      g.appendChild(txt(x, y+20, p.sod+' mm', 'tk', {'text-anchor':'middle'}));
-    }
-    bindTip(node,`<div class="th">${p.day<0?'Baseline':'Day '+p.day} — ${lab}</div>
-      <div class="tr"><span>Date</span><b>${dstr(p.day)}</b></div>
-      <div class="tr"><span>SOD</span><b>${p.sod} mm</b></div>
-      <div class="tr"><span>From baseline</span><b>${p.pchg>0?'+':''}${p.pchg.toFixed(1)}%</b></div>
-      <div class="tr"><span>From nadir</span><b>${p.pchgnad>0?'+':''}${p.pchgnad.toFixed(1)}% (${p.absnad>0?'+':''}${p.absnad} mm)</b></div>
-      <div class="tr" style="margin-top:4px"><span>Click for full derivation</span></div>`);
-    node.addEventListener('click',()=>{ state.selected=p.i; drawBurden(); drawDeriv(); });
-    if(p.i===state.selected){
-      g.appendChild(el('circle',{cx:x,cy:y,r:11,fill:'none',stroke:'var(--accent)','stroke-width':1.5,opacity:.6}));
-    }
+  all.forEach((Sr,si)=>{
+    Sr.forEach(p=>{
+      if(p.y===null) return;
+      const x=sx(p.day), y=sy(p.y), meta=RESP_META[p.resp]||RESP_META.SD;
+      let node;
+      if(meta.kind==='pd'){
+        node=el('rect',{x:x-5.5,y:y-5.5,width:11,height:11,fill:'var(--s-crit)',stroke:'var(--surface)','stroke-width':2});
+      } else if(meta.kind==='iupd'){
+        node=el('rect',{x:x-5.5,y:y-5.5,width:11,height:11,fill:'var(--s-warn)',stroke:'var(--surface)','stroke-width':2});
+      } else if(meta.kind==='bl'){
+        node=el('circle',{cx:x,cy:y,r:5,fill:'var(--ink-2)',stroke:'var(--surface)','stroke-width':2});
+      } else if(p.conf===false){
+        node=el('circle',{cx:x,cy:y,r:5.5,fill:'var(--surface)',stroke:meta.fill||'var(--accent)','stroke-width':2});
+      } else {
+        node=el('circle',{cx:x,cy:y,r:5.5,fill:meta.fill||'var(--accent)',stroke:'var(--surface)','stroke-width':2});
+      }
+      node.style.cursor='pointer'; g.appendChild(node);
+      const lab=meta.lab+(p.conf===false?' (unconf.)':'')+(p.episode?' #'+p.episode:'');
+      g.appendChild(txt(x,y-13,lab,'annot',{'text-anchor':'middle',
+        fill: meta.kind==='pd'?'var(--s-crit)': meta.kind==='iupd'?'var(--ink)':'var(--ink)'}));
+      if(si===0) g.appendChild(txt(x,y+20, abs?p.sod+' mm':((p.y>0?'+':'')+p.y.toFixed(1)+'%'),'tk',{'text-anchor':'middle'}));
+      bindTip(node,`<div class="th">${p.i===0?'Baseline':'Day '+p.day} — ${lab} · ${esc(S.assessors[si].label)}</div>
+        <div class="tr"><span>Date</span><b>${dstr(p.day)}</b></div>
+        <div class="tr"><span>SOD</span><b>${p.sod} mm</b></div>
+        <div class="tr"><span>From baseline</span><b>${p.pchg>0?'+':''}${p.pchg.toFixed(1)}%</b></div>
+        <div class="tr"><span>From nadir</span><b>${p.pchgnad>0?'+':''}${p.pchgnad.toFixed(1)}% (${p.absnad>0?'+':''}${p.absnad} mm)</b></div>
+        <div class="tr" style="margin-top:4px"><span>Click for full derivation</span></div>`);
+      if(si===0){
+        node.addEventListener('click',()=>{ state.selected=p.i; drawBurden(); drawDeriv(); });
+        if(p.i===state.selected) g.appendChild(el('circle',{cx:x,cy:y,r:11,fill:'none',stroke:'var(--accent)','stroke-width':1.5,opacity:.6}));
+      }
+    });
   });
 
-  // baseline rule
-  g.appendChild(txt(sx(-6),Y1+14,'baseline','tk',{'text-anchor':'middle'}));
-  axisStrip(g,262);
-  crosshair(svg,Y0,262);
+  // discordance marks
+  if(state.assessor==='BOTH'){
+    discordance().forEach(d=>{
+      g.appendChild(txt(sx(d.day),Y1-20,'≠','annot',{'text-anchor':'middle',fill:'var(--s-warn)','font-weight':'700','font-size':'13'}));
+    });
+  }
+
+  g.appendChild(txt(sx(S.tp[0]),Y1+14,'baseline','tk',{'text-anchor':'middle'}));
+  axisStrip(g,262); crosshair(svg,Y0,262);
+
+  document.getElementById('legBurden').innerHTML=`
+    <span class="lg"><i class="sw fill" style="background:var(--accent)"></i>Confirmed response</span>
+    <span class="lg"><i class="sw ring"></i>Unconfirmed response</span>
+    ${S.cfg.criteria==='iRECIST'?'<span class="lg"><i class="sw sq" style="background:var(--s-warn)"></i>iUPD (unconfirmed progression)</span>':''}
+    <span class="lg"><i class="sw sq" style="background:var(--s-crit)"></i>${S.cfg.criteria==='iRECIST'?'iCPD':'PD'}</span>
+    <span class="lg"><i class="sw ring" style="border-color:var(--ne)"></i>NE — line broken</span>
+    <span class="lg"><i class="sw sq" style="background:var(--ne);opacity:.45"></i>Not yet read — line ends, open cap</span>`;
+
+  document.getElementById('burdenHint').innerHTML = S.cfg.criteria==='iRECIST'
+    ? `Rails come from this study's configuration: PR at ${S.cfg.pr}%, PD at +${S.cfg.pd}% with a minimum ${S.cfg.pdmm} mm absolute rise from nadir. Under iRECIST a progression event is <b>iUPD</b> and is confirmed only by a further rise on a scan ${S.cfg.irecistMin}–${S.cfg.irecistMax} days later; a fall-back resets the count, which is why the episode number is shown on the marker.`
+    : `Rails come from this study's configuration: PR at ${S.cfg.pr}%, PD at +${S.cfg.pd}% with a minimum ${S.cfg.pdmm} mm absolute rise from nadir, confirmation required for ${S.cfg.confirmFor} at ≥${S.cfg.confirmDays} days. PD is defined against <em>nadir</em>, not baseline — switch the metric to “% from nadir” to see the rail that actually governs.`;
+
+  const box=document.getElementById('discBox');
+  if(state.assessor==='BOTH'){
+    const d=discordance();
+    box.innerHTML = d.length
+      ? `<div class="disc"><b>Assessor discordance — ${d.length} timepoint${d.length===1?'':'s'}.</b> ` +
+        d.map(x=>`Day ${x.day}: ${S.assessors[0].label} <b>${RESP_META[x.a].lab}</b> vs ${S.assessors[1].label} <b>${RESP_META[x.b].lab}</b>`).join(' · ') +
+        `. Each read is derived independently end to end — its own baseline, its own nadir, its own confirmation. The application never blends them into a consensus.</div>`
+      : '';
+  } else box.innerHTML='';
 }
 
-/* ---------------- derivation panel ---------------- */
+/* ===================== derivation panel ===================== */
 function drawDeriv(){
   const host=document.getElementById('derivPanel');
-  const S=burdenSeries(state.assessor==='BICR'?'BICR':'INV');
-  const p=S[state.selected];
+  const code = state.assessor==='BOTH'?S.assessors[0].code:state.assessor;
+  const P=series(code), p=P[state.selected];
+  const aLabel=(S.assessors.find(a=>a.code===code)||{}).label||code;
   if(!p || p.sod===null){
-    host.innerHTML=`<h4>Day ${TP[state.selected].day} — Not evaluable</h4>
-      <div class="sub">TL01 not assessable (respiratory motion artefact); a timepoint response cannot be assigned, so the burden curve is broken rather than interpolated across this visit.</div>`;
+    host.innerHTML=`<h4>Day ${S.tp[state.selected]} — ${p&&p.unread?'not yet read':'not evaluable'}</h4>
+      <div class="sub">${p&&p.unread
+        ? `${esc(aLabel)} has not assessed this timepoint. The burden line ends at the coverage edge with an open cap — it is neither a gap nor a value, and it must never be read as an unchanged patient.`
+        : 'A target lesion was not assessable, so a timepoint response cannot be assigned and the burden curve is broken rather than interpolated across this visit.'}</div>`;
     return;
   }
-  const rows=LES.filter(l=>l.kind==='target').map(l=>{
-    const v=l.v[p.i], b=l.v[0];
-    return `<tr><td class="mono">${l.id}</td><td>${l.site}</td><td>${l.meas}</td>
+  const rows=S.lesions.filter(l=>l.kind==='target'&&l.v&&l.v[code]).map(l=>{
+    const v=l.v[code][p.i], b=l.v[code][0];
+    return `<tr><td class="mono">${l.id}</td><td>${esc(l.site)}</td><td>${esc(l.meas)}</td>
       <td class="num">${b}</td><td class="num">${v===null?'NE':v}</td>
-      <td class="num">${v===null?'—':((v-b)>0?'+':'')+(100*(v-b)/b).toFixed(0)+'%'}</td></tr>`;
-  }).join('');
-  const isPD = p.resp==='PD';
-  const verdict = isPD
-    ? `Target response <b>PD</b>: +${p.pchgnad.toFixed(1)}% from the nadir of ${p.nadirPrev} mm, an absolute rise of +${p.absnad} mm — both the ≥20% and the ≥5 mm conditions are met. Non-target disease is not unequivocally progressive and the new liver lesion is still equivocal, so PD here is driven by the target sum alone.`
-    : p.resp==='PR'
-      ? `Target response <b>PR</b>: ${p.pchg.toFixed(1)}% from baseline, past the −30% threshold, with no new lesions and non-target disease not progressive. ${p.conf ? 'Confirmed by the assessment on Day '+TP[p.i-1].day+' ('+(p.day-TP[p.i-1].day)+' days apart, ≥4 weeks).' : '<b>Unconfirmed</b> — a confirmatory scan ≥4 weeks later is required before this counts toward objective response rate.'}`
-      : `Target response <b>SD</b>: ${p.pchg.toFixed(1)}% from baseline — neither the −30% shrinkage for PR nor the +20%/+5 mm growth from nadir for PD.`;
-
+      <td class="num">${v===null?'—':((v-b)>0?'+':'')+(100*(v-b)/b).toFixed(0)+'%'}</td></tr>`;}).join('');
+  const meta=RESP_META[p.resp];
+  let verdict;
+  if(p.resp==='PD'||p.resp==='iCPD'){
+    verdict=`<b>${meta.lab}</b>: +${p.pchgnad.toFixed(1)}% from the nadir of ${p.nadirPrev} mm, an absolute rise of +${p.absnad} mm — both the ≥${S.cfg.pd}% and the ≥${S.cfg.pdmm} mm conditions are met.`
+      + (p.resp==='iCPD'?` Under iRECIST this is the confirmatory assessment following iUPD episode ${p.episode}, ${p.day-S.tp[p.i-1]} days later (window ${S.cfg.irecistMin}–${S.cfg.irecistMax} days), and it shows further growth — so progression is confirmed.`:'');
+  } else if(p.resp==='iUPD'){
+    verdict=`<b>iUPD</b> (episode ${p.episode}): +${p.pchgnad.toFixed(1)}% and +${p.absnad} mm from the nadir of ${p.nadirPrev} mm meets RECIST progression, but under iRECIST it is <b>unconfirmed</b>. A confirmatory assessment ${S.cfg.irecistMin}–${S.cfg.irecistMax} days later decides between pseudoprogression and iCPD.`;
+  } else if(/PR|CR/.test(p.resp)){
+    verdict=`<b>${meta.lab}</b>: ${p.pchg.toFixed(1)}% from baseline, past the ${S.cfg.pr}% threshold, with no new lesions and non-target disease not progressive. `
+      + (p.conf===false
+          ? `<b>Unconfirmed</b> — this study requires a confirmatory assessment ≥${S.cfg.confirmDays} days later before it counts toward objective response.`
+          : `Confirmed by the assessment on Day ${S.tp[p.i-1]} (${p.day-S.tp[p.i-1]} days apart, ≥${S.cfg.confirmDays} days).`);
+  } else if(p.resp==='BL'){
+    verdict=`Baseline assessment. Sum of diameters ${p.sod} mm across ${S.lesions.filter(l=>l.kind==='target').length} target lesions — every later percentage on this page is relative to this number.`;
+  } else {
+    verdict=`<b>${meta.lab}</b>: ${p.pchg.toFixed(1)}% from baseline — neither the ${S.cfg.pr}% shrinkage for a partial response nor the +${S.cfg.pd}% / +${S.cfg.pdmm} mm growth from nadir for progression.`;
+  }
+  const newLes=S.lesions.find(l=>l.kind==='new'&&l.s&&l.s[code]&&l.s[code][p.i]);
   host.innerHTML=`
-    <h4>Derivation — Day ${p.day} · ${dstr(p.day)} · ${state.assessor==='BICR'?'central review':'investigator assessment'}</h4>
-    <div class="sub">Every value on the curve resolves to the measurements that produced it, via <span class="mono">RS.RSLNKGRP → TR.TRLNKGRP → TR.TRLNKID → TU.TULNKID</span>.</div>
+    <h4>Derivation — Day ${p.day} · ${dstr(p.day)} · ${esc(aLabel)}</h4>
+    <div class="sub">Every value on the curve resolves to the measurements that produced it, via <span class="mono">RS.RSLNKGRP → TR.TRLNKGRP → TR.TRLNKID → TU.TULNKID</span>. Thresholds applied come from config <span class="mono">${S.cfg.hash}</span>.</div>
     <div class="deriv-grid">
-      <div class="tblwrap">
-        <table>
-          <thead><tr><th>Lesion</th><th>Site</th><th>Measure</th><th class="num">Baseline</th><th class="num">This visit</th><th class="num">Δ own base</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Lesion</th><th>Site</th><th>Measure</th><th class="num">Baseline</th><th class="num">This visit</th><th class="num">Δ own base</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
       <div>
         <div class="calc">
           <span class="lbl">Sum of diameters</span><span class="val">${p.sod} mm</span>
@@ -748,225 +978,266 @@ function drawDeriv(){
           <span class="lbl">Change from nadir</span><span class="val">${p.absnad>0?'+':''}${p.absnad} mm</span>
           <span class="lbl">% change from nadir</span><span class="val">${p.pchgnad>0?'+':''}${p.pchgnad.toFixed(1)}%</span>
           <span class="rule"></span>
-          <span class="lbl">Non-target response</span><span class="val">${p.day===252?'Non-CR/Non-PD':'Non-CR/Non-PD'}</span>
-          <span class="lbl">New lesions</span><span class="val">${p.day===252?'Equivocal (NL01)':'None'}</span>
-          <span class="lbl">Overall timepoint response</span><span class="val">${p.resp}${p.conf===false?' (unconfirmed)':''}</span>
+          <span class="lbl">Non-target response</span><span class="val">Non-CR/Non-PD</span>
+          <span class="lbl">New lesions</span><span class="val">${newLes?esc(newLes.s[code][p.i])+' ('+newLes.id+')':'None'}</span>
+          <span class="lbl">Overall timepoint response</span><span class="val">${meta.lab}${p.conf===false?' (unconfirmed)':''}</span>
         </div>
         <div class="verdict">${verdict}</div>
       </div>
     </div>`;
 }
 
-/* ---------------- BAND 3b : per-lesion ---------------- */
+/* ===================== band 3b ===================== */
 function heatColor(pct){
   if(pct===null||pct===undefined) return 'var(--ne)';
   if(pct<=-50) return 'var(--d-n3)';
   if(pct<=-30) return 'var(--d-n2)';
   if(pct<=-10) return 'var(--d-n1)';
-  if(pct< 10) return 'var(--d-0)';
-  if(pct< 20) return 'var(--d-p1)';
-  if(pct< 50) return 'var(--d-p2)';
+  if(pct<10) return 'var(--d-0)';
+  if(pct<20) return 'var(--d-p1)';
+  if(pct<50) return 'var(--d-p2)';
   return 'var(--d-p3)';
 }
 function drawLesions(){
   const svg=document.getElementById('svgLesion'); svg.textContent='';
   const g=el('g',{}); svg.appendChild(g);
+  const code = state.assessor==='BOTH'?S.assessors[0].code:state.assessor;
   const rowH=27, top=44;
-  const ordered = LES.filter(l=>l.kind==='new').concat(LES.filter(l=>l.kind==='target'), LES.filter(l=>l.kind==='nontarget'));
+  const ordered = S.lesions.filter(l=>l.kind==='new').concat(
+                  S.lesions.filter(l=>l.kind==='target'), S.lesions.filter(l=>l.kind==='nontarget'));
   const H = top + ordered.length*rowH + 14;
   svg.setAttribute('viewBox',`0 0 1000 ${H+42}`);
-
   gridlines(g,26,H);
-  // column headers
-  TP.forEach(tp=>{
-    g.appendChild(txt(sx(tp.day), 20, tp.day<0?'BL':'D'+tp.day, 'tk', {'text-anchor':'middle'}));
-  });
+  S.tp.forEach((d,i)=>g.appendChild(txt(sx(d),20,i===0?'BL':'D'+d,'tk',{'text-anchor':'middle'})));
   g.appendChild(txt(8,20,'Lesion','rowlab'));
-  g.appendChild(txt(140,20,'Diameter trend','rowsub'));
+  g.appendChild(txt(132,20,'Trend','rowsub'));
 
   ordered.forEach((l,ri)=>{
     const y=top+ri*rowH;
-    if(l.kind==='new'){
-      g.appendChild(el('rect',{x:4,y:y-14,width:PX1-4,height:rowH-4,fill:'var(--s-crit)',opacity:.07}));
-    }
-    g.appendChild(txt(8,y-1,l.id+(l.kind==='target'?'':''),'rowlab',
-      {'font-weight':l.kind==='new'?'600':'500', fill:l.kind==='new'?'var(--s-crit)':'var(--ink)'}));
+    if(l.kind==='new') g.appendChild(el('rect',{x:4,y:y-14,width:PX1-4,height:rowH-4,fill:'var(--s-crit)',opacity:.07}));
+    g.appendChild(txt(8,y-1,l.id,'rowlab',{'font-weight':l.kind==='new'?'600':'500',
+      fill:l.kind==='new'?'var(--s-crit)':'var(--ink)'}));
     g.appendChild(txt(8,y+9,l.site,'rowsub'));
 
-    // sparkline in gutter for measured lesions
-    if(l.v){
-      const vals=l.v.filter(v=>v!==null);
+    const vv = l.v && l.v[code];
+    if(vv){
+      const vals=vv.filter(v=>v!==null);
       const mn=Math.min(...vals), mx=Math.max(...vals);
-      const gx0=132,gx1=192,gy0=y-11,gy1=y+9;
-      const pts=[];
-      l.v.forEach((v,i)=>{ if(v===null) return;
-        pts.push([gx0+(i/(l.v.length-1))*(gx1-gx0), gy1-(v-mn)/Math.max(1,mx-mn)*(gy1-gy0)]);
-      });
-      g.appendChild(el('polyline',{points:pts.map(p=>p[0]+','+p[1]).join(' '),fill:'none',
-        stroke:'var(--ink-2)','stroke-width':1.5,'stroke-linejoin':'round'}));
-      const last=pts[pts.length-1];
-      g.appendChild(el('circle',{cx:last[0],cy:last[1],r:2.5,fill:'var(--ink)'}));
+      const gx0=132,gx1=192,gy0=y-11,gy1=y+9, pts=[];
+      vv.forEach((v,i)=>{ if(v===null) return;
+        pts.push([gx0+(i/(vv.length-1))*(gx1-gx0), gy1-(v-mn)/Math.max(1,mx-mn)*(gy1-gy0)]); });
+      if(pts.length>1){
+        g.appendChild(el('polyline',{points:pts.map(q=>q[0]+','+q[1]).join(' '),fill:'none',
+          stroke:'var(--ink-2)','stroke-width':1.5,'stroke-linejoin':'round'}));
+        const last=pts[pts.length-1];
+        g.appendChild(el('circle',{cx:last[0],cy:last[1],r:2.5,fill:'var(--ink)'}));
+      }
     }
 
-    // cells
-    TP.forEach((tp,i)=>{
-      const x=sx(tp.day), w=30;
+    S.tp.forEach((day,i)=>{
+      const x=sx(day), w=Math.min(30,(PX1-PX0)/S.tp.length-4);
+      const unread = i>S.reads[code].coverIdx;
       let fill,label,tipHtml;
-      if(l.v){
-        const v=l.v[i], b=l.v[0];
-        const pct = (v===null||b===0)?null:100*(v-b)/b;
-        fill=heatColor(v===null?null:pct);
-        label = v===null?'NE':String(v);
-        tipHtml=`<div class="th">${l.id} · ${l.site}</div>
-          <div class="tr"><span>Visit</span><b>${tp.day<0?'Baseline':'Day '+tp.day} · ${dstr(tp.day)}</b></div>
-          <div class="tr"><span>${l.meas}</span><b>${v===null?'Not evaluable':v+' mm'}</b></div>
+      if(vv){
+        const v=vv[i], b=vv[0];
+        const pct=(v===null||!b)?null:100*(v-b)/b;
+        fill = v===null?(unread?'var(--surface-2)':'var(--ne)'):heatColor(pct);
+        label = v===null?(unread?'·':'NE'):String(v);
+        tipHtml=`<div class="th">${l.id} · ${esc(l.site)}</div>
+          <div class="tr"><span>Visit</span><b>${i===0?'Baseline':'Day '+day} · ${dstr(day)}</b></div>
+          <div class="tr"><span>${esc(l.meas)}</span><b>${v===null?(unread?'Not yet read':'Not evaluable'):v+' mm'}</b></div>
           <div class="tr"><span>Change from own baseline</span><b>${pct===null?'—':(pct>0?'+':'')+pct.toFixed(1)+'%'}</b></div>
-          <div class="tr"><span>Method</span><b>${l.qc&&l.qc.indexOf('MRI')>-1&&tp.day===252?'MRI':l.method}</b></div>`;
+          <div class="tr"><span>Method</span><b>${l.qc&&l.qc.indexOf('MRI')>-1&&i===S.tp.length-1?'MRI':l.method}</b></div>`;
       } else {
-        const s=l.s[i];
-        fill = s===null?'var(--surface-2)': s==='Absent'?'var(--d-n1)': s==='Equivocal'?'var(--s-warn)':'var(--d-0)';
-        label = s===null?'':(s==='Present'?'P':s==='Absent'?'A':'?');
-        tipHtml=`<div class="th">${l.id} · ${l.site}</div>
-          <div class="tr"><span>Visit</span><b>${tp.day<0?'Baseline':'Day '+tp.day}</b></div>
-          <div class="tr"><span>Status</span><b>${s===null?'Not assessed':s}</b></div>`;
+        const st=l.s&&l.s[code]?l.s[code][i]:null;
+        fill = st===null?'var(--surface-2)': st==='Absent'?'var(--d-n1)': st==='Equivocal'?'var(--s-warn)':'var(--d-0)';
+        label = st===null?'':(st==='Present'?'P':st==='Absent'?'A':'?');
+        tipHtml=`<div class="th">${l.id} · ${esc(l.site)}</div>
+          <div class="tr"><span>Visit</span><b>${i===0?'Baseline':'Day '+day}</b></div>
+          <div class="tr"><span>Status</span><b>${st===null?(unread?'Not yet read':'Not assessed'):st}</b></div>`;
       }
-      const r=el('rect',{x:x-w/2,y:y-13,width:w-2,height:20,rx:2,fill:fill});
+      const r=el('rect',{x:x-w/2,y:y-13,width:w-2,height:20,rx:2,fill,
+        stroke: (label==='·')?'var(--rule)':'none','stroke-dasharray':(label==='·')?'2 2':'none'});
       g.appendChild(r); bindTip(r,tipHtml);
       if(label){
-        const dark = (fill==='var(--d-n3)'||fill==='var(--d-n2)'||fill==='var(--d-p3)'||fill==='var(--d-p2)');
-        g.appendChild(txt(x,y+1,label,'tk',{'text-anchor':'middle',
-          fill: dark?'#fff':'var(--ink)','font-weight':'500'}));
+        const dark=['var(--d-n3)','var(--d-n2)','var(--d-p3)','var(--d-p2)'].indexOf(fill)>-1;
+        g.appendChild(txt(x,y+1,label,'tk',{'text-anchor':'middle',fill:dark?'#fff':'var(--ink)','font-weight':'500'}));
       }
     });
-
-    if(l.qc){
-      g.appendChild(txt(PX1+4,y+2,'▲','annot',{fill:'var(--s-warn)'}));
-    }
+    if(l.qc) g.appendChild(txt(PX1+4,y+2,'▲','annot',{fill:'var(--s-warn)'}));
   });
 
-  // new lesion callout, placed in the empty part of its own row
-  const nlY=top+0*rowH;
-  g.appendChild(txt(PX0+8,nlY+2,'New lesion — first observed D252, equivocal, confirmation pending','annot',{fill:'var(--s-crit)'}));
+  const nl=S.lesions.find(l=>l.kind==='new');
+  if(nl) g.appendChild(txt(PX0+8,top+2,'New lesion — first observed D'+S.tp[S.tp.length-1]+', equivocal, confirmation pending','annot',{fill:'var(--s-crit)'}));
 
-  axisStrip(g,H+8);
-  crosshair(svg,26,H+8);
+  axisStrip(g,H+8); crosshair(svg,26,H+8);
+  document.getElementById('lesionNote').innerHTML=S.notes.lesion;
 }
 
-/* ---------------- BAND 4 : AEs ---------------- */
+/* ===================== band 4 ===================== */
 function drawAe(){
   const svg=document.getElementById('svgAe'); svg.textContent='';
   const g=el('g',{}); svg.appendChild(g);
-  const list = state.ae==='rel' ? AES.filter(a=>a.g>=2||a.ser||a.dlt) : AES.slice();
-  list.sort((a,b)=>a.s-b.s);
+  const list=(state.ae==='rel'?S.aes.filter(a=>a.g>=2||a.ser||a.dlt):S.aes.slice()).sort((a,b)=>a.s-b.s);
   const rowH=29, top=28;
-  const H = top + (list.length+CONMED.length+1)*rowH + 6;
+  const H=top+(list.length+S.conmed.length+1)*rowH+6;
   svg.setAttribute('viewBox',`0 0 1000 ${H+44}`);
   gridlines(g,14,H);
-
-  const gradeFill = g_ => g_>=4?'var(--s-crit)': g_===3?'var(--s-serious)': g_===2?'var(--s-warn)':'var(--d-0)';
+  const gradeFill=q=>q>=4?'var(--s-crit)':q===3?'var(--s-serious)':q===2?'var(--s-warn)':'var(--d-0)';
 
   list.forEach((a,i)=>{
     const y=top+i*rowH;
     g.appendChild(txt(8,y-1,a.pt,'rowlab'));
     g.appendChild(txt(8,y+9,a.soc+' · '+a.rel,'rowsub'));
-    const r=el('rect',{x:sx(a.s),y:y-8,width:Math.max(3,sx(a.e)-sx(a.s)),height:14,rx:2,fill:gradeFill(a.g)});
+    const barW=Math.max(3,sx(a.e)-sx(a.s));
+    const r=el('rect',{x:sx(a.s),y:y-8,width:barW,height:14,rx:2,fill:gradeFill(a.g)});
     g.appendChild(r);
-    const dark = a.g>=3;
-    g.appendChild(txt(sx(a.s)+5,y+2.5,'G'+a.g,'tk',{fill:dark?'#fff':'var(--ink)','font-weight':'600'}));
-    bindTip(r,`<div class="th">${a.pt}</div>
-      <div class="tr"><span>System organ class</span><b>${a.soc}</b></div>
+    if(barW>=18) g.appendChild(txt(sx(a.s)+5,y+2.5,'G'+a.g,'tk',{fill:a.g>=3?'#fff':'var(--ink)','font-weight':'600'}));
+    else g.appendChild(txt(sx(a.s)-4,y+2.5,'G'+a.g,'tk',{'text-anchor':'end',fill:'var(--ink-2)','font-weight':'600'}));
+    bindTip(r,`<div class="th">${esc(a.pt)}</div>
+      <div class="tr"><span>System organ class</span><b>${esc(a.soc)}</b></div>
       <div class="tr"><span>Onset → resolution</span><b>D${a.s} → D${a.e}</b></div>
       <div class="tr"><span>Dates</span><b>${dstr(a.s)} → ${dstr(a.e)}</b></div>
       <div class="tr"><span>Max grade</span><b>Grade ${a.g}</b></div>
       <div class="tr"><span>Serious</span><b>${a.ser?'Yes':'No'}</b></div>
-      <div class="tr"><span>Causality</span><b>${a.rel}</b></div>
-      <div class="tr"><span>Action taken</span><b>${a.act}</b></div>
-      <div class="tr"><span>Outcome</span><b>${a.out}</b></div>
+      <div class="tr"><span>Causality</span><b>${esc(a.rel)}</b></div>
+      <div class="tr"><span>Action taken</span><b>${esc(a.act)}</b></div>
+      <div class="tr"><span>Outcome</span><b>${esc(a.out)}</b></div>
       ${a.dlt?'<div class="tr"><span>DLT</span><b>Yes — dose-limiting toxicity</b></div>':''}`);
     let mx=sx(a.e)+6;
     if(a.dlt){ g.appendChild(txt(mx,y+3,'◆ DLT','annot',{fill:'var(--s-crit)','font-weight':'600'})); mx+=44; }
     if(a.ser){ g.appendChild(txt(mx,y+3,'▲ Serious','annot',{fill:'var(--ink-2)','font-weight':'600'})); mx+=52; }
-    if(a.act!=='None'){ g.appendChild(txt(mx,y+3,a.act,'annot')); }
+    if(a.act!=='None') g.appendChild(txt(mx,y+3,a.act,'annot'));
   });
 
-  // conmed rows
   const cy0=top+list.length*rowH+8;
   g.appendChild(el('line',{x1:4,x2:PX1,y1:cy0-13,y2:cy0-13,stroke:'var(--grid)','stroke-width':1}));
   g.appendChild(txt(8,cy0+2,'Concomitant anti-cancer & supportive therapy','rowsub'));
-  CONMED.forEach((c,i)=>{
+  S.conmed.forEach((c,i)=>{
     const y=cy0+18+i*rowH;
-    g.appendChild(txt(8,y-1,c.kind==='rt'?'Palliative radiotherapy':'Corticosteroid','rowlab'));
-    g.appendChild(txt(8,y+9,c.kind==='rt'?'T8 spine · confounds attribution':'Dexamethasone 4 mg','rowsub'));
+    g.appendChild(txt(8,y-1,c.lab,'rowlab'));
+    g.appendChild(txt(8,y+9,c.sub,'rowsub'));
     const r=el('rect',{x:sx(c.s),y:y-7,width:Math.max(3,sx(c.e)-sx(c.s)),height:12,rx:2,
       fill:c.kind==='rt'?'var(--accent-deep)':'var(--d-n1)'});
     g.appendChild(r);
-    bindTip(r,`<div class="th">${c.t}</div>
+    bindTip(r,`<div class="th">${esc(c.t)}</div>
       <div class="tr"><span>Days</span><b>D${c.s} → D${c.e}</b></div>
       <div class="tr"><span>Dates</span><b>${dstr(c.s)} → ${dstr(c.e)}</b></div>`);
-    if(c.kind==='rt') g.appendChild(txt(sx(c.e)+6,y+3,'20 Gy / 5 fx to T8','annot'));
+    if(c.note) g.appendChild(txt(sx(c.e)+6,y+3,c.note,'annot'));
   });
 
-  axisStrip(g,H+10);
-  crosshair(svg,14,H+10);
+  axisStrip(g,H+10); crosshair(svg,14,H+10);
+  document.getElementById('aeNote').innerHTML=S.notes.ae;
 }
 
-/* ---------------- baseline inventory table ---------------- */
+/* ===================== inventory + config cards ===================== */
 function drawInventory(){
-  const tb=document.getElementById('invBody');
-  tb.innerHTML=LES.map(l=>{
-    const b = l.v?l.v[0]:null, last = l.v?l.v[6]:null;
-    const d = (b!==null&&last!==null)? (last-b) : null;
-    const kind = l.kind==='target'?'Target': l.kind==='nontarget'?'Non-target':'New';
-    return `<tr>
-      <td class="mono">${l.id}</td>
-      <td>${kind}</td>
-      <td>${l.site}</td>
-      <td>${l.method}</td>
-      <td>${l.meas}</td>
-      <td class="num">${b===null?'—':b+' mm'}</td>
-      <td class="num">${last===null?(l.s&&l.s[6]?l.s[6]:'—'):last+' mm'}</td>
+  const code = state.assessor==='BOTH'?S.assessors[0].code:state.assessor;
+  const last=S.tp.length-1;
+  document.getElementById('invSub').textContent=S.notes.inv+' · '+(S.assessors.find(a=>a.code===code)||{}).label;
+  document.getElementById('invBody').innerHTML=S.lesions.map(l=>{
+    const vv=l.v&&l.v[code], b=vv?vv[0]:null;
+    let lastV=null; if(vv){ for(let i=last;i>=0;i--){ if(vv[i]!==null){ lastV=vv[i]; break; } } }
+    const d=(b!==null&&lastV!==null)?lastV-b:null;
+    const kind=l.kind==='target'?'Target':l.kind==='nontarget'?'Non-target':'New';
+    const st=l.s&&l.s[code]?l.s[code].filter(x=>x).pop():null;
+    return `<tr><td class="mono">${l.id}</td><td>${kind}</td><td>${esc(l.site)}</td><td>${l.method}</td>
+      <td>${esc(l.meas)}</td><td class="num">${b===null?'—':b+' mm'}</td>
+      <td class="num">${lastV===null?(st||'—'):lastV+' mm'}</td>
       <td class="num">${d===null?'—':(d>0?'+':'')+d+' mm'}</td>
-      <td class="qc">${l.qc?'▲ '+l.qc:''}</td>
-    </tr>`;
-  }).join('');
+      <td class="qc">${l.qc?'▲ '+l.qc:''}</td></tr>`;}).join('');
+  const nT=S.lesions.filter(l=>l.kind==='target').length;
+  document.getElementById('invHint').innerHTML=
+    `Baseline SOD <b class="mono">${sodAt(code,0)} mm</b> across ${nT} target lesions — within this study's configured limits of ≤${S.cfg.maxTargets} total and ≤${S.cfg.maxPerOrgan} per organ.`;
 }
 
-/* ---------------- crosshair wiring ---------------- */
+function drawCfg(){
+  const c=S.cfg;
+  const card=(h,rows)=>`<div class="card"><h3>${h}</h3><div class="cfgtbl">${
+    rows.map(([k,v])=>`<div class="cfgrow"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('')}</div></div>`;
+  document.getElementById('cfgCards').innerHTML=
+    card('Criteria &amp; thresholds',[
+      ['criteria',c.criteria],
+      ['pr_pct_decrease_from_baseline',c.pr+'%'],
+      ['pd_pct_increase_from_nadir','+'+c.pd+'%'],
+      ['pd_min_absolute_increase_mm',c.pdmm+' mm'],
+      ['nadir.includes_baseline',String(c.nadirInclBaseline)],
+      ['target_lesions.max_total',c.maxTargets],
+      ['target_lesions.max_per_organ',c.maxPerOrgan]])
+    + card('Confirmation policy',[
+      ['confirmation.required_for',c.confirmFor],
+      ['confirmation.min_interval_days',c.confirmDays],
+      ['confirmation.sd_min_duration_days',c.sdMinDays===null?'null':c.sdMinDays]]
+      .concat(c.criteria==='iRECIST'?[['irecist.confirm_min_days',c.irecistMin],['irecist.confirm_max_days',c.irecistMax],['irecist.reset_on_pseudoprogression','true']]:[]))
+    + card('Treatment &amp; schedule',[
+      ['treatment.cycle_length_days',c.cycleDays],
+      ['treatment.dlt.window_days',c.dltDays],
+      ['schedule.interval_days',c.schedInterval],
+      ['schedule.tolerance_days',c.schedTol]])
+    + card('Assessors &amp; events',[
+      ['assessors',S.assessors.map(a=>a.code).join(', ')],
+      ['overlay.enabled',String(S.assessors.length>1)],
+      ['adverse_events.relevance_default',c.aeRelevance],
+      ['config hash',c.hash]]);
+}
+
+/* ===================== crosshair, controls, render ===================== */
 function wireCrosshair(){
   const svgs=[...document.querySelectorAll('.plot')];
-  const set=(dayX,on)=>{ svgs.forEach(s=>{ const l=s.querySelector('.xh'); if(!l) return;
-    l.setAttribute('x1',dayX); l.setAttribute('x2',dayX); l.setAttribute('opacity',on?0.65:0); }); };
+  const set=(x,on)=>svgs.forEach(s=>{const l=s.querySelector('.xh'); if(!l)return;
+    l.setAttribute('x1',x); l.setAttribute('x2',x); l.setAttribute('opacity',on?0.65:0);});
   svgs.forEach(s=>{
     s.addEventListener('mousemove',e=>{
-      const r=s.getBoundingClientRect();
-      const vb=s.viewBox.baseVal.width || 1000;
+      const r=s.getBoundingClientRect(), vb=s.viewBox.baseVal.width||1000;
       const ux=(e.clientX-r.left)/r.width*vb;
-      if(ux<PX0||ux>PX1){ set(0,false); return; }
-      set(ux,true);
+      if(ux<PX0||ux>PX1){ set(0,false); return; } set(ux,true);
     });
     s.addEventListener('mouseleave',()=>set(0,false));
   });
 }
-
-/* ---------------- controls ---------------- */
+function renderAll(){
+  drawHeader(); drawBand1(); drawExposure(); drawBurden(); drawDeriv();
+  drawLesions(); drawInventory(); drawAe(); drawCfg(); wireCrosshair();
+  wireAssessor();
+}
 function wireSeg(id,key,after){
-  const root=document.getElementById(id);
-  root.addEventListener('click',e=>{
+  document.getElementById(id).addEventListener('click',e=>{
     const b=e.target.closest('button'); if(!b) return;
-    [...root.querySelectorAll('button')].forEach(x=>x.setAttribute('aria-pressed', String(x===b)));
+    const root=document.getElementById(id);
+    [...root.querySelectorAll('button')].forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
     state[key]=b.dataset.v; after();
   });
 }
+let assessorWired=false;
+function wireAssessor(){
+  if(assessorWired) return; assessorWired=true;
+  document.getElementById('segAssessor').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    state.assessor=b.dataset.v;
+    drawHeader(); drawExposure(); drawBurden(); drawDeriv(); drawLesions(); drawInventory(); wireCrosshair();
+  });
+}
 
-function renderAll(){ drawExposure(); drawBurden(); drawDeriv(); drawLesions(); drawAe(); drawInventory(); wireCrosshair(); }
+/* study & subject pickers */
+const selStudy=document.getElementById('selStudy'), selSubject=document.getElementById('selSubject');
+selStudy.innerHTML=STUDIES.map(s=>`<option value="${s.id}">${s.id} — ${s.title}</option>`).join('');
+function syncSubjectPicker(){
+  selSubject.innerHTML=`<option>${S.subject.id}</option>`;
+}
+selStudy.addEventListener('change',()=>{
+  S=STUDIES.find(x=>x.id===selStudy.value);
+  state.assessor=S.assessors[0].code;
+  state.selected=Math.min(state.selected,S.tp.length-1);
+  syncSubjectPicker(); assessorWired=false; renderAll();
+});
+
+syncSubjectPicker();
 renderAll();
-wireSeg('segAssessor','assessor',()=>{ drawBurden(); drawDeriv(); wireCrosshair(); });
 wireSeg('segMetric','metric',()=>{ drawBurden(); wireCrosshair(); });
 wireSeg('segAe','ae',()=>{ drawAe(); wireCrosshair(); });
 
-/* sticky offset for the control bar */
 const hdr=document.querySelector('.hdr');
-const setH=()=>document.documentElement.style.setProperty('--hdrh', hdr.offsetHeight+'px');
+const setH=()=>document.documentElement.style.setProperty('--hdrh',hdr.offsetHeight+'px');
 setH(); window.addEventListener('resize',setH);
 })();
 </script>

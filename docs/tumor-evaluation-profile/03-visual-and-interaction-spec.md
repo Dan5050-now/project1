@@ -1,6 +1,6 @@
 # TEP — Visual and Interaction Specification
 
-This annex fixes the visual grammar of the Tumor Evaluation Profile. Its purpose is to keep the same encoding meaning the same thing in every band, so a reviewer learns the page once.
+This annex fixes the visual grammar of the Tumor Evaluation Profile. Its purpose is to keep the same encoding meaning the same thing in every band and in every study, so a reviewer learns the page once and carries that knowledge to the next protocol. Where a study's configuration changes a threshold or a criteria set, the *encoding* does not change — only the values it is drawn at.
 
 ---
 
@@ -34,6 +34,8 @@ Response is **ordered**, not nominal — CR is better than PR is better than SD 
 | iUPD | half-filled square, status-warning | only when iRECIST applies |
 | iCPD | filled square, status-critical, outlined | terminal state |
 
+The iUPD and iCPD rows apply only where the study configures iRECIST; under iRECIST the state labels carry their `i` prefix throughout the page, and prefixed and unprefixed states never appear in the same series.
+
 **Unconfirmed responses are drawn with a hairline ring instead of a solid fill.** This is the single most important encoding decision on the page, because an unconfirmed PR is a materially different claim from a confirmed one and the difference must survive being screenshotted into a slide.
 
 ### 3.2 The burden curve
@@ -44,7 +46,21 @@ The two reference rails at −30% and +20% are solid hairlines in the muted ink,
 
 Cohort context, when enabled, is drawn as background traces in the border hairline colour at low opacity, never in a categorical hue, so that no reviewer mistakes a context trace for a second series belonging to this subject. The subject's own line always renders on top with a 2px surface ring where it crosses a context trace.
 
+The reference rails are drawn at the values the study's configuration puts them at, and are labelled with their meaning rather than only their number. A reviewer moving between two protocols with different PD thresholds must be able to see which threshold is in force without opening the configuration.
+
 Gaps matter: **the line is broken, not interpolated, across a non-evaluable timepoint**, and the gap carries an `NE` marker. Silent interpolation across a missed scan is a correctness bug, not a cosmetic one.
+
+### 3.2a Three kinds of absence, three renderings
+
+Absence is where this page most easily lies, because a curve that simply stops reads as a patient who simply stopped. Three states must be distinguishable at a glance and must never share a rendering.
+
+| State | What it means | Rendering |
+|---|---|---|
+| **Not evaluable (NE)** | assessed, but no category can be assigned | hollow marker at the timepoint, line **broken** either side, `NE` label |
+| **Not yet read** | this assessor has not assessed this timepoint yet | a shaded span from the assessor's coverage edge to the last performed assessment, hatched and captioned with the assessor and outstanding count; the line **ends** at the coverage edge with an open cap |
+| **Not performed** | no assessment took place at a scheduled window | a gap in the assessment track in band 2 with an overdue marker; nothing is drawn on the burden curve at all |
+
+The open cap on the "not yet read" state is deliberate and is the same device as the ongoing-treatment cap in band 2: a line that ends flat asserts an ending, a line that ends open asserts that we do not yet know. In overlay mode both assessors carry their own coverage edge, and the region where only one is read is the most common thing a reviewer will need to explain to someone else — so it is captioned, not merely shaded.
 
 ### 3.3 Per-lesion rows
 
@@ -74,4 +90,14 @@ Filters live in a single row above the bands: assessor, AE relevance, axis mode,
 
 Every colour-carried distinction on the page — response category, AE grade, confirmation status, evaluability — carries a redundant shape, position, or label. A table view is available for the burden curve and the per-lesion grid, and it is also what the CSV export emits. Dark mode is specified as its own set of steps validated against the dark surface, not as an inverted light palette.
 
-The PDF export renders the same bands at print geometry with the axis intact, one subject per document, with the data cut stamp and the assessor selection printed in the footer of every page.
+The PDF export renders the same bands at print geometry with the axis intact, one subject per document. Every page footer carries the review-only badge, the study ID, the configuration hash, the build timestamp, the per-domain data as-of stamps and the assessor selection — the same provenance set that appears on screen, so a printed page can always be traced to the rules and data that produced it.
+
+## 6. Chrome that is never optional
+
+Three elements of the page frame are not design choices and may not be removed, collapsed or made dismissible in any study or any view.
+
+**The review-only badge.** Rendered by the application shell rather than a page template, so no view can omit it. It states that values are derived from an unvalidated near-live layer and are not a source of endpoint values.
+
+**Per-domain data freshness.** A single "last updated" stamp is misleading, because tumor domains lag safety domains as a matter of routine. The header carries a compact per-domain freshness strip, with any domain past its configured threshold marked in the status-warning treatment plus a label — never colour alone.
+
+**Assessor read coverage.** Whenever an assessor is selected, the header states how far that assessor's read extends and how many assessments are outstanding. This sits beside the assessor control rather than elsewhere on the page, because the two are read together or not at all.
