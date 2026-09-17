@@ -32,7 +32,7 @@ OUT = Path(__file__).resolve().parents[1] / "docs" / \
     f"PRAP_Server_Development_Plan_v{DOC_VERSION}.xlsx"
 
 WEB_PLAN = "PRAP_Development_Plan_v2.51.xlsx"
-NAPP_PLAN = "PRAP_NewApp_Development_Plan_v1.14.xlsx"
+NAPP_PLAN = "PRAP_NewApp_Development_Plan_v1.15.xlsx"
 
 FONT = "Arial"
 NAVY = "1F3864"

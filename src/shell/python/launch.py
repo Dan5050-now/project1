@@ -1,11 +1,11 @@
 """shell: start it.
 
     resolve the data folder  ->  serve on 127.0.0.1  ->  open the browser
-                             ->  hold the main thread for file dialogs
+                             ->  wait until something stops it
 
-The main thread does nothing but draw dialogs, because Tk insists on owning the
-thread it was created on and the HTTP server is perfectly happy in another. That is
-the only reason this file is not four lines long.
+The main thread used to do nothing but draw native file dialogs, because Tk insists
+on owning the thread it was created on. Those dialogs are gone (see files.py), so it
+now just waits - on the same stop event the page and Ctrl-C both set.
 
 Specification: PRAP_NewApp_Specification_v1.3.xlsx sheet 10.
 """
@@ -43,26 +43,15 @@ def read_page(app_dir):
 def ask_for_data_folder(app):
     """Rule 4. NR-DEP-09 says a read-only folder is told about at LAUNCH, not
     discovered at the first Save - which is the worst possible moment to find out."""
-    where = None
-    if app.dialogs.enabled:
-        stop = threading.Event()
-        answer = {}
-
-        def once():
-            answer["p"] = app.dialogs.ask(
-                "folder", title="Where should Project Management APP keep your data?")
-            stop.set()
-
-        threading.Thread(target=once, daemon=True).start()
-        app.dialogs.pump(stop)
-        where = answer.get("p")
-    if not where:
-        print("\nThis application cannot write beside itself, so it needs somewhere "
-              "to keep your data.")
-        try:
-            where = input("Folder (blank to give up): ").strip().strip('"')
-        except (EOFError, KeyboardInterrupt):
-            where = None
+    # Asked at the console, because there is no window to ask in: the server is not
+    # up yet, so the page cannot draw it, and the native folder picker this used to
+    # open is gone with the rest of the native dialogs (see files.py).
+    print("\nThis application cannot write beside itself, so it needs somewhere "
+          "to keep your data.")
+    try:
+        where = input("Folder (blank to give up): ").strip().strip('"')
+    except (EOFError, KeyboardInterrupt):
+        where = None
     return where or None
 
 
@@ -115,8 +104,7 @@ def main(argv=None):
     print(f"  your data    {app.data_dir}")
     print(f"  chosen by    {r['rule']}")
     print(f"  listening    {host}:{port}  (this machine only)")
-    how = "native" if app.dialogs.enabled else "in the page (no tkinter here)"
-    print(f"  file dialogs {how}")
+    print("  file dialogs in the page")
     print()
     print("  It should have opened in your browser. If it did not, paste this in:")
     print(f"    {url}")
@@ -137,8 +125,7 @@ def main(argv=None):
             pass
 
     try:
-        app.dialogs.pump(app.stop)             # the main thread, until told to stop
-        while not app.stop.wait(0.25):
+        while not app.stop.wait(0.25):         # the main thread, until told to stop
             pass
     except KeyboardInterrupt:
         print("\nStopping.")

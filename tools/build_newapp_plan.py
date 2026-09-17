@@ -20,7 +20,7 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.14"
+DOC_VERSION = "1.15"
 DOC_STATUS = ("Baseline v1.0 + changes C-N01 and C-N02. Gates N1-N3 closed; Step N4 in progress and "
               "Step N4a - the Python shell - BUILT AND TESTED, awaiting your run on the company laptop. "
               "Two company controls are measured rather than feared: an executable may run but may not "
@@ -228,6 +228,9 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
+    [f"{MARK_NEW}1.15", "2026-09-17", "Claude Code", "-",
+     "C-N03: 파일 선택 창이 하나로 통일되었다. 같은 애플리케이션인데 PM_APP.cmd로 실행하면 페이지 안에 그려진 폴더 목록이, PM_APP.py로 실행하면 Windows 기본 대화상자가 떴다 - 함께 배포되는 런타임에는 tkinter가 없고 정식 설치본에는 있기 때문이다. 현장에서 보고된 그대로이며, 같은 프로그램이 실행 방법에 따라 다른 창을 여는 것은 사용법 안내도 화면 캡처도 둘로 만든다. 네이티브 대화상자를 철회하고 페이지 안의 폴더 목록 하나만 남겼다. 그쪽이 어느 PC에서나 동작하고(표준 라이브러리만 쓴다), 패키지 배포판이 이미 쓰던 것이며, 브라우저의 파일 인터페이스를 거치지 않는다는 R-N21의 요건도 그대로 지킨다. 열기·다른 이름으로 저장·내보내기·폴더 선택 네 가지 모두 이미 폴더 목록으로 할 수 있었으므로 기능은 하나도 줄지 않았다. 함께 정리된 것: 메뉴의 '폴더에서 가져오기'는 '소스 데이터 가져오기'와 완전히 같은 동작이 되어 삭제했고, Tk가 주 스레드를 점유해야 해서 존재하던 대화상자 펌프가 사라지면서 launch.py의 주 스레드는 정지 신호만 기다린다.",
+     "Issued for review"],
     [f"{MARK_NEW}1.14", "2026-09-13", "Claude Code", "-",
      "TWO CORRECTIONS, BOTH ABOUT THIS DOCUMENT RATHER THAN THE APPLICATION. No "
      "requirement, decision, risk or task changes, and no code is touched. "
@@ -1150,7 +1153,7 @@ wbs = [
 
     ["N4a", "N4a.1", "Port the storage layer to Python: workspaces, atomic save, versions, journal, the write claim.", "src/storage/python/", "Complete - 80 checks, including 12 kills mid-save and 8 processes racing for one claim"],
     ["N4a", "N4a.2", "The local server that replaces Electron's main process, with the six controls NR-SEC-04..06 require.", "src/shell/python/server.py", "Complete - 11 of the 42 end-to-end checks are the security ones"],
-    ["N4a", "N4a.3", "Choosing a file WITHOUT the browser: a native dialog where tkinter exists, a folder listing in the page where it does not.", "src/shell/python/files.py, bridge.js", "Complete - and the page carries no file input at all (NR-IMP-09)"],
+    ["N4a", "N4a.3", "Choosing a file WITHOUT the browser: a folder listing drawn in the page. A native tkinter dialog was drawn too, where tcl/tk existed, and was withdrawn at C-N03 - it made the .cmd and the .py look like different programs.", "src/shell/python/files.py, bridge.js", "Complete - and the page carries no file input at all (NR-IMP-09)"],
     ["N4a", "N4a.4", "The window chrome the Electron menu bar used to provide, drawn in the page.", "src/shell/python/chrome.html, chrome.css", "Complete"],
     ["N4a", "N4a.5", "Build and package: one command, 107 KB of readable Python text.", "tools/build_python_app.py", "Complete - dist/PM_APP_python_v0.2.zip"],
     ["N4a", "N4a.6", "Prove it is the same application: 1,225 person-months compared against the independent Python reference on every run.", "tools/test_python_app.py", "Complete - worst difference 0.00e+00"],

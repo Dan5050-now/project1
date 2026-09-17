@@ -349,20 +349,20 @@
   }, 30000);
 
   /* ---- importing, WITHOUT the browser ever seeing a file ----------------- */
-  async function importSource(forceBrowse) {
+  // One entry in the menu, because there is one way in. It used to take a
+  // forceBrowse flag so somebody could ask for the folder listing instead of the
+  // native dialog; the native dialog is gone, so the flag and the second menu item
+  // ("Import from a folder…") would have been two names for the same command.
+  async function importSource() {
     let got = null;
     try {
-      if (caps.nativeDialogs && !forceBrowse) {
-        got = await call("file/openSource", {});
-      } else {
-        const p = await browseFor({
-          title: "Choose source data",
-          suffixes: [".xlsx", ".json"],
-          okLabel: "Open",
-        });
-        if (!p) return;
-        got = await call("file/openSource", { path: p });
-      }
+      const p = await browseFor({
+        title: "Choose source data",
+        suffixes: [".xlsx", ".json"],
+        okLabel: "Open",
+      });
+      if (!p) return;
+      got = await call("file/openSource", { path: p });
     } catch (e) {
       showBanner("bad", e.message);
       return;
@@ -475,14 +475,10 @@
       if (!ref || as) {
         const suggested = (ref ? ref.split(/[\\/]/).pop() : null)
           || `${(S.fileName || "Plan").replace(/\.[^.]+$/, "")}.prap`;
-        if (caps.nativeDialogs) {
-          out = await call("ws/saveAs", { sheets: sheetsNow(), suggested });
-        } else {
-          const p = await browseFor({ title: "Save the plan as", folders: true,
-                                      name: suggested, okLabel: "Save" });
-          if (!p) return;
-          out = await call("ws/saveAs", { sheets: sheetsNow(), ref: p });
-        }
+        const p = await browseFor({ title: "Save the plan as", folders: true,
+                                    name: suggested, okLabel: "Save" });
+        if (!p) return;
+        out = await call("ws/saveAs", { sheets: sheetsNow(), ref: p });
         if (!out) return;
         ref = out.ref;
       } else {
@@ -523,14 +519,10 @@
     else bytes = new Uint8Array(await buildXlsx(sheets).arrayBuffer());
     try {
       let out;
-      if (caps.nativeDialogs) {
-        out = await call("file/export", { bytes: bytesToB64(bytes), suggested: name });
-      } else {
-        const p = await browseFor({ title: "Export to", folders: true, name,
-                                    okLabel: "Export" });
-        if (!p) return;
-        out = await call("file/export", { bytes: bytesToB64(bytes), path: p });
-      }
+      const p = await browseFor({ title: "Export to", folders: true, name,
+                                  okLabel: "Export" });
+      if (!p) return;
+      out = await call("file/export", { bytes: bytesToB64(bytes), path: p });
       if (out) showBanner("", `Exported to ${out.path}. The source file on disk is `
         + `untouched.`);
     } catch (e) {
@@ -563,14 +555,10 @@
     const bytes = new Uint8Array(await buildXlsx(sheets).arrayBuffer());
     try {
       let out;
-      if (caps.nativeDialogs) {
-        out = await call("file/export", { bytes: bytesToB64(bytes), suggested: name });
-      } else {
-        const pth = await browseFor({ title: "Export calculated FTE to", folders: true,
-                                      name, okLabel: "Export" });
-        if (!pth) return;
-        out = await call("file/export", { bytes: bytesToB64(bytes), path: pth });
-      }
+      const pth = await browseFor({ title: "Export calculated FTE to", folders: true,
+                                    name, okLabel: "Export" });
+      if (!pth) return;
+      out = await call("file/export", { bytes: bytesToB64(bytes), path: pth });
       if (out) showBanner("", `Exported ${sheets.Detail.length - 1} assignment-month `
         + `row(s) to ${out.path}. This one is for reading — it cannot be imported back. `
         + `Your plan is untouched.`);
@@ -837,17 +825,14 @@
       case "reload": return reloadPlan();
       case "moveToShared": return moveToShared();
       case "open": {
-        let p = caps.nativeDialogs ? await call("ws/openDialog", {}) : null;
-        if (!caps.nativeDialogs)
-          p = await browseFor({ title: "Open a plan", suffixes: [".prap"],
-                                okLabel: "Open" });
+        const p = await browseFor({ title: "Open a plan", suffixes: [".prap"],
+                                    okLabel: "Open" });
         return p && openPlan(p);
       }
       case "recent": return showRecent();
       case "save": return savePlan(false);
       case "saveAs": return savePlan(true);
-      case "import": return importSource(false);
-      case "importBrowse": return importSource(true);
+      case "import": return importSource();
       case "export": return exportWorkbook(false);       // the browser download
       case "exportJson": return exportWorkbook(true);
       case "exportTo": return exportTo(false);
@@ -936,7 +921,7 @@
     tell("About Project Management APP", `<pre style="font:12.5px/1.7 ui-monospace,
       Consolas,monospace;white-space:pre-wrap;margin:0">Version        ${where.version}
 Shell          Python (${caps.shell})
-File dialogs   ${caps.nativeDialogs ? "native" : "in the page"}
+File dialogs   in the page
 Application    ${where.appDir}
 Data folder    ${where.dataDir}
 Chosen by      ${where.rule}

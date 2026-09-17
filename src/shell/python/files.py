@@ -17,117 +17,27 @@ page; a program the user ran on their own machine reading a file they chose is w
 every application on that laptop does, Excel included. The control is not bypassed -
 it is not involved.
 
-Two ways to choose, because one of them may not be there:
+ONE WAY TO CHOOSE, and it used to be two. A native tkinter dialog was drawn where
+tcl/tk was available, and a folder listing in the page where it was not - so the same
+application showed two different windows depending on which Python happened to run it.
+Reported from the field: PM_APP.cmd and PM_APP.py looked like different programs,
+because the bundled runtime the .cmd uses has no tkinter and a full installation does.
 
-  * tkinter's native dialog, which is the Windows dialog everyone knows. Tk must own
-    the main thread, so the HTTP thread posts a request and waits (see server.py).
-  * a plain folder listing served to the page, for a Python built without tkinter
-    and for typing a path directly. No browser file interface is involved in either.
+A tool that is handed round a team cannot have two front doors. The listing is the one
+that always works - it needs nothing beyond the standard library, it behaves the same
+on every machine, and it is the one the packaged edition was already using - so it is
+now the only one. No browser file interface is involved in it, which is the point of
+this file (R-N21).
 
 Specification: PRAP_NewApp_Specification_v1.3.xlsx sheet 03.
 """
 
 import os
-import queue
 import string
 import sys
-import threading
 
 SOURCE_TYPES = (".xlsx", ".json")
 PLAN_TYPE = ".prap"
-
-
-# ------------------------------------------------------------------ the native dialog
-
-def tk_available():
-    """Is there a Tk to draw a dialog with? Asked once, answered honestly.
-
-    A Python installed without tcl/tk is unusual but real, and finding out at the
-    moment somebody clicks Import is finding out too late. The answer is reported in
-    capabilities so the page can show the right thing from the start.
-    """
-    try:
-        import tkinter                                            # noqa: F401
-        from tkinter import filedialog                            # noqa: F401
-    except Exception:
-        return False
-    return True
-
-
-class DialogPump:
-    """Tk on the main thread, requests from the HTTP thread.
-
-    Tk is not thread-safe and on Windows it must be driven from the thread that
-    created it. The HTTP server runs in its own thread, so a dialog request is put
-    on a queue, the main thread draws it, and the answer goes back on another queue.
-    The HTTP thread blocks meanwhile, which is correct: it is waiting for a person.
-    """
-
-    def __init__(self):
-        self.requests = queue.Queue()
-        self.enabled = tk_available()
-        self._root = None
-
-    def ask(self, kind, **kw):
-        """Called from the HTTP thread. Returns the chosen path, or None."""
-        if not self.enabled:
-            return None
-        answer = queue.Queue(maxsize=1)
-        self.requests.put((kind, kw, answer))
-        try:
-            return answer.get(timeout=600)        # ten minutes to choose a file
-        except queue.Empty:
-            return None
-
-    def _tk(self):
-        import tkinter
-        if self._root is None:
-            self._root = tkinter.Tk()
-            self._root.withdraw()
-            # Without this the dialog opens behind the browser, and the application
-            # looks frozen while a window nobody can see waits for an answer.
-            self._root.attributes("-topmost", True)
-        return self._root
-
-    def pump(self, stop):
-        """Run on the main thread until `stop` is set."""
-        while not stop.is_set():
-            try:
-                kind, kw, answer = self.requests.get(timeout=0.25)
-            except queue.Empty:
-                continue
-            try:
-                answer.put(self._draw(kind, kw))
-            except Exception:
-                # A dialog that fails must not take the application with it: the
-                # page falls back to the folder listing, which always works.
-                answer.put(None)
-
-    def _draw(self, kind, kw):
-        from tkinter import filedialog
-        root = self._tk()
-        root.update()
-        if kind == "open":
-            p = filedialog.askopenfilename(
-                parent=root, title=kw.get("title", "Open"),
-                initialdir=kw.get("initialdir") or os.path.expanduser("~"),
-                filetypes=kw.get("filetypes") or [("All files", "*.*")])
-        elif kind == "save":
-            p = filedialog.asksaveasfilename(
-                parent=root, title=kw.get("title", "Save as"),
-                initialdir=kw.get("initialdir") or os.path.expanduser("~"),
-                initialfile=kw.get("initialfile") or "",
-                defaultextension=kw.get("defaultextension") or "",
-                filetypes=kw.get("filetypes") or [("All files", "*.*")])
-        elif kind == "folder":
-            p = filedialog.askdirectory(
-                parent=root, title=kw.get("title", "Choose a folder"),
-                initialdir=kw.get("initialdir") or os.path.expanduser("~"),
-                mustexist=False)
-        else:
-            p = None
-        root.update()
-        return p or None
 
 
 # ------------------------------------------------------------- the folder listing

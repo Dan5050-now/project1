@@ -411,8 +411,8 @@ if MANIFEST.exists():
 # ---- 4h. the desktop plan vs the desktop specification --------------------
 # The second product line gets the same guarantee as the first: a requirement cannot be
 # dropped between the plan and the specification without this saying so.
-NAPP_PLAN = ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.14.xlsx"
-NAPP_SPEC = ROOT / "docs" / "PRAP_NewApp_Specification_v1.6.xlsx"
+NAPP_PLAN = ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.15.xlsx"
+NAPP_SPEC = ROOT / "docs" / "PRAP_NewApp_Specification_v1.7.xlsx"
 if NAPP_PLAN.exists() and NAPP_SPEC.exists():
     np_ = load_workbook(NAPP_PLAN, data_only=True)["03_Requirements"]
     ns_ = load_workbook(NAPP_SPEC, data_only=True)["11_Traceability"]
@@ -596,8 +596,8 @@ else:
 VERSIONED = [
     (PLAN, "01_Version_History"),
     (SPEC, "01_Version_History"),
-    (ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.14.xlsx", "01_Version_History"),
-    (ROOT / "docs" / "PRAP_NewApp_Specification_v1.6.xlsx", "01_Version_History"),
+    (ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.15.xlsx", "01_Version_History"),
+    (ROOT / "docs" / "PRAP_NewApp_Specification_v1.7.xlsx", "01_Version_History"),
 ]
 for path, sheet_name in VERSIONED:
     if not path.exists():
@@ -669,8 +669,8 @@ SOURCE_FILE = re.compile(r"PRAP_SourceData_(Template|Dummy_10x10|Dummy)_v[\d.]+\
 CURRENT = {"Template": TEMPLATE.name, "Dummy": DUMMY.name, "Dummy_10x10": DUMMY_SMALL.name}
 HISTORY_SHEET = "01_Version_History"
 NAMING = [PLAN, SPEC,
-          ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.14.xlsx",
-          ROOT / "docs" / "PRAP_NewApp_Specification_v1.6.xlsx"]
+          ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.15.xlsx",
+          ROOT / "docs" / "PRAP_NewApp_Specification_v1.7.xlsx"]
 named = 0
 for path in NAMING:
     if not path.exists():

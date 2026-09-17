@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.21.1"
+VERSION = "1.21.2"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -162,6 +162,22 @@ if errorlevel 1 (
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.21.2
+
+  * 파일을 고르는 창이 하나로 통일되었습니다. 같은 프로그램인데 PM_APP.cmd로
+    실행했을 때와 PM_APP.py로 실행했을 때 서로 다른 창이 떴습니다 - 함께
+    드리는 실행 환경에는 Windows 기본 대화상자를 그리는 부품이 없고, 직접
+    설치하신 Python에는 있기 때문입니다.
+
+    이제 어느 쪽으로 실행하셔도 페이지 안에 그려지는 같은 폴더 목록이
+    나옵니다. 열기, 다른 이름으로 저장, 내보내기 모두 같습니다.
+
+  * 메뉴의 '폴더에서 가져오기'를 없앴습니다. '소스 데이터 가져오기'와 하는
+    일이 완전히 같아졌기 때문입니다.
+
+  * 계산 결과와 화면은 달라지지 않았습니다.
+
 
 WHAT IS NEW IN 1.21.1
 

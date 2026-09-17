@@ -571,8 +571,13 @@ def test_files(d):
     r = F.listing(str(d / "does" / "not" / "exist"), None)
     check("a folder that is not there does not raise", isinstance(r, dict))
 
-    check("whether there is a native dialog is answered before it is needed",
-          isinstance(F.tk_available(), bool))
+    # THERE IS ONE WAY TO CHOOSE A FILE, and this asserts it stays that way. It used
+    # to be two - a native tkinter dialog where tcl/tk existed, this listing where it
+    # did not - which made PM_APP.cmd and PM_APP.py look like different programs to
+    # the same user, because the bundled runtime has no tkinter and a full install
+    # does. Anything that brings the native path back would show up here.
+    check("there is no second way to choose a file",
+          not hasattr(F, "tk_available") and not hasattr(F, "DialogPump"))
 
 
 def main():

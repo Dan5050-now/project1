@@ -22,7 +22,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.6"
+DOC_VERSION = "1.7"
 # THE STATUS LINE HAD STOPPED MOVING. It still read "THIS ISSUE, v1.3 ... AWAITS APPROVAL"
 # while the issue on the cover was v1.6, so the cover named one version and the status
 # another - and a reader who trusted it would conclude the Python shell was being built on
@@ -41,7 +41,7 @@ DOC_STATUS = ("THIS ISSUE, v1.6, is APPROVED - the requester confirmed v1.3 to v
 # current version's date: the cover field is not "date of this issue", and changing it
 # here would silently re-date those four history rows as well.
 DOC_DATE = "2026-08-13"
-PLAN = "PRAP_NewApp_Development_Plan_v1.14.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.15.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Specification_v{DOC_VERSION}.xlsx"
@@ -184,7 +184,9 @@ r = lines(ws, r, [
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
-          [["1.6", "2026-09-13", "Claude Code", "APPROVED 2026-09-14",
+          [["1.7", "2026-09-17", "Claude Code", "Awaiting approval",
+            "C-N03: 파일 선택 창이 하나로 통일되었다. 같은 애플리케이션인데 PM_APP.cmd로 실행하면 페이지 안에 그려진 폴더 목록이, PM_APP.py로 실행하면 Windows 기본 대화상자가 떴다 - 함께 배포되는 런타임에는 tkinter가 없고 정식 설치본에는 있기 때문이다. 현장에서 보고된 그대로이며, 같은 프로그램이 실행 방법에 따라 다른 창을 여는 것은 사용법 안내도 화면 캡처도 둘로 만든다. 네이티브 대화상자를 철회하고 페이지 안의 폴더 목록 하나만 남겼다. 그쪽이 어느 PC에서나 동작하고(표준 라이브러리만 쓴다), 패키지 배포판이 이미 쓰던 것이며, 브라우저의 파일 인터페이스를 거치지 않는다는 R-N21의 요건도 그대로 지킨다. 열기·다른 이름으로 저장·내보내기·폴더 선택 네 가지 모두 이미 폴더 목록으로 할 수 있었으므로 기능은 하나도 줄지 않았다. 함께 정리된 것: 메뉴의 '폴더에서 가져오기'는 '소스 데이터 가져오기'와 완전히 같은 동작이 되어 삭제했고, Tk가 주 스레드를 점유해야 해서 존재하던 대화상자 펌프가 사라지면서 launch.py의 주 스레드는 정지 신호만 기다린다."],
+           ["1.6", "2026-09-13", "Claude Code", "APPROVED 2026-09-14",
             "RE-PINNED TO DESKTOP PLAN v1.14, and v1.5 is back-filled below. No NR-id is "
             "added, removed or reworded and no behaviour changes - sheet 11's traceability "
             "matrix is READ from the plan when this workbook is generated, so it now reads "
@@ -530,7 +532,7 @@ r = section(ws, r, "What differs from the Electron shell, and why")
 dv = [
     ["The menu is drawn in the page", "There is no application menu bar to use. Same items, same order, same accelerators for Save and Open.", "Visible"],
     ["The window is a browser tab", "It looks like the web application because it IS the web application. The console window that starts it is also how it is stopped, and says so.", "Visible"],
-    ["A folder listing inside the page", "For a Python built without tkinter, and for typing a path - a network share, say. It lists names and sizes only; nothing in it can read a file.", "Visible"],
+    ["A folder listing inside the page", "THE ONE WAY TO CHOOSE A FILE. It lists names and sizes only; nothing in it can read a file. A native tkinter dialog was drawn as well, where tcl/tk happened to be present - so PM_APP.cmd and PM_APP.py showed different windows to the same person, because the bundled runtime has no tkinter and a full installation does. Reported from the field and withdrawn at C-N03: a tool handed round a team cannot have two front doors, and this is the one that works on every machine.", "Visible"],
     ["The page ASKS whether it still holds the claim", "Electron pushed 'your claim was taken over' down a second channel. Here the page asks, on the same thirty-second clock the heartbeat runs on. One question every thirty seconds costs nothing and needs no second channel to go wrong.", "Invisible"],
     ["Export by download is kept", "A download is not an upload and R-N21 does not touch it, so storage/web/export.js runs unmodified with all of its checks. 'Export to a folder…' is added for when the Downloads folder is the wrong place.", "Visible"],
     ["No window size or position to remember", "The browser owns the window. The setting is kept in the file and ignored, so a later shell can use it.", "Invisible"],

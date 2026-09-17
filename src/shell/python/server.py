@@ -64,7 +64,6 @@ class App:
         self.resolved = {}
         self.settings = dict(PA.DEFAULT_SETTINGS)
         self.open_ref = None
-        self.dialogs = F.DialogPump()
         self.stop = threading.Event()
         self._heartbeat = None
         # The beat's OWN stop, not the application's. Setting _heartbeat to None
@@ -264,7 +263,7 @@ def operations(app):
 
     def caps(_):
         return {"workspaces": True, "versions": True, "claims": True, "journal": True,
-                "shell": "python", "nativeDialogs": app.dialogs.enabled,
+                "shell": "python",
                 "browse": True, "upload": False}
 
     def paths(_):
@@ -347,11 +346,6 @@ def operations(app):
         app.save_settings()
         return out
 
-    def ws_open_dialog(_):
-        return app.dialogs.ask("open", title="Open a plan",
-                               initialdir=os.path.join(app.data_dir or "", "workspaces"),
-                               filetypes=[("Plans", "*.prap"), ("All files", "*.*")])
-
     def ws_save(b):
         p = full(b["ref"])
         out = WS.save_workspace(
@@ -370,13 +364,9 @@ def operations(app):
         return out
 
     def ws_save_as(b):
+        # The page chose the path in its own folder browser before calling this;
+        # there is no second way to choose one any more (see files.py).
         p = b.get("ref")
-        if not p:
-            p = app.dialogs.ask("save", title="Save the plan as",
-                                initialdir=os.path.join(app.data_dir or "", "workspaces"),
-                                initialfile=b.get("suggested") or "Untitled.prap",
-                                defaultextension=".prap",
-                                filetypes=[("Plans", "*.prap")])
         if not p:
             return None
         if not os.path.splitext(p)[1]:
@@ -479,13 +469,6 @@ def operations(app):
         """
         p = b.get("path")
         if not p:
-            p = app.dialogs.ask("open", title="Choose source data",
-                                initialdir=b.get("initialdir"),
-                                filetypes=[("Source data", "*.xlsx *.json"),
-                                           ("Excel workbook", "*.xlsx"),
-                                           ("Interchange file", "*.json"),
-                                           ("All files", "*.*")])
-        if not p:
             return None
         p = os.path.abspath(os.path.expanduser(p))
         buf = WS.read_bytes(p)
@@ -507,10 +490,6 @@ def operations(app):
         """
         p = b.get("path")
         if not p:
-            p = app.dialogs.ask("save", title="Export",
-                                initialdir=app.data_dir,
-                                initialfile=b.get("suggested") or "export.xlsx")
-        if not p:
             return None
         p = os.path.abspath(os.path.expanduser(p))
         data = base64.b64decode(b.get("bytes") or "")
@@ -523,7 +502,8 @@ def operations(app):
         return {"path": p, "size": len(data)}
 
     def fs_list(b):
-        """The folder listing, for a Python without tkinter and for typing a path."""
+        """The folder listing the page draws its file browser from. The only way to choose
+        a file since the native dialog was removed - not a fallback any more."""
         return F.listing(b.get("path"), b.get("suffixes"))
 
     # ---- the change-log archive -----------------------------------------
@@ -613,7 +593,6 @@ def operations(app):
         "identity/set": identity_set,
         "identity/suggest": identity_suggest,
         "ws/open": ws_open,
-        "ws/openDialog": ws_open_dialog,
         "ws/save": ws_save,
         "ws/saveAs": ws_save_as,
         "ws/recent": ws_recent,
@@ -642,11 +621,14 @@ def operations(app):
 
 # ------------------------------------------------------------------- the handler
 
-# The operations that can stop and wait for somebody to choose a file. They run
-# WITHOUT the application lock (see do_POST), so each one takes it itself around
-# whatever it changes - which for three of the four is nothing at all: they read a
-# path, or bytes, and hand them back.
-BLOCKING_OPS = {"ws/openDialog", "ws/saveAs", "file/openSource", "file/export"}
+# The operations that read or write a file the user just chose. They run WITHOUT the
+# application lock (see do_POST), so each takes it itself around whatever it changes -
+# which for two of the three is nothing at all: they read a path, or bytes, and hand
+# them back. ws/openDialog used to be here too; it drew the native dialog and is gone
+# with it. These no longer wait on a person - the page has already chosen the path -
+# but a large workbook is still slow enough that holding the lock across it would
+# freeze every other request.
+BLOCKING_OPS = {"ws/saveAs", "file/openSource", "file/export"}
 
 
 def make_handler(app):
