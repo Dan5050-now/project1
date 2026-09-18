@@ -25,11 +25,15 @@ D3와 D6은 다른 도메인의 산출을 소비하므로 나중에 옵니다.
 | 인증·RBAC | SSO 연동, 3차원 권한 모델, 역할 템플릿 |
 | 관리자 화면 | 사용자·역할·배정 관리 (요구사항 C2) |
 | 감사 추적 | 전 모델 적용, 조회 화면 (요구사항 C3) |
-| 유입 기반 | SourceSystem, Feed, MappingProfile, DataDrop, 검증 파이프라인 |
+| **표준 template** | DS01~DS03 template 정의, Mapping Profile, 매칭 키 선언 ([12](12-standard-source-templates.md)) |
+| **검증 파이프라인** | 구조·완결성·무결성·일관성 4단계 점검, 검증 리포트 |
+| 유입 기반 | SourceSystem, Feed, DataDrop, Snapshot |
 | 스냅샷 | 스냅샷 생성과 시점 조회 (요구사항 C4) |
 | Export 기반 | 모든 테이블 CSV/Excel export (요구사항 C5) |
 
-**완료 조건.** 관리자가 사용자를 만들고 역할을 배정할 수 있고, 사용자가 SSO로 로그인해 자신의 권한 범위 안의 시험만 볼 수 있으며, 마스터 데이터를 엑셀로 업로드하고 그 변경이 감사 로그에 남는다.
+**완료 조건.** 관리자가 사용자를 만들고 역할을 배정할 수 있고, 사용자가 SSO로 로그인해 자신의 권한 범위 안의 시험만 볼 수 있으며, 표준 template으로 마스터 데이터를 업로드하면 검증 리포트가 나오고 그 변경이 **행위자 구분이 포함된** 감사 로그에 남는다.
+
+> 감사 추적의 `actor_type`(`HUMAN`/`AI`/`ENGINE`) 구분과 AI Tool API의 자리는 **AI를 도입하지 않더라도 Phase 0에서 확보**합니다. 이 둘은 나중에 얹을 수 없습니다 ([14](14-ai-extensibility.md) 7장).
 
 ## 3. Phase 1 — 엔진 검증 (D2 + D1)
 
@@ -37,13 +41,15 @@ D3와 D6은 다른 도메인의 산출을 소비하므로 나중에 옵니다.
 
 | 항목 | 산출 |
 |---|---|
-| 가정 관리 | AssumptionSet, SoA, VisitSchedule, StageScopeRule 입력·버전 관리 |
-| Expectation Engine | 방문 전개, 기대 항목 생성 (확정분) |
+| 가정 관리 | AssumptionSet, SoA, VisitSchedule 입력·버전 관리 |
+| **Trial Configuration** | 유예 기간, 단계 on/off, partial SDV, 쿼리 소유자별 기한, 대상 목록 ([13](13-trial-configuration.md)) |
+| **지표 명세** | 계산식 등록, golden dataset, 경계 조건 테스트 ([15](15-metric-specification.md)) |
+| Expectation Engine | 방문 전개, 기대 항목 생성 — **Due / Protocol / Forecast 3종** |
 | D2 RTSM | 피험자 상태, 층화, 예정/실제 방문, 윈도우 이탈 |
-| D1 EDC | 7단계 진척, 쿼리 현황 |
+| D1 EDC | 병행 단계 구조, investigator sign 특수 처리, 쿼리 기한 |
 | Progress Engine | 매칭, 단계 상태 갱신, backlog·rate·aging |
 | 롤업 | trial / country / site / subject 4단계 |
-| 도메인 화면 | [05](05-information-architecture.md) 3.3 공통 레이아웃, 드릴다운 |
+| 도메인 화면 | [05](05-information-architecture.md) 3.3 공통 레이아웃, 드릴다운, **분모 기준 토글** |
 | Subject 360 | D1 + D2 범위 |
 | 지표 정의 등록부 | [08](08-platform-services.md) 6장 |
 
@@ -57,9 +63,9 @@ D3와 D6은 다른 도메인의 산출을 소비하므로 나중에 옵니다.
 
 | 항목 | 산출 |
 |---|---|
-| D4 Sample | 단계 체인, 다단계 식별자 매칭, 이슈, 분석 상태 |
+| D4 Sample | 단계 체인, **kit 유형 포함 매칭 키**, 다단계 식별자 폴백, 이슈, 분석 상태 |
 | D5 Image | 단계 체인, QC 실패 추적, 판독 상태 |
-| Reconciliation Center | 4종 불일치 통합 작업 목록 |
+| Reconciliation Center | 재정의된 4유형 통합 작업 목록 ([03](03-core-concept-model.md) 5장) |
 | Issue 관리 | 쿼리·샘플·영상 이슈 통합, 차단 관계 |
 | D3 SDV Plan | 방문 계획 CRUD, 상태 전이, CRA 리소스 |
 | 예측 Layer 2 | 등록 예측, backlog 소진 예측, 도착 지연 모델 |
@@ -80,13 +86,15 @@ D3와 D6은 다른 도메인의 산출을 소비하므로 나중에 옵니다.
 | KRI / QTL | [07](07-prediction-and-analytics.md) 5장 |
 | 알림 | 임계값 초과, 마일스톤 위험 전환 |
 | BI 연동 | star schema 뷰, Parquet export, 읽기 전용 연결 (요구사항 C6) |
-| 가정 변경 미리보기 | [05](05-information-architecture.md) 3.6 |
+| 설정 변경 미리보기 | [13](13-trial-configuration.md) 5장 |
+| **AI Tool API** | Tool API 구현, `READ_ONLY`·`ANALYZE_ONLY` 작업 ([14](14-ai-extensibility.md) 7장) |
 
 ## 6. Phase 4 — 고도화 (선택)
 
 | 항목 | 비고 |
 |---|---|
 | API 커넥터 | EDC/RTSM 직접 연동. 확정 전제의 "확장" 부분 실현 |
+| **AI 제안 작업** | `PROPOSE` 등급 작업 + 승인 워크플로 ([14](14-ai-extensibility.md) 7장) |
 | 통계·학습 모델 | 사이트 위험 예측, 이상 탐지 ([07](07-prediction-and-analytics.md) Layer 3) |
 | BICR double read / adjudication | [04](04-domain-concepts.md) 5.4 |
 | Part 11 validation | 전자 서명, CSV 문서 패키지 ([08](08-platform-services.md) 3.4) |
@@ -111,7 +119,8 @@ Phase 4  고도화           ████                 커넥터, 학습 모�
 | Phase | 검증 방법 |
 |---|---|
 | 0 | 권한 시나리오 테스트 — 각 역할로 로그인해 보이는 범위 확인 |
-| 1 | **기존 엑셀 리포트와 숫자 대조** (완료 조건) |
+| 0 | **실제 vendor 리포트 샘플로 표준 template 적합성 확인** (DP-12-6) |
+| 1 | **기존 엑셀 리포트와 숫자 대조** (완료 조건) + golden dataset 통과 |
 | 2 | 실제 vendor 리포트 3종 이상으로 매칭률 확인 |
 | 3 | 과거 시험의 마일스톤 이력으로 `AT_RISK` 판정 정확도 역검증 |
 
@@ -137,3 +146,5 @@ Phase 1의 검증 대상으로 **어떤 시험을 쓸 것인가**가 중요합�
 | DP-10-3 | 초기 대상 시험을 무엇으로 할 것인가 | 9장 기준으로 선정 필요 |
 | DP-10-4 | 개발 인력과 기간 제약 | 확인 필요 |
 | DP-10-5 | Phase 0를 건너뛰고 기능부터 만들자는 압력이 있을 것 — 방어할 것인가 | **방어 권고** (C2~C4는 후행 추가 불가) |
+| DP-10-6 | Phase 0에 표준 template·검증 파이프라인을 포함하는 것이 적절한가 | **적절** — 이것이 없으면 Phase 1이 불가능 |
+| DP-10-7 | AI 도입을 Phase 3부터로 하는 것에 동의하는가 | 동의 권고 (엔진 신뢰 확보 후) |

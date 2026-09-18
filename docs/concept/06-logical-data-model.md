@@ -2,12 +2,15 @@
 
 이 문서는 개념 수준의 데이터 모델입니다. 물리 스키마(테이블 정의, 인덱스, 제약)는 사양 단계에서 확정합니다.
 
+*개정 이력: v2 (검토 반영 — 상태 통합, 단계 그래프, TrialConfig, 표준 template, AI 행위자 구분)*
+
 ## 1. 모델의 층 구조
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ ⑤ Platform      User, Role, Permission, AuditLog,       │
-│                 MetricDefinition, SavedView              │
+│                 MetricDefinition, SavedView,             │
+│                 AIAgent, AITask, AITaskRun               │
 ├─────────────────────────────────────────────────────────┤
 │ ④ Analytics     MetricFact (집계 결과, 읽기 전용)        │
 ├─────────────────────────────────────────────────────────┤
@@ -16,13 +19,17 @@
 │                 SDVVisit, Milestone, TimelineTask        │
 ├─────────────────────────────────────────────────────────┤
 │ ② Assumption    AssumptionSet, SoAActivity,              │
-│                 VisitSchedule, StageScopeRule            │
+│                 VisitSchedule,                           │
+│                 TrialConfig, StageSetting,               │
+│                 StageScopeRule, SubjectTargetList        │
 ├─────────────────────────────────────────────────────────┤
 │ ① Master        Trial, Country, Site, Subject, Visit,    │
-│                 FormDef, SampleType, ImageModality, Lab  │
+│                 ActivityDef, StageDef, Lab, CodeList     │
 ├─────────────────────────────────────────────────────────┤
-│ ⓪ Ingestion     SourceSystem, Feed, MappingProfile,      │
-│                 DataDrop, StagingRecord, Snapshot        │
+│ ⓪ Ingestion     SourceSystem, Feed, SourceTemplate,      │
+│                 MappingProfile, DataDrop,                │
+│                 StagingRecord, ValidationFinding,        │
+│                 Snapshot                                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -39,12 +46,18 @@ erDiagram
     SITE ||--o{ SUBJECT : enrolls
     SUBJECT ||--o{ VISIT : attends
     TRIAL ||--o{ ASSUMPTION_SET : "versioned"
+    TRIAL ||--o{ TRIAL_CONFIG : "versioned"
     ASSUMPTION_SET ||--o{ VISIT_SCHEDULE : defines
     ASSUMPTION_SET ||--o{ SOA_ACTIVITY : defines
-    ASSUMPTION_SET ||--o{ STAGE_SCOPE_RULE : defines
     ASSUMPTION_SET ||--o{ ENROLLMENT_PLAN : defines
+    TRIAL_CONFIG ||--o{ STAGE_SETTING : defines
+    TRIAL_CONFIG ||--o{ STAGE_SCOPE_RULE : defines
+    TRIAL_CONFIG ||--o{ QUERY_GRACE_SETTING : defines
+    TRIAL_CONFIG ||--o{ SUBJECT_TARGET_LIST : defines
+    TRIAL_CONFIG ||--o{ METRIC_SWITCH : defines
     VISIT_SCHEDULE ||--o{ SOA_ACTIVITY : "at visit"
     SOA_ACTIVITY }o--|| ACTIVITY_DEF : references
+    SOA_ACTIVITY }o--o| SUBJECT_TARGET_LIST : "applies to"
 
     TRIAL {
         id pk
@@ -73,10 +86,35 @@ erDiagram
     SOA_ACTIVITY {
         id pk
         string activity_type "FORM|SAMPLE|IMAGE"
+        string activity_code "FORMID|KITTYPE|MODALITY"
         int expected_count
-        json condition "코호트·층화 조건"
+        boolean sae_flag
+        json condition "코호트·층화 조건식"
+        id target_list_id fk "지정 시 해당 피험자만"
+    }
+    STAGE_SETTING {
+        id pk
+        string domain
+        string stage_code
+        boolean enabled "false면 화면·집계·export에서 제외"
+        string due_trigger
+        string grace_days "정수 | N/A | DBL_BASED"
+    }
+    QUERY_GRACE_SETTING {
+        id pk
+        string query_owner "DM|CRA|MM|PV|DEFAULT"
+        int open_grace_days
+        int answered_grace_days
+    }
+    SUBJECT_TARGET_LIST {
+        id pk
+        string list_name
+        string list_desc
+        json subject_ids
     }
 ```
+
+`TRIAL_CONFIG`가 별도 버전 단위로 분리된 것이 검토 반영 사항입니다. 유예 기간이나 단계 on/off는 시험 설계(SoA, 방문 스케줄)와 **변경 주기가 다르고 변경 주체도 다릅니다.** 하나로 묶으면 유예 기간 하나 바꾸려고 SoA 전체 버전이 올라갑니다.
 
 ### 2.2 추적 계층 — 모델의 심장
 
@@ -89,46 +127,65 @@ erDiagram
     EXPECTATION_ITEM ||--o{ ISSUE_OBJECT : "has"
     EXPECTATION_ITEM ||--o{ DISCREPANCY : "has"
     STAGE_STATUS }o--|| STAGE_DEF : "of"
-    ISSUE_OBJECT }o--o| STAGE_STATUS : "blocks"
+    STAGE_DEF }o--o| STAGE_DEF : "predecessor"
+    ISSUE_OBJECT }o--o| STAGE_STATUS : "waives"
     DATA_DROP ||--o{ EXPECTATION_ITEM : "actual 근거"
 
     EXPECTATION_ITEM {
         id pk
         string domain "EDC|SAMPLE|IMAGE|VISIT"
-        string item_key "매칭 키"
-        string expectation_type "CONFIRMED|FORECAST"
+        json match_key "매칭 키 (입도 선언에 따름)"
+        string expectation_basis "PROTOCOL|DUE|FORECAST 판정"
         id assumption_set_id fk
+        id trial_config_id fk
         id snapshot_id fk
     }
     STAGE_STATUS {
         id pk
-        string stage_code "entered|sdv|coded|..."
+        string stage_code "entered|sdv|review|coding|sign|freeze|lock|..."
         boolean required
-        date due_date
+        date trigger_date
+        date due_date "grace N/A 이면 null"
         datetime completed_at
-        string status "NOT_APPLICABLE|NOT_DUE|PENDING|OVERDUE|DONE|BLOCKED|WAIVED"
+        string status "NOT_APPLICABLE|NOT_DUE|PENDING|OVERDUE|DONE|WAIVED"
+        string waiver_type "ISSUE_BLOCKED|PROTOCOL_EXEMPT|OPERATIONAL_WAIVER"
+        string waiver_reason "필수"
         int aging_days
+    }
+    STAGE_DEF {
+        id pk
+        string domain
+        string stage_code
+        id predecessor_id fk "null이면 병행 그룹의 시작"
+        string parallel_group "같은 값끼리 병행"
+        boolean uses_overdue "false면 OVERDUE 미사용 (sign)"
     }
     ISSUE_OBJECT {
         id pk
         string issue_domain "QUERY|SAMPLE|IMAGE"
         string issue_type
+        string issue_owner "DM|CRA|MM|PV"
         string issue_group "query group 축"
         string state "OPEN|ANSWERED|CLOSED|CANCELLED"
-        boolean blocking
+        date opened_at
+        date due_date "owner별 유예 적용"
+        boolean unresolvable "true면 대상 항목 WAIVED 전이"
         string referral_to
-        datetime opened_at
-        datetime closed_at
+        date answered_at
+        date closed_at
     }
     DISCREPANCY {
         id pk
-        string kind "NOT_RECEIVED|NOT_EXPECTED|DISCREPANT|AMBIGUOUS"
+        string kind "EDC_Y_NOT_RECEIVED|RECEIVED_NOT_IN_EDC|MATCHED_DISCREPANT|AMBIGUOUS_MATCH"
+        string segment "CENTRAL|BIOANALYTICS|BICR|EDC_RTSM"
         string resolution_state
         id assignee fk
     }
 ```
 
-**핵심은 `EXPECTATION_ITEM` + `STAGE_STATUS` 조합입니다.** 이 두 테이블이 EDC의 7개 지표, 샘플의 7단계, 영상의 5단계를 **전부** 담습니다. 도메인마다 테이블을 만들지 않습니다.
+`STAGE_DEF`의 `predecessor_id`와 `parallel_group`이 EDC의 병행 구조를 표현합니다 ([04](04-domain-concepts.md) 1.2). `uses_overdue = false`가 investigator sign의 특수 처리를 담습니다.
+
+**핵심은 `EXPECTATION_ITEM` + `STAGE_STATUS` 조합입니다.** 이 두 테이블이 EDC의 7개 단계, 샘플의 5단계, 영상의 5단계를 **전부** 담습니다. 도메인마다 테이블을 만들지 않습니다.
 
 ### 2.3 계획 계층 (A3, A4)
 
@@ -185,9 +242,11 @@ erDiagram
 ```mermaid
 erDiagram
     SOURCE_SYSTEM ||--o{ FEED : provides
+    SOURCE_TEMPLATE ||--o{ FEED : "target schema"
     FEED ||--o{ MAPPING_PROFILE : "versioned"
     FEED ||--o{ DATA_DROP : receives
     DATA_DROP ||--o{ STAGING_RECORD : contains
+    DATA_DROP ||--o{ VALIDATION_FINDING : produces
     DATA_DROP }o--|| SNAPSHOT : "included in"
     MAPPING_PROFILE ||--o{ DATA_DROP : "applied to"
 
@@ -213,10 +272,30 @@ erDiagram
         datetime as_of
         string label
         boolean is_official
+        id assumption_set_id fk
+        id trial_config_id fk
+    }
+    SOURCE_TEMPLATE {
+        id pk
+        string dataset_code "DS01..DS10"
+        string version
+        json column_spec
+        json match_key_spec "매칭 키 입도"
+    }
+    VALIDATION_FINDING {
+        id pk
+        string check_code "S1..S5|C1..C4|I1..I5|X1..X5"
+        string severity "REJECT|WARN"
+        int source_row_no
+        string message
     }
 ```
 
 `SOURCE_SYSTEM.ingestion_mode`가 파일 업로드와 API 커넥터를 같은 자리에서 교체 가능하게 만드는 지점입니다. 확정된 전제(파일 우선, 커넥터 확장)가 이 한 필드로 구현됩니다.
+
+`SOURCE_TEMPLATE`이 [12](12-standard-source-templates.md)의 표준 형식을 데이터로 보유합니다. 컬럼 명세와 매칭 키 입도가 코드가 아니라 데이터로 존재해야, template이 개정되어도 코드를 고치지 않습니다.
+
+`VALIDATION_FINDING`은 [12](12-standard-source-templates.md) 5장의 점검 결과를 원본 행 번호와 함께 보존합니다. 이 테이블이 향후 AI 검증 보조의 입력이 됩니다 ([14](14-ai-extensibility.md) 3.1).
 
 ### 2.5 플랫폼 계층
 
@@ -244,17 +323,74 @@ erDiagram
     }
     AUDIT_LOG {
         id pk
-        datetime occurred_at
-        id actor_user_id fk
-        string action "CREATE|UPDATE|DELETE|LOGIN|EXPORT"
+        datetime occurred_at "UTC, 서버 생성"
+        string actor_type "HUMAN|AI|ENGINE"
+        id actor_user_id fk "actor_type=HUMAN"
+        id actor_agent_id fk "actor_type=AI"
+        string actor_engine "actor_type=ENGINE"
+        id ai_run_id fk "AI 실행 참조"
+        id initiated_by fk "AI를 실행시킨 사람"
+        string action "CREATE|UPDATE|DELETE|LOGIN|EXPORT|IMPORT|ENGINE_RUN"
         string entity_type
         string entity_id
         json old_value
         json new_value
         string reason
-        string source "UI|IMPORT|ENGINE"
+        string source "UI|IMPORT|API|ENGINE|AI"
+        id approved_by fk
+        datetime approved_at
     }
 ```
+
+### 2.6 AI 계층
+
+```mermaid
+erDiagram
+    AI_AGENT ||--o{ AI_AGENT_GRANT : has
+    AI_AGENT_GRANT }o--|| AI_TASK : "for"
+    AI_AGENT_GRANT }o--o| DATA_SCOPE : "limited by"
+    AI_AGENT ||--o{ AI_TASK_RUN : executes
+    AI_TASK ||--o{ AI_TASK_RUN : "of"
+    AI_TASK_RUN ||--o{ AI_TOOL_CALL : makes
+    AI_TASK_RUN ||--o{ AUDIT_LOG : "produces"
+    AI_TASK_RUN ||--o{ AI_PROPOSAL : creates
+    AI_PROPOSAL }o--o| USER : "approved by"
+
+    AI_TASK {
+        id pk
+        string task_code
+        string version
+        string required_level "READ_ONLY..DATA_CREATE"
+        json input_schema
+        json output_schema
+        boolean approval_required
+        string deterministic_fallback
+    }
+    AI_TASK_RUN {
+        id pk
+        id agent_id fk
+        string task_code
+        string task_version
+        id initiated_by fk
+        string provider
+        string model_identifier
+        datetime started_at
+        datetime finished_at
+        json input_ref
+        json output_ref
+        int records_affected
+        string status "SUCCEEDED|FAILED|REJECTED_BY_POLICY"
+    }
+    AI_PROPOSAL {
+        id pk
+        string target_entity_type
+        string target_entity_id
+        json proposed_change
+        string state "PENDING|APPROVED|REJECTED"
+    }
+```
+
+이 계층은 [14](14-ai-extensibility.md)의 구조를 데이터 모델로 옮긴 것입니다. **AI가 없어도 이 테이블들은 비어 있을 뿐 앱은 정상 동작합니다.**
 
 ## 3. 핵심 설계 결정
 
@@ -300,11 +436,19 @@ erDiagram
 ④층 `MetricFact`는 롤업 결과를 미리 계산해 저장하는 층입니다. 개념적으로는 star schema의 fact table입니다.
 
 ```
-MetricFact(snapshot_id, assumption_version, metric_code,
+MetricFact(snapshot_id, assumption_version, trial_config_version,
+           metric_code, metric_definition_version,
+           expected_basis,                      -- DUE | PROTOCOL | FORECAST
            trial_id, country_id, site_id, subject_id,
            domain, stage_code,
-           due_count, completed_count, backlog_count, overdue_count, rate)
+           due_count, completed_count, backlog_count,
+           overdue_count, waived_count, rate,
+           aging_median, aging_p90)
 ```
+
+`expected_basis`가 행 단위로 들어가 있으므로 **세 기준의 값이 모두 저장**됩니다. 화면 토글은 이 컬럼의 필터 전환일 뿐이며 재계산이 일어나지 않습니다 ([03](03-core-concept-model.md) 3.4). Export 시에는 세 기준이 모두 포함되어 외부 BI 도구에서도 같은 전환이 가능합니다.
+
+`waived_count`가 별도 컬럼인 것도 중요합니다. 분모 밖이지만 반드시 함께 보여야 하기 때문입니다.
 
 > **권고.** **둡니다.** 두 가지 이유입니다. 첫째, 대시보드 응답 속도가 사용자 채택을 좌우합니다. 둘째, 요구사항 C6(외부 BI 도구로 export)의 대상이 바로 이 테이블입니다. 이 구조를 그대로 내보내면 Power BI나 Tableau에서 별도 가공 없이 사용할 수 있습니다.
 
@@ -312,20 +456,23 @@ MetricFact(snapshot_id, assumption_version, metric_code,
 
 | 층 | 엔티티 | 역할 |
 |---|---|---|
-| ⓪ | `SourceSystem`, `Feed`, `MappingProfile` | 유입 경로 정의 |
-| ⓪ | `DataDrop`, `StagingRecord`, `Snapshot` | 불변 유입 단위와 시점 |
+| ⓪ | `SourceSystem`, `Feed`, `SourceTemplate`, `MappingProfile` | 유입 경로와 표준 형식 |
+| ⓪ | `DataDrop`, `StagingRecord`, `ValidationFinding`, `Snapshot` | 불변 유입 단위, 검증 결과, 시점 |
 | ① | `Trial`, `Country`, `Site`, `Subject`, `Visit` | 계층 마스터 |
-| ① | `ActivityDef`(FormDef/SampleType/ImageModality), `Lab` | 활동 정의 |
-| ② | `AssumptionSet` | 가정의 버전 단위 |
-| ② | `VisitSchedule`, `SoAActivity`, `StageScopeRule`, `EnrollmentPlan` | 기대 생성 규칙 |
+| ① | `ActivityDef`, `StageDef`, `Lab`, `CodeList` | 활동·단계·코드 정의 |
+| ② | `AssumptionSet` | 시험 설계 가정의 버전 단위 |
+| ② | `VisitSchedule`, `SoAActivity`, `EnrollmentPlan` | 기대 생성 규칙 |
+| ② | **`TrialConfig`** | **처리 설정의 버전 단위** |
+| ② | `StageSetting`, `StageScopeRule`, `QueryGraceSetting`, `SubjectTargetList`, `MetricSwitch` | 유예 기간, 범위, 대상, on/off |
 | ③ | `ExpectationItem`, `StageStatus` | **추적의 핵심** |
 | ③ | `IssueObject`, `Discrepancy` | 이슈와 불일치 |
 | ③ | `SDVVisit`, `SDVResource` | SDV 계획 (A3) |
 | ③ | `Milestone`, `TimelineTask`, `CompletionCondition` | 타임라인 (A4) |
 | ④ | `MetricFact` | 사전 집계, BI export 대상 |
 | ⑤ | `User`, `Role`, `Permission`, `DataScope`, `UserRole` | 권한 |
-| ⑤ | `AuditLog` | 감사 추적 |
+| ⑤ | `AuditLog` | 감사 추적 (행위자 구분 포함) |
 | ⑤ | `MetricDefinition`, `SavedView` | 지표 정의, 사용자 뷰 |
+| ⑤ | `AIAgent`, `AIAgentGrant`, `AITask`, `AITaskRun`, `AIToolCall`, `AIProposal` | AI 확장 ([14](14-ai-extensibility.md)) |
 
 ## 5. 검토 포인트 (Decision Points)
 
@@ -336,3 +483,5 @@ MetricFact(snapshot_id, assumption_version, metric_code,
 | DP-06-3 | 3.3 expected 물리화 채택 여부 | 물리화 |
 | DP-06-4 | 예상 데이터 규모는 어느 정도인가 (시험 수 × 피험자 수 × 방문 수 × 폼 수) | 파악 필요 — 파티셔닝 설계에 직결 |
 | DP-06-5 | 다중 시험을 하나의 DB에 둘 것인가, 시험별 분리할 것인가 | **하나의 DB + trial_id 분리** |
+| DP-06-6 | `TrialConfig`를 `AssumptionSet`과 분리하는 것에 동의하는가 | **분리 권고** (2.1) |
+| DP-06-7 | `MetricFact`에 3종 기준을 모두 저장하면 행 수가 3배가 된다. 허용 가능한가 | 허용 권고 — 토글 즉시성이 더 중요 |

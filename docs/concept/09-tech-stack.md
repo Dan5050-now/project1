@@ -14,6 +14,8 @@
 | K4 | 대량 import/export | C5, C6 |
 | K5 | 개발 속도 — 개념 검증 단계에서 중요 | 프로젝트 성격 |
 | K6 | Part 11 validation으로 승격 가능성 | 확정 전제 |
+| K7 | **표준 template 기반 대량 검증 처리** | 검토 반영 (요구사항 7, 8) |
+| K8 | **AI 통합 지점의 격리 가능성** | 검토 반영 (요구사항 9, 10) |
 
 ## 2. 선택지 비교
 
@@ -79,8 +81,10 @@ Streamlit은 빠르지만 K1·K2·K6에서 벽에 부딪히고, 그 벽은 나�
 | 인증 | **SSO (SAML/OIDC)** + django-allauth | 사내 통합 |
 | 권한 | django 내장 + **django-guardian** | 객체 수준 범위 제한 |
 | 감사 추적 | **django-simple-history** | C3, C4 |
-| Import/Export | **django-import-export** + openpyxl | C5 |
+| Import/Export | **django-import-export** + openpyxl + pandas | C5, K7 |
+| 검증 규칙 엔진 | **pandera** 또는 자체 규칙 레지스트리 | K7 — [12](12-standard-source-templates.md) 5장 |
 | 분석 export | **Parquet (pyarrow)** + 읽기 전용 뷰 | C6 |
+| AI Gateway | 자체 모듈 + 제공자 어댑터 | K8 — [14](14-ai-extensibility.md) 4장 |
 | 테스트 | pytest + factory_boy | |
 | 배포 | Docker + docker-compose | 재현 가능한 환경 (validation 대비) |
 
@@ -104,9 +108,14 @@ MVP는 **Django 템플릿 + HTMX**로 시작합니다. 이유는 개발 속도�
 │  │ Views    │ DRF API  │ Admin    │ Auth/RBAC│           │
 │  └──────────┴──────────┴──────────┴──────────┘           │
 │  ┌────────────────────────────────────────────┐          │
-│  │ 도메인 서비스                                │          │
+│  │ 도메인 서비스 (결정론 영역)                   │          │
 │  │  ExpectationEngine · ProgressEngine         │          │
 │  │  ReconciliationService · ForecastService    │          │
+│  │  ValidationEngine · MetricEngine            │          │
+│  └────────────────────────────────────────────┘          │
+│  ┌────────────────────────────────────────────┐          │
+│  │ AI Gateway (선택적 · 없어도 동작)             │          │
+│  │  권한 검사 · Tool API · 제공자 어댑터         │          │
 │  └────────────────────────────────────────────┘          │
 │  ┌────────────────────────────────────────────┐          │
 │  │ 모델 (django-simple-history 적용)            │          │
@@ -127,16 +136,23 @@ MVP는 **Django 템플릿 + HTMX**로 시작합니다. 이유는 개발 속도�
 project/
 ├── core/              공통: 감사, 권한, 스냅샷, 버전
 ├── ingestion/         SourceSystem, Feed, MappingProfile, DataDrop
-├── master/            Trial, Country, Site, Subject, Visit
-├── assumptions/       AssumptionSet, SoA, VisitSchedule, ScopeRule
+├── master/            Trial, Country, Site, Subject, Visit, CodeList
+├── assumptions/       AssumptionSet, SoA, VisitSchedule
+├── config/            TrialConfig, StageSetting, ScopeRule, TargetList  ← 요구사항 8
+├── templates/         SourceTemplate, 검증 규칙 레지스트리            ← 요구사항 7
 ├── tracking/          ExpectationItem, StageStatus, Issue, Discrepancy
 │   ├── engines/       ExpectationEngine, ProgressEngine, Reconciliation
 │   └── domains/       edc.py, sample.py, image.py, visit.py  ← 도메인 어댑터
 ├── planning/          SDVVisit, Milestone, TimelineTask
-├── analytics/         MetricFact, MetricDefinition, ForecastService
+├── analytics/         MetricFact, MetricDefinition, MetricEngine, Forecast
 ├── exports/           CSV/Excel/Parquet, BI 뷰
-└── adminpanel/        사용자·역할 관리 화면
+├── ai/                Gateway, ToolAPI, TaskRegistry, ProviderAdapter   ← 요구사항 9
+└── adminpanel/        사용자·역할 관리, 감사 조회, AI 활동 조회
 ```
+
+`ai/`가 **독립 모듈로 분리된 것이 핵심**입니다. 이 디렉터리를 통째로 제거해도 나머지 앱은 정상 동작합니다 ([14](14-ai-extensibility.md) 원칙 1.1). 규제 관점에서 "AI가 관여한 범위"를 코드 경계로도 설명할 수 있게 됩니다.
+
+`config/`와 `templates/`가 별도 모듈인 것도 의도적입니다. 시험마다 달라지는 것을 코드가 아니라 **데이터로 다루기** 위한 구조입니다.
 
 `tracking/domains/` 아래 네 개 파일이 [03](03-core-concept-model.md) 1장의 아키타입 설계가 코드로 나타난 모습입니다. 각 파일은 단계 체인 정의, Due 규칙, 매칭 키만 선언하고 계산 로직은 `engines/`가 공통으로 처리합니다.
 
@@ -159,3 +175,5 @@ project/
 | DP-09-3 | 배포 환경 — 사내 서버인가 클라우드인가 | 확인 필요 (validation 범위에 영향) |
 | DP-09-4 | 3.3의 HTMX 시작 + DRF 병행 전략에 동의하는가 | 동의 권고 |
 | DP-09-5 | 개발 인력 규모와 Python/Django 숙련도 | 확인 필요 |
+| DP-09-6 | 검증 규칙 엔진을 라이브러리로 쓸 것인가 자체 구현할 것인가 | 자체 레지스트리 권고 (AI 확장 대비) |
+| DP-09-7 | AI 제공자를 외부 서비스로 할 것인가 온프레미스로 할 것인가 | **DP-14-3 결정에 종속** |

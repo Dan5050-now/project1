@@ -25,7 +25,11 @@
 | 08 | [플랫폼 공통 서비스](08-platform-services.md) | RBAC, audit trail, 버전 관리, import/export, BI 연동 |
 | 09 | [기술 스택 권고](09-tech-stack.md) | 옵션 비교와 단일 권고안 |
 | 10 | [MVP 범위와 로드맵](10-mvp-and-roadmap.md) | 단계별 개발 계획 |
-| 11 | [리스크와 미결 사항](11-risks-and-open-questions.md) | 리스크 등록부, 결정 대기 목록 |
+| 11 | [리스크와 미결 사항](11-risks-and-open-questions.md) | 리스크 등록부, 확정된 결정, 결정 대기 목록 |
+| 12 | [표준 Source Dataset Template](12-standard-source-templates.md) | 앱이 요구하는 표준 데이터 형식과 업로드 검증 |
+| 13 | [Trial Configuration Template](13-trial-configuration.md) | 유예 기간, 단계 on/off, 대상 목록 등 시험별 설정 |
+| 14 | [AI 활용 확장성](14-ai-extensibility.md) | AI 권한 모델, Tool API, 행위자 구분 감사 추적 |
+| 15 | [지표 계산 명세](15-metric-specification.md) | 처리 조건과 계산식, 재현 가능성 |
 
 ## 확정된 전제
 
@@ -34,3 +38,14 @@
 | 데이터 유입 | **파일 업로드 우선, 커넥터 확장 가능 구조** | vendor API 계약·인증 협의 없이 즉시 시작 가능하고, 현실의 vendor 리포트 관행과 일치 |
 | 규제 수준 | **Non-GxP 내부 도구 + 21 CFR Part 11 대비 설계** | 개념 검증 속도를 지키면서 나중에 validation으로 승격할 때 재설계 위험을 없앰 |
 | 개발 언어 | **Python** | 요구사항으로 지정됨 |
+| 분모 기준 | **Due 기본 + 3종 토글 전환** | 운영 지표로서 Due가 유용하되, 총량·예측 관점도 필요 |
+| 예외 상태 | **`WAIVED` 단일 상태, 분모 제외** | 해결 불가와 의도적 면제 모두 예외 사항이며, 분모에 남기면 지표가 영구 왜곡 |
+| 시스템 호환성 | **표준 template + 시험별 설정** | 특정 EDC·시험 설계에 종속되지 않기 위함 |
+| AI의 역할 | **보조 수단. 보고되는 숫자는 계산하지 않음** | 재현되지 않는 숫자는 GCP·CSV 관점에서 근거가 될 수 없음 |
+
+## 개정 이력
+
+| 버전 | 일자 | 내용 |
+|---|---|---|
+| v1 | 2026-09-15 | 초안 작성 (문서 00~11) |
+| v2 | 2026-09-18 | 1차 검토 반영 — 분모 기준 토글, 상태 통합, 유예 기간 재정의, EDC 병행 단계, Reconciliation 재정의, 표준 template·설정 template·AI 확장·지표 명세 추가 (문서 12~15 신규) |
