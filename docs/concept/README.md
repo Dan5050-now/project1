@@ -30,6 +30,8 @@
 | 13 | [Trial Configuration Template](13-trial-configuration.md) | 유예 기간, 단계 on/off, 대상 목록 등 시험별 설정 |
 | 14 | [AI 활용 확장성](14-ai-extensibility.md) | AI 권한 모델, Tool API, 행위자 구분 감사 추적 |
 | 15 | [지표 계산 명세](15-metric-specification.md) | 처리 조건과 계산식, 재현 가능성 |
+| 16 | [External Data Source Format — Draft v0.1](16-external-data-format-draft.md) | 벤치마킹 기반 external data reconciliation file 형식 초안 |
+| — | [`templates/`](templates/) | 실물 template CSV (Excel로 열어 검토 가능) |
 
 ## 확정된 전제
 
@@ -53,3 +55,4 @@
 | v1 | 2026-09-15 | 초안 작성 (문서 00~11) |
 | v2 | 2026-09-18 | 1차 검토 반영 — 분모 기준 토글, 상태 통합, 유예 기간 재정의, EDC 병행 단계, Reconciliation 재정의, 표준 template·설정 template·AI 확장·지표 명세 추가 (문서 12~15 신규) |
 | v2.1 | 2026-09-19 | DP-12-6 확정 (입력 경계를 사내 표준 파일로 이동, 결합형 `DS05R`·`DS08R` 추가, 출처 메타데이터 필수화, 자체 판정 원칙), DP-14-3 확정 (사내 내부 LLM 연결) |
+| v2.2 | 2026-09-19 | DP-12-8 확정 (대조용 원시값 포함). 벤치마킹 기반 external data 형식 초안과 실물 template 추가 (문서 16, `templates/`). 매칭 키에 nominal timepoint 추가 제안 (DP-16-1) |

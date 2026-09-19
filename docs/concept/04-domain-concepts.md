@@ -324,10 +324,14 @@ expected → collected → received(central lab) → received(bioanalytics lab) 
 #### 매칭 키 입도
 
 ```
-권고 매칭 키:  kit_type(PK / ADA / NAB) + subject_id + visit  [+ aliquot 순번]
+권고 매칭 키:  kit_type(PK / ADA / NAB) + subject_id + visit + nominal timepoint  [+ 재채취 순번]
 ```
 
-**kit 유형이 매칭 키에 포함되지 않으면 그 방문에 샘플이 있는 것으로 혼동됩니다.** PK만 도착하고 ADA가 오지 않았는데 "그 방문 샘플은 수령됨"으로 판정되는 것입니다. 이 입도 선언은 표준 template의 필수 메타데이터입니다 ([12](12-standard-source-templates.md)).
+**kit 유형이 매칭 키에 포함되지 않으면 그 방문에 샘플이 있는 것으로 혼동됩니다.** PK만 도착하고 ADA가 오지 않았는데 "그 방문 샘플은 수령됨"으로 판정되는 것입니다.
+
+**nominal timepoint도 같은 이유로 필요합니다.** PK 샘플은 한 방문에서 pre-dose, 1h, 2h처럼 여러 시점에 채취되므로, timepoint 없이는 같은 방문의 PK 샘플들이 서로 구분되지 않습니다. 벤치마킹에서 확인한 업계의 표준 대조 키에도 nominal timepoint가 포함되어 있습니다 ([16](16-external-data-format-draft.md) 1.2).
+
+이 입도 선언은 표준 template의 필수 메타데이터입니다 ([12](12-standard-source-templates.md) 2.1).
 
 #### 식별자 폴백
 
@@ -340,13 +344,15 @@ expected → collected → received(central lab) → received(bioanalytics lab) 
 ```
 1차: barcode / kit ID
 2차: accession number (lab 리포트 간)
-3차: (kit_type, subject_id, visit, sequence) 조합
+3차: (kit_type, subject_id, visit, timepoint, repeat_seq) 조합
 실패: AMBIGUOUS_MATCH 로 분류하여 Reconciliation Center에 노출
 ```
 
+accession number를 1차가 아닌 2차에 둔 것은 벤치마킹 근거가 있습니다. **동일한 accession number가 서로 다른 피험자에 쓰이는 사례**가 업계에서 알려진 문제이므로, 단독 매칭 키로 신뢰할 수 없습니다 ([16](16-external-data-format-draft.md) 1.3).
+
 ### 4.4 Reconciliation 유형 (검토 반영)
 
-입력은 사내 표준 파일(`DS05R`, external data reconciliation file 대응)이며, 앱은 그 파일의 EDC측·lab측 원시값으로 **자체 판정**합니다 ([03](03-core-concept-model.md) 5.1).
+입력은 사내 표준 파일(external data reconciliation file 대응)이며, 앱은 그 파일의 EDC측·lab측 원시값으로 **자체 판정**합니다 ([03](03-core-concept-model.md) 5.1). 형식 초안과 판정 로직은 [16](16-external-data-format-draft.md) 5장·8장에 있습니다.
 
 | 유형 | 정의 | 후속 조치 |
 |---|---|---|
@@ -384,7 +390,8 @@ assigned → analyzed
 | DP-04-10 | 샘플 단위 — 채혈 1회(draw)인가 분주 1개(aliquot)인가 | **aliquot 단위** 추적, draw로 그룹핑 |
 | DP-04-11 | 4.5의 issue type 목록이 충분한가 | 설정 가능 목록, 표는 초기값 |
 | DP-04-12 | central lab과 bioanalytics lab이 다수일 수 있는가 | **다수 허용** (lab을 엔티티로) |
-| DP-04-21 | 4.3의 kit 유형 분류(PK/ADA/NAB) 외에 추가할 유형이 있는가 | 시험별 설정 목록 |
+| DP-04-21 | 4.3의 kit 유형 분류(PK/ADA/NAB) 외에 추가할 유형이 있는가 | 시험별 설정 목록 ([16](16-external-data-format-draft.md) 7.1) |
+| DP-04-22 | 매칭 키에 nominal timepoint를 추가하는 것에 동의하는가 | **추가 권고** (DP-16-1) |
 
 ---
 

@@ -166,6 +166,8 @@ DP-12-6 확정으로 **데이터 준비 부담은 크게 줄었습니다.** 앱�
 | 요구사항 11 | **지표 계산 명세와 재현 가능성** | [15](15-metric-specification.md) |
 | **DP-12-6** | **앱의 입력 경계 = vendor 원본이 아니라 vendor data로 만든 사내 표준 파일** (external data reconciliation file 등) | [12](12-standard-source-templates.md) 1.2, 3장 |
 | **DP-14-3** | **사내 내부 LLM 연결** — 외부 전송 없음, 어댑터 계층은 유지 | [14](14-ai-extensibility.md) 4.3 |
+| **DP-12-8** | **표준 파일에 대조용 원시값 포함** — 앱은 항상 자체 판정 가능 | [12](12-standard-source-templates.md) 3.2 |
+| DP-12-7 | **벤치마킹 기반 형식 초안 작성** — 검토 후 확정 | [16](16-external-data-format-draft.md) |
 
 ## 4. 결정 대기 목록
 
@@ -207,8 +209,10 @@ DP-12-6 확정으로 **데이터 준비 부담은 크게 줄었습니다.** 앱�
 
 | # | 사항 | 문서 |
 |---|---|---|
-| **DP-12-7** | **사내 external data reconciliation file 샘플 확보** — template 컬럼 명세를 실제 구조에 맞춰 조정 | [12](12-standard-source-templates.md) 7장 |
-| **DP-12-8** | **사내 표준 파일에 양측 원시값이 있는가, 대조 결과만 있는가** | [12](12-standard-source-templates.md) 7장 |
+| **DP-16-1** | **매칭 키에 nominal timepoint(`TPTNUM`) 추가** — 벤치마킹으로 발견 | [16](16-external-data-format-draft.md) 1.2 |
+| **DP-16-2** | **누적 전송 기본, 증분은 조건부 허용** | [16](16-external-data-format-draft.md) 4.4 |
+| DP-16-3 | 샘플 추적 단위 (kit vs aliquot) | [16](16-external-data-format-draft.md) 11장 |
+| DP-16-4 | controlled terminology 기본값 | [16](16-external-data-format-draft.md) 7장 |
 | DP-12-9 | 사내 실제 운영 형태가 결합형인가 분리형인가 | [12](12-standard-source-templates.md) 7장 |
 | DP-14-7 | 내부 LLM의 연결·인증 방식 | [14](14-ai-extensibility.md) 8장 |
 | DP-14-9 | 내부 LLM의 처리 용량 | [14](14-ai-extensibility.md) 8장 |
@@ -228,10 +232,9 @@ DP-12-6 확정으로 **데이터 준비 부담은 크게 줄었습니다.** 앱�
 
 **1단계.** 4.1의 구조 결정 7건을 확정합니다. 이것들이 바뀌면 이후 문서를 다시 써야 하므로 먼저 봐야 합니다.
 
-**2단계.** 4.3의 두 굵은 항목을 우선 확인합니다. 둘 다 사내 표준 파일의 실물을 봐야 답이 나옵니다.
+**2단계.** [16](16-external-data-format-draft.md)의 형식 초안을 검토합니다. 10장에 검토 요청 사항 10건(Q1~Q10)을 정리해 두었으며, 실물 template은 [`templates/`](templates/)에서 Excel로 바로 여실 수 있습니다.
 
-- **DP-12-7 표준 파일 샘플 확보** — 문서 12의 `DS05R`·`DS08R` 컬럼 명세를 실제 구조에 맞춰 조정해야 합니다.
-- **DP-12-8 양측 원시값 존재 여부** — 표준 파일이 대조 결과만 담고 원시값이 없다면, 앱은 자체 판정을 할 수 없어 재현 가능성 요건을 만족하지 못합니다. 이 경우 **표준 파일 구조 자체를 보완**하는 것이 선행 과제가 됩니다.
+그중 **DP-16-1(매칭 키에 nominal timepoint 추가)** 이 가장 중요합니다. 벤치마킹에서 발견한 사항으로, PK처럼 한 방문에서 여러 시점에 채취되는 샘플이 timepoint 없이는 구분되지 않습니다. 이 결정은 [03](03-core-concept-model.md)과 [04](04-domain-concepts.md)의 매칭 키 정의에 이미 반영해 두었습니다.
 
 **3단계.** 4.2의 업무 정의를 실무 담당자와 확정합니다. 이것이 [15](15-metric-specification.md)의 지표 정의 등록부와 [13](13-trial-configuration.md)의 설정 기본값이 됩니다.
 

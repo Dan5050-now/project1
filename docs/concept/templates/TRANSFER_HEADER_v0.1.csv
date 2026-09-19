@@ -1,0 +1,15 @@
+﻿KEY,VALUE,DESCRIPTION
+STUDYID,ABC-301,시험 식별자
+DATASET_CODE,EXT_SAMPLE_RECON,EXT_SAMPLE_RECON | EXT_IMAGE_RECON
+TEMPLATE_VERSION,0.1,사용한 template 버전
+TRANSFER_ID,ABC301-SR-2026W38,전송 단위 식별자 (사내 관리 번호)
+TRANSFER_TYPE,CUMULATIVE,CUMULATIVE | INCREMENTAL (누적 권고)
+SRC_SYSTEM,CentralLab-A; BioLab-B; Rave,원본 시스템·vendor. 복수는 세미콜론 구분
+SRC_EXTRACT_DTC,2026-09-18,vendor 원본 데이터 추출 기준일 (파일 작성일 아님)
+SRC_FILE_REF,CLA_ABC301_20260918.xlsx; RAVE_SAMPLE_20260918.csv,원본 파일명 또는 사내 관리 번호
+PERIOD_FROM,,INCREMENTAL인 경우 필수
+PERIOD_TO,,INCREMENTAL인 경우 필수
+ROW_COUNT,8,데이터 행 수. 실제 행 수와 대조됨
+PREPARED_BY,hong.gildong,표준 파일 작성자
+PREPARED_DTC,2026-09-18,표준 파일 작성일
+NOTE,,부분 추출 등 특이사항

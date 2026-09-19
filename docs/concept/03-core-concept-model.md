@@ -328,7 +328,9 @@ Issue(unresolvable = true)  →  Item.stage_status = WAIVED
 
 근거는 재현 가능성입니다. 외부에서 만들어진 판정을 수입하면 그 숫자는 [15](15-metric-specification.md)의 계산식 명세 바깥에 놓여 앱이 재현할 수 없습니다. 또한 두 판정의 불일치는 그 자체로 확인 가치가 있는 정보입니다.
 
-양측 원시값 없이 대조 결과만 들어오는 경우, 앱은 자체 판정을 할 수 없으므로 해당 Feed를 **"판정 수입" 상태로 표시**하고 재현 가능성 요건 미충족임을 화면에 명시합니다 ([12](12-standard-source-templates.md) 5.6).
+DP-12-8 확정에 따라 **사내 표준 파일에는 대조에 사용되는 양측 원시값이 포함**되므로, 앱은 항상 자체 판정이 가능합니다. "판정 수입" 상태 표시는 이 전제가 깨지는 경우에 대한 안전장치로 유지합니다 ([12](12-standard-source-templates.md) 5.6).
+
+형식의 상세는 [16](16-external-data-format-draft.md)에 있습니다.
 
 ### 5.2 매칭 키 입도가 먼저다
 
@@ -340,7 +342,7 @@ Issue(unresolvable = true)  →  Item.stage_status = WAIVED
 
 | 도메인 | 권고 매칭 키 | 불충분한 키의 위험 |
 |---|---|---|
-| Sample | `kit_type(PK/ADA/NAB) + subject_id + visit` (+ 필요 시 aliquot 순번) | `subject_id + visit`만 쓰면 kit 유형별 누락을 놓침 |
+| Sample | `kit_type(PK/ADA/NAB) + subject_id + visit + **nominal timepoint**` (+ 재채취 순번) | kit 유형이 빠지면 유형별 누락을 놓치고, **timepoint가 빠지면 같은 방문의 PK 다중 시점이 구분되지 않음** ([16](16-external-data-format-draft.md) 1.2) |
 | EDC Form | `subject_id + visit + form + (repeat_seq)` | 반복 폼 구분 실패 |
 | Image | `subject_id + visit + modality` | 검사 종류별 누락을 놓침 |
 

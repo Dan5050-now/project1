@@ -307,6 +307,7 @@ aging_p90(stage)     = 90th percentile of the same set
 | `quality.regression.count` | 이전 Drop 대비 역행 건수 ([12](12-standard-source-templates.md) 5.4 X4) |
 | `quality.feed.trust_level` | Feed별 신뢰도 (`NORMAL` / `CAUTION` / `IMPORTED_VERDICT`) |
 | `quality.src_extract_lag` | 원본 추출일과 조회 시점의 간격 — 데이터 최신성 |
+| `quality.row_count_mismatch` | Transfer Header `ROW_COUNT`와 실제 행 수의 차이 |
 
 이 지표들은 **앱 자신의 데이터 품질을 보여줍니다.** 사용자가 지표를 얼마나 신뢰해도 되는지 판단하는 근거입니다.
 
@@ -342,6 +343,8 @@ aging_p90(stage)     = 90th percentile of the same set
 | E11 | investigator sign | `rate` 없음, 건수만 |
 | E12 | kit 유형 미구분 소스 | 경고 + reconciliation 신뢰도 낮음 표시 |
 | E13 | 결합형 파일에 한쪽 원시값만 존재 | 자체 판정 불가 → "판정 수입" 표시 |
+| E15 | 같은 방문·같은 kit 유형의 다중 timepoint | `TPTNUM`으로 구분. 누락 시 `AMBIGUOUS_MATCH` |
+| E16 | 증분 전송의 기간 밖 항목 | "미수령"이 아니라 **"알 수 없음"** ([16](16-external-data-format-draft.md) 4.4) |
 | E14 | 앱 판정과 파일 판정 불일치 | 앱 판정 채택 + 불일치 목록 보고 |
 
 ### 7.3 명세 변경 절차
