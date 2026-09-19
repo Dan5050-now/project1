@@ -84,7 +84,7 @@ Streamlit은 빠르지만 K1·K2·K6에서 벽에 부딪히고, 그 벽은 나�
 | Import/Export | **django-import-export** + openpyxl + pandas | C5, K7 |
 | 검증 규칙 엔진 | **pandera** 또는 자체 규칙 레지스트리 | K7 — [12](12-standard-source-templates.md) 5장 |
 | 분석 export | **Parquet (pyarrow)** + 읽기 전용 뷰 | C6 |
-| AI Gateway | 자체 모듈 + 제공자 어댑터 | K8 — [14](14-ai-extensibility.md) 4장 |
+| AI Gateway | 자체 모듈 + 제공자 어댑터 → **사내 내부 LLM** | K8 — [14](14-ai-extensibility.md) 4.3 |
 | 테스트 | pytest + factory_boy | |
 | 배포 | Docker + docker-compose | 재현 가능한 환경 (validation 대비) |
 
@@ -176,4 +176,4 @@ project/
 | DP-09-4 | 3.3의 HTMX 시작 + DRF 병행 전략에 동의하는가 | 동의 권고 |
 | DP-09-5 | 개발 인력 규모와 Python/Django 숙련도 | 확인 필요 |
 | DP-09-6 | 검증 규칙 엔진을 라이브러리로 쓸 것인가 자체 구현할 것인가 | 자체 레지스트리 권고 (AI 확장 대비) |
-| DP-09-7 | AI 제공자를 외부 서비스로 할 것인가 온프레미스로 할 것인가 | **DP-14-3 결정에 종속** |
+| DP-09-7 | ~~AI 제공자를 외부 서비스로 할 것인가~~ | **확정** — 사내 내부 LLM 연결 ([14](14-ai-extensibility.md) 4.3) |

@@ -178,10 +178,14 @@ erDiagram
         id pk
         string kind "EDC_Y_NOT_RECEIVED|RECEIVED_NOT_IN_EDC|MATCHED_DISCREPANT|AMBIGUOUS_MATCH"
         string segment "CENTRAL|BIOANALYTICS|BICR|EDC_RTSM"
+        string source_verdict "표준 파일의 RECON_STATUS (참고값)"
+        boolean verdict_mismatch "앱 판정과 파일 판정의 불일치"
         string resolution_state
         id assignee fk
     }
 ```
+
+`DISCREPANCY`의 `source_verdict`와 `verdict_mismatch`는 사내 표준 파일이 담고 있는 대조 결과를 **참고값으로 보관하고 앱 판정과 비교**하기 위한 것입니다 ([03](03-core-concept-model.md) 5.1). 판정 자체는 항상 앱이 수행합니다.
 
 `STAGE_DEF`의 `predecessor_id`와 `parallel_group`이 EDC의 병행 구조를 표현합니다 ([04](04-domain-concepts.md) 1.2). `uses_overdue = false`가 investigator sign의 특수 처리를 담습니다.
 
@@ -262,9 +266,17 @@ erDiagram
         string file_hash
         datetime uploaded_at
         id uploaded_by fk
+        string src_system "원본 vendor·시스템"
+        date src_extract_dt "vendor 원본 추출 기준일"
+        string src_file_ref "원본 파일 참조"
+        string prepared_by "표준 파일 작성자"
+        date prepared_dt
+        string template_version
+        string trust_level "NORMAL|CAUTION|IMPORTED_VERDICT"
         int rows_total
         int rows_accepted
         int rows_rejected
+        int rows_warned
         string state "UPLOADED|VALIDATED|PROMOTED|REJECTED"
     }
     SNAPSHOT {
@@ -292,6 +304,8 @@ erDiagram
 ```
 
 `SOURCE_SYSTEM.ingestion_mode`가 파일 업로드와 API 커넥터를 같은 자리에서 교체 가능하게 만드는 지점입니다. 확정된 전제(파일 우선, 커넥터 확장)가 이 한 필드로 구현됩니다.
+
+`DATA_DROP`의 출처 필드가 검토 반영 사항입니다. 표준화가 앱 경계 밖에서 일어나므로([12](12-standard-source-templates.md) 1.3), **어느 vendor 데이터로 언제 누가 만든 파일인지**를 앱이 보유해야 추적성이 끊기지 않습니다. `src_extract_dt`와 `prepared_dt`를 분리한 것도 같은 이유입니다. 지표의 시간 기준은 원본 추출 시점이지 파일 작성 시점이 아닙니다.
 
 `SOURCE_TEMPLATE`이 [12](12-standard-source-templates.md)의 표준 형식을 데이터로 보유합니다. 컬럼 명세와 매칭 키 입도가 코드가 아니라 데이터로 존재해야, template이 개정되어도 코드를 고치지 않습니다.
 
@@ -457,7 +471,7 @@ MetricFact(snapshot_id, assumption_version, trial_config_version,
 | 층 | 엔티티 | 역할 |
 |---|---|---|
 | ⓪ | `SourceSystem`, `Feed`, `SourceTemplate`, `MappingProfile` | 유입 경로와 표준 형식 |
-| ⓪ | `DataDrop`, `StagingRecord`, `ValidationFinding`, `Snapshot` | 불변 유입 단위, 검증 결과, 시점 |
+| ⓪ | `DataDrop`(출처 메타데이터 포함), `StagingRecord`, `ValidationFinding`, `Snapshot` | 불변 유입 단위, 출처, 검증 결과, 시점 |
 | ① | `Trial`, `Country`, `Site`, `Subject`, `Visit` | 계층 마스터 |
 | ① | `ActivityDef`, `StageDef`, `Lab`, `CodeList` | 활동·단계·코드 정의 |
 | ② | `AssumptionSet` | 시험 설계 가정의 버전 단위 |
@@ -485,3 +499,4 @@ MetricFact(snapshot_id, assumption_version, trial_config_version,
 | DP-06-5 | 다중 시험을 하나의 DB에 둘 것인가, 시험별 분리할 것인가 | **하나의 DB + trial_id 분리** |
 | DP-06-6 | `TrialConfig`를 `AssumptionSet`과 분리하는 것에 동의하는가 | **분리 권고** (2.1) |
 | DP-06-7 | `MetricFact`에 3종 기준을 모두 저장하면 행 수가 3배가 된다. 허용 가능한가 | 허용 권고 — 토글 즉시성이 더 중요 |
+| DP-06-8 | 결합형 표준 파일 1행을 내부적으로 몇 개 레코드로 분해할 것인가 | **EDC측·lab측을 별도 StagingRecord로 분해** 후 ExpectationItem에 결합 |

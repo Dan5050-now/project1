@@ -83,7 +83,7 @@ flowchart TB
 
 ### 2.2 ② Ingestion Layer — 무엇이 실제로 들어왔는가
 
-**표준 source dataset template**을 통해 데이터를 받습니다. 시험마다 원본 시스템의 형식이 다르므로, 앱이 특정 EDC나 특정 시험 설계에 종속되지 않도록 **앱이 요구하는 표준 형식을 먼저 정의하고 사용자가 거기에 맞춰 준비**하는 방식을 채택했습니다. 상세는 [12](12-standard-source-templates.md)입니다.
+**표준 source dataset template**을 통해 데이터를 받습니다. 앱의 입력 경계는 vendor 원본 파일이 아니라 **vendor data로 사내에서 이미 만들고 있는 표준 파일**(external data reconciliation file 등)입니다. vendor 형식 변동이 표준화 단계에서 흡수되므로 앱은 영향을 받지 않습니다. 상세는 [12](12-standard-source-templates.md)입니다.
 
 핵심 개념은 **Data Drop**입니다. 파일 한 번의 업로드가 Data Drop 한 건이고, 이것이 불변 단위로 보존됩니다.
 
@@ -315,7 +315,22 @@ Issue(unresolvable = true)  →  Item.stage_status = WAIVED
 
 ## 5. Reconciliation — 불일치의 정의 (검토 반영)
 
-### 5.1 매칭 키 입도가 먼저다
+### 5.1 입력이 이미 대조된 파일이어도 앱은 자체 판정한다
+
+사내 표준 파일(external data reconciliation file)에는 보통 대조 결과가 이미 들어 있습니다. 그래도 **앱은 그 결과를 그대로 받아들이지 않고, 파일에 담긴 양측 원시값으로 자체 판정한 뒤 두 결과를 비교합니다.**
+
+```
+표준 파일 1행
+  ├─ EDC측 원시값     ──┐
+  ├─ vendor측 원시값  ──┼──> 앱의 자체 판정 (5.2~5.3의 유형)
+  └─ 파일의 대조 결과 ──┴──> 비교 → 불일치는 별도 목록으로 보고
+```
+
+근거는 재현 가능성입니다. 외부에서 만들어진 판정을 수입하면 그 숫자는 [15](15-metric-specification.md)의 계산식 명세 바깥에 놓여 앱이 재현할 수 없습니다. 또한 두 판정의 불일치는 그 자체로 확인 가치가 있는 정보입니다.
+
+양측 원시값 없이 대조 결과만 들어오는 경우, 앱은 자체 판정을 할 수 없으므로 해당 Feed를 **"판정 수입" 상태로 표시**하고 재현 가능성 요건 미충족임을 화면에 명시합니다 ([12](12-standard-source-templates.md) 5.6).
+
+### 5.2 매칭 키 입도가 먼저다
 
 불일치 유형을 정의하기 전에 **무엇을 기준으로 매칭하는가**를 확정해야 합니다. 이것이 결정되지 않으면 불일치 판정 자체가 틀립니다.
 
@@ -331,7 +346,7 @@ Issue(unresolvable = true)  →  Item.stage_status = WAIVED
 
 매칭 키의 입도가 소스보다 거칠면 앱은 **경고를 표시하고 해당 Feed의 reconciliation을 신뢰도 낮음으로 표시**합니다. 조용히 틀린 답을 내는 것보다 낫습니다.
 
-### 5.2 샘플 불일치 유형 (재정의)
+### 5.3 샘플 불일치 유형 (재정의)
 
 | 유형 | 정의 |
 |---|---|
@@ -344,7 +359,7 @@ Issue(unresolvable = true)  →  Item.stage_status = WAIVED
 
 각 유형은 **어느 랩 구간에서 발생했는지**(central / bioanalytics)를 함께 기록하여, 어느 물류 구간이 문제인지 드러나게 합니다.
 
-### 5.3 EDC·Image 불일치 유형
+### 5.4 EDC·Image 불일치 유형
 
 같은 4유형 구조를 각 도메인의 용어로 적용합니다.
 
@@ -353,7 +368,7 @@ Issue(unresolvable = true)  →  Item.stage_status = WAIVED
 | Image | EDC에 영상 평가 기록 있으나 BICR에 영상 없음 | BICR에 영상 있으나 EDC에 해당 기록 없음 | 획득일·검사 방법 불일치 | 매칭 후보 다수 |
 | EDC ↔ RTSM | RTSM에 방문 있으나 EDC에 폼 없음 | EDC에 폼 있으나 RTSM에 방문 없음 | 방문일 불일치 | 방문 식별 모호 |
 
-### 5.4 Reconciliation 상태
+### 5.5 Reconciliation 상태
 
 ```
 reconciliation status = ALL_RECONCILED   if 미해결 불일치 = 0
@@ -460,6 +475,7 @@ flowchart LR
 | EDC 단계 | 7단계 선형 | **입력 후 5단계 병행 → lock** (3.1) |
 | backlog 공식 | `BLOCKED` 포함 | **`PENDING`+`OVERDUE`만** (3.6) |
 | Reconciliation | 일반 4유형 | **매칭 키 입도 선언 + 샘플 기준 재정의** (5장) |
+| 입력 경계 | vendor 원본 파일 | **vendor data로 만든 사내 표준 파일** (2.2, 5.1) |
 
 ## 10. 검토 포인트 (Decision Points)
 
@@ -469,5 +485,6 @@ flowchart LR
 | DP-03-8 | 3.5 sample `received(bioanalytics)`, `analyzed`의 기본 유예 기간 값 | 실무 확인 필요 |
 | DP-03-9 | 3.5 image `QC passed`, `read`의 기본 유예 기간 값 | 실무 확인 필요 |
 | DP-03-10 | 3.5 쿼리 소유자 구분(DM/CRA/MM/PV) 외에 추가할 소유자가 있는가 | 설정 목록으로 확장 |
-| DP-03-11 | 5.1의 매칭 키 입도가 불충분할 때 "신뢰도 낮음" 표시로 충분한가, 아니면 업로드를 거부할 것인가 | **경고 후 진행** 권고 |
+| DP-03-11 | 5.2의 매칭 키 입도가 불충분할 때 "신뢰도 낮음" 표시로 충분한가, 아니면 업로드를 거부할 것인가 | **경고 후 진행** 권고 |
+| DP-03-13 | 5.1의 "앱 자체 판정 우선" 원칙에 동의하는가 | **동의 권고** — 재현 가능성의 전제 |
 | DP-03-12 | investigator sign의 SAE 구분 기준을 무엇으로 판정하는가 (폼 종류 / 플래그 / AE 심각도) | 표준 template의 명시 필드로 |

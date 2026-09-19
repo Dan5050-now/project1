@@ -145,6 +145,8 @@ User ──┬── UserRole(role=CDM Lead, scope=Trial ABC-301)
 | **지표 정의** | 개정 (revision) | `지표정의: v1` — 계산식 ([15](15-metric-specification.md)) |
 | **Template / Mapping** | 개정 (revision) | Data Drop마다 기록 ([12](12-standard-source-templates.md) 6장) |
 
+여기에 더해 각 Data Drop은 **출처(어느 vendor 데이터를 언제 추출해 누가 만든 파일인지)** 를 보유합니다. 표준화가 앱 밖에서 일어나므로 이 기록이 없으면 추적성이 끊깁니다.
+
 검토 반영으로 **시험 설정과 지표 정의가 독립 버전으로 추가**되었습니다. 유예 기간 하나만 바뀌어도 모든 사이트의 overdue 건수가 바뀌므로, 설정은 지표 계산 좌표의 일부여야 합니다.
 
 ### 4.1 스냅샷
@@ -193,8 +195,8 @@ User ──┬── UserRole(role=CDM Lead, scope=Trial ABC-301)
 
 | 단계 | 개념 |
 |---|---|
-| ① 템플릿 | **표준 source dataset template** 제공 ([12](12-standard-source-templates.md)). 컬럼 설명, 자료형, 허용값, 예시 포함 |
-| ② 업로드 | Data Drop 생성. 파일 해시 저장으로 중복 감지 |
+| ① 템플릿 | **표준 source dataset template** 제공 ([12](12-standard-source-templates.md)). 사내 표준 파일(external data reconciliation file 등)의 실제 구조에 맞춰 설계 |
+| ② 업로드 | Data Drop 생성. 파일 해시로 중복 감지. **출처 메타데이터 필수** ([12](12-standard-source-templates.md) 2.2) |
 | ③ 형식 검증 | 구조·완결성·무결성·일관성 4단계 점검 ([12](12-standard-source-templates.md) 5장) |
 | ④ 미리보기 | 몇 건이 신규·변경·거부인지, 어떤 행이 왜 거부되는지 표시 |
 | ⑤ 검증 결과 | 오류 리포트 다운로드 (원본 행 번호 포함) |
@@ -215,9 +217,11 @@ MappingProfile:
 
 매핑 프로파일도 버전 관리하며, 각 Data Drop이 어느 프로파일로 처리되었는지 기록합니다. vendor가 리포트 형식을 바꾸면 새 버전을 만들고, 과거 Drop은 과거 프로파일을 유지합니다.
 
-**이 장치가 표준 template의 부담을 실질적으로 없앱니다.** 매핑이 한 번 설정되면 사용자는 vendor 원본 리포트를 그대로 올릴 수 있고, 앱이 표준 형식으로 변환합니다. 표준 template은 목표 형식이지 업로드 필수 형식이 아닙니다.
+**이 장치가 표준 template의 부담을 실질적으로 없앱니다.** 매핑이 한 번 설정되면 사용자는 사내 표준 파일을 그대로 올릴 수 있고, 앱이 표준 형식으로 변환합니다. 표준 template은 목표 형식이지 업로드 필수 형식이 아닙니다.
 
-향후 이 매핑 제안을 AI가 보조할 수 있도록 설계에 자리를 둡니다 ([14](14-ai-extensibility.md) 3.1).
+앱의 입력 경계가 vendor 원본이 아니라 사내 표준 파일이므로(DP-12-6), 매핑이 흡수해야 할 차이는 그만큼 작아집니다. vendor 형식 변동은 표준화 단계에서 이미 흡수되기 때문입니다.
+
+이 매핑 제안은 내부 LLM이 보조할 수 있습니다 ([14](14-ai-extensibility.md) 3.1).
 
 ### 5.3 재업로드와 멱등성
 

@@ -10,7 +10,7 @@
 
 | # | 고정 대상 | 어디서 보장하는가 |
 |---|---|---|
-| 1 | 입력 데이터 | Data Drop 불변 보존 + Snapshot ([08](08-platform-services.md) 4.1) |
+| 1 | 입력 데이터 | Data Drop 불변 보존 + Snapshot + **출처 메타데이터** ([12](12-standard-source-templates.md) 2.2) |
 | 2 | 기대 항목 생성 규칙 | Assumption Set 버전 ([13](13-trial-configuration.md)) |
 | 3 | 처리 설정 (유예 기간, on/off, 범위) | Trial Config 버전 ([13](13-trial-configuration.md)) |
 | 4 | **계산식** | **이 문서** |
@@ -30,6 +30,14 @@ metric_value = f(metric_code,
 ```
 
 **이 좌표 전체가 모든 계산 결과에 함께 저장되고, 화면과 export에 표시됩니다.**
+
+### 1.1 외부에서 만들어진 판정은 재현 대상이 아니다
+
+사내 표준 파일(external data reconciliation file)이 담고 있는 대조 결과는 **이 명세의 바깥에서 만들어진 값**입니다. 앱이 그 값을 그대로 지표로 쓰면 재현 조건 4(계산식)가 성립하지 않습니다.
+
+따라서 reconciliation 지표는 **항상 앱이 파일의 양측 원시값으로 자체 계산**합니다 ([03](03-core-concept-model.md) 5.1). 파일의 판정은 `source_verdict`로 보관되어 비교 대상이 될 뿐 지표의 입력이 아닙니다.
+
+양측 원시값이 없어 자체 계산이 불가능한 Feed는 **"판정 수입" 상태로 표시되고, 그 Feed의 reconciliation 지표는 재현 가능성 요건 미충족임이 화면에 명시**됩니다 ([12](12-standard-source-templates.md) 5.6). 조용히 숫자만 내보내지 않습니다.
 
 ## 2. 지표 정의 레코드
 
@@ -247,6 +255,7 @@ aging_p90(stage)     = 90th percentile of the same set
 | `sample.recon.discrepant` | 불일치 유형 3 건수 |
 | `sample.recon.ambiguous` | 불일치 유형 4 건수 |
 | `sample.recon.status` | `ALL_RECONCILED` / `PENDING_ISSUE` |
+| `sample.recon.verdict_mismatch` | **앱 판정과 표준 파일 판정의 불일치 건수** (1.1) |
 | `sample.issue.open` | 미해결 샘플 이슈 수 |
 | `sample.waived.count` | 예외 건수 (분실·용혈 등) |
 
@@ -296,6 +305,8 @@ aging_p90(stage)     = 90th percentile of the same set
 | `quality.unmatched.count` | 매칭 실패 건수 |
 | `quality.due_undeterminable` | 기한 산정 불가 건수 (3.3) |
 | `quality.regression.count` | 이전 Drop 대비 역행 건수 ([12](12-standard-source-templates.md) 5.4 X4) |
+| `quality.feed.trust_level` | Feed별 신뢰도 (`NORMAL` / `CAUTION` / `IMPORTED_VERDICT`) |
+| `quality.src_extract_lag` | 원본 추출일과 조회 시점의 간격 — 데이터 최신성 |
 
 이 지표들은 **앱 자신의 데이터 품질을 보여줍니다.** 사용자가 지표를 얼마나 신뢰해도 되는지 판단하는 근거입니다.
 
@@ -330,6 +341,8 @@ aging_p90(stage)     = 90th percentile of the same set
 | E10 | 반복 폼 | entry 분모 제외, 이후 단계는 추적 |
 | E11 | investigator sign | `rate` 없음, 건수만 |
 | E12 | kit 유형 미구분 소스 | 경고 + reconciliation 신뢰도 낮음 표시 |
+| E13 | 결합형 파일에 한쪽 원시값만 존재 | 자체 판정 불가 → "판정 수입" 표시 |
+| E14 | 앱 판정과 파일 판정 불일치 | 앱 판정 채택 + 불일치 목록 보고 |
 
 ### 7.3 명세 변경 절차
 
@@ -361,3 +374,4 @@ aging_p90(stage)     = 90th percentile of the same set
 | DP-15-4 | 7.2의 경계 조건 12개 외에 추가할 것이 있는가 | 개발 중 추가 |
 | DP-15-5 | 지표 소유자(정의 변경 승인자)를 누구로 할 것인가 | 기능별 리드 |
 | DP-15-6 | 3.4 R-N2 반올림 자리수 | 소수점 첫째 자리 |
+| DP-15-7 | 1.1의 "외부 판정은 지표 입력이 아니다" 원칙에 동의하는가 | **동의 권고** |

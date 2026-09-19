@@ -346,6 +346,8 @@ expected → collected → received(central lab) → received(bioanalytics lab) 
 
 ### 4.4 Reconciliation 유형 (검토 반영)
 
+입력은 사내 표준 파일(`DS05R`, external data reconciliation file 대응)이며, 앱은 그 파일의 EDC측·lab측 원시값으로 **자체 판정**합니다 ([03](03-core-concept-model.md) 5.1).
+
 | 유형 | 정의 | 후속 조치 |
 |---|---|---|
 | **`EDC_Y_NOT_RECEIVED`** | EDC에서 collection = Y 이나 central lab 또는 bioanalytics lab에 없음 | 검체 추적 — 배송 중 분실 여부 확인 |
@@ -356,6 +358,8 @@ expected → collected → received(central lab) → received(bioanalytics lab) 
 앞의 두 유형은 방향이 반대인 동일한 대조이지만 **후속 조치가 완전히 다르므로** 합치지 않고 분리합니다.
 
 각 건은 **어느 랩 구간에서 발생했는지**(central / bioanalytics)를 함께 기록하여 물류 구간별 문제를 드러냅니다.
+
+표준 파일이 자체 대조 결과(`RECON_STATUS`)를 담고 있으면 앱의 판정과 비교하고, **불일치 건은 별도 목록으로 보고**합니다. 초기에는 불일치가 다수 나올 것으로 예상되며, 그 목록을 보며 양쪽 판정 기준을 맞춰가는 것이 Phase 1의 실질적 작업이 됩니다.
 
 ### 4.5 샘플 이슈의 업무 연결 (요구사항 D4-f)
 
@@ -440,6 +444,8 @@ QC 실패 건은 별도 지표로 관리합니다. QC 실패율은 사이트의 
 | 검사 방법(CT/MRI) 불일치 | `MATCHED_DISCREPANT` |
 
 매칭 키는 `subject_id + visit + modality`를 권고합니다. modality가 빠지면 샘플의 kit 유형과 같은 문제가 발생합니다.
+
+입력은 결합형 표준 파일 `DS08R`이 기본이며, EDC측(`EDC_*`)과 BICR측(`BICR_*`) 값이 한 행에 들어옵니다 ([12](12-standard-source-templates.md) 4.9).
 
 ### 5.6 검토 포인트
 
