@@ -6,9 +6,15 @@
 
 ## 현재 상태
 
-**개념 설계 단계.** 구현 코드는 아직 없습니다.
+**상세 사양 단계.** 구현 코드는 아직 없습니다.
 
-개념 문서는 [`docs/concept/`](docs/concept/README.md)에 있습니다. 검토와 수정을 거쳐 상세 사양으로 발전시킬 예정입니다.
+| 단계 | 산출물 | 상태 |
+|---|---|---|
+| 개념 설계 | [`docs/concept/`](docs/concept/README.md) | 완료 (구조 결정 확정) |
+| 상세 사양 | [`docs/spec/`](docs/spec/README.md) | **Phase 0 + Phase 1 범위 작성 완료** |
+| 구현 | — | 미착수 |
+
+사양은 Phase 0(기반)과 Phase 1(엔진 검증)만 다룹니다. Phase 2 이후는 엔진이 실제 시험 데이터로 검증된 뒤에 작성합니다.
 
 ## 다루는 범위
 
@@ -24,6 +30,8 @@
 ## 문서
 
 시작점은 [`docs/concept/README.md`](docs/concept/README.md)입니다.
+
+구현 사양은 [`docs/spec/README.md`](docs/spec/README.md)에서 시작하며, [golden dataset](docs/spec/golden/)이 사양의 검증 기준입니다.
 
 핵심 설계를 빠르게 파악하려면 [`03-core-concept-model.md`](docs/concept/03-core-concept-model.md)를 먼저 보시면 됩니다. 여섯 도메인을 네 개의 아키타입으로 정리한 문서이며, 나머지 문서는 모두 그 개념의 적용입니다.
 

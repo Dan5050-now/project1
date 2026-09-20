@@ -1,0 +1,32 @@
+﻿METRIC_CODE,LEVEL,SITEID,BASIS,STAGE_CODE,GROUP_KEY,DUE_COUNT,COMPLETED_COUNT,BACKLOG_COUNT,OVERDUE_COUNT,WAIVED_COUNT,RATE,NOTE
+edc.entry.rate,TRIAL,,DUE,entered,,9,7,2,1,0,0.7778,
+edc.entry.rate,SITE,S01,DUE,entered,,5,4,1,1,0,0.8000,
+edc.entry.rate,SITE,S02,DUE,entered,,4,3,1,0,0,0.7500,
+edc.sdv.rate,TRIAL,,DUE,sdv,,4,0,4,3,0,0.0000,
+edc.sdv.rate,SITE,S01,DUE,sdv,,2,0,2,1,0,0.0000,
+edc.sdv.rate,SITE,S02,DUE,sdv,,2,0,2,2,0,0.0000,
+edc.coding.rate,TRIAL,,DUE,coding,,1,0,1,1,1,0.0000,
+edc.coding.rate,SITE,S01,DUE,coding,,1,0,1,1,1,0.0000,
+edc.freeze.rate,TRIAL,,DUE,freeze,,3,0,3,0,1,0.0000,
+edc.freeze.rate,SITE,S01,DUE,freeze,,0,0,0,0,1,,
+edc.freeze.rate,SITE,S02,DUE,freeze,,3,0,3,0,0,0.0000,
+rtsm.visit.rate,TRIAL,,DUE,occurred,,13,9,4,3,0,0.6923,
+rtsm.visit.rate,SITE,S01,DUE,occurred,,8,5,3,3,0,0.6250,
+rtsm.visit.rate,SITE,S02,DUE,occurred,,5,4,1,0,0,0.8000,
+edc.lock.rate,TRIAL,,DUE,lock,,0,0,0,0,0,,E1 분모 0 → RATE 공란(N/A). 0%가 아님
+edc.sign.pending_all,TRIAL,,DUE,sign,,,,4,,1,,E11 rate·due 없음. 건수만
+edc.sign.pending_sae,TRIAL,,DUE,sign,SAE,,,1,,,,SAE 데이터 별도 집계
+edc.review.rate,—,,—,review,,,,,,,,E6 단계 비활성화 → metric_fact 행이 생성되지 않아야 함
+edc.waived.count,TRIAL,,DUE,,,,,,,1,,예외 항목 수(distinct item). 단계별 waived는 각 행 참조
+query.total,TRIAL,,DUE,,,,,6,,,,
+query.open,TRIAL,,DUE,,,,,4,,,,
+query.answered,TRIAL,,DUE,,,,,1,,,,
+query.closed,TRIAL,,DUE,,,,,1,,,,
+query.open.overdue,TRIAL,,DUE,,,,,3,,,,"Q-001(DM,due 09-15) Q-003(DM,due 08-15) Q-006(DEFAULT,due 09-24)"
+query.answered.overdue,TRIAL,,DUE,,,,,1,,,,"Q-004(PV, answered grace 7 → due 09-27)"
+rtsm.visit.deviation.over,TRIAL,,DUE,occurred,,,,1,,,,G-001 V3 윈도우 +4일
+rtsm.visit.deviation.under,TRIAL,,DUE,occurred,,,,0,,,,
+rtsm.visit.missed,TRIAL,,DUE,occurred,,,,3,,,,"G-002 V2·V3, G-006 V2"
+rtsm.visit.compliance_rate,TRIAL,,DUE,occurred,,9,8,1,,,0.8889,윈도우 내 방문 / 발생 방문
+quality.duplicate_key,TRIAL,,DUE,,,,,1,,,,E8 G-001 V1 DM 중복
+quality.missing_completion_date,TRIAL,,DUE,,,,,2,,,,"G-006 V1 DM, G-006 V1 AE"
