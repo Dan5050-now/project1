@@ -415,7 +415,7 @@ expected → taken → uploaded(BICR) → QC passed → assigned → read
 |---|---|---|
 | **taken** | 획득 예정일 (방문 발생일) | **+0 달력일** |
 | **uploaded (BICR)** | 획득일 | **+14 달력일** |
-| QC passed | 업로드일 (미제공 시 근사값, [15](15-metric-specification.md) 3.3b) | 설정값 (DP-03-9) |
+| QC passed | 업로드일 (미제공 시 기한 미계산, [15](15-metric-specification.md) 3.3b) | 설정값 (DP-03-9) |
 | assigned | QC 통과일 | 설정값 |
 | read | 배정일 | 설정값 (DP-03-9) |
 
