@@ -415,7 +415,7 @@ expected → taken → uploaded(BICR) → QC passed → assigned → read
 |---|---|---|
 | **taken** | 획득 예정일 (방문 발생일) | **+0 달력일** |
 | **uploaded (BICR)** | 획득일 | **+14 달력일** |
-| QC passed | 업로드일 | 설정값 (DP-03-9) |
+| QC passed | 업로드일 (미제공 시 근사값, [15](15-metric-specification.md) 3.3b) | 설정값 (DP-03-9) |
 | assigned | QC 통과일 | 설정값 |
 | read | 배정일 | 설정값 (DP-03-9) |
 
@@ -440,6 +440,14 @@ QC 실패 건은 별도 지표로 관리합니다. QC 실패율은 사이트의 
 | adjudication | 두 판독 불일치 시 제3 판독자 조정 |
 
 초기 범위에서는 **판독 완료 여부**만 추적하고, double read와 adjudication은 개념에 포함하되 구현은 후속 단계로 둡니다.
+
+vendor가 상세 판독 상태를 제공하지 않는 경우가 많다는 검토 의견을 반영해, 다음 순서로 판정합니다 ([16](16-external-data-format-draft.md) 2.3).
+
+```
+① BICR_READSTAT 제공  → 그대로 사용
+② 미제공, BICR_READDTC 제공 → 날짜 유무로 READ / NOT READ 판정
+③ 둘 다 미제공 → 판독 단계를 시험 설정에서 비활성화 (0%로 표시하지 않음)
+```
 
 ### 5.5 INV vs BICR 대조 (요구사항 D5-d)
 

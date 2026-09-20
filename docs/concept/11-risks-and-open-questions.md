@@ -171,6 +171,8 @@ DP-12-6 확정으로 **데이터 준비 부담은 크게 줄었습니다.** 앱�
 | **DP-16-1** | **매칭 키에 nominal timepoint(`TPTNUM`) 포함** | [16](16-external-data-format-draft.md) 1.2 |
 | **DP-16-2** | **누적 전송** — 현재 관행과 일치 | [16](16-external-data-format-draft.md) 4.4 |
 | **Q2 확정** | **사내 표준 DTS 없음. 앱 template이 vendor DTS 협의의 sponsor 측 기준안이 됨** | [16](16-external-data-format-draft.md) 2.2 |
+| **DP-16-6** | **우선순위 검토 완료** — 19건 반영, 조건부 우선순위 도입 | [16](16-external-data-format-draft.md) 2.2 |
+| **DP-16-8** | **MUST 미확보 시 대안 정의** — 계산 불가 지표는 화면에서 제외 | [16](16-external-data-format-draft.md) 2.3 |
 
 ## 4. 결정 대기 목록
 
@@ -212,9 +214,9 @@ DP-12-6 확정으로 **데이터 준비 부담은 크게 줄었습니다.** 앱�
 
 | # | 사항 | 문서 |
 |---|---|---|
-| **DP-16-6** | **MUST / SHOULD / NICE 구분의 타당성** — vendor 협의의 기준이 됨 | [16](16-external-data-format-draft.md) 2.2 |
 | **DP-16-7** | **DTS 협의 worksheet를 표준 절차에 넣을 것인가** | [16](16-external-data-format-draft.md) 2.2 |
-| DP-16-8 | vendor가 MUST 항목을 제공하지 못할 때의 대안 절차 | [16](16-external-data-format-draft.md) 11장 |
+| DP-16-9 | 스냅샷 기반 근사 완료일 사용 여부 | [16](16-external-data-format-draft.md) 2.4, [15](15-metric-specification.md) 3.3b |
+| DP-16-10 | `SRC_EXTRACT_DTC` 확보 수준 — 근사 산출의 전제 | [16](16-external-data-format-draft.md) 2.4 |
 | DP-16-3 | 샘플 추적 단위 (kit vs aliquot) | [16](16-external-data-format-draft.md) 11장 |
 | DP-16-4 | controlled terminology 기본값 | [16](16-external-data-format-draft.md) 7장 |
 | DP-12-9 | 사내 실제 운영 형태가 결합형인가 분리형인가 | [12](12-standard-source-templates.md) 7장 |
@@ -238,7 +240,7 @@ DP-12-6 확정으로 **데이터 준비 부담은 크게 줄었습니다.** 앱�
 
 **2단계.** [16](16-external-data-format-draft.md)의 남은 검토 항목(Q4~Q12)을 확인합니다. 실물 template과 DTS 협의 worksheet는 [`templates/`](templates/)에서 Excel로 바로 여실 수 있습니다.
 
-사내 표준 DTS가 없고 시험마다 vendor와 셋업한다는 점이 확인되어, **이 형식은 DTS 협의에 들고 들어가는 sponsor 측 기준안**이 되었습니다. 따라서 남은 항목 중 **DP-16-6(MUST/SHOULD/NICE 구분)** 이 가장 실질적입니다. 이 구분이 곧 vendor 협의에서 어디까지 양보할 수 있는지를 정하기 때문입니다.
+우선순위 검토가 완료되어 worksheet는 v0.2로 확정 수준에 가까워졌습니다. 남은 항목 중 **DP-16-9(스냅샷 기반 근사 완료일)** 가 판단이 필요한 건입니다. vendor가 완료일을 주지 않을 때 앱이 스냅샷 전환 시점으로 근사할 것인지, 아니면 해당 지표를 포기할 것인지의 선택입니다.
 
 **3단계.** 4.2의 업무 정의를 실무 담당자와 확정합니다. 이것이 [15](15-metric-specification.md)의 지표 정의 등록부와 [13](13-trial-configuration.md)의 설정 기본값이 됩니다.
 

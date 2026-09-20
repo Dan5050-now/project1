@@ -96,12 +96,23 @@ metric_value = f(metric_code,
 |---|---|
 | 트리거 날짜 결측 | `due_date` 계산 불가 → 상태 `NOT_DUE`, **분모 제외**, 별도 "기한 산정 불가" 건수로 집계 |
 | 완료 플래그 결측 | `N`으로 간주 |
-| 완료 플래그 `Y`인데 완료일 결측 | **완료로 인정**. 단 일관성 경고 ([12](12-standard-source-templates.md) 5.4 X1) |
+| 완료 플래그 `Y`인데 완료일 결측 | **완료로 인정**. 단 일관성 경고 ([12](12-standard-source-templates.md) 5.4 X1). 후속 단계의 기한 기준일이 필요하면 R-A1의 근사를 적용 |
 | 매칭 키 결측 | 항목 제외 + 검증 거부 |
 
 "기한 산정 불가" 건수를 별도로 집계하는 것이 중요합니다. 조용히 분모에서 빠지면 지표가 이유 없이 좋아 보입니다.
 
-### 3.4 나눗셈과 반올림
+### 3.3b 완료일이 제공되지 않을 때의 근사 (R-A1)
+
+vendor가 완료 플래그만 주고 완료일을 주지 않는 경우가 있습니다(예: `BICR_UPLDDTC`, `BA_ANALDTC` 미제공 — [16](16-external-data-format-draft.md) 2.4). 이때 후속 단계의 기한 기준일이 사라지므로 다음 근사를 적용합니다.
+
+| 규칙 | 내용 |
+|---|---|
+| R-A1 | 플래그가 직전 스냅샷의 `N`에서 현 스냅샷의 `Y`로 바뀐 경우, **현 스냅샷의 `SRC_EXTRACT_DTC`를 근사 완료일**로 사용한다 |
+| R-A2 | 근사값에는 `is_approximate = true`를 표시하고, **오차 범위 = 직전 스냅샷과의 추출일 간격**을 함께 기록한다 |
+| R-A3 | 근사 완료일은 **후속 단계의 기한 계산에는 사용하되, 소요일수(cycle time) 지표에서는 근사 표시와 함께 별도 집계**한다 |
+| R-A4 | `SRC_EXTRACT_DTC`가 없으면 근사도 불가능하다. 이 경우 해당 단계는 `NOT_DUE`(기한 산정 불가)로 두고 건수만 집계한다 |
+
+R-A2가 중요합니다. **근사값을 실측값과 섞어 평균을 내면 지표가 조용히 왜곡됩니다.** 화면과 export 모두에서 구분이 유지되어야 합니다.
 
 | 규칙 | 내용 |
 |---|---|
@@ -308,6 +319,7 @@ aging_p90(stage)     = 90th percentile of the same set
 | `quality.feed.trust_level` | Feed별 신뢰도 (`NORMAL` / `CAUTION` / `IMPORTED_VERDICT`) |
 | `quality.src_extract_lag` | 원본 추출일과 조회 시점의 간격 — 데이터 최신성 |
 | `quality.row_count_mismatch` | Transfer Header `ROW_COUNT`와 실제 행 수의 차이 |
+| `quality.approximated_dates` | R-A1 근사가 적용된 항목 수 |
 
 이 지표들은 **앱 자신의 데이터 품질을 보여줍니다.** 사용자가 지표를 얼마나 신뢰해도 되는지 판단하는 근거입니다.
 
@@ -345,6 +357,8 @@ aging_p90(stage)     = 90th percentile of the same set
 | E13 | 결합형 파일에 한쪽 원시값만 존재 | 자체 판정 불가 → "판정 수입" 표시 |
 | E15 | 같은 방문·같은 kit 유형의 다중 timepoint | `TPTNUM`으로 구분. 누락 시 `AMBIGUOUS_MATCH` |
 | E16 | 증분 전송의 기간 밖 항목 | "미수령"이 아니라 **"알 수 없음"** ([16](16-external-data-format-draft.md) 4.4) |
+| E17 | 완료 플래그만 있고 완료일 없음 | R-A1 근사 적용, `is_approximate` 표시 |
+| E18 | 근사 완료일이 포함된 소요일수 집계 | 실측값과 분리 집계 (R-A3) |
 | E14 | 앱 판정과 파일 판정 불일치 | 앱 판정 채택 + 불일치 목록 보고 |
 
 ### 7.3 명세 변경 절차

@@ -2,6 +2,7 @@
 
 *DP-12-7에 따른 초안. 벤치마킹 결과를 반영해 작성했으며, 검토 의견을 받아 확정합니다.*
 *v0.2: Q1~Q3 검토 반영 — `TPTNUM` 매칭 키 확정, 사내 DTS 부재에 따른 위치 변경, 누적 전송 확정*
+*v0.3: worksheet 검토 의견 19건 반영 — 우선순위 재조정, 조건부 우선순위 도입, MUST 미확보 시의 대안 정의 (2.3)*
 
 > **이 문서의 위치.** [12](12-standard-source-templates.md)가 앱이 받는 표준 dataset 전반을 다룬다면, 이 문서는 그중 **external data reconciliation file**의 형식을 실제 사용 가능한 수준으로 구체화한 초안입니다. 실물 template 파일은 [`templates/`](templates/)에 있습니다.
 
@@ -128,27 +129,74 @@ DTS 협의에서 vendor가 제공할 수 없는 항목이 반드시 나옵니다
 
 | 우선순위 | 의미 | 협의에서의 태도 |
 |---|---|---|
-| **MUST** | 없으면 앱의 해당 도메인이 동작하지 않음 | 반드시 확보. 안 되면 대안 협의 |
+| **MUST** | 없으면 앱의 해당 도메인이 동작하지 않음 | 반드시 확보. 안 되면 2.3의 대안 적용 |
 | **SHOULD** | 특정 지표나 분석이 불가능해짐 | 요청하되 대안 수용 가능 |
 | **NICE** | 있으면 유용 | 부담되면 생략 |
 
-| Dataset | MUST | SHOULD | NICE |
-|---|---|---|---|
-| Sample Reconciliation | 11 | 14 | 18 |
-| Image Reconciliation | 10 | 11 | 13 |
-| *(Transfer Header)* | *8* | *5* | *1* |
+**조건부 우선순위 (검토 반영).** 시험 설계에 따라 우선순위가 달라지는 항목이 있다는 지적을 반영해 `PRIORITY_CONDITION` 열을 추가했습니다.
 
-MUST 항목만 보면 요구가 크지 않습니다. **샘플 11개, 영상 10개**이며 대부분 vendor가 이미 관리하는 값입니다. Transfer Header는 대부분 표준 파일 작성자가 채우는 항목이라 vendor 부담이 아닙니다.
+| 컬럼 | 기본 | 조건 |
+|---|---|---|
+| `EDC_TPTNAME` | SHOULD | 한 방문에서 복수 sub-sampling timepoint를 정의하는 시험이면 **MUST** |
+| `CL_LABID` | SHOULD | 복수 central lab을 분리 운영하면 **MUST** |
+| `BA_LABID` | SHOULD | 복수 분석랩을 분리 운영하면 **MUST** |
+| `PERIOD_FROM` / `PERIOD_TO` | SHOULD | 증분 전송이면 **MUST** |
+
+조건부로 둔 이유는 협의의 설득력 때문입니다. 단일 lab 시험에서 `CL_LABID`를 MUST로 요구하면 근거 없는 요구로 보이고, 그런 요구가 몇 개 섞이면 MUST 목록 전체의 신뢰가 떨어집니다.
+
+**검토 후 우선순위 분포**
+
+| Dataset | MUST | SHOULD | NICE | 조건부 |
+|---|---|---|---|---|
+| Sample Reconciliation | **13** | 13 | 17 | 3 |
+| Image Reconciliation | **10** | 11 | 13 | — |
+| *(Transfer Header)* | *5* | *4* | *5* | *2* |
+
+MUST 항목만 보면 요구가 크지 않습니다. **샘플 13개, 영상 10개**이며 대부분 vendor가 이미 관리하는 값입니다. Transfer Header는 표준 파일 작성자가 채우는 항목이라 vendor 부담이 아닙니다.
+
+### 2.3 MUST가 확보되지 않을 때 (DP-16-8)
+
+협의에서 vendor가 MUST 항목을 제공하지 못할 수 있습니다. 그때 **무엇이 불가능해지는지와 무엇으로 대신할 수 있는지**를 미리 정해 둡니다. 협의 자리에서 즉석 판단하면 나중에 설명할 수 없는 지표가 생깁니다.
+
+| 미확보 항목 | 잃는 것 | 대안 |
+|---|---|---|
+| `EDC_COLLDTC` / `EDC_IMGDTC` | 도착·업로드 **기한 계산 자체** | 대안 없음. 해당 단계를 시험 설정에서 **비활성화**하고 건수만 추적 |
+| `CL_RECVDTC` | 도착 단계 **완료 시점**. 진척률은 `CL_RECVFL`로 가능 | 상태 플래그로 완료 판정, 소요일수 지표 제외 |
+| `CL_COLLDTC` | EDC와 lab 간 **채취일 대조** | 대조 유형 4종 중 `MATCHED_DISCREPANT` 탐지 범위 축소 |
+| `BA_RECVDTC` | 분석 단계 **기한 계산** | 분석 단계 비활성화 또는 `CL_SHIPBADTC` 기준으로 대체 |
+| `KITTYPE` / `TPTNUM` / `MODALITY` | **매칭 키 입도.** 오판정 위험 | 대안 없음. Feed 신뢰도를 "주의"로 표시하고 reconciliation 결과에 경고 병기 |
+
+원칙은 하나입니다. **계산할 수 없게 된 지표는 0%나 N/A로 표시하지 않고 화면에서 제외**하며, 그 사유를 설정 화면에 남깁니다 ([04](04-domain-concepts.md) 1.4와 같은 방식). 근거 없는 숫자를 보여주는 것보다 없다고 말하는 편이 낫습니다.
 
 > **초안 v0.1에서 바로잡은 것.** v0.1에서 필수(●)로 표시한 컬럼이 실제보다 적었습니다. `EDC_COLLDTC`와 `CL_RECVDTC`가 빠져 있었는데, 이 둘이 없으면 **중앙랩 도착 기한을 계산할 수 없어** 해당 항목이 통째로 "기한 산정 불가"로 빠집니다. 영상도 `EDC_IMGDTC`와 `BICR_UPLDDTC`가 같은 이유로 필수입니다. v0.2에서 MUST로 올렸습니다.
+
+### 2.4 날짜 없이 플래그만 오는 경우
+
+검토에서 `BICR_UPLDDTC`를 "`BICR_IMGFL`로 확인 가능"하다는 이유로 낮추자는 의견이 있었습니다. **도착 여부 판정에는 맞는 말이지만 날짜가 사라지면 두 가지가 함께 사라집니다.**
+
+| 잃는 것 | 영향 |
+|---|---|
+| 업로드 소요일수 | 촬영에서 업로드까지 며칠 걸리는지 알 수 없음 → 사이트별 지연 분석 불가 |
+| 다음 단계의 기한 기준일 | QC 기한이 업로드일 기준이므로 QC 단계가 "기한 산정 불가"가 됨 |
+
+다만 이 앱에는 **쓸 수 있는 대안이 있습니다.** 모든 Data Drop이 불변으로 보존되므로([12](12-standard-source-templates.md) 1.2), 플래그가 `N`에서 `Y`로 바뀐 **첫 스냅샷의 추출 기준일을 근사 도착일로 사용**할 수 있습니다.
+
+```
+Drop A (추출 2026-09-04)  BICR_IMGFL = N
+Drop B (추출 2026-09-11)  BICR_IMGFL = Y   →  근사 업로드일 = 2026-09-11
+```
+
+근사값이므로 전송 주기만큼의 오차가 있습니다. 따라서 이렇게 산출된 날짜는 **화면에 근사값임을 표시**하고, 소요일수 지표에는 "최대 N일 오차" 안내를 붙입니다. 같은 방식을 `BA_ANALDTC`(분석 완료일) 미제공 시에도 적용합니다.
+
+이 대안이 성립하려면 `SRC_EXTRACT_DTC`가 필요합니다. 검토에서 SHOULD로 낮춘 항목인데, **없으면 근사도 불가능해지므로** 협의에서 가능한 한 확보를 권고합니다.
 
 #### DTS 협의용 worksheet
 
 vendor에게 바로 건넬 수 있는 양식을 만들었습니다.
 
-**[`templates/DTS_VARIABLE_REQUEST_v0.1.csv`](templates/DTS_VARIABLE_REQUEST_v0.1.csv)**
+**[`templates/DTS_VARIABLE_REQUEST_v0.2.csv`](templates/DTS_VARIABLE_REQUEST_v0.2.csv)**
 
-앱이 요구하는 전 컬럼이 우선순위와 설명과 함께 들어 있고, vendor가 채울 칸이 오른쪽에 있습니다.
+앱이 요구하는 전 컬럼이 우선순위·조건·설명과 함께 들어 있고, vendor가 채울 칸이 오른쪽에 있습니다. `REVIEW_NOTE` 열에는 v0.1에서 무엇이 어떻게 바뀌었는지가 기록되어 있습니다.
 
 | vendor 기입 칸 | 내용 |
 |---|---|
@@ -250,9 +298,9 @@ Transfer Header의 `ROW_COUNT`와 실제 행 수를 대조합니다. 불일치�
 |---|---|---|---|
 | `CL_LABID` | | text | 복수 central lab 구분 |
 | `CL_RECVFL` | ● | Y/N | **수령 여부.** 대조 유형 판정의 다른 한 축 |
-| `CL_COLLDTC` | | date | **lab이 기록한 채취일.** `EDC_COLLDTC`와 대조 |
+| `CL_COLLDTC` | ● | date | **lab이 기록한 채취일.** `EDC_COLLDTC`와 대조. 불일치 탐지의 핵심 비교정보 |
 | `CL_COLLTM` | | time | lab이 기록한 채취시각 |
-| `CL_SHIPDTC` | | date | 사이트 출고일. **기록만 하고 기한 계산에는 미사용** |
+| `CL_SHIPDTC` | | date | 사이트 출고일. 알 수 없는 경우가 많으며 기한 계산에 미사용 |
 | `CL_RECVDTC` | ● | date | central lab 도착일 |
 | `CL_SAMPSTAT` | ● | code | `RECEIVED`/`IN_TRANSIT`/`LOST`/`REJECTED`/`NOT_SHIPPED` |
 | `CL_CONDITION` | | code | 수령 상태 `ACCEPTABLE`/`COMPROMISED` |
@@ -267,7 +315,7 @@ Transfer Header의 `ROW_COUNT`와 실제 행 수를 대조합니다. 불일치�
 |---|---|---|---|
 | `BA_LABID` | | text | 복수 lab 구분 |
 | `BA_RECVFL` | | Y/N | 수령 여부 |
-| `BA_RECVDTC` | | date | 도착일 |
+| `BA_RECVDTC` | ● | date | 도착일. 분석 단계 기한의 기준일 |
 | `BA_ASSAYCD` | | text | 분석법 코드 |
 | `BA_ANALSTAT` | | code | `NOT_ASSIGNED`/`ASSIGNED`/`ANALYZED`/`REJECTED` |
 | `BA_ANALDTC` | | date | 분석 완료일 |
@@ -319,15 +367,15 @@ Transfer Header의 `ROW_COUNT`와 실제 행 수를 대조합니다. 불일치�
 | 컬럼 | 필수 | 자료형 | 설명 |
 |---|---|---|---|
 | `BICR_IMGFL` | ● | Y/N | BICR 보유 여부 |
-| `BICR_IMGDTC` | | date | BICR 기록 획득일. `EDC_IMGDTC`와 대조 |
-| `BICR_MODALITY` | | code | BICR 기록 검사 방법 |
+| `BICR_IMGDTC` | ● | date | BICR 기록 획득일. `EDC_IMGDTC`와 대조 |
+| `BICR_MODALITY` | ● | code | BICR 기록 검사 방법. `EDC_MODALITY`와 대조 |
 | `BICR_ANATREG` | | code | BICR 기록 부위 |
-| `BICR_UPLDDTC` | ● | date | 업로드일 |
+| `BICR_UPLDDTC` | | date | 업로드일. 미제공 시 `BICR_IMGFL`로 도착 여부만 판정 (2.4) |
 | `BICR_QCSTAT` | | code | `PENDING`/`PASSED`/`FAILED` |
 | `BICR_QCDTC` | | date | QC 완료일 |
 | `BICR_QCFAILRS` | | code | QC 실패 사유 (7.4) |
 | `BICR_ASSIGNDTC` | | date | 판독자 배정일 |
-| `BICR_READSTAT` | ● | code | `NOT_ASSIGNED`/`ASSIGNED`/`READ` |
+| `BICR_READSTAT` | | code | `NOT_ASSIGNED`/`ASSIGNED`/`READ`. 미제공 시 `BICR_READDTC`로 대체 (2.4) |
 | `BICR_READDTC` | | date | 판독 완료일 |
 | `BICR_READN` | | number | 완료된 판독 수 (double read 대비) |
 | `BICR_ADJFL` | | Y/N | adjudication 필요 여부 |
@@ -422,8 +470,10 @@ bioanalytics 구간도 같은 논리를 `CL_SHIPBADTC`와 `BA_RECVFL`에 적용�
 | Q8 | 결과값(농도 등)을 제외하는 것에 동의하는가 (P7) | 제외 |
 | Q9 | 영상의 `ANATREG`를 매칭 키에 넣을 것인가 | 초안은 **제외**, 필요 시 추가 |
 | Q10 | 컬럼 수가 실무적으로 과한가 | **MUST는 샘플 11개·영상 10개** (2.2) |
-| **Q11** | **2.2의 MUST / SHOULD / NICE 구분이 타당한가** | worksheet 참조 |
-| **Q12** | **DTS 협의용 worksheet를 실제로 vendor에게 건넬 것인가** | 권고 |
+| ~~Q11~~ | ~~MUST / SHOULD / NICE 구분이 타당한가~~ | **검토 완료 — 19건 반영 (2.2)** |
+| Q12 | DTS 협의용 worksheet를 실제로 vendor에게 건넬 것인가 | 권고 |
+| **Q13** | **2.3의 MUST 미확보 시 대안이 타당한가** | 계산 불가 지표는 화면에서 제외 |
+| **Q14** | **2.4의 스냅샷 기반 근사 도착일을 쓸 것인가** | 사용하되 근사값 표시 |
 
 ## 11. 검토 포인트 (Decision Points)
 
@@ -433,7 +483,10 @@ bioanalytics 구간도 같은 논리를 `CL_SHIPBADTC`와 `BA_RECVFL`에 적용�
 | ~~DP-16-2~~ | ~~누적 전송 기본 방침~~ | **확정 — 누적** |
 | DP-16-6 | 2.2의 MUST/SHOULD/NICE 구분이 타당한가 | 실무 검토 필요 |
 | DP-16-7 | DTS 협의 worksheet를 표준 절차에 넣을 것인가 | **넣기 권고** — 협의 산출물이 Mapping Profile 입력이 됨 |
-| DP-16-8 | vendor가 MUST 항목을 제공하지 못할 때의 대안 절차 | 시험별 판단. 해당 도메인 추적 범위 축소를 명시 |
+| ~~DP-16-8~~ | ~~vendor가 MUST 항목을 제공하지 못할 때의 대안~~ | **정의 완료 (2.3)** |
+| ~~DP-16-6~~ | ~~MUST/SHOULD/NICE 구분의 타당성~~ | **검토 반영 완료 (2.2)** |
+| DP-16-9 | 2.4의 스냅샷 기반 근사 도착일 사용 여부 | **사용 권고**, 근사값 표시 필수 |
+| DP-16-10 | `SRC_EXTRACT_DTC` 확보 수준 — 근사 산출의 전제가 됨 | 협의에서 확보 권고 |
 | DP-16-3 | 샘플 추적 단위 (kit vs aliquot) — DP-04-10과 연결 | **kit 단위** |
 | DP-16-4 | 7장 CT 기본값의 적절성 | 실무 검토 필요 |
 | DP-16-5 | `RECON_STATUS` 값과 앱 판정 유형의 매핑 테이블 필요 여부 | 필요 |
