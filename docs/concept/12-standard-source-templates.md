@@ -54,7 +54,7 @@
 | 검증 리포트 | 업로드 즉시 원본 행 번호와 함께 오류 지점 표시 |
 | AI 보조 | 내부 LLM이 매핑과 점검을 보조 ([14](14-ai-extensibility.md)) |
 
-> **설계 원칙.** 앱 template을 사내 표준 파일에 맞추는 것이 먼저이고, 사내 표준 파일을 앱에 맞추게 하는 것은 나중입니다. **실제 external data reconciliation file 샘플을 확보해 4장의 컬럼 명세를 조정하는 작업이 Phase 0의 첫 과제**입니다.
+> **설계 원칙 (검토 반영).** 사내에 표준 DTS가 없고 시험마다 vendor와 새로 셋업하므로, 앱 template은 **따라가는 대상이 아니라 DTS 협의에 들고 들어가는 sponsor 측 기준안**입니다. 협의용 worksheet와 우선순위 구분은 [16](16-external-data-format-draft.md) 2.2에 있습니다.
 
 ## 2. 공통 규약
 

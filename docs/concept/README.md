@@ -31,7 +31,7 @@
 | 14 | [AI 활용 확장성](14-ai-extensibility.md) | AI 권한 모델, Tool API, 행위자 구분 감사 추적 |
 | 15 | [지표 계산 명세](15-metric-specification.md) | 처리 조건과 계산식, 재현 가능성 |
 | 16 | [External Data Source Format — Draft v0.1](16-external-data-format-draft.md) | 벤치마킹 기반 external data reconciliation file 형식 초안 |
-| — | [`templates/`](templates/) | 실물 template CSV (Excel로 열어 검토 가능) |
+| — | [`templates/`](templates/) | 실물 template CSV + **DTS 협의 worksheet** (Excel로 열어 검토 가능) |
 
 ## 확정된 전제
 
@@ -44,6 +44,7 @@
 | 예외 상태 | **`WAIVED` 단일 상태, 분모 제외** | 해결 불가와 의도적 면제 모두 예외 사항이며, 분모에 남기면 지표가 영구 왜곡 |
 | 시스템 호환성 | **표준 template + 시험별 설정** | 특정 EDC·시험 설계에 종속되지 않기 위함 |
 | 입력 경계 | **vendor 원본이 아니라 vendor data로 만든 사내 표준 파일** (external data reconciliation file 등) | 이미 만들고 있는 파일을 재사용하고, vendor 형식 변동을 표준화 단계에서 흡수 |
+| 표준 형식의 위치 | **vendor DTS 협의에 들고 들어가는 sponsor 측 기준안** | 사내 표준 DTS가 없고 시험마다 새로 셋업하므로, 기준안이 있어야 시험 간 변동이 줄어듦 |
 | 대조 판정 | **파일의 판정을 수입하지 않고 앱이 양측 원시값으로 자체 판정** | 외부 판정은 앱이 재현할 수 없어 계산식 명세 밖에 놓임 |
 | AI 연결 | **사내 내부 LLM** | 데이터가 조직 경계를 벗어나지 않음. 어댑터 계층은 교체·기록을 위해 유지 |
 | AI의 역할 | **보조 수단. 보고되는 숫자는 계산하지 않음** | 재현되지 않는 숫자는 GCP·CSV 관점에서 근거가 될 수 없음 |
@@ -56,3 +57,4 @@
 | v2 | 2026-09-18 | 1차 검토 반영 — 분모 기준 토글, 상태 통합, 유예 기간 재정의, EDC 병행 단계, Reconciliation 재정의, 표준 template·설정 template·AI 확장·지표 명세 추가 (문서 12~15 신규) |
 | v2.1 | 2026-09-19 | DP-12-6 확정 (입력 경계를 사내 표준 파일로 이동, 결합형 `DS05R`·`DS08R` 추가, 출처 메타데이터 필수화, 자체 판정 원칙), DP-14-3 확정 (사내 내부 LLM 연결) |
 | v2.2 | 2026-09-19 | DP-12-8 확정 (대조용 원시값 포함). 벤치마킹 기반 external data 형식 초안과 실물 template 추가 (문서 16, `templates/`). 매칭 키에 nominal timepoint 추가 제안 (DP-16-1) |
+| v2.3 | 2026-09-20 | Q1~Q3 확정 — `TPTNUM` 매칭 키 포함, 누적 전송 확정. **사내 표준 DTS 부재가 확인되어 앱 template이 vendor DTS 협의의 sponsor 측 기준안으로 위치 변경.** MUST/SHOULD/NICE 우선순위와 DTS 협의 worksheet 추가 |

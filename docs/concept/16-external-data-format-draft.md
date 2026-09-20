@@ -1,6 +1,7 @@
 # 16. External Data Source Format — Draft v0.1
 
 *DP-12-7에 따른 초안. 벤치마킹 결과를 반영해 작성했으며, 검토 의견을 받아 확정합니다.*
+*v0.2: Q1~Q3 검토 반영 — `TPTNUM` 매칭 키 확정, 사내 DTS 부재에 따른 위치 변경, 누적 전송 확정*
 
 > **이 문서의 위치.** [12](12-standard-source-templates.md)가 앱이 받는 표준 dataset 전반을 다룬다면, 이 문서는 그중 **external data reconciliation file**의 형식을 실제 사용 가능한 수준으로 구체화한 초안입니다. 실물 template 파일은 [`templates/`](templates/)에 있습니다.
 
@@ -75,7 +76,7 @@ DP-12-8로 확정된 사항이 업계 관행과 일치함을 확인했습니다.
 
 | # | 원칙 | 근거 |
 |---|---|---|
-| P1 | 사내 DTS가 있으면 그 구조를 따르고, 앱 전용 항목만 추가한다 | 1.1 |
+| P1 | **사내 표준 DTS가 없으므로, 이 형식이 vendor와 DTS를 셋업할 때의 기준안이 된다** | 2.2 |
 | P2 | 한 행이 **대조 단위 하나**다 (샘플 1건, 영상 검사 1건) | 대조 결과를 행 단위로 판정하기 위함 |
 | P3 | **양측 원시값을 모두 담는다.** 대조 결과만 담지 않는다 | DP-12-8, 1.4 |
 | P4 | 매칭 키는 **kit 유형·modality와 nominal timepoint를 포함**한다 | 1.2 |
@@ -84,6 +85,79 @@ DP-12-8로 확정된 사항이 업계 관행과 일치함을 확인했습니다.
 | P7 | 결과값(농도, 역가 등)은 담지 않는다 | 이 앱은 진척을 추적하지 결과를 다루지 않음 |
 
 P7을 명시하는 이유는 범위 관리 때문입니다. 분석 결과값까지 받기 시작하면 이 앱이 데이터 저장소가 되어 [00](00-overview.md) 2.2의 Non-goals를 넘게 됩니다.
+
+### 2.1 검토로 확정된 사항
+
+| # | 질문 | 답변 | 반영 |
+|---|---|---|---|
+| Q1 | 매칭 키에 `TPTNUM` 포함 | **포함 필요** | 확정. [03](03-core-concept-model.md) 5.2, [04](04-domain-concepts.md) 4.3에 반영 |
+| Q2 | 사내 DTS 존재 여부 | **없음. 매번 vendor와 DTS 셋업** | 이 형식의 위치가 바뀜 (2.2) |
+| Q3 | 누적 전송 가능 여부 | **일반적으로 누적 파일 수령** | 확정. 증분은 예외 처리로만 유지 (4.4) |
+
+### 2.2 이 형식의 위치가 바뀐다 (Q2 반영)
+
+초안은 "사내 DTS가 있으면 그것을 따른다"는 전제로 썼습니다. **사내 표준 DTS가 없고 시험마다 vendor와 새로 셋업한다면, 이 형식의 위치가 달라집니다.**
+
+```
+[초안의 전제]                          [실제]
+
+사내 DTS (기준)                        시험마다 vendor와 DTS 협의
+     │                                        │
+     ▼ 따른다                                 │ 이 형식을 들고 들어간다
+  앱 template                         ┌───────▼────────┐
+                                      │  앱 template   │  ← sponsor 측 기준안
+                                      └───────┬────────┘
+                                              ▼
+                                       vendor별 DTS 합의
+```
+
+즉 이 형식은 **앱이 수동적으로 맞추는 대상이 아니라, DTS 협의에 들고 들어가는 sponsor 측 요구사항**이 됩니다.
+
+#### 이것이 좋은 이유
+
+| 항목 | 효과 |
+|---|---|
+| 시험 간 변동 감소 | 매번 백지에서 협의하는 대신 같은 기준안에서 출발하므로, 시험마다 형식이 달라지는 폭이 줄어듭니다 |
+| 협의 시간 단축 | vendor가 채워 넣을 양식이 준비되어 있습니다 |
+| Mapping 작업 감소 | 협의 단계에서 이미 맞춰지므로 앱의 Mapping Profile이 흡수할 차이가 줄어듭니다 |
+| 누락 예방 | "그 항목은 빠졌네"를 DBL 직전이 아니라 셋업 시점에 발견합니다 |
+
+#### 다만 vendor가 전부 줄 수 있는 것은 아닙니다
+
+DTS 협의에서 vendor가 제공할 수 없는 항목이 반드시 나옵니다. 그래서 **모든 컬럼을 동등하게 요구하지 않고 우선순위를 나눕니다.**
+
+| 우선순위 | 의미 | 협의에서의 태도 |
+|---|---|---|
+| **MUST** | 없으면 앱의 해당 도메인이 동작하지 않음 | 반드시 확보. 안 되면 대안 협의 |
+| **SHOULD** | 특정 지표나 분석이 불가능해짐 | 요청하되 대안 수용 가능 |
+| **NICE** | 있으면 유용 | 부담되면 생략 |
+
+| Dataset | MUST | SHOULD | NICE |
+|---|---|---|---|
+| Sample Reconciliation | 11 | 14 | 18 |
+| Image Reconciliation | 10 | 11 | 13 |
+| *(Transfer Header)* | *8* | *5* | *1* |
+
+MUST 항목만 보면 요구가 크지 않습니다. **샘플 11개, 영상 10개**이며 대부분 vendor가 이미 관리하는 값입니다. Transfer Header는 대부분 표준 파일 작성자가 채우는 항목이라 vendor 부담이 아닙니다.
+
+> **초안 v0.1에서 바로잡은 것.** v0.1에서 필수(●)로 표시한 컬럼이 실제보다 적었습니다. `EDC_COLLDTC`와 `CL_RECVDTC`가 빠져 있었는데, 이 둘이 없으면 **중앙랩 도착 기한을 계산할 수 없어** 해당 항목이 통째로 "기한 산정 불가"로 빠집니다. 영상도 `EDC_IMGDTC`와 `BICR_UPLDDTC`가 같은 이유로 필수입니다. v0.2에서 MUST로 올렸습니다.
+
+#### DTS 협의용 worksheet
+
+vendor에게 바로 건넬 수 있는 양식을 만들었습니다.
+
+**[`templates/DTS_VARIABLE_REQUEST_v0.1.csv`](templates/DTS_VARIABLE_REQUEST_v0.1.csv)**
+
+앱이 요구하는 전 컬럼이 우선순위와 설명과 함께 들어 있고, vendor가 채울 칸이 오른쪽에 있습니다.
+
+| vendor 기입 칸 | 내용 |
+|---|---|
+| `VENDOR_CAN_PROVIDE` | `Y` / `N` / `PARTIAL` |
+| `VENDOR_COLUMN_NAME` | vendor 시스템에서의 컬럼명 |
+| `VENDOR_FORMAT` | 자료형·형식이 다를 경우 |
+| `VENDOR_NOTE` | 제약 사항, 제공 조건 |
+
+이 worksheet의 가치는 협의에서 끝나지 않습니다. **vendor가 기입한 `VENDOR_COLUMN_NAME`이 그대로 앱의 Mapping Profile 입력이 됩니다** ([08](08-platform-services.md) 5.2). 협의 산출물이 곧 시스템 설정이 되므로 옮겨 적는 작업이 사라집니다.
 
 ## 3. 파일 구성
 
@@ -116,13 +190,15 @@ CSV(UTF-8) 또는 Excel(.xlsx). 날짜는 ISO 8601 `YYYY-MM-DD`, 시각은 `hh:m
 
 시험별로 정합니다. 권고는 **주 1회**이며, DBL 전 구간에서는 주 2회 이상으로 조정합니다. 주기 자체는 앱 설정 항목이 아니지만, **직전 전송 이후 경과일이 예상 주기를 넘으면 화면에 데이터 최신성 경고**가 표시됩니다 ([15](15-metric-specification.md) 6.8 `quality.src_extract_lag`).
 
-### 4.4 누적 전송을 기본으로 한다
+### 4.4 누적 전송 (Q3 확정)
 
-DTS 관행에서 전송 유형은 누적(cumulative)과 증분(incremental) 중 하나를 고릅니다. **이 앱은 누적을 기본으로 요구합니다.**
+**현재 일반적으로 누적 파일을 수령하고 있음이 확인되었습니다.** 따라서 누적이 기본이며, 아래 증분 관련 규정은 예외 상황에 대한 대비로만 유지합니다.
+
+DTS 관행에서 전송 유형은 누적(cumulative)과 증분(incremental) 중 하나를 고릅니다. **이 앱은 누적을 요구합니다.**
 
 이유가 분명합니다. 증분 파일만 받으면 앱은 **"이번에 안 보낸 것"과 "존재하지 않는 것"을 구분할 수 없습니다.** 이 앱의 존재 이유가 "무엇이 빠져 있는가"에 답하는 것인데, 증분 전송에서는 그 질문 자체가 성립하지 않습니다.
 
-증분 전송이 불가피한 경우(파일 크기 등)에는 다음을 요구합니다.
+증분 전송이 불가피한 경우(파일 크기 등)에는 다음을 요구합니다. **DTS 협의 시 누적 전송을 명시적으로 합의 항목에 넣는 것**이 가장 확실한 예방책입니다.
 
 | 요구 | 내용 |
 |---|---|
@@ -162,7 +238,7 @@ Transfer Header의 `ROW_COUNT`와 실제 행 수를 대조합니다. 불일치�
 | 컬럼 | 필수 | 자료형 | 설명 |
 |---|---|---|---|
 | `EDC_COLLFL` | ● | Y/N | **채취 여부.** 대조 유형 판정의 한 축 |
-| `EDC_COLLDTC` | | date | EDC 기록 채취일. **중앙랩 도착 기한의 트리거** |
+| `EDC_COLLDTC` | ● | date | EDC 기록 채취일. **중앙랩 도착 기한의 트리거** |
 | `EDC_COLLTM` | | time | EDC 기록 채취시각 |
 | `EDC_TPTNAME` | | text | EDC 기록 timepoint. `TPTNAME`과 대조 |
 | `EDC_NOTDONERS` | | text | 미채취 사유 |
@@ -177,7 +253,7 @@ Transfer Header의 `ROW_COUNT`와 실제 행 수를 대조합니다. 불일치�
 | `CL_COLLDTC` | | date | **lab이 기록한 채취일.** `EDC_COLLDTC`와 대조 |
 | `CL_COLLTM` | | time | lab이 기록한 채취시각 |
 | `CL_SHIPDTC` | | date | 사이트 출고일. **기록만 하고 기한 계산에는 미사용** |
-| `CL_RECVDTC` | | date | central lab 도착일 |
+| `CL_RECVDTC` | ● | date | central lab 도착일 |
 | `CL_SAMPSTAT` | ● | code | `RECEIVED`/`IN_TRANSIT`/`LOST`/`REJECTED`/`NOT_SHIPPED` |
 | `CL_CONDITION` | | code | 수령 상태 `ACCEPTABLE`/`COMPROMISED` |
 | `CL_ISSUETYPE` | | code | 7.3의 이슈 코드 |
@@ -231,7 +307,7 @@ Transfer Header의 `ROW_COUNT`와 실제 행 수를 대조합니다. 불일치�
 | 컬럼 | 필수 | 자료형 | 설명 |
 |---|---|---|---|
 | `EDC_IMGDONEFL` | ● | Y/N | 영상 획득 여부 |
-| `EDC_IMGDTC` | | date | EDC 기록 획득일. **업로드 기한의 트리거** |
+| `EDC_IMGDTC` | ● | date | EDC 기록 획득일. **업로드 기한의 트리거** |
 | `EDC_MODALITY` | | code | **EDC 기록 검사 방법.** `BICR_MODALITY`와 대조 |
 | `EDC_ANATREG` | | code | EDC 기록 부위 |
 | `EDC_NOTDONERS` | | text | 미실시 사유 |
@@ -246,7 +322,7 @@ Transfer Header의 `ROW_COUNT`와 실제 행 수를 대조합니다. 불일치�
 | `BICR_IMGDTC` | | date | BICR 기록 획득일. `EDC_IMGDTC`와 대조 |
 | `BICR_MODALITY` | | code | BICR 기록 검사 방법 |
 | `BICR_ANATREG` | | code | BICR 기록 부위 |
-| `BICR_UPLDDTC` | | date | 업로드일 |
+| `BICR_UPLDDTC` | ● | date | 업로드일 |
 | `BICR_QCSTAT` | | code | `PENDING`/`PASSED`/`FAILED` |
 | `BICR_QCDTC` | | date | QC 완료일 |
 | `BICR_QCFAILRS` | | code | QC 실패 사유 (7.4) |
@@ -336,23 +412,28 @@ bioanalytics 구간도 같은 논리를 `CL_SHIPBADTC`와 `BA_RECVFL`에 적용�
 
 | # | 확인 사항 | 초안의 선택 |
 |---|---|---|
-| Q1 | **`TPTNUM`을 매칭 키에 넣는 것이 맞는가** (1.2) | 넣음 — PK 다중 시점 구분에 필수 |
-| Q2 | 사내 DTS가 이미 있는가. 있다면 그 컬럼명을 따를 것인가 | 있으면 사내 것을 따름 |
-| Q3 | 누적 전송이 가능한가 (4.4) | 누적 기본 |
+| ~~Q1~~ | ~~`TPTNUM`을 매칭 키에 넣는 것이 맞는가~~ | **확정 — 포함** |
+| ~~Q2~~ | ~~사내 DTS가 이미 있는가~~ | **확정 — 없음. 이 형식이 DTS 협의 기준안이 됨 (2.2)** |
+| ~~Q3~~ | ~~누적 전송이 가능한가~~ | **확정 — 누적 수령** |
 | Q4 | 샘플 추적 단위가 kit인가 aliquot인가 | 초안은 **kit 단위**, `CL_ALIQUOTN`으로 분주 수만 기록 |
 | Q5 | bioanalytics 블록을 같은 파일에 둘 것인가 분리할 것인가 | 같은 파일 |
 | Q6 | 7장 controlled terminology에 추가·수정할 값 | — |
 | Q7 | `RECON_*` 블록이 실제 사내 파일에 존재하는가 | 없어도 무방 |
 | Q8 | 결과값(농도 등)을 제외하는 것에 동의하는가 (P7) | 제외 |
 | Q9 | 영상의 `ANATREG`를 매칭 키에 넣을 것인가 | 초안은 **제외**, 필요 시 추가 |
-| Q10 | 컬럼 수가 실무적으로 과한가 | 필수는 샘플 8개·영상 7개뿐 |
+| Q10 | 컬럼 수가 실무적으로 과한가 | **MUST는 샘플 11개·영상 10개** (2.2) |
+| **Q11** | **2.2의 MUST / SHOULD / NICE 구분이 타당한가** | worksheet 참조 |
+| **Q12** | **DTS 협의용 worksheet를 실제로 vendor에게 건넬 것인가** | 권고 |
 
 ## 11. 검토 포인트 (Decision Points)
 
 | # | 결정 필요 사항 | 기본 제안 |
 |---|---|---|
-| DP-16-1 | **매칭 키에 `TPTNUM` 추가** | **추가** — [03](03-core-concept-model.md) 5.2, [04](04-domain-concepts.md) 4.3 갱신 필요 |
-| DP-16-2 | 누적 전송 기본 방침 | 누적 기본, 증분은 조건부 허용 |
+| ~~DP-16-1~~ | ~~매칭 키에 `TPTNUM` 추가~~ | **확정 — 추가.** [03](03-core-concept-model.md) 5.2, [04](04-domain-concepts.md) 4.3 반영 완료 |
+| ~~DP-16-2~~ | ~~누적 전송 기본 방침~~ | **확정 — 누적** |
+| DP-16-6 | 2.2의 MUST/SHOULD/NICE 구분이 타당한가 | 실무 검토 필요 |
+| DP-16-7 | DTS 협의 worksheet를 표준 절차에 넣을 것인가 | **넣기 권고** — 협의 산출물이 Mapping Profile 입력이 됨 |
+| DP-16-8 | vendor가 MUST 항목을 제공하지 못할 때의 대안 절차 | 시험별 판단. 해당 도메인 추적 범위 축소를 명시 |
 | DP-16-3 | 샘플 추적 단위 (kit vs aliquot) — DP-04-10과 연결 | **kit 단위** |
 | DP-16-4 | 7장 CT 기본값의 적절성 | 실무 검토 필요 |
 | DP-16-5 | `RECON_STATUS` 값과 앱 판정 유형의 매핑 테이블 필요 여부 | 필요 |

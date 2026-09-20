@@ -221,6 +221,8 @@ MappingProfile:
 
 앱의 입력 경계가 vendor 원본이 아니라 사내 표준 파일이므로(DP-12-6), 매핑이 흡수해야 할 차이는 그만큼 작아집니다. vendor 형식 변동은 표준화 단계에서 이미 흡수되기 때문입니다.
 
+또한 시험 시작 시 vendor와 DTS를 협의할 때 [DTS 협의 worksheet](templates/DTS_VARIABLE_REQUEST_v0.1.csv)를 사용하면, **vendor가 기입한 컬럼명이 그대로 Mapping Profile의 입력**이 됩니다 ([16](16-external-data-format-draft.md) 2.2). 협의 산출물이 곧 시스템 설정이 되므로 옮겨 적는 작업과 그 과정의 오류가 사라집니다.
+
 이 매핑 제안은 내부 LLM이 보조할 수 있습니다 ([14](14-ai-extensibility.md) 3.1).
 
 ### 5.3 재업로드와 멱등성

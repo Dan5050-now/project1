@@ -4,11 +4,41 @@
 
 Excel에서 그대로 열어 검토하실 수 있습니다. 파일은 **UTF-8 with BOM**으로 저장되어 있어 Excel에서 한글이 깨지지 않습니다.
 
-| 파일 | 내용 |
-|---|---|
-| [`TRANSFER_HEADER_v0.1.csv`](TRANSFER_HEADER_v0.1.csv) | 전송 단위의 출처 메타데이터. **매 전송마다 동반** |
-| [`EXT_SAMPLE_RECON_v0.1.csv`](EXT_SAMPLE_RECON_v0.1.csv) | 샘플 대조. 헤더 + 예시 8행 |
-| [`EXT_IMAGE_RECON_v0.1.csv`](EXT_IMAGE_RECON_v0.1.csv) | 영상 대조. 헤더 + 예시 7행 |
+| 파일 | 용도 | 내용 |
+|---|---|---|
+| [`DTS_VARIABLE_REQUEST_v0.1.csv`](DTS_VARIABLE_REQUEST_v0.1.csv) | **vendor와 DTS 협의할 때 건네는 양식** | 전 컬럼 91개, 우선순위·설명 포함. vendor 기입 칸 4개 |
+| [`TRANSFER_HEADER_v0.1.csv`](TRANSFER_HEADER_v0.1.csv) | 파일 형식 예시 | 전송 단위의 출처 메타데이터. **매 전송마다 동반** |
+| [`EXT_SAMPLE_RECON_v0.1.csv`](EXT_SAMPLE_RECON_v0.1.csv) | 파일 형식 예시 | 샘플 대조. 헤더 43열 + 예시 8행 |
+| [`EXT_IMAGE_RECON_v0.1.csv`](EXT_IMAGE_RECON_v0.1.csv) | 파일 형식 예시 | 영상 대조. 헤더 34열 + 예시 7행 |
+
+## DTS 협의 worksheet 사용법
+
+사내에 표준 DTS가 없고 시험마다 vendor와 새로 셋업하므로, 이 worksheet가 **협의의 출발점**이 됩니다 ([16번 문서 2.2](../16-external-data-format-draft.md)).
+
+```
+① worksheet를 vendor에게 전달
+        ↓
+② vendor가 오른쪽 4개 칸을 기입
+   VENDOR_CAN_PROVIDE / VENDOR_COLUMN_NAME / VENDOR_FORMAT / VENDOR_NOTE
+        ↓
+③ MUST 항목 중 제공 불가한 것을 협의
+        ↓
+④ 합의된 내용이 그 시험의 DTS가 됨
+        ↓
+⑤ VENDOR_COLUMN_NAME이 그대로 앱의 Mapping Profile 입력이 됨
+```
+
+⑤가 이 양식의 실질적 가치입니다. 협의 산출물을 시스템 설정으로 **옮겨 적는 작업과 그 과정의 오류가 사라집니다.**
+
+### 우선순위
+
+| 우선순위 | 의미 | 샘플 | 영상 |
+|---|---|---|---|
+| **MUST** | 없으면 해당 도메인이 동작하지 않음 | 11 | 10 |
+| **SHOULD** | 특정 지표나 분석이 불가능해짐 | 14 | 11 |
+| **NICE** | 있으면 유용 | 18 | 13 |
+
+MUST가 적은 것이 의도입니다. **협의에서 반드시 지켜야 할 선을 좁게 잡아야** vendor와의 합의가 현실적입니다. MUST 항목은 대부분 vendor가 이미 관리하고 있는 값입니다.
 
 ## 예시 행이 보여주는 것
 
@@ -47,6 +77,6 @@ Excel에서 그대로 열어 검토하실 수 있습니다. 파일은 **UTF-8 wi
 
 ## 검토하실 때
 
-- 컬럼이 **사내 external data reconciliation file에 실제로 있는지**를 먼저 봐주시면 좋겠습니다. 없는 컬럼은 빼고, 있는데 빠진 컬럼은 알려주시면 추가하겠습니다.
-- 컬럼명은 사내 명칭이 있으면 그쪽을 따르는 것이 맞습니다. 이름을 맞추는 것보다 **의미가 빠지지 않는 것**이 중요합니다.
-- 필수(●) 표시된 컬럼은 [16번 문서](../16-external-data-format-draft.md) 5장과 6장에 정리되어 있습니다. 샘플 8개, 영상 7개뿐입니다.
+- **MUST / SHOULD / NICE 구분이 타당한지**를 먼저 봐주시면 좋겠습니다. 이 구분이 곧 vendor 협의에서 어디까지 양보할 수 있는지를 정합니다.
+- vendor가 실제로 제공하기 어려울 것 같은 MUST 항목이 있다면 알려주세요. 그 항목이 없을 때 앱이 무엇을 포기해야 하는지 함께 정리하겠습니다.
+- 컬럼명은 협의 과정에서 vendor 것을 따라도 무방합니다. 이름을 맞추는 것보다 **의미가 빠지지 않는 것**이 중요합니다.
