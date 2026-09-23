@@ -21,7 +21,7 @@ const os = require("node:os");
 const APP = "PM_APP";
 const FORMAT = "prap-source-data";
 const FORMAT_VERSION = 1;
-const SCHEMA_EXPECTED = 5;
+const SCHEMA_EXPECTED = 13;
 
 /** Errors the interface throws. ui/ switches on `kind`; the user reads `message`.
  *  A storage layer that throws one kind of error forces the screen to say one kind of

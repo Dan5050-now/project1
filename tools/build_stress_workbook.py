@@ -41,7 +41,7 @@ from openpyxl import Workbook, load_workbook
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 VERSION = "1.0"
-SOURCE = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.10.xlsx"
+SOURCE = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.11.xlsx"
 OUT = ROOT / "templates" / f"PRAP_SourceData_Stress_1000_v{VERSION}.xlsx"
 
 _spec = importlib.util.spec_from_file_location("bsw", ROOT / "tools" / "build_source_workbook.py")

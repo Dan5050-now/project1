@@ -17,10 +17,10 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.60"
-DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.25 - Gate 4 refinements rounds 1-25, "
-              "plus SCHEMA 6 (the work scope, the biosimilar split), the shared-role division "
-              "and the delivered default assumptions.")
+DOC_VERSION = "2.61"
+DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.52, source schema 13 - Gate 4 "
+              "refinements, the work scope and the biosimilar split, the shared-role division, "
+              "the delivered default assumptions, and milestone highlighting.")
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -397,6 +397,44 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.61", "2026-09-23", "Claude Code", "Pending",
+     "R-50, REQ-PRJ-14: A MILESTONE CAN BE MARKED IN A COLOUR, AND THE MARK FINDS IT ON "
+     "EVERY TIMELINE. Asked for from the field: the Project timeline draws every "
+     "milestone the same black triangle, so the two or three that a reader is actually "
+     "scanning for - the inspection, the date that slipped, the one the sponsor asks "
+     "about - are indistinguishable from the twenty that are merely on the plan. "
+     "Milestone gains milestone_highlight, beside the date it marks; source schema "
+     "version steps 12 to 13. "
+     "THE COLUMN HOLDS A WORD FROM THE LISTS SHEET, NOT A COLOUR CODE. The template "
+     "ships 'Highlight (Red)', '(Yellow)', '(Blue)', '(Green)' and '(Orange)', and what "
+     "the application reads is the COLOUR WORD inside the value - so a team that decides "
+     "red means something in particular may say so in their own list ('Highlight (Red) - "
+     "slipped') and keep both the colour and the reason. The legend then prints their "
+     "words back rather than the word 'red'. That is the whole reason the check is a "
+     "lookup and not an equality test: the list belongs to the people using it, and a "
+     "rule that broke the moment somebody explained their own convention in it is a rule "
+     "they would have to work around. "
+     "IT BEATS THE DB-LOCK RED THE CHART APPLIES BY ITSELF, deliberately. One is a "
+     "standing rule about what a milestone does to the period derivation; the other is "
+     "somebody saying 'look at this one'. The second is the newer statement and the one "
+     "made on purpose, and nothing is lost by letting it win - the pop-up goes on saying "
+     "the milestone sets a boundary. "
+     "WHERE IT SHOWS: the Overall tab's timeline, the project tab's timeline, the "
+     "milestone table (a colour chip in the cell, drawn as a pseudo-element so it can "
+     "never become part of what the cell contains), the pop-up, and the legend - which "
+     "lists only the colours actually in use, because a legend teaching five colours "
+     "when one is in use answers a question nobody asked. "
+     "V-37 IS NEW: a value with no colour word in it leaves the milestone unmarked, "
+     "which looks exactly like forgetting to mark it, so it is said out loud with the "
+     "values the file itself offers. Warning, never a refusal - a mark changes no "
+     "figure. "
+     "NO FIGURE MOVES. The highlight is kept BESIDE the milestone dates rather than "
+     "inside them: M.milestones stays name -> dates, which is the shape the period "
+     "derivation, V-14, V-20 and V-21 all read, and a presentation choice has no "
+     "business inside the structure the arithmetic depends on. Template steps to v1.17 "
+     "and the two example workbooks to v1.19 and v1.11; a file at schema 12 still opens, "
+     "with V-09 saying which columns may be missing. tools/test_highlight.py is new.",
+     "Issued for review"],
     [f"{MARK_NEW}2.60", "2026-09-13", "Claude Code", "Pending",
      "R-49, REQ-DSH-17: THE DASHBOARD NOW SHOWS THE FIGURE V-36 DESCRIBES. The half of "
      "the field report that v2.59 deliberately did not build, asked for once the rule "
@@ -2144,6 +2182,7 @@ reqs = [
     ["REQ-PRJ-08", "Project data", "Total period is derived from start and end dates rather than typed by hand, so it cannot contradict the timeline.", "Should", "Derived", "2"],
     [f"{MARK_CHG}REQ-PRJ-12", "Project data", "The set of periods a project carries depends on its type: either clinical trial type uses Before-Start-up / Start-up / Conduct (interim) / Close-out (interim) / Conduct (final) / Close-out (final) / After Close-out (final); 'Others' uses Planning / Develop / Close. No name occurs twice in one project.", "Must", "Q-18, Q-23, R-02, R-11", "2"],
     [f"{MARK_NEW}REQ-PRJ-13", "Project data", "A milestone name may occur more than once in one project. 'Inspection' in particular may record several events; the others are expected once.", "Must", "R-01", "2"],
+    [f"{MARK_NEW}REQ-PRJ-14", "Project data", "A milestone may be MARKED IN A COLOUR, and the mark finds that milestone wherever the Project timeline is drawn - on the Overall tab and on the project's own tab. The colour is chosen from the Lists sheet, so the set belongs to the people using the plan rather than to the code; an empty value means no mark, which is what every milestone was before schema 13. A mark changes no figure and never refuses a save.", "Should", "R-50", "4"],
     [f"{MARK_CHG}REQ-PRJ-09", "Project data", "A clinical trial of either type records its clinical phase (phase 1 / 2 / 3 / 4). The phase determines the project's period weights, so it drives the simulation rather than merely describing the project.", "Must", "Q-26", "2"],
     [f"{MARK_NEW}REQ-PRJ-10", "Project data", "A clinical trial of either type records who performs each of EDC set-up, data-review-system set-up, RBQM set-up and DM conduct ('by CRO' / 'by SB').", "Must", "Reviewer v0.11", "2"],
     [f"{MARK_NEW}REQ-PRJ-11", "Project data", "A clinical trial of either type records the EDC system, data review system and RBQM system in use, from data-driven value lists.", "Must", "Reviewer v0.11", "2"],
@@ -2302,6 +2341,7 @@ mile = [
     ["project_name", "Derived", "No", "DERIVED - looked up from Project on import and refreshed from it, so a mismatch cannot corrupt the link. Locked in the template; a value typed here is discarded and the disagreement reported as V-13.", "REQ-PRJ-05"],
     [f"{MARK_CHG}milestone_name", "List", "Yes", "Standard list (10) at v1.1: 'Protocol (v1)', 'CTA submission', 'FPI', 'First SIV', 'LPI', 'interim DB lock cut-off', 'interim DB lock', 'final DB lock cut-off', 'final DB lock', 'Inspection'. FPI returns as the fallback for First SIV; Inspection is new and MAY REPEAT within a project. Held in Lists, not fixed in code.", "REQ-PRJ-05, REQ-PRJ-13"],
     ["milestone_date", "Date", "Yes", "Planned date.", "REQ-PRJ-05"],
+    [f"{MARK_NEW}milestone_highlight", "List", "No", "OPTIONAL, schema 13. Marks this milestone on every Project timeline in a colour - the Overall tab's and the project's own. Held in Lists ('Highlight (Red)' and four more); what is read is the COLOUR WORD inside the value, so a team may add what their colour means and keep both. Empty means no mark, which is what every milestone was before schema 13. A value naming no colour is reported as V-37 and drawn unmarked.", "REQ-PRJ-14"],
     ["milestone_seq", "Integer", "No", "Display order on the timeline.", "REQ-PRJ-05"],
     [f"{MARK_NEW}note_1", "Text", "No", "Free extension column.", "REQ-PRJ-07"],
 ]
@@ -2444,7 +2484,7 @@ r = note(ws, r, "Read only where the owning Project or Assignment carries estima
 
 r = section(ws, r, "Sheet: Config")
 cfg = [
-    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16), 8 at v2.31 (R-17), 9 at v2.38 (R-30), 10 at v2.39 (R-31), 11 at v2.41 (R-33, the standards sheet renamed), 12 at v2.54 (R-46, MonthlyEstimate.edited_at retired - the first column this schema has REMOVED rather than added or renamed).", "12", "REQ-VC-02"],
+    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16), 8 at v2.31 (R-17), 9 at v2.38 (R-30), 10 at v2.39 (R-31), 11 at v2.41 (R-33, the standards sheet renamed), 12 at v2.54 (R-46, MonthlyEstimate.edited_at retired - the first column this schema has REMOVED rather than added or renamed), 13 at v2.61 (R-50, Milestone.milestone_highlight).", "13", "REQ-VC-02"],
     [f"{MARK_NEW}absorb_unstaffed_role_factor", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (REQ-CAL-16). 0 = an unstaffed role simply costs nothing, which is how every version before v2.31 behaved. A setting for the same reason the last one is: it moves every figure on a project that is not fully staffed.", "1", "REQ-CAL-16"],
     [f"{MARK_NEW}split_shared_role_fte", "1 = where several people hold the same role on one project in a month, the role factor is divided between them (REQ-CAL-14). 0 = each carries the whole factor, which is how every version before v2.28 behaved. A setting rather than a constant because it changes every figure a shared role ever produced, and somebody comparing this month's report with last year's has to be able to see where the difference came from.", "1", "REQ-CAL-14"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],
@@ -2476,6 +2516,7 @@ rules = [
     [f"{MARK_CHG}V-28", "RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all.", "Retired - and deliberately not reinstated at a lower severity. What the rule SAID was true; what it did not account for was WHEN it said it. An error refuses the edit that raised it (REQ-IMP-09), and unlike V-23 this one did not need the project to have any periods - so it fired on a project still being built, which is exactly when assignments are being typed in. A user could not record who was on a project until the standing assumptions carried a factor for their role, which is backwards: the plan is the document being written, the assumptions are maintained separately. The gap is not denied - V-03 still refuses a role invalid for the project type, and V-23 still reports a role with no factor for a period the project spans, which is the same finding at the point where it can be acted on. The id is not reused."],
     [f"{MARK_NEW}V-29", "A role that carries a factor, that nobody holds on the project, and that nothing covers for.", "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct."],
     [f"{MARK_NEW}V-31", "A project or assignment set to MANUAL has months it covers that carry no MonthlyEstimate figure. Named, with the months listed.", "Error - those months are counted as 0.00, and a figure silently dropping to zero is the one outcome this feature must never produce quietly. Not a refusal: it is raised from the CALCULATION, like V-23, because it is something that happened to a number rather than a fact about a sheet, and a finding that exists only after the arithmetic cannot refuse the edit that led to it. Switching to manual copies every month across, so a month with no figure is one that has since been removed or a month the thing has grown into - the application offers to fill them from the calculation."],
+    [f"{MARK_NEW}V-37", "Milestone.milestone_highlight carries a value that names no colour the application can draw.", "Warning - the milestone is drawn unmarked, which is what it would have been with the column empty, and the finding says so with the values the file's own Lists sheet offers. Never a refusal: a mark changes no figure, and a plan whose highlight column is misspelt is still a correct plan. It is reported rather than ignored because the failure is INVISIBLE otherwise - an unmarked milestone looks exactly like one nobody got round to marking, so a typo in the list value would quietly undo the thing the user asked for. What the application reads is the colour word inside the value ('red', 'yellow', 'blue', 'green', 'orange'), which is what lets a team write what their colour means beside it; the rule fires only when no such word is there at all."],
     [f"{MARK_NEW}V-36", "A project that has periods and NOBODY ASSIGNED TO IT AT ALL. Raised from the CALCULATION, one finding per project, carrying what the project needs: the total FTE-months, the span, the peak and the month it falls in.", "Information - and classed INCOMPLETE, so it never refuses an edit and never questions a save. A project with nobody on it yet is not a fault: it is the state every project is in for the minute after it is created, exactly as a person with no assignment is (v2.52). WHAT IT FIXES IS A ROW OF BLANKS, NOT AN ERROR. The project IS listed - it has a row in Resource by project, it is drawn on the timeline, and it counts in the projects tile - but every one of its months is EMPTY, it puts nothing on the three demand charts, it takes no legend entry and it reaches no line of Standard vs staffed. That is worse than being absent: a row of blanks reads as a project that costs nothing rather than one nobody has been put on yet, which is the same failure V-34 exists for. Type, phase, scope and periods are all the standard needs to say what it costs. REQ-CAL-19 is explicit that the project-month IS its standard and the people on it DIVIDE it; a divisor of nobody does not make the demand nought. AND NOTHING ELSE REPORTED IT: V-34 compares demand against applied, which is this gap at its widest, but V-34 is built from projGap, which is built from projMonth, which is built from the LINES - so no assignment means no line, no entry and no finding, and the one project short by the whole of its standard was the only shortfall the shortfall rule could not see. IT CARRIES THE FIGURE, which is why it is raised from the calculation rather than from the validation, and why every term is the one an assignment with blank dates would get (REQ-CAL-15): the number it states is to the hundredth the number the project shows the moment somebody is assigned, which tools/test_unstaffed.py asserts in both directions. SKIPPED where there is nothing to say or nothing to do: a project with no periods has no demand to state and V-12 or V-16 already says so, and a Completed project is history rather than a gap to fill - its finding would never answer itself, which is what the INCOMPLETE class promises."],
     [f"{MARK_NEW}V-35", "Person.capacity_fte outside 0.00 to 1.00, in either direction.", "Error - and it REFUSES, which almost nothing else in this application does. capacity_fte is how much of ONE PERSON there is: 1.00 is full-time, 0.50 is half a week, 0.00 is somebody on the books who is not available at all and is therefore allowed. Every other figure here is a judgement somebody is entitled to make - a period weight, a role factor, a stated month - and the rules about those report rather than refuse, because which of two deliberate numbers is wrong is not the application's business. This is not a judgement: there is no such thing as one and a half of a person, the number is in the wrong unit, and the usual cause is hours typed into an FTE column - which the message says, with the arithmetic. Somebody doing the work of two people is TWO ASSIGNMENTS, or a person weight above 1.00 on one of them. A workbook that already breaks it still OPENS: the save and edit checks compare the count of blocking findings before and after, so a rule broken by an incoming file is reported without locking anybody out of their own plan. V-22 stands down on the same row - reporting that 1.50 is also not below the under-allocation floor would be true and useless."],
     [f"{MARK_NEW}V-34", "A project whose month is not what its own standard says it needs - standard FTE x period weight x the part of the month it runs - in either direction. Raised from the CALCULATION, one finding per project, naming the months and the worst of them.", "Warning - it reports and never refuses. refuses() acts only on errors, so this reaches the findings report, the load banner, the archived change log and the results export without gating a save or asking a question. Departing from the standard is the POINT of a manual figure (REQ-CAL-18): a manager part way through a trial knows better than the assumptions, and the application has no business calling that wrong. What it does have business doing is saying so, because the departure is otherwise completely silent - the charts just draw a different project. An all-automatic plan raises nothing at all, which is what keeps the rule worth reading."],
@@ -2819,7 +2860,7 @@ wbs = [
     ["4", "4.5", "Calculation engine, verified against the reference implementation.", "app/PRAP.html + test evidence", "Complete - EXACT MATCH on all 1,225 person-months of the dummy dataset"],
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
-    ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.16.xlsx", "Complete"],
+    ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.17.xlsx", "Complete"],
     ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-25 applied (app v1.24); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
@@ -3051,6 +3092,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-50", "Data model", "Mark a milestone in a colour, and carry the mark to the Project timeline on both tabs.", "Applied. Milestone gains milestone_highlight beside milestone_date; source schema steps 12 to 13. The colours live in Lists, and the application reads the COLOUR WORD inside the value - so a team may write what their colour means and keep both. A value with no colour word in it is V-37 and the milestone draws unmarked. REQ-PRJ-14 added.", "Applied"],
     ["R-01", "Data model", "Add 'Inspection' as a standard milestone.", "Applied. Milestone list grows to ten. Unlike the others, 'Inspection' MAY REPEAT within one project, so REQ-PRJ-13 and V-20 were added and V-14's uniqueness check now exempts it.", "Applied"],
     ["R-02", "Calculation", "Sheet 05 derivation edits: Before-Start-up ends at 'Protocol (v1)'; Start-up begins the day after it and ends at 'First SIV' (or 'FPI'); a seventh period 'After Close-out (final)' spans the Inspection dates.", "Applied. Clinical period set grows to six names; REQ-PRJ-12 and REQ-CAL-09 reworded; REQ-CAL-13 added for the milestone-beats-offset rule; 'FPI' restored to the milestone list as the First SIV fallback.", "Applied"],
     ["R-03", "Calculation", "Not requested - found while applying R-02.", "Period 7 was defined as earliest to latest 'Inspection'. Where an inspection is dated on or before the final DB lock, that makes period 7 start before period 6 and overlap Conduct. Only inspections AFTER the final DB lock open period 7; earlier ones stay markers, reported by V-21. CONFIRMED by the reviewer at the v1.1 review.", "CONFIRMED"],

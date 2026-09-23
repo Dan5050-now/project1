@@ -6,11 +6,11 @@ This document is written for a language model or an agent, not for a person. It 
 
 |  |  |
 |---|---|
-| Application | `app/PRAP.html` v1.51 |
-| Source schema version | 12 |
+| Application | `app/PRAP.html` v1.52 |
+| Source schema version | 13 |
 | Contract version | 1.0 |
 | Guide version | 1.0 |
-| Generated | 2026-09-17 |
+| Generated | 2026-09-23 |
 
 ---
 
@@ -64,12 +64,12 @@ The repository keeps every issue of every document, so pick from `docs/PRAP_Mani
 
 | What | Path |
 |---|---|
-| Development plan | `docs/PRAP_Development_Plan_v2.60.xlsx` |
-| Programming specification | `docs/PRAP_Programming_Specification_v1.31.xlsx` |
+| Development plan | `docs/PRAP_Development_Plan_v2.61.xlsx` |
+| Programming specification | `docs/PRAP_Programming_Specification_v1.32.xlsx` |
 | UI component list | `docs/PRAP_UI_Component_List_v2.2.xlsx` |
-| Source data template | `templates/PRAP_SourceData_Template_v1.16.xlsx` |
-| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.18.xlsx` |
-| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.10.xlsx` |
+| Source data template | `templates/PRAP_SourceData_Template_v1.17.xlsx` |
+| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.19.xlsx` |
+| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.11.xlsx` |
 | This guide | `docs/PRAP_AI_Agent_Guide.md` |
 
 ## 2. The eight words you need
@@ -92,7 +92,7 @@ Ten sheets, all required, in this order. A missing sheet is fatal (V-00).
 | Sheet | Role | Parent | Key | Columns |
 |---|---|---|---|---|
 | `Project` | master | — | `project_id` | 25 |
-| `Milestone` | child | `Project` | `project_id`, `milestone_name`, `milestone_date` | 6 |
+| `Milestone` | child | `Project` | `project_id`, `milestone_name`, `milestone_date` | 7 |
 | `ProjectPeriod` | child | `Project` | `project_id`, `period_name` | 7 |
 | `PeriodFTEStandard` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name` | 6 |
 | `RoleFactor` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name`, `role_name` | 8 |
@@ -153,6 +153,7 @@ Lists, Config                      vocabulary and settings
 | `project_name` | derived · **do not write** | DERIVED - looked up from Project, do not type. |
 | `milestone_name` | text · list `milestone_name` | From the standard list of ten. 'Inspection' may appear on several rows. |
 | `milestone_date` | date | Planned date. |
+| `milestone_highlight` | text · list `milestone_highlight` | OPTIONAL. Marks this milestone on the Project timeline in a colour. Pick from the list; leave empty for no mark. |
 | `milestone_seq` | text | Display order on the timeline. |
 | `note_1` | text | Free text. e.g. why a date moved, or which inspection body. |
 
@@ -308,6 +309,7 @@ These live on the `Lists` sheet of the workbook you are given — read them from
 | `RBQM_system` | `CluePoints`, `Medidata CDS`, `No system (manual)` |
 | `project_status` | `Planned`, `Active`, `On hold`, `Completed` |
 | `milestone_name` | `Protocol (v1)`, `CTA submission`, `FPI`, `First SIV`, `LPI`, `interim DB lock cut-off`, `interim DB lock`, `final DB lock cut-off`, `final DB lock`, `Inspection` |
+| `milestone_highlight` | `Highlight (Red)`, `Highlight (Yellow)`, `Highlight (Blue)`, `Highlight (Green)`, `Highlight (Orange)` |
 | `period_name_clinical` | `Before-Start-up`, `Start-up`, `Conduct (interim)`, `Close-out (interim)`, `Conduct (final)`, `Close-out (final)`, `After Close-out (final)` |
 | `period_name_others` | `Planning`, `Develop`, `Close` |
 | `role_clinical` | `Project oversight`, `Lead data manager`, `Clinical Data Associator`, `Clinical Database Programmer`, `Data Analyst` |
@@ -376,7 +378,7 @@ THE MONTH, DIVIDED BY THOSE CLAIMS
 
 Three things in that example are worth keeping hold of. **The two `Other staff` divide one role factor** — 0.42 between them, not 0.42 each — so the month does not grow because a second person was added. **The people sum to the project-month exactly**: the demand is rounded to whole cents once and those cents are handed out by largest remainder, which is why `PSN-006` is given 0.15 rather than the 0.14 a plain rounding of 0.1443 would produce. And **had you multiplied the four per-assignment factors** for `PSN-001` you would have reported 0.43 FTE where the application says 1.05.
 
-Reproduce it with `python tools/prap_io.py calculate templates/PRAP_SourceData_Dummy_10x10_v1.10.xlsx`.
+Reproduce it with `python tools/prap_io.py calculate templates/PRAP_SourceData_Dummy_10x10_v1.11.xlsx`.
 
 ### 5.3 Periods
 
@@ -407,7 +409,7 @@ over_allocation_fte and under_allocation_fte are ABSOLUTE FTE figures. They are 
 
 | Parameter | Default | Controls |
 |---|---|---|
-| `schema_version` | 12 | Structure version of this workbook. The application warns on a mismatch. |
+| `schema_version` | 13 | Structure version of this workbook. The application warns on a mismatch. |
 | `fte_hours_per_month` | 160 | Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month. |
 | `over_allocation_fte` | 1.5 | A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01). |
 | `under_allocation_fte` | 0.6 | A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01). |
@@ -478,6 +480,7 @@ Severities: **fatal** nothing loads · **error** the figures would be wrong · *
 | **V-34** | warning | A project whose month is not what its own standard says it needs - standard FTE x period weight x the part of the month it runs - in either direction. Raised from the CALCULATION, one finding per project, naming the months and the worst of them. |
 | **V-35** | error | Person.capacity_fte outside 0.00 to 1.00, in either direction. |
 | **V-36** | information | A project that has periods and NOBODY ASSIGNED TO IT AT ALL. Raised from the CALCULATION, one finding per project, carrying what the project needs: the total FTE-months, the span, the peak and the month it falls in. |
+| **V-37** | warning | Milestone.milestone_highlight carries a value that names no colour the application can draw. |
 
 **Aim for zero errors and zero warnings you cannot explain.** A file that loads with errors still shows numbers, and those numbers are wrong in ways the user will not see.
 
@@ -621,4 +624,4 @@ A plain-text form of the source workbook, so a program or an AI agent that canno
 
 ---
 
-Generated by `tools/build_ai_reference.py` on 2026-09-17 from `app/PRAP.html` v1.51, `PRAP_Development_Plan_v2.60.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.
+Generated by `tools/build_ai_reference.py` on 2026-09-23 from `app/PRAP.html` v1.52, `PRAP_Development_Plan_v2.61.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.

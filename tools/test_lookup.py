@@ -54,7 +54,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import prap_io                                                       # noqa: E402
 
 fails = []
-BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.16.xlsx")
+BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.17.xlsx")
 
 
 def check(ok, label, detail=""):

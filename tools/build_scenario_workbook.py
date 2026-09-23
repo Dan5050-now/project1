@@ -34,7 +34,7 @@ from openpyxl import Workbook, load_workbook
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 VERSION = "1.0"
-SOURCE = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.10.xlsx"
+SOURCE = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.11.xlsx"
 OUT = ROOT / "templates" / f"PRAP_SourceData_Scenarios_v{VERSION}.xlsx"
 LARGE_VERSION = "1.0"
 LARGE_OUT = ROOT / "templates" / f"PRAP_SourceData_Scenarios_50x50_v{LARGE_VERSION}.xlsx"

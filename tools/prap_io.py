@@ -36,6 +36,20 @@ from openpyxl.utils import get_column_letter
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_source_workbook as B                                      # noqa: E402
 
+# Schema 13: milestone_highlight. The COLOUR WORD inside the value is what marks the
+# timeline, so a team may write what their colour means - "Highlight (Red) - slipped" -
+# and keep the colour. Mirrors hlToken() in src/core/03_parse.js; the two have to agree,
+# because this file predicts what the application will report (V-37).
+HIGHLIGHT_WORDS = ["red", "yellow", "blue", "green", "orange"]
+
+
+def hl_token(v):
+    if v is None:
+        return ""
+    t = str(v).lower()
+    return next((w for w in HIGHLIGHT_WORDS if w in t), "")
+
+
 FORMAT_NAME = "prap-source-data"
 FORMAT_VERSION = 1
 SHEET_ORDER = list(B.SHEETS.keys())
@@ -686,6 +700,19 @@ def validate(M):
             M.add("error", "V-26", "Project", p["__row"],
                   f"Project {pid}: project_type '{p['project_type']}' was split in schema 6. "
                   f"Change it to {RETIRED_TYPES[p['project_type']]}.")
+
+    # V-37: a highlight nobody can draw - a value with no colour word in it leaves the
+    # milestone unmarked, which looks exactly like forgetting to mark it.
+    for m in M.raw.get("Milestone", []):
+        v = m.get("milestone_highlight")
+        if v is None or str(v).strip() == "" or hl_token(v):
+            continue
+        offered = ", ".join(M.lists.get("milestone_highlight", []))
+        M.add("warning", "V-37", "Milestone", m.get("__row", ""),
+              f"Project {m.get('project_id')}: milestone_highlight '{v}' names no colour this "
+              f"application can draw, so '{m.get('milestone_name')}' is left unmarked. "
+              + (f"Valid: {offered}." if offered
+                 else f"Expected one of: {', '.join(HIGHLIGHT_WORDS)}."))
 
     for pid, mm in M.milestones.items():
         for nm, dates in mm.items():

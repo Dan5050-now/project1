@@ -191,7 +191,7 @@ const LIST_FOR = {
   EDC_setup:"setup_party", DataReviewSystem_setup:"setup_party",
   RBQM_setup:"setup_party", DM_conduct:"setup_party",
   EDC_system:"EDC_system", DataReviewSystem:"DataReviewSystem", RBQM_system:"RBQM_system",
-  milestone_name:"milestone_name",
+  milestone_name:"milestone_name", milestone_highlight:"milestone_highlight",
 };
 /** A column the user TYPES INTO that is not stored on the row it appears in.
  *
@@ -543,8 +543,16 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
       const marked = S.editedCells.has(`${sheet}|${r.__row}|${c}`) ? " edited" : "";
       const help = COLUMN_HELP[c] ? `<br><span class="tr">${esc(COLUMN_HELP[c])}</span>` : "";
       const tip = `${colHead(c)}<br>${disp === "" ? "<i>empty</i>" : esc(disp)}${help}`;
+      /* The colour a highlight names, shown in the cell as a small square - as an
+         ATTRIBUTE the stylesheet draws from, never as an element inside the cell. The
+         cell is contenteditable and what is typed in it is read straight back off the
+         DOM, so a chip that lived in the cell's own content would be part of the value:
+         one stray keystroke and the mark becomes text nobody meant to type. A pseudo
+         element cannot be edited, selected or copied by accident. */
+      const hl = c === "milestone_highlight" ? hlToken(v) : "";
       return `<td class="cell${marked}" contenteditable="true" data-sheet="${att(sheet)}" `
-        + `data-row="${r.__row}" data-col="${att(c)}" data-tip="${att(tip)}">${esc(disp)}</td>`;
+        + `data-row="${r.__row}" data-col="${att(c)}"${hl ? ` data-hl="${att(hl)}"` : ""} `
+        + `data-tip="${att(tip)}">${esc(disp)}</td>`;
     }).join("");
     return `<tr${sel} data-id="${att(r[selKey] ?? "")}">`
       + (FIXED_ROWS.has(sheet)

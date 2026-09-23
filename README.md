@@ -236,8 +236,14 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.60.xlsx` — **current.** 86 requirements, 37 live
-  validation rules, source schema version 12. The latest change is **R-49 —
+- `docs/PRAP_Development_Plan_v2.61.xlsx` — **current.** 87 requirements, 38 live
+  validation rules, source schema version 13. The latest change is **R-50 —
+  `REQ-PRJ-14`, a milestone can be marked in a colour**: the Project timeline drew every
+  milestone the same black triangle, so the two or three a reader is actually scanning
+  for were indistinguishable from the twenty merely on the plan. `Milestone` gains
+  `milestone_highlight`; the colours live in the `Lists` sheet and what the application
+  reads is the colour WORD inside the value, so a team may record what their colour means
+  and keep both. `V-37` reports a value naming no colour. Before it, **R-49 —
   `REQ-DSH-17`, the dashboard shows what an unstaffed month asks for**: a dot in
   *Resource by project* was a statement, and the wrong one — it says the month costs
   nothing, when what it costs is exactly what its standard says. The figure is now drawn
@@ -264,8 +270,10 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.31.xlsx` — **current specification.** Schema 12.
-  Sheet 07 gains `V-36` (R-48); sheet 06's Table A gains the unallocated figure (R-49).
+- `docs/PRAP_Programming_Specification_v1.32.xlsx` — **current specification.** Schema 13.
+  Sheet 03 carries `Milestone.milestone_highlight` and sheet 07 gains `V-37` (R-50);
+  before them, sheet 07 gained `V-36` (R-48) and sheet 06's Table A the unallocated
+  figure (R-49).
   Its `Rendering at the target volume` section is now measurements rather than estimates,
   and states the quantity it had been missing: the Overall tab's cost follows
   `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same

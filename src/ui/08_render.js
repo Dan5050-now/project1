@@ -90,6 +90,13 @@ function persColourOf(sid){
   return SCOL[sid] || "var(--other)";
 }
 
+/* The five highlight colours, as the stylesheet knows them (schema 13). Named here so
+   the chart, the legend and the table cell all reach for one definition, and defined as
+   CSS variables rather than hexes so each theme can pick a shade that reads on its own
+   ground - a yellow that works on white disappears on black. */
+const HIGHLIGHT_FILL = {red:"var(--hl-red)", yellow:"var(--hl-yellow)", blue:"var(--hl-blue)",
+                        green:"var(--hl-green)", orange:"var(--hl-orange)"};
+
 const PERIOD_HUE = {
   "Before-Start-up":"#adaca6", "Start-up":"#d9472f",
   "Conduct (interim)":"#3fc795", "Close-out (interim)":"#f2b53d",

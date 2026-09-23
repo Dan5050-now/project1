@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.21.2"
+VERSION = "1.22"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -162,6 +162,27 @@ if errorlevel 1 (
 
 READ_ME = """PROJECT MANAGEMENT APP - Python edition
 =======================================
+
+WHAT IS NEW IN 1.22
+
+  * A MILESTONE CAN BE MARKED IN A COLOUR, and the mark finds it on every
+    Project timeline - the one on Overall and the one on the project's own
+    tab. The milestone table has a new column beside the date, MILESTONE
+    HIGHLIGHT, offering five colours; pick one and that milestone's marker
+    is drawn in it, larger, with the colour named in the legend.
+
+    THE COLOURS ARE YOURS TO NAME. They live in the Lists sheet of the
+    workbook, and what the application reads is the colour WORD inside the
+    value - so if your team decides red means a date that slipped, write
+    'Highlight (Red) - slipped' in the list and the timeline says that back
+    to you in its legend. Leave the column empty and nothing changes: the
+    milestone draws exactly as it always did.
+
+  * Workbook layout version 13 - the new column. YOUR EXISTING FILES STILL
+    OPEN: a plan or workbook written at version 12 has no colour column, so
+    nothing is marked, and the application says once which version it read.
+    No figure moves. Template v1.17, example files v1.19 and v1.11.
+
 
 WHAT IS NEW IN 1.21.2
 

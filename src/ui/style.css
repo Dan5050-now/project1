@@ -38,6 +38,7 @@
   --fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.20);
   --accent:#0066cc;--s1:#0066cc;--other:#aeaeb2;
   --good:#248a3d;--warn:#ff9500;--crit:#d70015;
+  --hl-red:#d70015;--hl-yellow:#e0a000;--hl-blue:#0066cc;--hl-green:#1d7a35;--hl-orange:#e06c00;
   --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
   --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
@@ -91,6 +92,7 @@
   --fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.36);
   --accent:#0a84ff;--s1:#0a84ff;--other:#5a5a5e;
   --good:#30d158;--warn:#ff9f0a;--crit:#ff6961;
+  --hl-red:#ff6961;--hl-yellow:#ffd60a;--hl-blue:#0a84ff;--hl-green:#30d158;--hl-orange:#ff9f0a;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
   --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
   --hairline:rgba(235,235,245,.18);
@@ -102,6 +104,7 @@
   --fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.36);
   --accent:#0a84ff;--s1:#0a84ff;--other:#5a5a5e;
   --good:#30d158;--warn:#ff9f0a;--crit:#ff6961;
+  --hl-red:#ff6961;--hl-yellow:#ffd60a;--hl-blue:#0a84ff;--hl-green:#30d158;--hl-orange:#ff9f0a;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
   --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
   --hairline:rgba(235,235,245,.18);
@@ -113,6 +116,7 @@
   --fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.20);
   --accent:#0066cc;--s1:#0066cc;--other:#aeaeb2;
   --good:#248a3d;--warn:#ff9500;--crit:#d70015;
+  --hl-red:#d70015;--hl-yellow:#e0a000;--hl-blue:#0066cc;--hl-green:#1d7a35;--hl-orange:#e06c00;
   --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
   --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
@@ -583,6 +587,28 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 .rowsub{fill:var(--ink2);font-size:10.5px;font-variant-numeric:tabular-nums}
 .ms{fill:var(--ink);stroke:var(--surface);stroke-width:1.2;cursor:pointer}
 .ms.key{fill:var(--crit);stroke-width:1.4}
+/* A highlight somebody chose, after .ms.key so it wins over the DB-lock red the chart
+   applies by itself. Each colour is a variable so both themes can carry a shade that
+   reads on their own ground. */
+.ms.hl-red{fill:var(--hl-red);stroke-width:1.4}
+.ms.hl-yellow{fill:var(--hl-yellow);stroke-width:1.4}
+.ms.hl-blue{fill:var(--hl-blue);stroke-width:1.4}
+.ms.hl-green{fill:var(--hl-green);stroke-width:1.4}
+.ms.hl-orange{fill:var(--hl-orange);stroke-width:1.4}
+.legend .sw.tri.hl-red{border-top-color:var(--hl-red);border-left-width:7px;border-right-width:7px}
+.legend .sw.tri.hl-yellow{border-top-color:var(--hl-yellow);border-left-width:7px;border-right-width:7px}
+.legend .sw.tri.hl-blue{border-top-color:var(--hl-blue);border-left-width:7px;border-right-width:7px}
+.legend .sw.tri.hl-green{border-top-color:var(--hl-green);border-left-width:7px;border-right-width:7px}
+.legend .sw.tri.hl-orange{border-top-color:var(--hl-orange);border-left-width:7px;border-right-width:7px}
+/* The chip in a highlight cell. ::before, so it is drawn beside the value without being
+   part of what the cell contains - the cell is edited in place and read back as text. */
+td.cell[data-hl]::before{content:"";display:inline-block;width:.72em;height:.72em;
+  border-radius:2px;margin-right:.45em;vertical-align:-1px;border:1px solid var(--hairline)}
+td.cell[data-hl="red"]::before{background:var(--hl-red)}
+td.cell[data-hl="yellow"]::before{background:var(--hl-yellow)}
+td.cell[data-hl="blue"]::before{background:var(--hl-blue)}
+td.cell[data-hl="green"]::before{background:var(--hl-green)}
+td.cell[data-hl="orange"]::before{background:var(--hl-orange)}
 .halo{stroke:var(--surface);stroke-width:4;opacity:.9}
 .th-over{stroke:var(--crit);stroke-width:1.5;stroke-dasharray:5 3}
 .th-under{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:5 3}

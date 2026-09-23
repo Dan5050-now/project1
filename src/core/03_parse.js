@@ -49,7 +49,8 @@ const SHEET_HEADERS = {
     "work_scope_type","outsourcing_scope_det","EDC_setup","DataReviewSystem_setup","RBQM_setup","DM_conduct",
     "EDC_system","DataReviewSystem","RBQM_system","planned_member_count","start_date",
     "end_date","total_period_months","status","estimation_type","note_1","note_2","note_3","note_4","note_5"],
-  Milestone:["project_id","project_name","milestone_name","milestone_date","milestone_seq","note_1"],
+  Milestone:["project_id","project_name","milestone_name","milestone_date","milestone_highlight",
+    "milestone_seq","note_1"],
   ProjectPeriod:["project_id","period_name","period_seq","period_start","period_end","weight","note_1"],
   PeriodFTEStandard:["project_type","clinical_phase","work_scope_type","period_name",
     "standard_fte","note_1"],
@@ -206,6 +207,29 @@ const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignmen
 /* What each column means, shown on its heading. These definitions come from the plan's
    data model - the point is that someone filling in the workbook should not have to
    open a specification to find out what a column is for. */
+/* MILESTONE HIGHLIGHTING (schema 13). A milestone may be marked with a colour, and the
+   colour then finds the marker on every Project timeline - the one on Overall and the
+   one on the project's own tab.
+
+   THE COLUMN HOLDS A WORD, NOT A COLOUR CODE, and the word is read out of whatever the
+   Lists sheet offers. 'Highlight (Red)' is what the template ships, but a team that
+   decides red means something in particular may say so - 'Highlight (Red) - slipped' -
+   and the marker stays red, because what is looked for is the COLOUR WORD inside the
+   value rather than the value itself. That is the whole reason this is a lookup and not
+   an equality test: the list belongs to the people using it, and a rule that broke the
+   moment somebody explained their own convention in it would be a rule they had to work
+   around.
+
+   An unrecognised value is not silently dropped: V-37 reports it and the milestone draws
+   in the ordinary colour, which is what it did before there was a column at all. */
+const HIGHLIGHT_WORDS = ["red", "yellow", "blue", "green", "orange"];
+
+function hlToken(v){
+  if (v === null || v === undefined) return "";
+  const t = String(v).toLowerCase();
+  return HIGHLIGHT_WORDS.find(w => t.includes(w)) || "";
+}
+
 const COLUMN_HELP = {
   estimation_type:"'automatic' (the default) or 'manual'. AUTOMATIC means the figures come from the assumptions, as everything always has. MANUAL means somebody has stated the monthly FTE themselves, on the MonthlyEstimate sheet, and those figures are used instead. Switching to manual COPIES the calculated figures across as a starting point so nothing jumps; switching back to automatic DISCARDS them. The application asks before doing either.",
   standard_fte:"The STANDARD MONTHLY FTE for this project type, phase, scope and period — a MAGNITUDE, not a multiplier. 4.02 means a project of this kind takes about four full-time people a month through this period. It is where a figure gets its SIZE (REQ-CAL-19): the project's own ProjectPeriod.weight then adjusts it for that particular study, and the role factors divide it between the roles actually staffed. Called 'weight' until schema 10, which is most of why it went unused — a weight reads like something to multiply by.",
@@ -217,6 +241,7 @@ const COLUMN_HELP = {
   difference:"The stated figure minus the automatic one. This is the size of the departure the manual estimate is making, month by month.",
   period:"THE WHOLE DERIVATION OF THIS MONTH, TERM BY TERM: which period of the project's own plan it falls in, the standard monthly FTE that period selects, this project's own weight, and how much of the month the project ran — which multiplied are the project's month. On a person's table a second line follows with their CLAIM on that month: role factor ÷ sharers × person weight × month coverage, ending in the percentage of the month it won. Those terms make a claim and not a figure — every claim on a project-month is measured against the others, so the shares add to one (REQ-CAL-19), which is why the two halves are closed off separately instead of written as one product. A fallback says it is one and names its rule: no standard row is V-19, no role factor row is V-23, no period at all is V-12. Read off the same calculation the figure came from, so no term shown here can be a different one from the term the arithmetic used.",
   sharers:"How many people hold THIS ROLE on this project in this month. The role factor is what the ROLE costs the project, not what each holder costs, so it is divided by this: put a second data manager on a trial and each of them claims half of what one claimed, and the project's month does not move (REQ-CAL-14). A share that halves from one month to the next with nothing else changed is usually this.",
+  milestone_highlight:"OPTIONAL. Marks this milestone on the Project timeline in a colour — on the Overall tab and on this project's own tab, wherever the timeline is drawn. Pick one of the values the Lists sheet offers; leave it empty and the milestone draws as it always did. The colour word inside the value is what is read, so a team that writes what their colours MEAN — 'Highlight (Red) - slipped' — keeps the colour and gains the reason.",
   project_id:"Unique identifier for the project. Editing it cascades to every row that references it.",
   project_name:"Display name. Shown wherever the project appears.",
   project_type:"'NewDrug CT', 'Biosimilar CT (Healthy)', 'Biosimilar CT (Patient)' or 'Others'. Everything but 'Others' is a clinical trial: they share one period set and differ in their weights.",
@@ -295,7 +320,8 @@ const COLUMN_LABEL = {
   total_period_months:"Length in months", status:"Status",
   estimation_type:"Figures come from",
   // Milestone
-  milestone_name:"Milestone", milestone_date:"Date", milestone_seq:"Order",
+  milestone_name:"Milestone", milestone_date:"Date", milestone_highlight:"Highlight",
+  milestone_seq:"Order",
   // ProjectPeriod, and the standards it reads
   period_name:"Period", period_seq:"Order", period_start:"From", period_end:"To",
   weight:"Period weight", standard_fte:"Standard monthly FTE",

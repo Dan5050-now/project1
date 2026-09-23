@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.51",
+  "version": "1.52",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -22,14 +22,14 @@
    "both_end_the_same": "A plan started blank exports to the same .xlsx and the same .prap.json as any other, so nothing downstream needs to know which way it began."
   }
  },
- "schema_version": 12,
+ "schema_version": 13,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.60.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.31.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.61.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.32.xlsx",
   "ui_component_list": "docs/PRAP_UI_Component_List_v2.2.xlsx",
-  "source_data_template": "templates/PRAP_SourceData_Template_v1.16.xlsx",
-  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.18.xlsx",
-  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.10.xlsx",
+  "source_data_template": "templates/PRAP_SourceData_Template_v1.17.xlsx",
+  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.19.xlsx",
+  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.11.xlsx",
   "agent_guide": "docs/PRAP_AI_Agent_Guide.md"
  },
  "sheets": {
@@ -251,6 +251,13 @@
      "type": "date",
      "editable": true,
      "note": "Planned date."
+    },
+    {
+     "name": "milestone_highlight",
+     "type": "text",
+     "editable": true,
+     "note": "OPTIONAL. Marks this milestone on the Project timeline in a colour. Pick from the list; leave empty for no mark.",
+     "value_list": "milestone_highlight"
     },
     {
      "name": "milestone_seq",
@@ -869,6 +876,13 @@
    "final DB lock",
    "Inspection"
   ],
+  "milestone_highlight": [
+   "Highlight (Red)",
+   "Highlight (Yellow)",
+   "Highlight (Blue)",
+   "Highlight (Green)",
+   "Highlight (Orange)"
+  ],
   "period_name_clinical": [
    "Before-Start-up",
    "Start-up",
@@ -898,7 +912,7 @@
  },
  "config": {
   "schema_version": {
-   "default": 12,
+   "default": 13,
    "meaning": "Structure version of this workbook. The application warns on a mismatch."
   },
   "fte_hours_per_month": {
@@ -1298,6 +1312,14 @@
    "effect": "Information - and classed INCOMPLETE, so it never refuses an edit and never questions a save. A project with nobody on it yet is not a fault: it is the state every project is in for the minute after it is created, exactly as a person with no assignment is (v2.52). WHAT IT FIXES IS A ROW OF BLANKS, NOT AN ERROR. The project IS listed - it has a row in Resource by project, it is drawn on the timeline, and it counts in the projects tile - but every one of its months is EMPTY, it puts nothing on the three demand charts, it takes no legend entry and it reaches no line of Standard vs staffed. That is worse than being absent: a row of blanks reads as a project that costs nothing rather than one nobody has been put on yet, which is the same failure V-34 exists for. Type, phase, scope and periods are all the standard needs to say what it costs. REQ-CAL-19 is explicit that the project-month IS its standard and the people on it DIVIDE it; a divisor of nobody does not make the demand nought. AND NOTHING ELSE REPORTED IT: V-34 compares demand against applied, which is this gap at its widest, but V-34 is built from projGap, which is built from projMonth, which is built from the LINES - so no assignment means no line, no entry and no finding, and the one project short by the whole of its standard was the only shortfall the shortfall rule could not see. IT CARRIES THE FIGURE, which is why it is raised from the calculation rather than from the validation, and why every term is the one an assignment with blank dates would get (REQ-CAL-15): the number it states is to the hundredth the number the project shows the moment somebody is assigned, which tools/test_unstaffed.py asserts in both directions. SKIPPED where there is nothing to say or nothing to do: a project with no periods has no demand to state and V-12 or V-16 already says so, and a Completed project is history rather than a gap to fill - its finding would never answer itself, which is what the INCOMPLETE class promises.",
    "severity_reported_by_app": [
     "information"
+   ],
+   "enforced_by_application": true
+  },
+  "V-37": {
+   "statement": "Milestone.milestone_highlight carries a value that names no colour the application can draw.",
+   "effect": "Warning - the milestone is drawn unmarked, which is what it would have been with the column empty, and the finding says so with the values the file's own Lists sheet offers. Never a refusal: a mark changes no figure, and a plan whose highlight column is misspelt is still a correct plan. It is reported rather than ignored because the failure is INVISIBLE otherwise - an unmarked milestone looks exactly like one nobody got round to marking, so a typo in the list value would quietly undo the thing the user asked for. What the application reads is the colour word inside the value ('red', 'yellow', 'blue', 'green', 'orange'), which is what lets a team write what their colour means beside it; the rule fires only when no such word is there at all.",
+   "severity_reported_by_app": [
+    "warning"
    ],
    "enforced_by_application": true
   }

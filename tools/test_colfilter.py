@@ -32,8 +32,8 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
-SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.10.xlsx"
-BIG = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.18.xlsx"
+SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.11.xlsx"
+BIG = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.19.xlsx"
 
 # The six sections named in the request, by the sheet each one draws.
 WANT = {"Project", "Person", "MonthlyEstimate", "PeriodFTEStandard", "RoleFactor"}

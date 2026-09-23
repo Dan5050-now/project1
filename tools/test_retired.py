@@ -30,6 +30,7 @@ worth testing, because the failure would not appear until somebody tried to save
 """
 
 import pathlib
+import re
 import shutil
 import sys
 import tempfile
@@ -39,7 +40,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.10.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.11.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 fails = []
@@ -97,8 +98,15 @@ with sync_playwright() as pw:
       label: typeof COLUMN_LABEL === 'object' && 'edited_at' in COLUMN_LABEL,
       help: typeof COLUMN_HELP === 'object' && 'edited_at' in COLUMN_HELP,
     })""")
-    check(gone["schema"] == 12 and "edited_at" not in gone["cols"],
-          "1a. not in the schema, which has stepped to 12",
+    # The schema goes on stepping - 12 when edited_at was retired, 13 when milestone
+    # highlighting arrived - and what this check is about is the COLUMN, not the number
+    # of the day. Read the number from the file that owns it; a literal here fails on
+    # the next schema change and says nothing about edited_at when it does.
+    core_schema = int(re.search(r"SCHEMA_EXPECTED = (\d+);",
+                                (ROOT / "src" / "core" / "00_meta.js").read_text(encoding="utf-8")
+                                ).group(1))
+    check(gone["schema"] == core_schema and "edited_at" not in gone["cols"],
+          f"1a. not in the schema, which is at v{core_schema} and no longer names it",
           f"schema v{gone['schema']}, MonthlyEstimate: {', '.join(gone['cols'])}")
     check(gone["retired"] == ["edited_at"] and not gone["label"] and not gone["help"],
           "    and recorded as retired rather than merely deleted",

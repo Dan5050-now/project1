@@ -47,7 +47,7 @@ except ImportError:                     # playwright is a TEST dependency, not t
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PKG = ROOT / "dist" / "PM_APP_py"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.18.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.19.xlsx"
 # WHERE CHROMIUM IS, or None to let playwright find its own. A hardcoded path is how
 # this file used to mean "runs on my machine": it named a Linux build, so on the
 # Windows PC that actually prepares the release it could not have worked even with

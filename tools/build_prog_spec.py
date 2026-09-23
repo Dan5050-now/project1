@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.31"
+DOC_VERSION = "1.32"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.60.xlsx"
+PLAN = "PRAP_Development_Plan_v2.61.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -123,7 +123,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Governing document", f"{PLAN} - APPROVED BASELINE, Dan 2026-08-02"),
-    ("Schema version specified", "12"),
+    ("Schema version specified", "13"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -146,7 +146,7 @@ r = lines(ws, r, [
     "Two things make this specification unusual, and both are deliberate:",
     "",
     "  - The data schema is not described in prose. It already exists as a working file,",
-    "    templates/PRAP_SourceData_Template_v1.16.xlsx, and sheet 03 documents the parse contract against it.",
+    "    templates/PRAP_SourceData_Template_v1.17.xlsx, and sheet 03 documents the parse contract against it.",
     "  - The calculation and validation logic already has a reference implementation in",
     "    tools/verify_source_workbook.py, which runs against the dummy data. Sheet 05 gives the pseudocode;",
     "    that script is the executable check that the pseudocode is right.",
@@ -193,6 +193,20 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.32", "2026-09-23", "Claude Code", "Dan",
+         "R-50, REQ-PRJ-14. SOURCE SCHEMA STEPS 12 TO 13: Milestone gains "
+         "milestone_highlight, beside the date it marks. A milestone may be marked in a "
+         "colour and the mark finds it wherever the Project timeline is drawn - the "
+         "Overall tab's and the project's own. The value comes from the Lists sheet and "
+         "what the application reads is the COLOUR WORD inside it, so a team may record "
+         "what their colour means and keep both; the legend then prints their words "
+         "rather than the word 'red'. Sheet 07 gains V-37 for a value naming no colour: "
+         "warning, never a refusal, because the milestone simply draws as it did before "
+         "the column existed and a mark changes no figure. The column is OPTIONAL and "
+         "part of no key. Nothing in the calculation moves - the highlight is carried "
+         "beside the milestone dates rather than inside them, so the structure the "
+         "period derivation reads is unchanged. Template v1.17, examples v1.19 and "
+         "v1.11.", "Draft"],
         ["1.31", "2026-09-13", "Claude Code", "Dan",
          "R-49, REQ-DSH-17. Sheet 06's Table A now specifies what a project-month "
          "inside the project's own run with NOBODY ON IT shows: the figure its standard "
@@ -646,8 +660,8 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 r = section(ws, r, "Source documents")
 src = [
     [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes APPROVED BASELINE 2026-08-02. 70 requirements, 24 validation rules, 11 decisions, source schema version 5.", "Governs this document"],
-    ["templates/PRAP_SourceData_Template_v1.16.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
-    ["templates/PRAP_SourceData_Dummy_v1.18.xlsx", "16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12 'Others', 20 people, 277 assignments over 74 months.", "The acceptance data for sheet 05"],
+    ["templates/PRAP_SourceData_Template_v1.17.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
+    ["templates/PRAP_SourceData_Dummy_v1.19.xlsx", "16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12 'Others', 20 people, 277 assignments over 74 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
     ["docs/STEP2_OPEN_POINTS.md", "Points raised while building the template.", "Carried into sheet 10"],
 ]
@@ -675,7 +689,7 @@ r = table(ws, r, ["Deferred", "Why"], defer, [56, 76], wrap_cols=(1, 2))
 
 # ---- 03 Data schema -------------------------------------------------------
 ws, r = sheet(wb, "03_Data_Schema", "Data schema - the parse contract",
-              "Documents templates/PRAP_SourceData_Template_v1.16.xlsx. Sheet and column names are matched "
+              "Documents templates/PRAP_SourceData_Template_v1.17.xlsx. Sheet and column names are matched "
               "exactly and case-sensitively.")
 
 r = section(ws, r, "Reading the workbook")
@@ -703,7 +717,7 @@ r = table(ws, r, ["Type", "Coercion", "Why it matters"], types, [12, 62, 66], wr
 r = section(ws, r, "Sheets and keys")
 sheets = [
     ["Project", "project_id", "-", "23", "Master."],
-    ["Milestone", "project_id + milestone_name + milestone_date", "Project", "6", "milestone_name is NOT unique alone - 'Inspection' repeats (REQ-PRJ-13)."],
+    ["Milestone", "project_id + milestone_name + milestone_date", "Project", "7", "milestone_name is NOT unique alone - 'Inspection' repeats (REQ-PRJ-13). Schema 13 adds milestone_highlight, which is OPTIONAL and part of no key: two rows differing only in their colour would be the same milestone twice."],
     ["ProjectPeriod", "project_id + period_name", "Project", "7", "Since R-11 no period name repeats in a project, so the name alone identifies the row. period_seq carries order, not identity (V-18)."],
     ["PeriodFTEStandard", "project_type + clinical_phase + work_scope_type + period_name", "-", "6", "84 baseline rows at schema 6: three trial types keyed separately (R-05, R-12), four phases, seven periods (R-11), with work_scope_type EMPTY. A row per scope as well would be 252. 'Others' take manual weights (Q-28)."],
     ["RoleFactor", "project_type + clinical_phase + work_scope_type + period_name + role_name", "-", "7", "429 baseline rows at schema 6 - the largest sheet in the workbook, and 1,269 if every scope were spelled out. Keyed on all five so a role's burden can vary across the life of a project (R-10) and with how much of the work is kept (R-12). clinical_phase is EMPTY on the nine 'Others' rows - the lookup must match null to null, not fall through."],
@@ -824,7 +838,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "12", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "13", "Compared with the version this application expects (sheet 08)."],
     ["absorb_unstaffed_role_factor", "Integer", "1", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (sheet 05). 0 = an unstaffed role costs nothing, the arithmetic of every version before this one."],
     ["split_shared_role_fte", "Integer", "1", "1 = the role factor is divided between the people sharing a role in a month (sheet 05). 0 = each carries the whole factor, the arithmetic of every version before this one. A switch, not a threshold - so the Config reader must distinguish a value of 0 from an absent value, which is the defect this setting exposed."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
@@ -922,6 +936,7 @@ rules = [
     ["V-22", "Warning", "Person.capacity_fte is below config.under_allocation_fte.", "PSN-018: capacity 0.50 FTE is below the under-allocation floor of 0.60, so this person can never clear it however fully they are booked. Lower the floor or raise the capacity."],
     ["V-31", "Error", "A project or assignment set to estimation_type = 'manual' has months it covers with no MonthlyEstimate row.", "Project PRJ-019 is set to MANUAL but MonthlyEstimate has no figure for 3 of its month(s): 2028-01, 2028-02, 2028-03. Those months are counted as 0.00."],
     ["V-32", "Error", "A manual PROJECT has a figure for a month in which nobody is assigned to it, so there is nobody to share it out to.", "Project PRJ-019 has a manual figure for 2 month(s) in which nobody is assigned to it. It has NOT been applied - the project would otherwise show a total that none of its people account for."],
+    ["V-37", "Warning", "Milestone.milestone_highlight names no colour the application can draw. The value comes from the Lists sheet and what is read is the COLOUR WORD inside it - red, yellow, blue, green or orange - so a team may write what their colour means beside it and keep both. The rule fires only when no such word is there at all. The milestone is drawn unmarked, exactly as an empty column would draw it, and no figure changes.", "Project PRJ-004: milestone_highlight 'Hilight (Read)' names no colour this application can draw, so 'Inspection' is left unmarked. Valid: Highlight (Red), Highlight (Yellow), Highlight (Blue), Highlight (Green), Highlight (Orange)."],
     ["V-36", "Information", "A project that has periods and NO assignment rows at all. Raised from the CALCULATION, one finding per project. Classed INCOMPLETE, so it never refuses and never asks. Skipped where the project has no periods (V-12 or V-16 already says so, and there is no demand to state) or where its status is Completed (history, not a gap - a finding that will never answer itself does not belong in the INCOMPLETE class). Every term is the one an assignment with blank dates would get (REQ-CAL-15), so the figure it names is to the hundredth the figure the project shows once somebody is assigned.", "Project PRJ-099 has periods but NOBODY ASSIGNED TO IT. It is listed in Resource by project and drawn on the timeline, but EVERY ONE OF ITS MONTHS IS EMPTY, and it adds nothing to the demand charts - a row of blanks, which reads as a project that costs nothing rather than one nobody has been put on yet. Its own standard says it needs 38.05 FTE-months across 24 month(s), from 2025-03, peaking at 1.86 FTE in 2026-10. That demand is real and unallocated: a project-month IS its standard and the people on it divide it (REQ-CAL-19), so having nobody on it does not make the figure nought - it leaves it unstated. Assign somebody and the project fills in across every table and chart, at exactly these figures. This is a note, not a fault: it is the state every project is in until its first assignment, so it never refuses an edit and never questions a save."],
     ["V-35", "Error", "Person.capacity_fte outside 0.00 to 1.00, in either direction. REFUSES - the only rule added this year that does.", "PSN-001: capacity 1.50 FTE is outside 0.00 to 1.00. capacity_fte is how much of ONE PERSON there is, so 1.00 is full-time and 0.50 is half a week - there is no such thing as 1.50 of a person. A figure above 1.00 is usually hours typed into an FTE column: 1.50 hours a month is 0.01 FTE. Somebody who does the work of two people is TWO ASSIGNMENTS, or a person weight above 1.00 on one of them - not a capacity above 1.00."],
     ["V-34", "Warning", "A project-month where what the project NEEDS - standard FTE x period weight x the part of the month it runs - is not what it is being GIVEN, in either direction. Raised from the calculation; one finding per project.", "Project PRJ-019 is not being given what its own standard says it needs: 2 month(s) SHORT of it by up to 5.00 FTE, and 1 month(s) OVER it by up to 3.00 FTE. Worst is 2026-09, which needs 10.00 and is getting 5.00. It is reported because it is otherwise invisible: the charts simply draw a different project."],
@@ -1320,7 +1335,7 @@ ex = [
 ]
 r = table(ws, r, ["Element", "Value", "Note"], ex, [22, 62, 44], wrap_cols=(2, 3))
 r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workbook.py against "
-                "PRAP_SourceData_Dummy_v1.18.xlsx must give no errors and no warnings, across 62 projects, "
+                "PRAP_SourceData_Dummy_v1.19.xlsx must give no errors and no warnings, across 62 projects, "
                 "20 people, 277 assignments and 308 periods spanning 74 months. Every period set must be "
                 "contiguous, all 50 trials must carry 'Conduct (final)', 30 must also carry "
                 "'Conduct (interim)', and 12 must carry the final inspection period. No project may carry "
@@ -1351,7 +1366,7 @@ ov = [
     ["Table B - by person", "Rows people, columns months, cells FTE summed across projects. Over-allocated cells red, under-allocation runs amber. A person row expands to their projects.", "REQ-DSH-01, REQ-DSH-08"],
     ["Graph 1", "Stacked bar: total monthly demand, ONE BAND PER PROJECT, ordered by total resource with the largest on the baseline. 'Others' projects are grey; trials take the extended colour set. NO LEGEND - a list of 62 entries cannot be matched against the chart. Identity comes from the hover pop-up, which carries project name and type, that month's FTE and its hour equivalent, its share of the month, the headcount, every person on the project that month with their role, and - under a rule - THE MONTH'S TOTAL ACROSS EVERY PROJECT IN VIEW. The total is what a band on its own cannot give: 4.02 FTE means nothing until you know whether the month came to five or to fifty. It is the same figure Graph 2 states for that month, summed along the other axis, so the two pop-ups are held to agreeing in words as well as in pixels.", "REQ-DSH-02"],
     ["Graph 2", "Monthly FTE per person, with reference lines at the two thresholds - one pair of lines, since both are absolute. Above the bar budget it shows a ranked subset with the rest rolled into one 'others' band, and says which it is showing.", "REQ-DSH-02, REQ-DSH-08, REQ-DSH-09"],
-    ["Graph 3", "Timeline per project - the FIRST panel on the tab, above the summary tiles. Each row carries the project name with its start, end and length beneath. Bands are coloured BY PERIOD NAME (see the colour rule below), with the period weight as a lightness step inside each hue. Milestones are inverted triangles in a lane above the bands; 'Inspection' takes the same marker as every other milestone. The hover pop-up gives the period, its dates, its weight and the FTE per month the project draws across it.", "REQ-DSH-02, REQ-PRJ-05, REQ-DSH-10"],
+    ["Graph 3", "Timeline per project - the FIRST panel on the tab, above the summary tiles. Each row carries the project name with its start, end and length beneath. Bands are coloured BY PERIOD NAME (see the colour rule below), with the period weight as a lightness step inside each hue. Milestones are inverted triangles in a lane above the bands; 'Inspection' takes the same marker as every other milestone. A milestone carrying milestone_highlight is drawn in that colour and takes the larger marker (schema 13, REQ-PRJ-14) - a colour chosen by hand beats the DB-lock red the chart applies by itself, and the legend lists only the colours in use, labelled with the words the file gives them. The hover pop-up gives the period, its dates, its weight and the FTE per month the project draws across it.", "REQ-DSH-02, REQ-PRJ-05, REQ-DSH-10"],
     ["Summary tiles", "Active projects; people assigned; total FTE in the horizon; over-allocated person-months; under-allocation runs; and project-months OFF THEIR STANDARD, split short/over and never netted. The last one is clickable and scrolls to the section below; it is counted by the same function that draws that section, so the two cannot disagree.", "REQ-DSH-08, REQ-DSH-15"],
     ["Standard vs staffed", "A SECTION, under the tiles: every project-month where what the project needs is not what it is getting, largest gap first, with the project, the month, needs, staffed, the gap and its direction. Deliberately NOT a tab - a tab is the surface you visit only once you already suspect a problem, which is the wrong property for something whose whole danger is that it is silent, and the findings report is already the list of everything wrong. Clicking any row opens that month in a dialog: the demand term by term, everyone on it with their applied figures, and EVERY Stated figure editable in place. A month that already has a MonthlyEstimate row is an ordinary contenteditable cell over it, so the editing path of sheet 07 handles it unchanged. A month with NO row has nothing to write through, so its cell CREATES one - and where the assignment is still automatic it asks first, because a lone row against an automatic assignment is read by nothing and setting estimation_type without seeding the other months counts each of them as 0.00 (REQ-CAL-18); the switch, the seeding and the typed figure are then applied together or not at all. Already manual with no row for that month is the V-31 case and is not asked. A cell with no data-sheet is skipped by the generic handler, which is what lets a creating cell carry its own. A row whose Applied is not its Stated carries the V-33 mark. The dialog redraws after an edit; one still showing the gap just closed would read as an edit that did nothing. Empty when there is nothing to report, and it says why rather than disappearing.", "REQ-DSH-15"],
     ["Reset filters", "Clears every filter and restores the default 24-month horizon in one action.", "REQ-DSH-05"],
@@ -1436,7 +1451,7 @@ r = note(ws, r, "Why the requirement was not simply set to the volume in use. 50
 r = section(ws, r, "Tab 2 - Source data (project)")
 t2 = [
     ["Project table", "All 23 Project columns, sortable and filterable, total_period_months recomputed. Editable.", "REQ-DSH-03, REQ-IMP-07"],
-    ["Milestone sub-table", "Milestones of the selected project in date order. 'Inspection' may appear several times.", "REQ-PRJ-05, REQ-PRJ-13"],
+    ["Milestone sub-table", "Milestones of the selected project in date order. 'Inspection' may appear several times. milestone_highlight is offered from the Lists sheet and its cell carries a chip in the chosen colour, drawn as a pseudo-element so it is never part of what the cell contains.", "REQ-PRJ-05, REQ-PRJ-13, REQ-PRJ-14"],
     ["Period sub-table", "Derived periods with seq, dates and weight, in seq order. Names are unique within a project since R-11, so project_id + period_name identifies a row. Shows whether each date was derived or hand-set. A LOOKUP column beside the weight names the standard monthly FTE this period selects for a project of this type, phase and work scope, and multiplies the two - so the row carries the month's demand rather than one term of the expression for it. Missing, it reads 'none - V-19' rather than the 1.00 the calculation falls back to.", "REQ-PRJ-06, REQ-CAL-09, REQ-DSH-10, REQ-DSH-14"],
     ["Recompute periods", "Re-derives from current milestones, warning that hand-set dates will be replaced.", "decision C-10"],
     ["Utilisation graph", "The selected project's monthly resource across the horizon, as bars, with THREE reference lines: 2x and 0.5x the average an ACTIVE project-month draws across the portfolio, and the project's own average over its full life. Sits directly under the project table, mirroring the person tab's strip. Months where the project draws nothing are excluded from the portfolio average - averaging them in would drag the norm toward zero and make every running project look heavy.", "REQ-DSH-12"],

@@ -32,7 +32,7 @@ from . import timefmt
 APP = "PM_APP"
 FORMAT = "prap-source-data"
 FORMAT_VERSION = 1
-SCHEMA_EXPECTED = 12          # the layout core/ reads; kept in step with
+SCHEMA_EXPECTED = 13          # the layout core/ reads; kept in step with
                               # SCHEMA_EXPECTED in core/00_meta.js, which is the
                               # one the findings report quotes at the user (V-09)
 

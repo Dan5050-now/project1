@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 12
-TEMPLATE_VERSION = "1.16"
-DUMMY_VERSION = "1.18"
-DUMMY_SMALL_VERSION = "1.10"
+SCHEMA_VERSION = 13
+TEMPLATE_VERSION = "1.17"
+DUMMY_VERSION = "1.19"
+DUMMY_SMALL_VERSION = "1.11"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -85,6 +85,10 @@ LISTS = [
     ("milestone_name", ["Protocol (v1)", "CTA submission", "FPI", "First SIV", "LPI",
                         "interim DB lock cut-off", "interim DB lock",
                         "final DB lock cut-off", "final DB lock", "Inspection"]),
+    # Schema 13. The word in the brackets is what the application reads, so a team may
+    # add what their colour MEANS - "Highlight (Red) - slipped" - and keep the colour.
+    ("milestone_highlight", ["Highlight (Red)", "Highlight (Yellow)", "Highlight (Blue)",
+                             "Highlight (Green)", "Highlight (Orange)"]),
     ("period_name_clinical", ["Before-Start-up", "Start-up", "Conduct (interim)",
                               "Close-out (interim)", "Conduct (final)",
                               "Close-out (final)", "After Close-out (final)"]),
@@ -294,6 +298,8 @@ SHEETS = {
         ("project_name", "DERIVED - looked up from Project, do not type.", "calc"),
         ("milestone_name", "From the standard list of ten. 'Inspection' may appear on several rows.", ""),
         ("milestone_date", "Planned date.", ""),
+        ("milestone_highlight", "OPTIONAL. Marks this milestone on the Project timeline in "
+                                "a colour. Pick from the list; leave empty for no mark.", ""),
         ("milestone_seq", "Display order on the timeline.", ""),
         ("note_1", "Free text. e.g. why a date moved, or which inspection body.", ""),
     ],
@@ -391,7 +397,8 @@ DROPDOWNS = {
                 "DM_conduct": "setup_party", "EDC_system": "EDC_system",
                 "DataReviewSystem": "DataReviewSystem", "RBQM_system": "RBQM_system",
                 "status": "project_status"},
-    "Milestone": {"milestone_name": "milestone_name"},
+    "Milestone": {"milestone_name": "milestone_name",
+                  "milestone_highlight": "milestone_highlight"},
     "PeriodFTEStandard": {"project_type": "project_type", "clinical_phase": "clinical_phase",
                              "work_scope_type": "work_scope_type",
                              "period_name": "period_name_clinical"},
@@ -1165,7 +1172,9 @@ def add_readme(wb, kind, facts=None):
         "",
         "SHEETS",
         "   Project               one row per project.",
-        "   Milestone             one row per milestone. Eight standard names.",
+        "   Milestone             one row per milestone. Eight standard names. milestone_highlight",
+        "                         is optional: pick a colour and that milestone is marked on the",
+        "                         Project timeline, on the Overall tab and on the project's own tab.",
         "   ProjectPeriod         the periods each project passes through, with their weights.",
         "   PeriodFTEStandard  default weights per project type, clinical phase, WORK SCOPE and",
         "                         period. Clinical trials only.",
@@ -1351,7 +1360,11 @@ def build(kind):
             events = sorted(mm.items(), key=lambda kv: kv[1])
             events += [("Inspection", x) for x in inspections.get(pid, [])]
             for seq, (nm, dt) in enumerate(sorted(events, key=lambda kv: kv[1]), start=1):
-                mile_rows.append([pid, None, nm, dt, seq,
+                # One colour, used for one thing: an inspection is what a reader scans a
+                # timeline for. Marking everything would make the example a colour chart
+                # and teach nothing about what the column is for.
+                mile_rows.append([pid, None, nm, dt,
+                                  "Highlight (Orange)" if nm == "Inspection" else None, seq,
                                   "Regulatory inspection" if nm == "Inspection" else None])
         period_rows = [list(x) + [("Entered by hand - no milestone mapping"
                                    if P[x[0]] == "Others" else "Derived from milestones")]
@@ -1395,7 +1408,8 @@ def build(kind):
                         "EDC in-house; review with the CRO", "by SB", "by SB", "by CRO", "by SB", "Veeva EDC",
                         "Veeva DQS", "CluePoints", 5, date(2025, 10, 1), date(2027, 6, 30), None,
                         "Active", "automatic", "example row - delete before use", None, None, None, None],
-            "Milestone": ["PRJ-001", None, "CTA submission", date(2026, 1, 15), 2, "example row - delete before use"],
+            "Milestone": ["PRJ-001", None, "CTA submission", date(2026, 1, 15), "Highlight (Red)", 2,
+                          "example row - delete before use"],
             "ProjectPeriod": ["PRJ-001", "Start-up", 2, date(2025, 12, 15), date(2026, 4, 14), 1.30, "example row - delete before use"],
             # No example row: these two sheets now arrive full of real defaults, and
             # a grey "delete before use" row among them would be the one thing on the

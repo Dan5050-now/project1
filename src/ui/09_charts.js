@@ -142,6 +142,7 @@ function chartGantt(pids, opts){
   for (const p of rows) for (const s of (M.periods[p] || [])) wmax = Math.max(wmax, num(s.weight) || 0);
   wmax = wmax || 1;
 
+  const hlUsed = new Set();
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
     + `aria-label="Project timeline: one row per project, bands coloured by period">`];
   for (let y = new Date(lo).getUTCFullYear(); y <= new Date(hi).getUTCFullYear(); y++){
@@ -187,10 +188,19 @@ function chartGantt(pids, opts){
       for (const d of dates){
         if (!d) continue;
         const xx = x(d.getTime()), key = KEY_MILESTONES.has(nm);
+        /* A highlight the user asked for BEATS the DB-lock red this chart applies by
+           itself: one is a standing rule about what the milestone does to the periods,
+           the other is somebody saying "look at this one". The second is the newer
+           statement and the one made on purpose, so it wins - and the tooltip goes on
+           saying the milestone sets a boundary, so nothing is lost by letting it. */
+        const hl = (M.msHighlight[p] || {})[`${nm}|${ymd(d)}`] || "";
+        if (hl) hlUsed.add(hl);
         const tip = `<b>${esc(pr.project_name)}</b><br>${esc(nm)}`
-          + (key ? ` <span class="tr">&#183; sets a period boundary</span>` : "") + `<br>${ymd(d)}`;
-        const w_ = key ? 6.5 : 5, h_ = key ? 11 : 9;
-        o.push(`<polygon class="ms${key ? " key" : ""}" points="${(xx-w_).toFixed(1)},${y+1} `
+          + (key ? ` <span class="tr">&#183; sets a period boundary</span>` : "") + `<br>${ymd(d)}`
+          + (hl ? `<br><span class="tr">marked ${esc(M.hlLabels[hl] || hl)}</span>` : "");
+        const w_ = (key || hl) ? 6.5 : 5, h_ = (key || hl) ? 11 : 9;
+        o.push(`<polygon class="ms${key ? " key" : ""}${hl ? " hl-" + hl : ""}" `
+          + `points="${(xx-w_).toFixed(1)},${y+1} `
           + `${(xx+w_).toFixed(1)},${y+1} ${xx.toFixed(1)},${y+1+h_}" data-tip="${att(tip)}"></polygon>`);
       }
   });
@@ -202,6 +212,11 @@ function chartGantt(pids, opts){
     leg.push(`<li${sLeg(n)}><span class="sw" style="background:${PERIOD_HUE[n]}"></span>${esc(n)}</li>`);
   leg.push('<li><span class="sw tri"></span>milestone</li>');
   leg.push('<li><span class="sw tri key"></span>DB lock &#8212; sets a period boundary</li>');
+  /* Only the colours actually on this chart, each labelled with what the FILE calls it.
+     Listing all five when one is in use would teach a palette nobody asked about; this
+     answers "what is that red triangle" and stops. */
+  for (const t of HIGHLIGHT_WORDS) if (hlUsed.has(t))
+    leg.push(`<li><span class="sw tri hl-${t}"></span>${esc(M.hlLabels[t] || t)}</li>`);
   leg.push('<li class="hint">darker band = higher period weight</li></ul>');
   leg.push(`<p class="note">${opts.note || `All ${rows.length} project(s) in the current filter, `
     + `scrolling in both directions inside this panel.`}</p>`);

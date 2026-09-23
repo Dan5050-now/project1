@@ -336,7 +336,7 @@ def guide_markdown(C):
       "application says 1.05.")
     w("")
     w("Reproduce it with "
-      "`python tools/prap_io.py calculate templates/PRAP_SourceData_Dummy_10x10_v1.10.xlsx`.")
+      "`python tools/prap_io.py calculate templates/PRAP_SourceData_Dummy_10x10_v1.11.xlsx`.")
     w("")
     w("### 5.3 Periods")
     w("")

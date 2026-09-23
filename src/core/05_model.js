@@ -136,7 +136,7 @@ function buildModel(sheets){
   for (const s of REQUIRED_SHEETS) raw[s] = toObjects(s, sheets[s], F);
 
   const M = {
-    projects:{}, milestones:{}, periods:{}, people:{}, assignments:[],
+    projects:{}, milestones:{}, msHighlight:{}, hlLabels:{}, periods:{}, people:{}, assignments:[],
     ppw:{}, pws:{}, rf:{}, rfRoles:{}, rfAbsorb:{}, lists:{}, config:{}, raw, findings:F,
   };
   for (const r of raw.Lists) if (r.list_name) (M.lists[r.list_name] ||= []).push(r.value);
@@ -246,6 +246,21 @@ function buildModel(sheets){
   for (const m of raw.Milestone){
     if (!m.project_id || !m.milestone_name || !m.milestone_date) continue;   // incomplete
     ((M.milestones[m.project_id] ||= {})[m.milestone_name] ||= []).push(m.milestone_date);
+    /* The highlight is kept BESIDE the dates rather than inside them (schema 13).
+       M.milestones is name -> dates, and the period derivation, V-14, V-20 and V-21 all
+       read it in that shape; widening it to carry a colour would put a presentation
+       choice inside the structure the arithmetic depends on, and every one of those
+       readers would need changing for a mark that changes no figure. Keyed by name and
+       date because that pair is what the timeline draws - the same milestone name can
+       appear twice ('Inspection') and the two occurrences may be marked differently. */
+    const tok = hlToken(m.milestone_highlight);
+    if (tok){
+      (M.msHighlight[m.project_id] ||= {})[`${m.milestone_name}|${ymd(m.milestone_date)}`] = tok;
+      // What the file CALLS this colour, kept so the legend can say it back. A team that
+      // writes 'Highlight (Red) - slipped' has told the reader what red means here, and
+      // repeating their own words beats a legend that only says "red".
+      M.hlLabels[tok] ||= String(m.milestone_highlight).trim();
+    }
   }
   for (const k of Object.keys(M.milestones))
     for (const n of Object.keys(M.milestones[k])) M.milestones[k][n].sort((a,b)=>a-b);
@@ -375,6 +390,22 @@ function validate(M, F){
        outsourcing_scope_det is free text now: there is nothing left to contradict, and
        a rule that can no longer fire is a rule to remove rather than to leave standing
        and unexplained. */
+  }
+
+  /* V-37: a highlight nobody can draw. The column takes a value from the Lists sheet and
+     the COLOUR WORD in it is what marks the timeline; a value with no colour word in it
+     leaves the milestone drawn as it always was, which looks exactly like forgetting to
+     mark it. Said out loud, with what the file itself offers, because the remedy is to
+     pick one of those - not to learn a fixed vocabulary from a manual. */
+  for (const m of (M.raw.Milestone || [])){
+    const v = m.milestone_highlight;
+    if (v === null || v === undefined || String(v).trim() === "") continue;
+    if (hlToken(v)) continue;
+    const offered = (M.lists.milestone_highlight || []).join(", ");
+    add("warning","V-37","Milestone",m.__row,
+      `Project ${m.project_id}: milestone_highlight '${v}' names no colour this application `
+      + `can draw, so '${m.milestone_name}' is left unmarked. `
+      + (offered ? `Valid: ${offered}.` : `Expected one of: ${HIGHLIGHT_WORDS.join(", ")}.`));
   }
 
   // V-11 / V-20 / V-21 on milestones

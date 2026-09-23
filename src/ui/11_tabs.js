@@ -285,7 +285,7 @@ function projDetail(pid){
         <p class="cap">CTA submission and the DB locks set the period boundaries.
           <strong>Blank list</strong> lays out the standard milestone names with their dates
           empty, so only the dates have to be typed.</p>
-        ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_seq","note_1"])}</div>
+        ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_highlight","milestone_seq","note_1"])}</div>
       <div class="panel">
         <div class="phead"><h2>Periods — ${esc(pr.project_name)}</h2>
           ${periodGenButton(pr, pid)}
@@ -340,7 +340,7 @@ function scratchProject(draft){
         <p class="cap">CTA submission and a DB lock are the two the period derivation hangs
           on — enter those and the seven clinical periods are computed for you. The other
           eight names are markers.</p>
-        ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_seq","note_1"],
+        ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_highlight","milestone_seq","note_1"],
                     null, null, null, lock)}</div>
       <div class="panel">
         <div class="phead"><h2>Periods${who}</h2>
