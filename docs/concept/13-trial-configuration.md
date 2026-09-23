@@ -44,6 +44,7 @@
 | `CFG07` | Subject Target Lists | 피험자별 적용 대상 목록 | 선택 |
 | `CFG08` | Metric Switches | 지표 적용 여부 | 권장 |
 | `CFG09` | Code Lists | 코드값 목록 | ● |
+| `CFG10` | Issue Waiver Rules | 해결 불가 이슈 유형별 예외 처리 범위 | 권장 |
 
 ## 4. 시트 명세
 
@@ -77,7 +78,7 @@
 | `WINDOW_BEFORE` | ● | 윈도우 하한 (일) |
 | `WINDOW_AFTER` | ● | 윈도우 상한 (일) |
 | `APPLY_COHORT` | | 적용 코호트. 비우면 전체 |
-| `APPLY_CONDITION` | | 조건식 (4.10) |
+| `APPLY_CONDITION` | | 조건식 (4.11) |
 
 ### 4.3 CFG03 — Schedule of Activities
 
@@ -92,7 +93,7 @@
 | `EXPECTED_COUNT` | | 기대 개수. 기본 1 |
 | `FORM_TYPE` | | `STANDARD` / `LOG`. LOG는 entry 분모 제외 |
 | `SAE_FLAG` | | 해당 폼이 SAE 관련인지 (investigator sign 구분용) |
-| `APPLY_CONDITION` | | 조건식 (4.10) |
+| `APPLY_CONDITION` | | 조건식 (4.11) |
 | `TARGET_LIST` | | CFG07의 목록 이름. 지정 시 그 목록의 피험자에게만 적용 |
 
 `TARGET_LIST`가 검토에서 언급된 **"serum pregnancy sample이 필요한 피험자 목록"** 같은 경우를 처리하는 장치입니다 (4.8).
@@ -188,7 +189,7 @@ CFG03에서 해당 활동 행에 `TARGET_LIST = SERUM_PREG_SUBJ`를 지정하면
 
 > **설계 판단 — 규칙과 목록 중 무엇을 쓸 것인가.**
 >
-> 위 예시는 `SEX = F AND 가임기` 같은 조건식(4.10)으로도 표현할 수 있습니다. 조건식이 더 우아하고 피험자가 추가될 때 자동 반영됩니다.
+> 위 예시는 `SEX = F AND 가임기` 같은 조건식(4.11)으로도 표현할 수 있습니다. 조건식이 더 우아하고 피험자가 추가될 때 자동 반영됩니다.
 >
 > 그런데 실무에서는 가임기 판정처럼 **앱이 가진 데이터만으로는 결정할 수 없는 기준**이 자주 등장합니다. 이때 조건식만 제공하면 사용자는 방법이 없습니다. 그래서 **조건식을 우선 권고하되 명시적 목록을 항상 사용할 수 있게** 둡니다. 둘 다 지정되면 목록이 우선합니다.
 
@@ -225,7 +226,35 @@ sample.recon.status        Y
 
 업로드된 source data에 이 목록에 없는 코드값이 있으면 검증 단계에서 보고됩니다 ([12](12-standard-source-templates.md) 5.1 S4).
 
-### 4.10 조건식 (APPLY_CONDITION)
+### 4.10 CFG10 — Issue Waiver Rules
+
+해결 불가 이슈가 **어느 단계를 예외 처리하는지**를 이슈 유형별로 정의합니다. 검토에서 "이슈 유형에 따라 예외 처리 수준이 다르다"는 지적을 반영한 시트입니다.
+
+| 컬럼 | 필수 | 설명 |
+|---|---|---|
+| `ISSUE_DOMAIN` | ● | `QUERY` / `SAMPLE` / `IMAGE` |
+| `ISSUE_TYPE` | ● | `CFG09`의 이슈 유형 코드 |
+| `BLOCKED_STAGES` | ● | 차단할 단계 코드. 쉼표 구분. 특수값 `ALL_INCOMPLETE` |
+| `WAIVER_TYPE` | | 기본 `ISSUE_BLOCKED` |
+| `NOTE` | | 근거 |
+
+예시입니다.
+
+```
+ISSUE_DOMAIN  ISSUE_TYPE              BLOCKED_STAGES   NOTE
+QUERY         CODING_UNRESOLVABLE     coding           코딩만 불가. 입력·SDV·서명은 진행
+QUERY         SOURCE_MISSING          sdv              원자료 부재로 SDV만 불가
+QUERY         DATA_UNAVAILABLE        ALL_INCOMPLETE   데이터 자체가 없음
+SAMPLE        HEMOLYSIS               analyzed         수령은 됨. 분석만 불가
+SAMPLE        LOST_IN_TRANSIT         ALL_INCOMPLETE   검체 자체가 없음
+IMAGE         IMAGE_LOST              ALL_INCOMPLETE   영상 자체가 없음
+```
+
+> **규칙이 없는 유형은 예외 처리하지 않습니다.** `ALL_INCOMPLETE`로 폴백하지 않는 이유는 방향 때문입니다. 예외 처리는 분모를 줄이는 동작이고, 분모가 조용히 줄면 지표가 이유 없이 좋아 보입니다. 반대로 예외 처리를 못 하면 backlog가 남아 눈에 띕니다. **틀릴 때 눈에 띄는 쪽**을 택합니다.
+>
+> 규칙 없는 해결 불가 이슈는 "예외 규칙 미정의" 목록으로 화면에 노출되어 설정 보완을 유도합니다.
+
+### 4.11 조건식 (APPLY_CONDITION)
 
 조건부 활동과 범위 규칙을 표현하는 간단한 식입니다. **제한된 문법**을 사용합니다. 자유로운 수식을 허용하면 검증도 재현도 어려워지기 때문입니다.
 
@@ -280,9 +309,11 @@ sample.recon.status        Y
 
 | # | 결정 필요 사항 | 기본 제안 |
 |---|---|---|
-| DP-13-1 | 9개 시트 구성이 적절한가. 빠진 설정 항목이 있는가 | 실무 검토 필요 |
+| DP-13-1 | 10개 시트 구성이 적절한가. 빠진 설정 항목이 있는가 | 실무 검토 필요 |
 | DP-13-2 | 4.7의 "조건식 우선, 목록 병용" 방침에 동의하는가 | 동의 권고 |
-| DP-13-3 | 4.10 조건식 문법의 범위가 충분한가 | 충분, 부족 시 목록으로 대체 |
+| DP-13-3 | 4.11 조건식 문법의 범위가 충분한가 | 충분, 부족 시 목록으로 대체 |
 | DP-13-4 | CFG03의 SoA를 이 template으로 받을 것인가, 별도 SoA 도구를 쓸 것인가 | 이 template으로 시작, USDM import는 후속 |
 | DP-13-5 | 설정 변경 권한을 누구에게 줄 것인가 (시험 리드 / 시스템 관리자) | **시험 리드 + 승인 절차** |
 | DP-13-6 | CFG01의 `PARTIAL_DATE_RULE` 기본값 | `LATEST` (보수적 판정) |
+| DP-13-7 | `CFG10`의 이슈 유형별 차단 단계 기본 목록 | 4.10 예시 기준, **실무 확정 필요** |
+| DP-13-8 | 규칙 미정의 유형을 예외 처리하지 않는 방침 | **동의 권고** (4.10) |

@@ -35,7 +35,30 @@ expectation_item        1벌   — 프로토콜상 생성 가능한 모든 항�
 
 시간 기준 파티셔닝은 하지 않습니다. 조회가 항상 시험 단위로 좁혀지므로 실익이 적고, 파티션 수만 늘어납니다.
 
-### 1.4 도메인별 확장 속성은 JSONB로 둔다
+### 1.4 사이트 귀속은 "활동이 일어난 사이트"로 한다 (검토 반영)
+
+초안은 피험자의 사이트 이전이 발생하지 않는다고 전제하고 `expectation_item`에 `site_id`를 비정규화했습니다. **이전이 발생할 수 있음이 확인**되어 귀속 규칙을 명시합니다.
+
+```
+항목의 site_id = 그 활동이 일어난 사이트
+  ├─ 방문이 발생함     → visit_actual.site_id  (DS02의 SITEID)
+  ├─ 방문 미발생       → 그 방문 목표일 시점의 피험자 소속 사이트
+  └─ 이력 없음         → 피험자의 현재 사이트
+```
+
+**이전이 과거를 다시 쓰지 않는 것**이 핵심입니다. Site A에서 수행된 방문의 폼은 이후 피험자가 B로 이전해도 A의 backlog로 남습니다. 그렇지 않으면 B가 자기가 하지 않은 일의 지연을 떠안고, A의 성과는 사라집니다.
+
+이전 시 재귀속 대상은 **아직 발생하지 않은 방문의 항목뿐**입니다.
+
+| 대안 | 왜 채택하지 않았는가 |
+|---|---|
+| 비정규화 제거 후 조인 | 롤업 쿼리마다 `subject` 조인. N-1(2초) 달성이 어려움 |
+| 전 항목을 현재 사이트로 갱신 | 과거 성과가 왜곡됨 |
+| 스냅샷마다 사이트를 다시 계산 | 과거 `metric_fact`가 바뀜. 재현 가능성 위반 |
+
+과거 `metric_fact`는 그대로 둡니다. 이전 전에 만들어진 스냅샷은 그 당시 귀속을 유지하며, 이것이 [개념 08](../concept/08-platform-services.md) 4.2 규칙 3과 일관됩니다.
+
+### 1.5 도메인별 확장 속성은 JSONB로 둔다
 
 `expectation_item.attributes`(JSONB)에 도메인 고유 속성을 담습니다. **자주 필터링하는 속성은 물리 컬럼으로 승격**합니다 ([개념 06](../concept/06-logical-data-model.md) 3.1). Phase 1에서 승격 대상은 `form_type`, `sae_flag`입니다.
 
@@ -83,7 +106,29 @@ expectation_item        1벌   — 프로토콜상 생성 가능한 모든 항�
 
 UNIQUE(`trial_id`, `subject_code`). INDEX(`trial_id`, `site_id`, `status`).
 
+`site_id`는 **현재 소속 사이트**입니다. 이전 이력은 2.3.1에 별도로 보관합니다.
+
 `is_forecast`가 Forecast 기준의 출발점입니다. 가상 피험자는 **실적 매칭 대상에서 제외**되며 화면에서 별도 표시됩니다.
+
+### 2.3.1 `subject_site_history`
+
+사이트 이전 이력입니다. `DS01.SITEID`가 이전 Drop과 달라지면 자동으로 행이 추가됩니다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | bigserial | |
+| `trial_id`, `subject_id` | bigint FK | |
+| `site_id`, `country_id` | bigint FK | 해당 기간의 소속 |
+| `valid_from` | date | 이 사이트 소속 시작일 |
+| `valid_to` | date | NULL이면 현재 |
+| `source_drop_id` | bigint FK | 이전을 감지한 Drop |
+| `detected_at` | timestamptz | |
+
+UNIQUE(`subject_id`, `valid_from`). INDEX(`trial_id`, `subject_id`, `valid_from`).
+
+첫 행의 `valid_from`은 `enrolled_on`(없으면 첫 Drop의 `src_extract_on`)입니다.
+
+> **한계를 명시합니다.** 실제 이전일이 아니라 **앱이 이전을 인지한 시점**이 기준입니다. 표준 파일에 이전일 컬럼이 없기 때문입니다. 따라서 이전 직전에 발생한 미발생 방문의 귀속에 최대 한 전송 주기만큼의 오차가 있을 수 있습니다. 정확한 귀속이 필요하면 `DS01`에 이전일 컬럼을 추가하는 것이 선행되어야 합니다 (S-02-5).
 
 ### 2.4 `visit_actual`
 
@@ -93,6 +138,7 @@ UNIQUE(`trial_id`, `subject_code`). INDEX(`trial_id`, `site_id`, `status`).
 |---|---|---|
 | `id` | bigserial | |
 | `trial_id`, `subject_id` | bigint FK | |
+| `site_id`, `country_id` | bigint FK | **그 방문이 수행된 사이트** (`DS02.SITEID`) |
 | `visit_code` | varchar(50) | `CFG02.VISITID`와 대조 |
 | `visit_on` | date | 실제 방문일 |
 | `status` | varchar(20) | `OCCURRED`/`NOT_DONE`/`CANCELLED` |
@@ -164,6 +210,11 @@ UNIQUE(`trial_id`, `version`). 시험당 `state='ACTIVE'`인 행은 최대 1개 
 | `subject_target_list` | `trial_config_id`, `list_name`, `list_desc` | `CFG07` |
 | `subject_target_member` | `list_id`, `subject_code` | `CFG07` |
 | `metric_switch` | `trial_config_id`, `metric_code`, `enabled`, `reason` | `CFG08` |
+| `issue_waiver_rule` | `trial_config_id`, `issue_domain`, `issue_type`, `blocked_stages` jsonb, `waiver_type` | **`CFG10`** |
+
+`issue_waiver_rule`이 검토 반영 사항입니다. **해결 불가 이슈가 어느 단계를 예외 처리하는지는 이슈 유형에 따라 다르므로**, 코드가 아니라 설정으로 둡니다 ([03](03-engine-spec.md) 3.7).
+
+`blocked_stages`는 단계 코드 배열이며, 특수값 `["ALL_INCOMPLETE"]`는 미완료 required 단계 전부를 뜻합니다. **유형이 이 표에 없으면 예외 처리를 하지 않습니다** (3.7의 기본값).
 
 `stage_setting.grace_days`를 varchar로 둔 것은 `N/A`와 `DBL_BASED` 특수값 때문입니다 ([개념 13](../concept/13-trial-configuration.md) 4.4). 파싱은 엔진에서 하며, 업로드 시 형식을 검증합니다.
 
@@ -261,7 +312,9 @@ CREATE TABLE expectation_item (
 | (`trial_id`, `site_id`, `domain`) | 사이트 롤업 |
 | (`trial_id`, `subject_id`) | Subject 360 |
 
-`country_id`와 `site_id`를 비정규화한 것은 롤업 조인을 없애기 위함입니다. 피험자의 사이트 이전은 발생하지 않는다고 전제합니다.
+`country_id`와 `site_id`를 비정규화한 것은 롤업 조인을 없애기 위함입니다. 값은 **활동이 일어난 사이트**이며 1.4의 규칙으로 결정됩니다. 피험자 사이트 이전 시 **미발생 방문의 항목만** 재귀속됩니다.
+
+`site_transferred` 파생 플래그는 두지 않습니다. 이전 여부는 `subject_site_history`로 확인하며, 화면에서는 피험자 단위로 표시합니다.
 
 ### 5.2 `stage_status`
 
@@ -309,7 +362,7 @@ CHECK (status NOT IN ('PENDING','OVERDUE','DONE') OR required)
 | `id`, `trial_id` | | |
 | `issue_domain` | varchar(10) | `QUERY`/`SAMPLE`/`IMAGE` |
 | `external_id` | varchar(100) | `DS04.QUERYID` |
-| `subject_id`, `site_id`, `country_id` | bigint | 롤업 비정규화 |
+| `subject_id`, `site_id`, `country_id` | bigint | 롤업 비정규화. 연결 항목이 있으면 **그 항목의 사이트**, 없으면 `opened_on` 시점의 소속 사이트 |
 | `item_id` | bigint | 연결된 항목 (있으면) |
 | `issue_owner` | varchar(20) | `DM`/`CRA`/`MM`/`PV` |
 | `issue_group`, `issue_type` | varchar(50) | 분해 축 |
@@ -456,5 +509,7 @@ INDEX(`trial_id`, `occurred_at` DESC), (`entity_type`, `entity_id`), (`actor_typ
 |---|---|---|
 | S-02-1 | 파티션 수 16이 적절한가 | 시험 수 20개 미만이면 충분. 재파티셔닝 절차 필요 |
 | S-02-2 | `stage_status` SCD2의 보존 기간 | 시험 종료 후 정책에 따름 (DP-08-6) |
-| S-02-3 | 피험자 사이트 이전을 허용할 것인가 | **불허 전제.** 허용 시 비정규화 컬럼 갱신 로직 필요 |
+| ~~S-02-3~~ | ~~피험자 사이트 이전 허용 여부~~ | **확정 — 발생 가능.** 활동이 일어난 사이트로 귀속 (1.4), `subject_site_history` 추가 (2.3.1) |
 | S-02-4 | `match_key` 문자열 길이 300이 충분한가 | 샘플 도메인 추가 시 재검토 |
+| **S-02-5** | **`DS01`에 사이트 이전일 컬럼을 추가할 것인가** | 없으면 인지 시점 기준. 정확한 귀속이 필요하면 추가 권고 |
+| S-02-6 | `CFG10` 이슈 유형별 차단 단계의 기본 목록 | 실무 확정 필요 ([03](03-engine-spec.md) 3.7) |

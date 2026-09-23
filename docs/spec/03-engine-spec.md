@@ -94,6 +94,7 @@ function generate_expectations(trial, assumption, config):
                 for seq in 1..act.expected_count:
                     item = upsert_item(domain=domain_of(act.activity_type),
                                        subject=subject, visit=v,
+                                       site=attribute_site(subject, v),  # 2.9
                                        activity_code=act.activity_code,
                                        repeat_seq=seq,
                                        form_type=act.form_type,
@@ -172,7 +173,7 @@ projected_enrollment(plan, to_date) =
 
 ### 2.8 조건식 평가
 
-`apply_condition`은 [개념 13](../concept/13-trial-configuration.md) 4.10의 제한된 문법입니다.
+`apply_condition`은 [개념 13](../concept/13-trial-configuration.md) 4.11의 제한된 문법입니다.
 
 | 항목 | 사양 |
 |---|---|
@@ -182,6 +183,50 @@ projected_enrollment(plan, to_date) =
 | NULL 처리 | 피연산자가 NULL이면 조건은 **false**. `!=` 비교도 false |
 
 마지막 행을 명시하는 이유는 `SEX != 'M'`이 `SEX`가 NULL인 피험자에게 true가 되면 기대 항목이 잘못 생성되기 때문입니다.
+
+### 2.9 사이트 귀속과 이전 (검토 반영)
+
+피험자의 사이트 이전이 발생할 수 있으므로([02](02-data-model.md) 1.4), 항목의 사이트는 **활동이 일어난 곳**으로 정합니다.
+
+```
+function attribute_site(subject, visit):
+    if visit.occurred:
+        return visit_actual.site_id                      # DS02의 SITEID
+    h = subject_site_history.covering(visit.target_on)
+    return h.site_id if h else subject.site_id
+```
+
+#### 이전 감지
+
+```
+function detect_transfer(subject, drop_row):
+    if drop_row.SITEID == subject.site_id:  return
+    close_current_history(subject, valid_to = drop.src_extract_on - 1)
+    open_history(subject, site = drop_row.SITEID,
+                 valid_from = drop.src_extract_on, source_drop = drop)
+    subject.site_id = drop_row.SITEID
+    audit(action='UPDATE', entity='Subject', actor_type='ENGINE',
+          reason=f'Site transfer detected: {old} → {new}')
+    reattribute_pending_items(subject)
+```
+
+#### 재귀속 범위
+
+```
+function reattribute_pending_items(subject):
+    for item in items(subject) where not item.visit.occurred:
+        item.site_id, item.country_id = attribute_site(subject, item.visit)
+```
+
+**발생한 방문의 항목은 건드리지 않습니다.** Site A에서 수행된 방문의 폼은 이후 이전이 있어도 A의 backlog로 남습니다.
+
+#### 과거 스냅샷
+
+이전은 **과거 `metric_fact`를 바꾸지 않습니다.** 이전 전에 생성된 스냅샷은 그 당시 귀속을 유지하며, 이것이 [개념 08](../concept/08-platform-services.md) 4.2 규칙 3과 일관됩니다. 비교 모드에서 사이트별 수치가 달라 보일 수 있으므로, 이전이 있었던 피험자를 포함하는 비교에는 안내를 표시합니다.
+
+#### 한계
+
+실제 이전일이 아니라 **앱이 인지한 시점**이 기준입니다. 표준 파일에 이전일 컬럼이 없기 때문이며, 미발생 방문의 귀속에 최대 한 전송 주기의 오차가 생길 수 있습니다 (S-02-5).
 
 ## 3. ProgressEngine
 
@@ -320,28 +365,74 @@ function query_due(issue, config):
     return issue.opened_on + (g.open if issue.state=='OPEN' else g.answered)
 ```
 
-### 3.7 예외(WAIVED) 전이
+### 3.7 예외(WAIVED) 전이 (검토 반영)
 
-**차단 단계의 범위 (Phase 1)**
+초안은 해결 불가 이슈가 **항목의 미완료 required 단계 전부**를 예외 처리한다고 했습니다. 검토 결과 **이슈 유형에 따라 차단 수준이 다르다**는 것이 확인되어, 유형 기반 규칙으로 바꿉니다.
 
-```
-blocked_stages(issue) = 해당 항목의 required 단계 중 아직 DONE이 아닌 전부
-```
-
-단계를 지정해 차단하는 방식은 Phase 1에서 구현하지 않습니다. 해결 불가로 판정된 항목은 이후 어느 단계도 진행되지 않는 것이 실무와 맞습니다.
+#### 차단 범위는 설정에서 온다
 
 ```
-function apply_unresolvable_issue(issue):
-    if not issue.unresolvable: return
-    if issue.item_id is None:  return
-    for stage in blocked_stages(issue):
+function blocked_stages(issue, config):
+    rule = config.issue_waiver_rule[issue.issue_domain][issue.issue_type]
+    if rule is None:                          return []          # 기본값: 예외 처리 없음
+    if rule.blocked_stages == ['ALL_INCOMPLETE']:
+        return incomplete_required_stages(issue.item)
+    return [s for s in rule.blocked_stages
+              if is_required(issue.item, s) and not is_done(issue.item, s)]
+```
+
+규칙은 `CFG10`으로 시험마다 정의합니다 ([13](../concept/13-trial-configuration.md) 4.11).
+
+| `ISSUE_TYPE` | `BLOCKED_STAGES` | 의미 |
+|---|---|---|
+| `CODING_UNRESOLVABLE` | `coding` | 코딩만 불가. 입력·SDV·서명은 진행됨 |
+| `SOURCE_MISSING` | `sdv` | 원자료 부재로 SDV만 불가 |
+| `DATA_UNAVAILABLE` | `ALL_INCOMPLETE` | 데이터 자체가 없어 이후 전부 불가 |
+| `HEMOLYSIS` *(Phase 2)* | `analyzed` | 수령은 되었고 분석만 불가 |
+| `LOST_IN_TRANSIT` *(Phase 2)* | `ALL_INCOMPLETE` | 검체 자체가 없음 |
+
+표의 값은 예시이며 **실무 확정이 필요**합니다 (S-02-6).
+
+#### 규칙이 없으면 예외 처리하지 않는다
+
+이것이 이 절에서 가장 중요한 결정입니다.
+
+```
+rule 없음  →  blocked_stages = []  →  항목은 backlog에 그대로 남음
+```
+
+규칙 없는 유형을 `ALL_INCOMPLETE`로 폴백하지 않는 이유는 방향 때문입니다. **예외 처리는 분모를 줄이는 동작**이고, 분모가 조용히 줄면 지표가 이유 없이 좋아 보입니다. 반대로 예외 처리를 못 하면 backlog가 남아 눈에 띕니다. **틀릴 때 눈에 띄는 쪽으로 기울이는 것**이 맞습니다.
+
+규칙이 없는 유형의 해결 불가 이슈는 **"예외 규칙 미정의" 목록**으로 화면에 노출해 설정 보완을 유도합니다.
+
+#### 전이
+
+```
+function apply_unresolvable_issue(issue, config):
+    if not issue.unresolvable:  return
+    if issue.item_id is None:   return
+
+    stages = blocked_stages(issue, config)
+    if not stages:
+        record_quality_finding('WAIVER_RULE_UNDEFINED', issue)
+        return
+
+    for stage in stages:
         set_status(issue.item_id, stage, WAIVED,
-                   waiver_type='ISSUE_BLOCKED',
-                   waiver_reason=f'Issue {issue.external_id}: {issue.issue_type}')
+                   waiver_type = config.issue_waiver_rule[...].waiver_type or 'ISSUE_BLOCKED',
+                   waiver_reason = f'Issue {issue.external_id} ({issue.issue_type})')
         audit(action='UPDATE', reason=waiver_reason, actor_type='ENGINE')
 ```
 
 **자동 전이는 `unresolvable=true`가 사람에 의해 설정된 뒤에만 일어납니다** ([개념 03](../concept/03-core-concept-model.md) 4.3). 엔진이 스스로 항목을 분모에서 빼지 않습니다.
+
+#### 해제
+
+이슈의 `unresolvable`이 `false`로 되돌아가면 해당 단계의 `WAIVED`를 해제하고 재판정합니다. 해제도 감사 로그에 남습니다.
+
+#### 건별 단계 지정은 Phase 2
+
+사용자가 **이슈 건마다 차단 단계를 직접 고르는 방식**은 Phase 1에서 구현하지 않습니다 (S-03-6). 유형 기반 규칙으로 대부분의 경우가 표현되며, 건별 예외는 운영 부담과 감사 복잡도를 함께 키웁니다.
 
 ### 3.8 SCD2 갱신
 
@@ -464,4 +555,6 @@ GROUP BY i.country_id, i.site_id;
 | S-03-3 | 일 배치 실행 시각 | 시험 기준 시간대 06:00 |
 | S-03-4 | 가상 피험자 코드 체계 (`FC-`) 충돌 가능성 | 실제 피험자 코드와 겹치면 업로드 시 거부 |
 | S-03-5 | 기준일(anchor) 없는 피험자 처리 | **항목 생성하지 않음.** 별도 "기준일 없음" 건수로 집계 (golden E19) |
-| S-03-6 | 3.7 `blocked_stages`를 단계 지정 방식으로 확장할 것인가 | Phase 2 이후 검토 |
+| ~~S-03-6~~ | ~~`blocked_stages`를 건별 단계 지정 방식으로 확장~~ | **확정 — Phase 2 이후.** 유형 기반 규칙(3.7)으로 Phase 1 대응 |
+| S-03-7 | `CFG10` 규칙 미정의 시 예외 처리하지 않는 방침에 동의하는가 | **동의 권고** (3.7) |
+| S-03-8 | 사이트 이전 시 비교 모드 안내 문구 | 이전 포함 비교에 배너 표시 (2.9) |

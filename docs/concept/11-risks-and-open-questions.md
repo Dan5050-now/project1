@@ -207,7 +207,7 @@ DP-12-6 확정으로 **데이터 준비 부담은 크게 줄었습니다.** 앱�
 | DP-08-3 | 변경 사유 필수 입력 대상 | [08](08-platform-services.md) 8장 |
 | DP-12-1 | 표준 dataset 10종 구성의 적절성 | [12](12-standard-source-templates.md) 7장 |
 | DP-12-2 | DS03의 wide vs long 구조 | [12](12-standard-source-templates.md) 7장 |
-| DP-13-1 | 설정 template 9개 시트 구성의 적절성 | [13](13-trial-configuration.md) 7장 |
+| DP-13-1 | 설정 template 10개 시트 구성의 적절성 | [13](13-trial-configuration.md) 7장 |
 | DP-15-3 | 지표 목록에서 빠진 것 | [15](15-metric-specification.md) 8장 |
 | DP-15-5 | 지표 정의 변경 승인자 | [15](15-metric-specification.md) 8장 |
 

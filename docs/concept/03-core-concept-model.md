@@ -306,10 +306,14 @@ resolution cycle time = closed_at - opened_at
 요구사항 D4-f, D5-f의 "해결 불가능하며 업무에 영향을 주는 이슈"를 표현합니다. 초안의 `BLOCKED` 상태가 `WAIVED`로 통합되었으므로 연결도 다음과 같이 바뀝니다.
 
 ```
-Issue(unresolvable = true)  →  Item.stage_status = WAIVED
+Issue(unresolvable = true)  →  이슈 유형별 규칙(CFG10)이 정한 단계만 WAIVED
                                Item.waiver_type  = ISSUE_BLOCKED
                                Item.waiver_reason ← Issue 내용 참조
 ```
+
+**차단 범위는 이슈 유형에 따라 다릅니다.** 코딩 불가 쿼리는 코딩 단계만 막고, 검체 분실은 이후 전부를 막습니다. 유형별 규칙은 [13](13-trial-configuration.md) 4.10의 `CFG10`으로 시험마다 정의합니다.
+
+**규칙이 정의되지 않은 유형은 예외 처리하지 않습니다.** 예외 처리는 분모를 줄이는 동작이므로, 규칙이 없을 때 넓게 막는 쪽으로 폴백하면 지표가 조용히 좋아 보입니다. 틀릴 때 눈에 띄는 쪽을 택합니다.
 
 이 전이는 **자동으로 일어나지 않습니다.** 담당자가 "해결 불가"로 판정해야 하며, 그 판정 자체가 감사 추적에 기록됩니다. 분모에서 항목을 빼는 결정이므로 근거가 남아야 하기 때문입니다.
 

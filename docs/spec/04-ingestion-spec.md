@@ -130,6 +130,12 @@ class Check:
 | `X4` | 이전 Drop 대비 상태 역행 | **WARN (강)** |
 | `X5` | 탈락 이후 방문 발생 | WARN |
 | `X6` | 파일의 `RECON_STATUS`와 앱 판정 불일치 | WARN |
+| `X7` | **피험자의 `SITEID`가 이전 Drop과 다름 (사이트 이전)** | WARN |
+| `X8` | 해결 불가 이슈의 유형에 `CFG10` 규칙이 없음 | WARN |
+
+`X7`은 사이트 이전 감지입니다. 오타로 인한 잘못된 이전을 잡기 위해 경고로 노출하며, 확정 시 `subject_site_history`에 기록되고 미발생 방문의 항목이 재귀속됩니다 ([03](03-engine-spec.md) 2.9).
+
+`X8`은 예외 규칙이 정의되지 않은 해결 불가 이슈입니다. 해당 항목은 예외 처리되지 않고 backlog에 남으므로, 설정 보완을 유도하는 신호입니다.
 
 `X4`는 별도 목록으로 화면에 노출합니다. 실무에서 가장 자주 발생하고, 놓치면 지표가 이유 없이 떨어집니다.
 
@@ -144,6 +150,8 @@ class Check:
 | `CHK-CFG-005` | `CFG04.GRACE_DAYS` 형식 (정수/`N/A`/`DBL_BASED`) | REJECT |
 | `CHK-CFG-006` | `CFG08.METRIC_CODE`가 `metric_definition`에 존재 | REJECT |
 | `CHK-CFG-007` | `CFG01.ANCHOR_RULE`이 허용값 | REJECT |
+| `CHK-CFG-008` | `CFG10.BLOCKED_STAGES`의 단계 코드가 `stage_def`에 존재 | REJECT |
+| `CHK-CFG-009` | `CFG10.ISSUE_TYPE`이 `CFG09`에 존재 | REJECT |
 
 설정 파일은 **REJECT만 있고 WARN이 없습니다.** 설정이 부분적으로만 반영되면 지표가 설명 불가능해지기 때문입니다.
 

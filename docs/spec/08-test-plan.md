@@ -40,7 +40,22 @@ Golden 계층이 최우선입니다. **이 프로젝트의 실패 모드 1순위
 
 ### 2.3 필수 검증 케이스
 
-[golden/README.md](golden/README.md) 4장의 E1~E11, E17~E19가 각각 개별 테스트 케이스입니다. 하나라도 실패하면 빌드가 깨집니다.
+[golden/README.md](golden/README.md) 4장의 E1~E11, E17~E20이 각각 개별 테스트 케이스입니다. 하나라도 실패하면 빌드가 깨집니다.
+
+검토로 추가된 두 규칙은 별도 테스트로 둡니다.
+
+```python
+def test_waiver_scope_follows_issue_type():
+    # E7 — CODING_UNRESOLVABLE 은 coding 만 막는다
+    item = item_of('G-001', 'V1', 'AE')
+    assert status(item, 'coding') == 'WAIVED'
+    assert status(item, 'sign')   == 'PENDING'      # 전부 막으면 실패
+
+def test_site_attribution_follows_activity():
+    # E20 — 이전 전 활동은 이전 사이트에 남는다
+    assert site_of(item_of('G-007', 'V1', 'DM')) == 'S01'
+    assert site_of(item_of('G-007', 'V2', 'VS')) == 'S02'
+```
 
 ### 2.4 Simpson 회귀 테스트
 
@@ -49,8 +64,8 @@ def test_rollup_is_not_average_of_rates():
     trial = metric('edc.entry.rate', level='TRIAL')
     s01   = metric('edc.entry.rate', level='SITE', site='S01')
     s02   = metric('edc.entry.rate', level='SITE', site='S02')
-    assert trial.rate == Decimal('0.7778')
-    assert (s01.rate + s02.rate) / 2 == Decimal('0.7750')
+    assert trial.rate == Decimal('0.8182')
+    assert round((s01.rate + s02.rate) / 2, 4) == Decimal('0.8167')
     assert trial.rate != (s01.rate + s02.rate) / 2      # 핵심
 ```
 
@@ -92,6 +107,8 @@ def test_waiver_beats_completion():
 | I-6 | DS03 먼저, DS01 나중 | `I2` 보류 후 자동 재처리 |
 | I-7 | 증분 전송 | 기간 밖 항목 상태 불변 |
 | I-8 | 일 배치 (날짜만 경과) | `PENDING` → `OVERDUE` 전이, 항목 생성 없음 |
+| I-9 | 사이트 이전 Drop 반영 | `X7` 경고, 이력 추가, **미발생 방문만 재귀속**, 과거 스냅샷 불변 |
+| I-10 | `CFG10` 규칙 없는 해결 불가 이슈 | 예외 처리 안 됨, `X8` 경고, backlog 유지 |
 
 I-4가 [개념 08](../concept/08-platform-services.md) 4.2 규칙 3의 검증입니다.
 

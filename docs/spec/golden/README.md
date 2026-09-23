@@ -6,7 +6,7 @@
 
 | 디렉터리 | 내용 |
 |---|---|
-| [`input/`](input/) | 시험 설정 6개 + 표준 dataset 4개 |
+| [`input/`](input/) | 시험 설정 7개 + 표준 dataset 4개 |
 | [`expected/`](expected/) | 항목 수준 기대 상태, 지표 기대값, 검증 결과 기대값 |
 
 기준 시각은 **`as_of = 2026-09-30`** 입니다 (`CFG01_TRIAL_SETTINGS.csv`).
@@ -23,6 +23,7 @@ SoA    V1 → DM(STANDARD), AE(LOG)
 
 유예   entry 14 · sdv 60 · review 비활성 · coding 60 · sign N/A · freeze·lock DBL 기준
 범위   sdv = VS만 (partial SDV) · coding = AE만 · sign/freeze/lock = 전체
+예외   CODING_UNRESOLVABLE → coding 단계만 차단 (CFG10)
 ```
 
 ## 3. 피험자와 의도
@@ -35,6 +36,7 @@ SoA    V1 → DM(STANDARD), AE(LOG)
 | G-004 | S02 | Discontinued | **탈락 후 FOLLOWUP 방문 기대 유지** + 부분 날짜 + 서명 완료 |
 | G-005 | S01 | Screen failed | **기준일 없음 → 항목 생성 안 됨** |
 | G-006 | S01 | On treatment | **완료 플래그만 있고 완료일 없음** → 후속 단계 기한 미산출 |
+| G-007 | S01 → **S02** | On treatment | **사이트 이전.** 이전 전 방문은 S01, 이후·미발생은 S02 귀속 |
 
 ## 4. 다루는 경계 조건
 
@@ -56,28 +58,52 @@ SoA    V1 → DM(STANDARD), AE(LOG)
 | E17 | 완료일 없음 → 소요일수 미산출 | G-006 |
 | E18 | 그 날짜를 쓰는 후속 단계 → 기한 미계산 | G-006 sign |
 | **E19** | **기준일(anchor) 없음 → 항목 생성 안 됨** | G-005 |
+| **E20** | **사이트 이전 → 활동이 일어난 사이트로 귀속** | G-007 |
 
 `E12`~`E16`(kit 유형 매칭, 결합형 파일, 증분 전송, timepoint)은 샘플·영상 도메인이므로 **Phase 2 golden dataset**에서 다룹니다.
+
+### 4.1 E7 — 예외 범위가 이슈 유형에 따라 달라진다
+
+Q-003의 유형은 `CODING_UNRESOLVABLE`이고, `CFG10`은 이 유형이 **`coding` 단계만** 차단하도록 정의합니다.
+
+| 대상 항목 | 단계 | 결과 |
+|---|---|---|
+| G-001 V1 AE | `coding` | **WAIVED** — 분모 제외 |
+| G-001 V1 AE | `sign` | **PENDING** — 계속 추적 |
+
+유형별 규칙이 없다면 이 항목의 모든 미완료 단계가 예외 처리되어 `sign`까지 분모에서 빠집니다. **그 차이를 잡는 것이 이 케이스의 목적**입니다.
+
+### 4.2 E20 — 사이트 이전 귀속
+
+G-007은 V1을 S01에서, V2를 S02에서 받았고 현재 소속은 S02입니다.
+
+| 항목 | 귀속 | 근거 |
+|---|---|---|
+| V1 방문 · V1 DM | **S01** | 그 활동이 일어난 사이트 |
+| V2 방문 · V2 VS | **S02** | 그 활동이 일어난 사이트 |
+| V3 방문 (미발생) | **S02** | 목표일 시점의 소속 사이트 |
+
+전 항목을 현재 사이트(S02)로 몰면 S01의 성과가 사라지고 S02가 하지 않은 일을 떠안습니다. **사이트별 수치가 이 규칙을 따르는지**가 검증 지점입니다.
 
 ## 5. 핵심 기대값
 
 | 지표 | due | 완료 | rate |
 |---|---|---|---|
-| `edc.entry.rate` (trial) | 9 | 7 | **0.7778** |
-| `edc.entry.rate` (S01) | 5 | 4 | 0.8000 |
-| `edc.entry.rate` (S02) | 4 | 3 | 0.7500 |
-| `edc.sdv.rate` (trial) | 4 | 0 | 0.0000 |
+| `edc.entry.rate` (trial) | 11 | 9 | **0.8182** |
+| `edc.entry.rate` (S01) | 6 | 5 | 0.8333 |
+| `edc.entry.rate` (S02) | 5 | 4 | 0.8000 |
+| `edc.sdv.rate` (trial) | 5 | 0 | 0.0000 |
 | `edc.coding.rate` (trial) | 1 | 0 | 0.0000 (예외 1건 제외) |
 | `edc.lock.rate` (trial) | 0 | 0 | **공란 = N/A** |
-| `rtsm.visit.rate` (trial) | 13 | 9 | 0.6923 |
-| `edc.sign.pending_all` | — | — | **4건** |
+| `rtsm.visit.rate` (trial) | 16 | 11 | 0.6875 |
+| `edc.sign.pending_all` | — | — | **7건** |
 | `edc.sign.pending_sae` | — | — | **1건** |
 
 ### 5.1 Simpson 검증
 
-사이트별 rate는 0.8000과 0.7500이므로 **단순 평균은 0.7750**입니다. 전체 rate는 **0.7778**로 다릅니다.
+사이트별 rate는 0.8333과 0.8000이므로 **단순 평균은 0.8167**(반올림)입니다. 전체 rate는 **0.8182**로 다릅니다.
 
-이 차이가 [개념 03](../../concept/03-core-concept-model.md) 6.2의 롤업 규칙을 검증합니다. 앱이 0.7750을 내놓으면 **하위 비율을 평균한 것**이므로 구현이 틀린 것입니다.
+이 차이가 [개념 03](../../concept/03-core-concept-model.md) 6.2의 롤업 규칙을 검증합니다. 앱이 0.8167을 내놓으면 **하위 비율을 평균한 것**이므로 구현이 틀린 것입니다.
 
 ## 6. 갱신 규칙
 

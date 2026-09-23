@@ -51,3 +51,12 @@ golden dataset은 **사양의 자기 검증 장치**입니다. 입력 파일로 
 | EDC 단계 | 입력 후 5단계 병행 → lock | [개념 04](../concept/04-domain-concepts.md) 1.2 |
 | 입력 경계 | 사내 표준 파일 (vendor 원본 아님) | [개념 12](../concept/12-standard-source-templates.md) 1.2 |
 | 값의 추정 | 하지 않음 | [개념 15](../concept/15-metric-specification.md) 3.3b |
+| 예외 범위 | 이슈 **유형별 규칙**(`CFG10`). 규칙 없으면 예외 처리 안 함 | [03](03-engine-spec.md) 3.7 |
+| 사이트 귀속 | **활동이 일어난 사이트**. 이전은 미발생 방문만 재귀속 | [02](02-data-model.md) 1.4 |
+
+## 5. 개정 이력
+
+| 버전 | 일자 | 내용 |
+|---|---|---|
+| v1 | 2026-09-20 | Phase 0 + Phase 1 사양 작성, golden dataset 포함 |
+| v1.1 | 2026-09-23 | 02·03 검토 반영 — 이슈 유형별 예외 규칙(`CFG10`), 사이트 이전 귀속 규칙, golden에 G-007·E20 추가 |
