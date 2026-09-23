@@ -1,0 +1,582 @@
+<title>PRAP 운영 전환 검토서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#F6F8FA; --panel:#FFFFFF; --panel-2:#EEF1F5;
+    --ink:#141A21; --ink-2:#4C5665; --ink-3:#78828F;
+    --rule:#D9DFE7; --rule-2:#E8ECF1;
+    --accent:#1C5E78; --accent-soft:#E3EEF3;
+    --block:#9E2F27; --block-soft:#FBEAE8;
+    --caution:#96600F; --caution-soft:#FBF2E2;
+    --minor:#5B5330; --minor-soft:#F6F3E4;
+    --ok:#2A6349; --ok-soft:#E5F0EA;
+    --f-head:"Noto Serif KR",'Nanum Myeongjo',Georgia,serif;
+    --f-body:"IBM Plex Sans KR",'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+    --f-mono:"IBM Plex Mono",'Cascadia Mono',Consolas,monospace;
+    --measure:70ch;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#0F1317; --panel:#161B21; --panel-2:#1D242B;
+      --ink:#E3E8EE; --ink-2:#A3AEBB; --ink-3:#7C8795;
+      --rule:#2C353E; --rule-2:#232B33;
+      --accent:#79B7D0; --accent-soft:#16303B;
+      --block:#E5867C; --block-soft:#331B18;
+      --caution:#DCA94F; --caution-soft:#302512;
+      --minor:#C4BC86; --minor-soft:#2A2818;
+      --ok:#79BE9B; --ok-soft:#16291F;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0F1317; --panel:#161B21; --panel-2:#1D242B;
+    --ink:#E3E8EE; --ink-2:#A3AEBB; --ink-3:#7C8795;
+    --rule:#2C353E; --rule-2:#232B33;
+    --accent:#79B7D0; --accent-soft:#16303B;
+    --block:#E5867C; --block-soft:#331B18;
+    --caution:#DCA94F; --caution-soft:#302512;
+    --minor:#C4BC86; --minor-soft:#2A2818;
+    --ok:#79BE9B; --ok-soft:#16291F;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--paper);color:var(--ink);font-family:var(--f-body);
+    font-size:15.5px;line-height:1.75;-webkit-font-smoothing:antialiased;
+    word-break:keep-all;overflow-wrap:anywhere;
+  }
+  .wrap{max-width:1160px;margin:0 auto;padding-inline:20px;padding-block:0 96px}
+
+  header.mast{border-bottom:2px solid var(--ink);padding-block:44px 22px}
+  .eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+  h1{font-family:var(--f-head);font-weight:700;font-size:clamp(30px,5.4vw,50px);line-height:1.18;letter-spacing:-.015em;margin:0 0 14px;text-wrap:balance}
+  .dek{font-size:clamp(16px,2.2vw,18.5px);color:var(--ink-2);max-width:60ch;margin:0}
+  .edition{
+    display:inline-flex;align-items:center;gap:9px;margin-bottom:16px;
+    background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent);
+    padding:5px 12px;border-radius:2px;
+    font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:500
+  }
+  .mast-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2px 26px;margin-top:26px;border-top:1px solid var(--rule);padding-top:16px}
+  .mast-meta div{display:flex;flex-direction:column;gap:1px;padding-block:5px}
+  .mast-meta dt,.ml{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+  .mast-meta dd,.mv{margin:0;font-size:13.5px;font-weight:500}
+
+  .shell{display:grid;grid-template-columns:1fr;gap:0}
+  @media (min-width:1000px){
+    .shell{grid-template-columns:190px minmax(0,1fr);gap:56px;align-items:start}
+    nav.toc{position:sticky;top:24px;padding-top:40px}
+  }
+  nav.toc{padding-block:28px 8px;border-bottom:1px solid var(--rule)}
+  @media (min-width:1000px){nav.toc{border-bottom:0}}
+  nav.toc .ml{display:block;margin-bottom:10px}
+  nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:2px 14px}
+  @media (min-width:1000px){nav.toc ol{flex-direction:column;gap:1px}}
+  nav.toc a{display:block;color:var(--ink-2);text-decoration:none;font-size:13px;padding:4px 0;border-left:2px solid transparent;transition:color .15s}
+  @media (min-width:1000px){nav.toc a{padding-left:11px}}
+  nav.toc a:hover{color:var(--accent)}
+  nav.toc a.on{color:var(--ink);font-weight:600;border-left-color:var(--accent)}
+  nav.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  main{min-width:0;padding-top:8px}
+  section.part{padding-top:52px;scroll-margin-top:20px}
+  .pnum{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.16em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:7px}
+  h2{font-family:var(--f-head);font-weight:700;font-size:clamp(23px,3.4vw,31px);line-height:1.3;margin:0 0 6px;letter-spacing:-.01em;text-wrap:balance;padding-bottom:12px;border-bottom:1px solid var(--ink)}
+  h3{font-family:var(--f-body);font-weight:600;font-size:17.5px;line-height:1.45;margin:38px 0 12px;text-wrap:balance}
+  h4{font-family:var(--f-mono);font-weight:500;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:30px 0 10px}
+  p{margin:0 0 15px;max-width:var(--measure)}
+  ul,ol{max-width:var(--measure);margin:0 0 15px;padding-left:1.3em}
+  li{margin-bottom:7px}
+  strong{font-weight:600}
+  em{font-style:normal;background:var(--accent-soft);padding:.05em .3em;border-radius:2px}
+  code{font-family:var(--f-mono);font-size:.855em;background:var(--panel-2);padding:.12em .38em;border-radius:3px;color:var(--ink)}
+  a{color:var(--accent)}
+  del{color:var(--ink-3);text-decoration-color:var(--block)}
+
+  .lede{background:var(--panel);border:1px solid var(--rule);border-left:3px solid var(--ink);padding:26px 26px 10px;margin-top:34px}
+  .lede ol{counter-reset:l;list-style:none;padding:0;max-width:64ch}
+  .lede ol li{position:relative;padding-left:38px;margin-bottom:18px;counter-increment:l}
+  .lede ol li::before{content:counter(l);position:absolute;left:0;top:1px;font-family:var(--f-mono);font-size:12px;font-weight:500;color:var(--accent);border:1px solid var(--rule);border-radius:50%;width:24px;height:24px;display:grid;place-items:center;line-height:1}
+
+  .analogy{border-left:3px solid var(--accent);background:var(--accent-soft);padding:18px 22px;margin:22px 0;max-width:var(--measure)}
+  .analogy p{margin-bottom:10px}
+  .analogy p:last-child{margin-bottom:0}
+  .analogy .ml{display:block;margin-bottom:7px;color:var(--accent)}
+  blockquote{margin:20px 0;padding:16px 22px;border-left:3px solid var(--rule);color:var(--ink-2);max-width:var(--measure);font-size:14.5px}
+  blockquote p:last-child{margin-bottom:0}
+
+  pre{font-family:var(--f-mono);font-size:12.5px;line-height:1.66;background:var(--panel);border:1px solid var(--rule);padding:16px 18px;overflow-x:auto;margin:20px 0;border-radius:3px}
+  pre code{background:none;padding:0;font-size:inherit}
+  pre.console{border-left:3px solid var(--accent)}
+  pre.pass{border-left:3px solid var(--ok)}
+
+  .tw{overflow-x:auto;margin:20px 0;border:1px solid var(--rule);border-radius:3px;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;line-height:1.6}
+  th,td{padding:10px 13px;text-align:left;vertical-align:top;border-bottom:1px solid var(--rule-2)}
+  thead th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:500;background:var(--panel-2);border-bottom:1px solid var(--rule);white-space:nowrap;position:sticky;top:0}
+  tbody tr:last-child td{border-bottom:0}
+  td.num,th.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  table.tight{min-width:640px}
+  table.wide{min-width:850px}
+  .yes{color:var(--ok);font-weight:600}
+  .no{color:var(--block);font-weight:600}
+  .mid{color:var(--caution);font-weight:600}
+
+  .verdicts{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:24px 0}
+  .vd{background:var(--panel);padding:17px 18px;display:flex;flex-direction:column;gap:7px}
+  .vd .mv{font-size:14px;font-weight:600;line-height:1.4}
+  .vd p{font-size:12.5px;color:var(--ink-2);margin:0;line-height:1.6}
+  .mark{font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+  .mark.g{color:var(--ok)}.mark.a{color:var(--caution)}.mark.r{color:var(--block)}
+
+  /* measured-figure row */
+  .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:24px 0}
+  .fg{background:var(--panel);padding:16px 18px;display:flex;flex-direction:column;gap:3px}
+  .fg b{font-family:var(--f-mono);font-size:23px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--ok);line-height:1.15}
+  .fg span{font-size:12px;color:var(--ink-2);line-height:1.5}
+
+  .finding{background:var(--panel);border:1px solid var(--rule);border-left-width:4px;border-left-style:solid;padding:20px 22px 6px;margin:18px 0}
+  .finding.block{border-left-color:var(--block)}
+  .finding.caution{border-left-color:var(--caution)}
+  .finding.minor{border-left-color:var(--minor)}
+  .finding.okf{border-left-color:var(--ok)}
+  .fh{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:12px}
+  .fn{font-family:var(--f-mono);font-size:12px;font-weight:500;color:var(--ink-3);white-space:nowrap}
+  .ft{font-weight:600;font-size:16px;line-height:1.4;flex:1 1 260px;min-width:0}
+  .chip{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:2px;white-space:nowrap;font-weight:500}
+  .chip.block{background:var(--block-soft);color:var(--block)}
+  .chip.caution{background:var(--caution-soft);color:var(--caution)}
+  .chip.minor{background:var(--minor-soft);color:var(--minor)}
+  .chip.ok{background:var(--ok-soft);color:var(--ok)}
+  .chip.measured{background:var(--accent-soft);color:var(--accent)}
+
+  .road{margin:24px 0;border-top:1px solid var(--rule)}
+  .stage{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:0 18px;padding:16px 0;border-bottom:1px solid var(--rule);align-items:start}
+  .stage .sn{font-family:var(--f-mono);font-size:11px;color:var(--accent);letter-spacing:.08em;padding-top:3px;white-space:nowrap}
+  .stage .sb strong{display:block;font-size:15px;margin-bottom:3px}
+  .stage .sb p{font-size:13px;color:var(--ink-2);margin:0;max-width:56ch}
+  .stage .sd{font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap;padding-top:3px;color:var(--ink);font-weight:500;text-align:right}
+  .stage .sd i{display:block;font-style:normal;font-size:11px;color:var(--ink-3);text-decoration:line-through}
+  @media (max-width:620px){
+    .stage{grid-template-columns:minmax(0,1fr) auto;gap:0 14px}
+    .stage .sn{grid-column:1/-1;padding-top:0;margin-bottom:4px}
+  }
+  .stage.total{border-bottom:2px solid var(--ink)}
+  .stage.total .sb strong{font-family:var(--f-head)}
+
+  figure{margin:24px 0}
+  figure pre{margin:0}
+  figcaption{font-size:12.5px;color:var(--ink-3);margin-top:8px;font-family:var(--f-mono)}
+
+  .acts{list-style:none;padding:0;margin:20px 0;max-width:var(--measure)}
+  .acts li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:12px;padding:13px 0;border-bottom:1px solid var(--rule-2);margin:0}
+  .acts li span.an{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);padding-top:3px}
+  .acts li strong{display:block;margin-bottom:2px}
+  .acts li p{font-size:13px;color:var(--ink-2);margin:0}
+
+  footer{margin-top:72px;padding-top:22px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink-3);max-width:var(--measure)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+  html{scroll-behavior:smooth}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">설계 검토 · 운영 적합성 분석</p>
+  <span class="edition">개정 5판 · 현재 상태 (v1.22)</span>
+  <h1>PM_APP 현재 상태와 서버 전환 방안</h1>
+  <p class="dek">5판은 <strong>지금 이 프로그램이 어디에 있는가</strong>만 다룹니다. 1~4판에서 지적하고 <strong>이미 해결한 문제는 전부 덜어냈고</strong>, 남은 것은 <a href="#s2">2부</a>의 여섯 건입니다. <strong>공유 폴더에서 여러 명이 같은 계획을 여는 사용은 이제 작업이 사라지지 않습니다</strong> — 다만 파일 단위 잠금이므로 한 번에 한 사람이며, 요청하신 레코드 단위 차단과 권한 분리는 <a href="#s4">4부</a>의 서버 전환이 필요합니다.</p>
+  <dl class="mast-meta">
+    <div><dt>대상</dt><dd>PM_APP Python <strong>1.22</strong> · 엔진 <strong>v1.52</strong> · 스키마 <strong>13</strong></dd></div>
+    <div><dt>상태</dt><dd>배포 가능 · <strong>시험 42개 스위트 전부 통과</strong></dd></div>
+    <div><dt>남은 문제</dt><dd><strong>5건</strong> (차단 1 · 주의 3 · 경미 1)</dd></div>
+    <div><dt>작성</dt><dd>2026-09-15</dd></div>
+  </dl>
+</header>
+
+<div class="shell">
+
+<nav class="toc" aria-label="목차">
+  <span class="ml">목차</span>
+  <ol>
+    <li><a href="#s0">요약</a></li>
+    <li><a href="#s1">1 · 지금 할 수 있는 것</a></li>
+    <li><a href="#s2">2 · 남아 있는 문제</a></li>
+    <li><a href="#s3">3 · 넘겨주기</a></li>
+    <li><a href="#s4">4 · 서버 전환 설계</a></li>
+    <li><a href="#s5">5 · 다음 할 일</a></li>
+    <li><a href="#s6">부록 · 종결 항목</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ===== 0 ===== -->
+<section class="part" id="s0">
+  <span class="pnum">요약</span>
+  <h2>지금 어디에 있는가</h2>
+
+  <div class="lede">
+    <ol>
+      <li><strong>작업이 말없이 사라지던 문제는 끝났습니다.</strong> 잠금을 잡기만 하고 놓지 않던 것, 정전 복구 기록을 쓰기만 하고 읽지 않던 것, 남이 먼저 저장한 것을 확인하지 않던 것 — 세 가지가 모두 배선되어 <strong>양쪽 셸(파이썬·데스크톱)에서 동작</strong>하고, 저장·잠금·복구 검사 <strong>104건</strong>이 이를 지킵니다.</li>
+      <li><strong>파이썬이 없는 PC에서도 씁니다.</strong> 설치가 아니라 <strong>앱 폴더 안에 파이썬을 넣어</strong> 배포합니다. 사용자는 압축을 풀고 <code>PM_APP.cmd</code> 를 더블클릭합니다 — 관리자 권한도, 레지스트리도, PATH 변경도 없습니다.</li>
+      <li><strong>요청하신 두 가지는 아직입니다.</strong> ⓐ 일반 가정값을 관리자만 고치게 하는 것과 ⓑ 남이 편집 중인 <strong>레코드</strong>를 막는 것은 파일 기반 구조로는 불가능하고, <a href="#s4">4부</a>의 서버 전환(약 2.5~3개월)이 필요합니다. 그 설계는 완성되어 있으며, <strong>지금 막힌 것은 기술이 아니라 IT팀 승인</strong>입니다.</li>
+    </ol>
+  </div>
+
+  <div class="verdicts">
+    <div class="vd"><span class="mark g">가능</span><span class="mv">1인이 자기 PC에서</span><p>제한 없음. 파이썬 설치 여부와 무관합니다</p></div>
+    <div class="vd"><span class="mark g">가능</span><span class="mv">배포는 공유 폴더, 데이터는 각자</span><p>권장 형태. 앱은 각자 PC, 계획서만 공유 폴더</p></div>
+    <div class="vd"><span class="mark a">조건부</span><span class="mv">여러 명이 같은 계획 파일</span><p>한 번에 한 사람(파일 단위 잠금). <strong>공유 폴더 실측 후</strong> — 2부 R-1</p></div>
+    <div class="vd"><span class="mark r">불가</span><span class="mv">동시 편집 + 권한 분리</span><p>서버 전환이 필요합니다 — 4부</p></div>
+  </div>
+
+  <div class="figs">
+    <div class="fg"><b>42 / 42</b><span>시험 스위트 전부 통과</span></div>
+    <div class="fg"><b>104</b><span>저장·잠금·복구 검사</span></div>
+    <div class="fg"><b>0.00e+00</b><span>참조 구현과의 최대 오차 (1,227 person-month)</span></div>
+    <div class="fg"><b>5</b><span>남아 있는 문제</span></div>
+  </div>
+</section>
+
+<!-- ===== 1 ===== -->
+<section class="part" id="s1">
+  <span class="pnum">1부</span>
+  <h2>지금 이 앱으로 할 수 있는 것</h2>
+
+  <h3>공유 폴더에서 두 사람이 같은 계획을 열면</h3>
+  <p>이제 이렇게 동작합니다. 예전에는 나중 사람이 저장하면 먼저 저장한 사람의 작업이 <strong>경고 없이 사라졌습니다.</strong></p>
+  <div class="tw"><table class="tight">
+    <thead><tr><th>상황</th><th>화면이 하는 일</th></tr></thead>
+    <tbody>
+      <tr><td>남이 편집 중인 계획을 열었을 때</td><td><strong>읽기 전용</strong>으로 열리고, <em>“이서연(DM)이 편집 중입니다. 09:29 시작, 활동 중”</em> 처럼 <strong>누구에게 물어야 하는지</strong>를 이름·부서·시작시각으로 말합니다</td></tr>
+      <tr><td>그 사람이 저장하고 끝냈을 때</td><td><strong>30초 안에</strong> “이제 비어 있습니다”가 뜹니다. 다시 열지 않고 그 자리에서 편집을 시작할 수 있습니다</td></tr>
+      <tr><td>상대 PC가 꺼져 잠금이 남았을 때</td><td><strong>30분</strong>이 지나면 만료로 보고 인계받을 수 있습니다. 문구가 달라 “활동 중”과 구별됩니다</td></tr>
+      <tr><td>내가 보던 판본 뒤에 남이 저장했을 때</td><td>저장이 <strong>거부되고</strong> 무엇이 달라졌는지 알립니다 — 남의 저장을 덮어쓰지 않습니다</td></tr>
+      <tr><td>편집 중 앱이나 PC가 꺼졌을 때</td><td>다시 열면 <strong>저장하지 못한 편집을 되돌려 줍니다</strong>. 단, 그 사이 남이 저장했다면 제안하지 않습니다(섞이면 안 되므로)</td></tr>
+      <tr><td>팀이 함께 쓰는 계획을 찾을 때</td><td>파일 창에 <strong>내 계획 / 팀 계획</strong> 바로가기가 있고, 개인 폴더에 있으면서 남이 저장한 계획에는 <strong>옮기기</strong> 버튼이 붙습니다</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="analogy">
+    <span class="ml">지금의 한계를 한 문장으로</span>
+    <p>회의실 문에 <strong>이름표를 거는 방식</strong>입니다. 방을 쓰는 사람이 누구인지 분명하고 빈방은 바로 알 수 있지만, <strong>한 방에 두 사람이 각자 다른 책상에서 일할 수는 없습니다.</strong> 그것이 요청하신 레코드 단위 편집이고, 4부의 구조 변경입니다.</p>
+  </div>
+
+  <h3>새로 들어간 것 — 마일스톤 색 표시 (v1.22)</h3>
+  <p>타임라인은 모든 마일스톤을 <strong>같은 검은 삼각형</strong>으로 그렸습니다. 그래서 읽는 사람이 실제로 찾는 두세 개 — 실사, 밀린 날짜, 위에서 묻는 그 날짜 — 가 <strong>계획에 적혀 있을 뿐인 스무 개와 구별되지 않았습니다.</strong></p>
+  <p>이제 마일스톤 표의 <strong>날짜 옆 칸</strong>에서 색을 고르면, 그 마일스톤이 <strong>두 타임라인 모두</strong>(<code>Overall</code> 과 프로젝트 자기 탭)에서 그 색으로, 조금 크게 그려집니다. 표의 칸에는 색 사각형이 붙고, 범례에는 <strong>실제로 쓰인 색만</strong> 나옵니다.</p>
+  <div class="analogy">
+    <span class="ml">색 목록은 쓰는 사람의 것입니다</span>
+    <p>색은 <code>Lists</code> 시트에 있고, 앱이 읽는 것은 값 안의 <strong>색 단어</strong>입니다. 그래서 팀이 <code>Highlight (Red) — 지연</code> 처럼 <strong>뜻을 덧붙여도 색은 그대로</strong>이고, <strong>범례가 그 문구를 그대로 되돌려 줍니다.</strong> 코드를 고칠 필요가 없습니다.</p>
+  </div>
+  <p>소스 스키마가 <strong>12에서 13으로</strong> 올라갔습니다. <strong>기존 파일은 그대로 열립니다</strong> — 색 칸이 없을 뿐이고, 앱이 버전을 한 번 알립니다. <strong>숫자는 하나도 움직이지 않습니다.</strong></p>
+
+  <h3>배포는 이렇게 돌아갑니다</h3>
+  <p>담당자 한 사람이 버전마다 10~15분 쓰고, 사용자는 <strong>압축을 풀고 더블클릭</strong>합니다.</p>
+  <figure>
+<pre><code>담당자 PC                              공유 폴더                    사용자 PC
+  src\ + tools\                          배포\                        C:\PM_APP\
+  ├ build_python_app.py  ─┐               ├ ..._with_runtime.zip  ──▶  ├ PM_APP.cmd  ← 더블클릭
+  └ bundle_runtime.py  ───┴──▶ 21개 파일  └ 빈 서식 .xlsx              ├ runtime\    ← 파이썬 동봉
+    (파이썬 3.13 embeddable 동봉)         데이터\                      └ data\       ← 개인 계획서
+                                          └ 팀 계획서가 사는 곳 ◀──────── 여기에 저장</code></pre>
+    <figcaption>사용자 PC에 설치되는 것은 없습니다. 폴더를 지우면 사라집니다</figcaption>
+  </figure>
+
+  <h3>무엇으로 그렇게 말하는가</h3>
+  <pre class="pass"><code>전체 42개 스위트          42 통과 · 0 실패
+test_storage_py          104 passed   저장·잠금·만료·복구·기준판본
+test_python_app            0 failed   실제 구동 + 화면 숫자 대조
+  EVERY FIGURE EQUALS THE PYTHON REFERENCE IMPLEMENTATION
+  1,227 person-months compared, worst difference 0.00e+00
+test_no_python            42 검사     파이썬 없는 PC 경로 (런처·번들·PC점검)
+test_highlight            12 검사     마일스톤 색 표시 (신규)
+두 인스턴스 실전 확인      "이서연 (DM) is editing this plan. Started 09:29, active now."</code></pre>
+  <p><strong>윈도우에서 실제로 확인된 것과 아직인 것을 구분해 둡니다.</strong> 담당자 PC(윈도우)에서 <strong>빌드와 런타임 동봉까지는 실행되었습니다.</strong> 아직 확인되지 않은 것은 <strong>공유 폴더에서의 동작</strong>이며, 그것이 2부 첫 항목입니다.</p>
+</section>
+
+<!-- ===== 2 ===== -->
+<section class="part" id="s2">
+  <span class="pnum">2부</span>
+  <h2>남아 있는 문제 — 다섯 건</h2>
+  <p>해결된 것은 <a href="#s6">부록</a>에 한 줄씩만 남기고 본문에서 덜어냈습니다. 지금 판단에 필요한 것은 아래 다섯 건입니다.</p>
+
+  <div class="finding caution">
+    <div class="fh"><span class="fn">R-1</span><span class="ft">윈도우 공유 폴더에서 실제로 재 본 적이 없습니다</span><span class="chip caution">먼저 할 일</span></div>
+    <p>모든 시험은 리눅스에서 이루어졌습니다. 잠금이 <strong>“먼저 만든 사람만 이긴다”</strong>에 기대는데, 그 보장은 <strong>파일 시스템의 성질</strong>이고 사내 SMB 공유가 어떻게 동작하는지는 재 봐야 압니다.</p>
+    <p><strong>재는 방법은 준비되어 있습니다.</strong> <code>python tools\check_share.py \\서버\공유\PRAP\데이터</code> 를 담당자 PC에서 한 번 돌리면 <strong>화면 12줄</strong>로 답합니다. <strong>반출할 파일을 만들지 않고</strong>, 경로·PC 이름·계정을 출력에 넣지 않습니다 — 사내 자료를 밖으로 내보낼 수 없다는 제약에 맞춘 설계입니다.</p>
+    <p><code>verdict</code> 가 <code>SAFE FOR SHARED USE</code> 가 아니면 <strong>그 폴더를 팀 공유로 쓰지 마십시오.</strong> 특히 <code>exclusive create</code> 가 <code>1 winner</code> 가 아니면 두 사람이 같은 계획을 동시에 편집할 수 있다는 뜻입니다.</p>
+  </div>
+
+  <div class="finding block">
+    <div class="fh"><span class="fn">R-2</span><span class="ft">요청 ⓐ 권한 분리와 ⓑ 레코드 단위 차단은 지금 구조로 불가능합니다</span><span class="chip block">구조 변경</span></div>
+    <p>두 가지 모두 <strong>기능이 빠진 것이 아니라 구조가 다른 것</strong>입니다.</p>
+    <p><strong>ⓐ 권한.</strong> 사용자가 입력하는 이름·부서는 <strong>선언이지 인증이 아니고</strong>(NR-USR-08), 서버가 사용자 자신의 PC에서 그 사람의 권한으로 돌며, 데이터는 공유 폴더의 평문 파일입니다. 화면에서 버튼을 숨기는 것은 친절함이지 통제가 아닙니다 — 파일을 직접 열면 그만입니다.</p>
+    <p><strong>ⓑ 레코드 잠금.</strong> 설계자가 명시적으로 선을 그어 두었습니다 — <em>“한 계획의 서로 다른 부분을 두 사람이 동시에 편집하는 것은 다른 제품이고, 저장 형식이 갖고 있지 않은 병합 모델을 필요로 한다”</em>(N-20).</p>
+    <p><strong>설계는 완성되어 있습니다</strong> — <a href="#s4">4부</a>에 잠금 8행 동작표, 권한 3단계, 가정값 버전 관리까지. <strong>막혀 있는 것은 기술이 아니라 승인</strong>입니다(R-3).</p>
+  </div>
+
+  <div class="finding caution">
+    <div class="fh"><span class="fn">R-3</span><span class="ft">IT팀 질문 8개가 아직 전달되지 않았습니다</span><span class="chip caution">일정 병목</span></div>
+    <p>서버 전환의 0단계이고, <strong>가장 큰 일정 위험</strong>입니다(N-01). 질문은 <a href="#s4">4부</a>에 그대로 있습니다 — AD 연동, 서비스 계정, 보안 그룹, VM, HTTPS 인증서, PostgreSQL 제약, 사내 도입 절차 소요기간.</p>
+    <p>8번 질문(<em>“사내 표준 PC에 파이썬이 있는가”</em>)은 <strong>이제 답이 필요 없습니다</strong> — 파이썬을 앱에 동봉하는 방식으로 관문 자체를 없앴습니다. 나머지 7개는 그대로 유효합니다.</p>
+  </div>
+
+  <div class="finding caution">
+    <div class="fh"><span class="fn">R-4</span><span class="ft">문서 목록이 파이썬 앱을 지배하는 설계서를 가리키지 않습니다</span><span class="chip caution">잘못된 결론 유발</span></div>
+    <p><code>docs/PRAP_Manifest.json</code> 의 “현행 문서” 11건에 <strong>NewApp Specification 과 NewApp Development Plan 이 없습니다.</strong> 그런데 이 둘이 <strong>파이썬 데스크톱 앱</strong>을 지배하는 문서입니다.</p>
+    <p><strong>왜 문제인가.</strong> 목록에 있는 Development Plan v2.60은 <strong>웹앱</strong>을 지배하는 문서이고, 거기에는 여전히 <em>“다중 사용자 동시 편집은 범위 밖”</em>, <em>“한 번에 한 사람만 워크북을 관리한다”</em> 가 적혀 있습니다. 이 목록만 보고 들어온 사람은 <strong>“동시 편집은 설계 범위 밖”이라고 결론</strong> 내리는데, <strong>그 결론은 틀립니다</strong> — NewApp 문서에서는 대응 가정이 철회되었고 공유 사용이 설계되어 있습니다.</p>
+    <p><strong>제가 1판에서 정확히 이 함정에 빠졌습니다.</strong> 조치는 간단합니다 — 매니페스트의 현행 목록에 두 문서를 추가하고, 계획서 v2.60의 해당 항목에 <em>“데스크톱 앱은 NewApp 문서가 지배함”</em> 주석을 답니다.</p>
+  </div>
+
+  <div class="finding minor">
+    <div class="fh"><span class="fn">R-5</span><span class="ft">계획서 표지가 앱 버전보다 26판 뒤처져 있습니다</span><span class="chip minor">문서</span></div>
+    <pre><code>계획서 v2.60 표지:  "Application v1.25 - Gate 4 refinements rounds 1-25 ..."
+실제 앱:             APP_VERSION = 1.51   (웹앱·파이썬앱 모두 동일)</code></pre>
+    <p>숫자가 틀린 것이 아니라 <strong>어느 문서가 어느 코드를 설명하는지 판단할 근거가 흐려지는</strong> 것이 문제입니다. 표지 한 줄을 갱신하면 됩니다.</p>
+  </div>
+
+  <div class="finding minor">
+    <div class="fh"><span class="fn">R-7</span><span class="ft">앱을 공유 폴더에 두고 거기서 실행하는 것은 확인되지 않았습니다</span><span class="chip minor">운영 규칙</span></div>
+    <p>실측으로 확인된 것은 <strong>“사용자 폴더에서 실행 허용”</strong> 이고, <strong>네트워크 경로(UNC)에서 실행하는 것은 별개의 통제</strong>라 막혀 있는 경우가 흔합니다. <strong>앱은 각자 PC, 계획서만 공유 폴더</strong> 형태를 유지하십시오. 담당자 절차서에도 같은 주의가 적혀 있습니다.</p>
+  </div>
+</section>
+
+<!-- ===== 3 ===== -->
+<section class="part" id="s3">
+  <span class="pnum">3부</span>
+  <h2>다른 사람(또는 다른 Claude)에게 넘길 수 있는가</h2>
+  <p><strong>넘길 수 있습니다.</strong> 4판에서 “넘기면 막힌다”고 적었던 것들 — 소스 없음, 도구 없음, 구버전 템플릿 — 은 해소되었습니다. 지금 필요한 것은 <strong>압축본 하나와 브랜치 이름</strong>입니다.</p>
+  <div class="tw"><table class="tight">
+    <thead><tr><th>넘길 것</th><th>무엇인가</th></tr></thead>
+    <tbody>
+      <tr><td class="mono"><code>PRAP_source_src_tools.zip</code></td><td><strong>이것 하나면 나머지가 따라옵니다.</strong> <code>src\</code>(앱 소스 45개) + <code>tools\</code>(빌드·검증 75개). 빈 서식도 이 안의 명령이 만들어 냅니다 — 셀 3,486개 중 차이 0개로 진본과 일치함을 확인했습니다</td></tr>
+      <tr><td>저장소 브랜치</td><td><code>Dan5050-now/project1</code> 의 <code>claude/project-resource-assignment-app-1vjdzh</code>. <strong>기본 브랜치가 아닙니다</strong></td></tr>
+      <tr><td>설계 문서 2건</td><td>NewApp Specification · NewApp Development Plan — <strong>R-4 때문에 반드시 이름을 대어 함께 주십시오</strong></td></tr>
+      <tr><td>매뉴얼 2건</td><td>사용자 안내서 · 담당자 절차서. 저장소의 <code>docs/review/</code> 에 함께 있습니다</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>압축본이 스스로 검증한다는 점이 이 항목의 핵심입니다.</strong> <code>package_source.py</code> 는 압축본을 쓰기 전에 <strong>임시 폴더에 풀어 실제로 빌드해 보고</strong>, 결과가 저장소의 앱과 <strong>바이트 단위로 같지 않으면 아무것도 쓰지 않습니다.</strong> “빌드되지 않는 소스 묶음은 인도물이 아니다”를 따지는 대신 <strong>해 보는 쪽</strong>을 택한 것입니다.</p>
+</section>
+<!-- ===== 4 ===== -->
+<section class="part" id="s4">
+  <span class="pnum">4부</span>
+  <h2>요청 a) b) — 서버 전환 설계</h2>
+  <p>전제: <strong>중앙 서버 + 데이터베이스 재구축.</strong> 요청하신 ⓐ 권한 분리와 ⓑ 레코드 단위 차단을 둘 다 성립시키는 유일한 구조이며, 설계는 아래에서 끝나 있습니다.</p>
+
+  <h3>왜 구조 변경인가</h3>
+  <h4>① 설계자가 명시적으로 거부했고 이유를 남겼습니다 (N-20)</h4>
+  <blockquote>
+    <p><em>“행 단위·구역 단위 잠금 — 한 계획의 서로 다른 부분을 두 사람이 동시에 편집하는 것은 <strong>다른 제품</strong>이고, <strong>저장 형식이 갖고 있지 않은 병합 모델</strong>을 필요로 한다. claim은 워크스페이스 전체를 덮는다(N-20).”</em></p>
+    <p><em>“주신 요구 — 누군가 편집 중일 때 다른 세션의 업데이트를 막으라는 것 — 은 전체 워크스페이스 claim으로 <strong>이미 완전히 충족</strong>된다. 그 선을 넘는 모든 것은 <strong>협업 편집기를 만드는 일이고, 그것은 다른 도구다.</strong>”</em></p>
+  </blockquote>
+  <p>즉 2026-08-13의 지시는 현재 구조로 충족되어 있고, 이번 요구는 <strong>그 선을 넘는 새 요구</strong>입니다.</p>
+
+  <h4>② 관리자 권한은 현 구조에서 물리적으로 불가능합니다</h4>
+  <p>스펙 <code>08_Identity</code>가 직접 말합니다 — <em>“선언된 것이고 인증된 것이 아니다. … <strong>로그인이 아니고, 어떤 접근도 통제하지 않으며</strong>, 누가 무엇을 했는지의 증거로 의존해서는 안 된다(NR-USR-08).”</em> 거기에 서버가 사용자 자신의 PC에서 사용자 권한으로 돌고, 데이터는 공유 폴더의 평문 JSON입니다.</p>
+
+  <h4>③ 버릴 것이 거의 없습니다 — 그리고 그것은 측정된 사실입니다</h4>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>자산</th><th>재사용</th><th>근거 — 측정으로 확인된 것</th></tr></thead>
+    <tbody>
+      <tr><td><strong>계산 엔진</strong> (3,799행)</td><td class="yes">그대로</td><td>person-month <strong>3,304 · 1,227 · 441건</strong> 참조 구현과 오차 0.00e+00. <code>test_layers</code>가 <em>“core/는 DOM·window·대화상자를 건드리지 않는다”</em>를 <strong>자동 강제</strong> → 서버로 들어내기 가능</td></tr>
+      <tr><td><strong>화면 전체</strong></td><td class="yes">거의 그대로</td><td>목표 규모에서 <strong>8.8초 로드·오류 0건</strong>. XSS 안전 실증</td></tr>
+      <tr><td><strong>데이터 모델</strong></td><td class="yes">DB 테이블로 번역</td><td><code>prap_contract.json</code> + <code>src/core/03_parse.js</code>·<code>05_model.js</code> → 스키마 자동 생성 현실적</td></tr>
+      <tr><td><strong>검증 규칙 36개</strong></td><td class="yes">그대로</td><td><code>prap_io.py</code>가 <strong>앱과 동일 판정</strong>(<code>test_interop</code> 확인). 서버측 재검증의 상당 부분이 이미 완료</td></tr>
+      <tr><td><strong>감사 CSV 생성</strong></td><td class="yes">그대로</td><td>수식 주입 방어 포함 — DB 이력으로 옮길 때도 이 함수 재사용</td></tr>
+      <tr><td>잠금 판단 로직</td><td class="mid">DB 잠금 테이블로</td><td>사상 계승. <code>claim.py</code>는 <strong>80개 테스트 통과</strong>(8프로세스 경쟁 포함)</td></tr>
+      <tr><td>저장 절차</td><td class="mid">DB 트랜잭션으로</td><td>—</td></tr>
+      <tr><td>로컬 HTTP 서버</td><td class="mid">실제 서버로 승격</td><td>API 28개가 출발점</td></tr>
+      <tr><td>파일 선택 창</td><td class="no">불필요</td><td>서버 방식에서는 파일 창 자체가 필요 없습니다</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>목표 구조</h3>
+  <figure>
+<pre><code>[ 사용자 A 브라우저 ] ┐
+[ 사용자 B 브라우저 ] ├── HTTPS ──▶ [ 사내 서버 1대 ]
+[ 사용자 C 브라우저 ] ┘               ├ 웹 서버 (IIS 또는 nginx)
+  └ 화면 + 계산 엔진                   ├ 애플리케이션 (Python / FastAPI)
+    (src/core + src/ui 재사용)         │   ├ 인증·권한 확인
+                                       │   ├ 레코드 잠금 관리     ← 요청 b)
+                                       │   ├ 검증 재실행 (prap_io.py 재사용)
+                                       │   └ 변경 이력 기록
+                                       ├ 데이터베이스 (PostgreSQL)
+                                       │   ├ 업무 데이터 (10개 시트 → 테이블)
+                                       │   ├ 잠금 / 사용자·권한 / 변경이력
+                                       │   └ 가정값 버전
+                                       └ 사내 AD 연동 (로그인)</code></pre>
+    <figcaption>덤으로 해결: 업데이트가 서버 1곳만 · 파이썬 설치 불필요 · 작업 유실 구조적 불가 · 이력 깨짐 불가 · 대화상자 멈춤 소멸</figcaption>
+  </figure>
+
+  <h3>구성요소</h3>
+  <ul>
+    <li><strong>DB: PostgreSQL 권장</strong> — 행 단위 잠금, 트랜잭션 신뢰도, 무료. 사내에 SQL Server가 이미 운영 중이고 DBA가 있다면 SQL Server로 바꿔도 설계는 성립합니다.</li>
+    <li><strong>앱 서버: Python + FastAPI 권장</strong> — <code>prap_io.py</code>가 파이썬이므로 검증·계산 재사용이 즉시 가능합니다.</li>
+    <li><strong>서버</strong>: 사내 VM 1대, Windows Server 2019/2022, 4 vCPU / 16GB / 100GB SSD, 일 1회 전체 + 시간별 증분 백업. <em>(3판 측정 기준 — 참조 구현이 목표 규모를 10초 내로 처리하므로 이 사양은 충분합니다.)</em></li>
+    <li><strong>모든 업무 테이블에 <code>row_version</code></strong> — 남의 저장을 덮어쓰는 사고를 구조적으로 막는 이중 안전장치.</li>
+    <li><strong>인증: 사내 AD 연동 권장.</strong> 이유는 보안이 아니라 <strong>운영 부담</strong> — 자체 계정은 비밀번호 초기화와 퇴사자 정리를 담당자가 영구히 처리해야 합니다.</li>
+  </ul>
+
+  <h3>IT팀 확인 질문 7개</h3>
+  <ol class="acts">
+    <li><span class="an">1</span><div><strong>Windows 통합 인증(Kerberos/NTLM) 또는 LDAP 조회를 쓸 수 있습니까?</strong><p>승인 절차는?</p></div></li>
+    <li><span class="an">2</span><div><strong>그 용도의 서비스 계정을 발급받을 수 있습니까?</strong></div></li>
+    <li><span class="an">3</span><div><strong>권한 구분용 AD 보안 그룹을 신규 생성할 수 있습니까?</strong><p><code>PRAP-Admins</code>, <code>PRAP-Editors</code>. 구성원 변경은 누가?</p></div></li>
+    <li><span class="an">4</span><div><strong>사내 가상 서버(VM) 1대를 받을 수 있습니까?</strong><p>사양·OS·백업 정책은?</p></div></li>
+    <li><span class="an">5</span><div><strong>사내 HTTPS 인증서를 발급받을 수 있습니까?</strong><p><code>https://prap.사내도메인</code></p></div></li>
+    <li><span class="an">6</span><div><strong>PostgreSQL 설치에 제약이 있습니까?</strong><p>이미 표준 DB가 지정되어 있습니까?</p></div></li>
+    <li><span class="an">7</span><div><strong>사내 웹 애플리케이션 도입 시 IT 변경관리·보안 검토 절차와 소요 기간은?</strong><p><em>(GxP/CSV 검증 질문은 철회되었습니다 — A-N11 “이 도구에 밸리데이션 의무 없음”이 Q-N09 에서 확인됨)</em></p></div></li>
+      </ol>
+
+  <h3>요청 b) 레코드 단위 잠금 설계</h3>
+  <p>잠금 단위 2종 — <strong>프로젝트 잠금</strong>(프로젝트 행 + 마일스톤·기간·월별추정 + <strong>그 프로젝트의 모든 배정</strong>)과 <strong>배정 잠금</strong>(배정 1행 + 가중치 창 + 월별추정). 부모 프로젝트에 <strong>의도 표시(intent)</strong>를 남기고, <code>UNIQUE (scope, record_id, mode)</code> 제약으로 <strong>DB가 승자를 판정</strong>하는 <strong>다중 단위 잠금(multi-granularity locking)</strong> 설계입니다.</p>
+  <div class="analogy">
+    <span class="ml">왜 프로젝트 잠금이 배정까지 포함해야 하는가</span>
+    <p>프로젝트 기간은 <strong>건물의 층 구분선</strong>이고 배정은 <strong>각 층의 사무실</strong>입니다. 층 구분선을 옮기면 <strong>모든 사무실의 위치가 함께 바뀝니다.</strong></p>
+  </div>
+  <p><strong>소스로 확인한 근거:</strong> <code>src/core/06_calculate.js</code>는 프로젝트-월 총량을 <code>standard_fte × period_weight × coverage</code>로 잡고 <strong>그 안에서 사람들의 몫을 정규화</strong>합니다(REQ-CAL-19). 따라서 기간 경계를 바꾸면 <strong>그 프로젝트 모든 배정의 수치가 동시에 재계산</strong>되며, 배정을 하나만 바꿔도 <strong>같은 역할을 가진 다른 사람의 몫까지 바뀝니다</strong>(<code>rf / share</code>). 즉 프로젝트 잠금이 하위 배정을 포함해야 하는 이유가 <strong>가중치 곱셈보다 강한 결합</strong> 때문임이 확인되었습니다.</p>
+  <div class="tw"><table class="wide">
+    <thead><tr><th class="num">#</th><th>요청</th><th>현재 잠금</th><th>결과</th><th>메시지</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>A가 <code>PRJ-001</code> 기간 수정</td><td>없음</td><td class="yes">허용</td><td>“PRJ-001을 편집 중입니다”</td></tr>
+      <tr><td class="num">2</td><td><strong>B가 <code>PRJ-001</code> 기간/월 FTE 수정</strong></td><td>A가 PRJ-001</td><td class="no">차단</td><td><strong>“김OO(DM팀)이 PRJ-001을 편집 중입니다. 11:31 시작, 활동 중.”</strong> ← 요청 예시 1</td></tr>
+      <tr><td class="num">3</td><td>B가 <code>ASG-007</code> 수정</td><td>A가 PRJ-001</td><td class="no">차단</td><td>“김OO이 PRJ-001 전체를 편집 중”</td></tr>
+      <tr><td class="num">4</td><td>B가 <code>ASG-007</code> 수정</td><td>없음</td><td class="yes">허용</td><td>PRJ-001에 의도 표시</td></tr>
+      <tr><td class="num">5</td><td><strong>C가 같은 <code>ASG-007</code> 수정</strong></td><td>B가 ASG-007</td><td class="no">차단</td><td><strong>“이OO(DM팀)이 이 배정을 편집 중입니다”</strong> ← 요청 예시 2</td></tr>
+      <tr><td class="num">6</td><td>C가 <strong>다른</strong> <code>ASG-009</code> 수정</td><td>B가 ASG-007</td><td class="yes">허용</td><td>— <strong>진짜 동시 편집 지점</strong></td></tr>
+      <tr><td class="num">7</td><td>A가 <code>PRJ-001</code> 전체 수정</td><td>B가 ASG-007</td><td class="no">차단</td><td>“이OO이 이 프로젝트의 배정을 편집 중”</td></tr>
+      <tr><td class="num">8</td><td>D가 <code>PRJ-002</code> 수정</td><td>위 전부</td><td class="yes">허용</td><td>— 완전 독립</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>잠금 규칙은 기존 사상을 계승합니다</strong> — 값이 실제로 바뀔 때 획득(NR-STO-10), 30초 생존신호 / 30분 만료 분리(NR-STO-14), 자기 세션 즉시 복구(NR-STO-19), 실명+부서+시작시각+해제예정 메시지(NR-STO-12). <strong>이 사상은 80개 테스트로 검증되었으므로 새로 발명할 것이 없습니다.</strong></p>
+  <p><strong>잠금이 남는 사고를 막는 3중 장치:</strong> ① 다른 레코드로 이동 시 이전 잠금 필수 해제 ② <code>expires_at</code> 자동 만료 ③ <strong>관리자용 “현재 잠금 목록” + 강제 해제</strong>(현재 전혀 없는 수단).</p>
+  <h4>놓치기 쉬운 문제 — “사람” 축 충돌</h4>
+  <p>한 인원의 서로 다른 배정을 두 사람이 각각 정당하게 수정하면 그 인원의 월 합계가 과다배정에 접근하는데 <strong>둘 다 자기 화면에서는 볼 수 없습니다.</strong></p>
+  <div class="analogy">
+    <span class="ml">비유</span>
+    <p>두 부서장이 각자 같은 직원의 일정을 잡았습니다. 각자 자기 몫은 합리적인데 <strong>합치면 그 사람은 주 60시간을 일해야 합니다.</strong> 둘 다 잘못한 게 없는데 결과는 잘못되었습니다.</p>
+  </div>
+  <p>잠금이 아니라 <strong>알려주기로</strong> 풀어야 합니다 — 저장 시 해당 인원 전체 합계 재계산 후 경고(막지 않음), 같은 인원의 다른 배정 편집 중이면 정보성 안내, 과다배정 목록 상시 노출.</p>
+
+  <h3>요청 a) 관리자 권한 분리</h3>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>권한</th><th>할 수 있는 일</th><th>대상</th></tr></thead>
+    <tbody>
+      <tr><td><strong>관리자</strong></td><td>전부 + <strong>General assumptions 수정</strong> + 사용자·권한 관리 + 잠금 강제 해제 + 이력 조회</td><td>1~2명</td></tr>
+      <tr><td><strong>편집자</strong></td><td>프로젝트·인원·배정 데이터 편집. <strong>General assumptions는 읽기만</strong></td><td>실무 담당자</td></tr>
+      <tr><td><strong>조회자</strong></td><td>전부 읽기만. 엑셀 내보내기 가능</td><td>팀장·유관부서</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>General assumptions = 4개 테이블</strong>: <code>PeriodFTEStandard</code>(88행) · <code>RoleFactor</code>(430행) · <code>Lists</code> · <code>Config</code>. 실측에서 이 탭이 <strong>98~184행</strong>을 렌더링하는 것을 확인했습니다.</p>
+  <div class="analogy">
+    <span class="ml">비유</span>
+    <p>이 4개는 <strong>환율표</strong>입니다. 개별 프로젝트 데이터가 “금액”이라면 이것은 환산 환율입니다. <strong>한 칸 바꾸면 회사 모든 장부의 숫자가 동시에 바뀝니다.</strong></p>
+  </div>
+  <p>소스로 확인한 사실이 이 판단을 강화합니다 — <code>PeriodFTEStandard.standard_fte</code>는 <strong>프로젝트-월 총량 자체</strong>를 결정하는 값입니다(REQ-CAL-19). 가중치 하나가 아니라 <strong>분모</strong>입니다.</p>
+  <p><strong>가정값은 잠금이 아니라 버전으로:</strong> 새 버전 저장(덮어쓰지 않음) → 적용 전 <strong>영향 범위 표시</strong>(“프로젝트 62개, 인원 20명의 FTE가 바뀝니다. 새로 과다배정 3명: …”) → 편집 중 사용자에게 알림 → 과거 버전 보존으로 “지난달 보고서는 어느 기준이었나”에 답변 가능.</p>
+  <p><strong>권한 확인은 반드시 서버에서</strong> — 화면 버튼 숨김은 친절함이지 보안이 아닙니다.</p>
+
+  <h3>로드맵</h3>
+  <p><strong>1단계는 이미 끝났습니다</strong> — 세 공백의 배선과 그 배선 시험이 v1.21.1 에 들어가 있습니다. 남은 것은 0단계(승인)부터입니다.</p>
+  <div class="road">
+    <div class="stage"><span class="sn">0단계</span><div class="sb"><strong>준비 — 지금 여기서 막혀 있습니다</strong><p>IT 질문 7개 답변 + 서버·DB 승인. 기술적 선행조건은 남아 있지 않습니다</p></div><span class="sd">1~2주</span></div>
+    <div class="stage"><span class="sn">1단계</span><div class="sb"><strong>파일 방식의 응급 수정 — 완료</strong><p>NR-STO-07/15/16 배선 + 배선 시험이 v1.21.1 에 들어 있습니다</p></div><span class="sd">완료<i>3~5일</i></span></div>
+    <div class="stage"><span class="sn">2단계</span><div class="sb"><strong>서버 골격 + DB + 데이터 이관 + 검증 이식</strong><p><code>prap_io.py</code>·<code>prap_contract.json</code> 재사용</p></div><span class="sd">2~3주</span></div>
+    <div class="stage"><span class="sn">3단계</span><div class="sb"><strong>인증·권한 — 요청 a) 완료</strong><p>AD 연동 · 권한 3단계 · 가정값 버전 관리</p></div><span class="sd">2~3주</span></div>
+    <div class="stage"><span class="sn">4단계</span><div class="sb"><strong>레코드 잠금 — 요청 b) 완료</strong><p>잠금 테이블 · 다중 단위 잠금 · 인원 축 안내 · 관리자 잠금 화면</p></div><span class="sd">2~3주</span></div>
+    <div class="stage"><span class="sn">5단계</span><div class="sb"><strong>검증·이관</strong><p><em>회귀 기준선과 규모 측정이 이미 확보되어 축소</em></p></div><span class="sd">1~2주<i>2판 2~3주</i></span></div>
+    <div class="stage total"><span class="sn">합계</span><div class="sb"><strong>약 2.5~3개월</strong></div><span class="sd">—<i>1판 3~4개월</i></span></div>
+  </div>
+
+  <h3>남은 위험</h3>
+  <div class="tw"><table class="wide">
+    <thead><tr><th class="num">ID</th><th>위험</th><th>가능성</th><th>영향</th><th>3판 변경</th></tr></thead>
+    <tbody>
+      <tr><td class="num">N-01</td><td><strong>IT팀 승인 지연</strong></td><td class="mid">높음</td><td class="no">높음</td><td><strong>지금 가장 큰 위험</strong> — 기술 쪽에 남은 선행조건이 없으므로 일정은 전적으로 여기에 달려 있습니다</td></tr>
+      <tr><td class="num">N-03</td><td>계산 엔진 이관 시 숫자가 달라짐</td><td class="yes">낮음</td><td class="no">매우 높음</td><td><strong>크게 완화</strong> — 회귀 기준선(3,304·1,227·441 person-month)과 <code>prap_io.py</code>, <code>test_layers</code> 의 경계 강제. 엔진이 v1.50→v1.51 로 올라가고도 오차 0.00e+00 이었던 실적이 있습니다</td></tr>
+      <tr><td class="num">N-05</td><td>레코드 잠금이 실사용에서 답답함</td><td class="mid">중</td><td class="mid">중</td><td>유지 — 4단계에서 실사용 확인 필요</td></tr>
+      <tr><td class="num">N-06</td><td>파일 방식 사용자의 저항</td><td class="mid">중</td><td class="yes">낮음</td><td>유지</td></tr>
+      <tr><td class="num">R-N06</td><td><strong>윈도우 공유 폴더의 동작 미확인</strong></td><td class="mid">중</td><td class="no">높음</td><td>2부 R-1 — <code>check_share.py</code> 한 번으로 해소됩니다</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+
+<!-- ===== 5 ===== -->
+<section class="part" id="s5">
+  <span class="pnum">5부</span>
+  <h2>다음 할 일 — 순서대로</h2>
+
+  <h3>이번 주</h3>
+  <ol class="acts">
+    <li><span class="an">1</span><div><strong><code>check_share.py</code> 를 실제 공유 폴더에서 한 번 돌리기</strong><p>담당자 PC에서 1분. 화면 12줄로 끝나고 반출할 파일이 생기지 않습니다. <strong>이것이 “여러 명이 같은 계획을 쓸 수 있는가”에 대한 마지막 미지수입니다</strong> (R-1)</p></div></li>
+    <li><span class="an">2</span><div><strong>IT팀 질문 7개 전달</strong><p>답이 오는 데 걸리는 시간이 곧 전환 일정입니다. 기술 쪽에 남은 선행조건이 없으므로 <strong>지금 보내는 것이 가장 빨리 당기는 방법</strong>입니다 (R-3)</p></div></li>
+    <li><span class="an">3</span><div><strong>시범 사용 2~3명</strong><p>1번이 <code>SAFE FOR SHARED USE</code> 로 나왔다면. 계획서는 공유 폴더의 <code>데이터\</code> 에, 앱은 각자 PC에 (R-7)</p></div></li>
+  </ol>
+
+  <h3>그다음 — 문서 정리 (반나절)</h3>
+  <ol class="acts">
+    <li><span class="an">4</span><div><strong>매니페스트에 NewApp 설계서 2건 추가</strong><p>넘겨받는 사람이 틀린 결론에 이르지 않게 (R-4)</p></div></li>
+    <li><span class="an">5</span><div><strong>계획서 v2.60 표지의 <code>Application v1.25</code> → <code>v1.51</code></strong><p>그리고 “동시 편집 범위 밖” 항목에 <em>“데스크톱 앱은 NewApp 문서가 지배함”</em> 주석 (R-5)</p></div></li>
+  </ol>
+
+  <h3>승인이 나오면</h3>
+  <p>4부의 로드맵 그대로입니다. <strong>0단계부터 약 2.5~3개월</strong>이고, 1단계(응급 수정)는 이미 끝나 있습니다.</p>
+</section>
+
+<!-- ===== 6 ===== -->
+<section class="part" id="s6">
+  <span class="pnum">부록</span>
+  <h2>종결 항목 — 한 줄씩</h2>
+  <p>1~4판에서 지적하고 <strong>해결이 끝난</strong> 것들입니다. 본문에서는 덜어냈고, 여기에는 <strong>무엇이 어떻게 끝났는지</strong>만 남깁니다. 상세 기록과 패치는 저장소의 <code>docs/review/</code> 와 <code>docs/review/fixes/</code> 에 그대로 있습니다.</p>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>항목</th><th>무엇이었나</th><th>어떻게 끝났나</th></tr></thead>
+    <tbody>
+      <tr><td><strong>결함 B</strong></td><td>남의 저장을 말없이 덮어씀</td><td class="yes">저장 전 기준 판본 확인 배선(NR-STO-16). 덮어쓰기 시도는 거부되고 무엇이 달라졌는지 알립니다</td></tr>
+      <tr><td><strong>결함 C</strong></td><td>정전 복구 기록을 쓰기만 하고 읽지 않음</td><td class="yes">복구 제안 배선(NR-STO-07). 판본 비교를 <strong>수정시각이 아니라 저장 토큰</strong>으로 바꿔, 공유 폴더에서 복구가 버려지던 것까지 함께 해결</td></tr>
+      <tr><td><strong>결함 D</strong></td><td>잠금을 잡고 놓지 않음</td><td class="yes">반납 배선 + <strong>기다리는 세션에 30초 안에 알림</strong>(NR-STO-15 후반부) + 30분 만료 인계(Q-N16)</td></tr>
+      <tr><td><strong>결함 E</strong></td><td>팀 폴더가 있는데 화면이 알려주지 않음</td><td class="yes">파일 창의 <strong>내 계획 / 팀 계획</strong> 바로가기, 그리고 남이 저장한 개인 폴더 계획에 뜨는 <strong>옮기기</strong> 버튼</td></tr>
+      <tr><td><strong>결함 F</strong></td><td>파이썬 설치 관문</td><td class="yes">사내 PC에 파이썬이 있음을 확인했고, <strong>없는 PC를 위해 런타임 동봉 배포</strong>를 만들었습니다 — 설치 없이 동작</td></tr>
+      <tr><td><strong>결함 H</strong></td><td>파일 대화상자가 전체를 멈춤</td><td class="yes">대화상자 계열을 전역 잠금 밖으로 분리</td></tr>
+      <tr><td><strong>결함 I</strong></td><td>동봉 템플릿이 7세대 구버전</td><td class="yes">현행 <code>Template v1.16</code>(schema 12)으로 교체. 문서 생성기의 파일명 표기가 원인이었고, 같은 부류를 잡는 검사 규칙을 추가</td></tr>
+      <tr><td><strong>결함 9</strong></td><td>파이썬 셸의 스키마 번호 불일치</td><td class="yes">맞춤. 스키마가 13으로 올라간 지금도 화면·파이썬 셸·데스크톱 셸이 모두 13입니다 — 시험이 <code>core/</code> 의 값과 대조해 강제합니다</td></tr>
+      <tr><td><strong>D-6</strong></td><td>“미승인 스펙 위에서 개발 중”</td><td class="yes">미승인이 아니라 <strong>표지 문구가 낡은 것</strong>이었습니다. 표지와 버전 이력 4행을 정정</td></tr>
+      <tr><td><strong>D-10</strong></td><td>가이드의 계산 공식이 틀림</td><td class="yes">틀린 공식은 <strong>기계가 읽는 계약 파일</strong>에 있었습니다. 사양서의 세 줄과 재현 가능한 예제로 교체</td></tr>
+      <tr><td><strong>항목 13</strong></td><td>공유 계획 폴더 미구현</td><td class="yes">구현 + 화면 연결 (결함 E와 함께)</td></tr>
+      <tr><td><strong>항목 12</strong></td><td>배선을 검사하는 시험이 없음</td><td class="yes">저장·잠금·복구 <strong>104건</strong>과 실구동 검사 추가. 세 공백이 다시 끊기면 시험이 먼저 멈춥니다</td></tr>
+      <tr><td><strong>R-6</strong></td><td>데스크톱 셸의 스키마 번호가 8판 뒤처짐</td><td class="yes">5 → 13. 스키마가 13으로 움직인 김에 맞췄습니다 — 그대로 두는 것은 <strong>틀린 경고를 유지하기로 선택하는 것</strong>이었습니다</td></tr>
+      <tr><td><strong>R-50</strong></td><td>마일스톤을 눈에 띄게 할 방법이 없음</td><td class="yes">색 표시 추가(스키마 13). 두 타임라인·표·범례에 반영되고, 색 목록은 <code>Lists</code> 시트에 있어 팀이 뜻을 덧붙여도 색이 유지됩니다</td></tr>
+      <tr><td>배포 도구 3건</td><td>배포본 미생성 · 검증 명령 중단 · 빌드 경고</td><td class="yes">점검이 앱을 실행해 버리던 것, 시험 도구가 없으면 전부 멈추던 것, 빌드가 경고를 찍던 것 — 모두 수정하고 <strong>각각을 잡는 시험</strong>을 넣었습니다</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+</main>
+</div>
+</div>
+
+<footer>
+  <p>5판은 <strong>현재 상태 문서</strong>입니다. 1~4판의 지적 중 해결된 것은 본문에서 덜어내고 부록에 한 줄씩만 남겼습니다 — 상세 이력은 저장소(<code>docs/review/</code>)에 판본별로 보존되어 있습니다.</p>
+  <p>본문의 수치는 모두 실행으로 얻은 것입니다. 시험 42개 스위트, 저장·잠금·복구 104건, 참조 구현과의 대조 1,227 person-month(최대 오차 0.00e+00). <strong>다만 그 실행은 리눅스에서 이루어졌습니다</strong> — 윈도우 공유 폴더에서의 동작은 <code>check_share.py</code> 가 현장에서 답합니다(2부 R-1). 그것이 지금 남아 있는 가장 중요한 미지수입니다.</p>
+</footer>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var secs = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  if(!('IntersectionObserver' in window)) return;
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(!e.isIntersecting) return;
+      var i = secs.indexOf(e.target);
+      if(i < 0) return;
+      links.forEach(function(l){ l.classList.remove('on'); });
+      links[i].classList.add('on');
+    });
+  }, { rootMargin: '-15% 0px -70% 0px' });
+  secs.forEach(function(s){ if(s) io.observe(s); });
+})();
+</script>
