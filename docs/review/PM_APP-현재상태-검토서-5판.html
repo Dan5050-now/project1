@@ -184,13 +184,13 @@
 
 <header class="mast">
   <p class="eyebrow">설계 검토 · 운영 적합성 분석</p>
-  <span class="edition">개정 5판 · 현재 상태 (v1.21.1)</span>
+  <span class="edition">개정 5판 · 현재 상태 (v1.22)</span>
   <h1>PM_APP 현재 상태와 서버 전환 방안</h1>
   <p class="dek">5판은 <strong>지금 이 프로그램이 어디에 있는가</strong>만 다룹니다. 1~4판에서 지적하고 <strong>이미 해결한 문제는 전부 덜어냈고</strong>, 남은 것은 <a href="#s2">2부</a>의 여섯 건입니다. <strong>공유 폴더에서 여러 명이 같은 계획을 여는 사용은 이제 작업이 사라지지 않습니다</strong> — 다만 파일 단위 잠금이므로 한 번에 한 사람이며, 요청하신 레코드 단위 차단과 권한 분리는 <a href="#s4">4부</a>의 서버 전환이 필요합니다.</p>
   <dl class="mast-meta">
-    <div><dt>대상</dt><dd>PM_APP Python <strong>1.21.1</strong> · 엔진 <strong>v1.51</strong></dd></div>
-    <div><dt>상태</dt><dd>배포 가능 · <strong>시험 41개 스위트 전부 통과</strong></dd></div>
-    <div><dt>남은 문제</dt><dd><strong>6건</strong> (차단 1 · 주의 3 · 경미 2)</dd></div>
+    <div><dt>대상</dt><dd>PM_APP Python <strong>1.22</strong> · 엔진 <strong>v1.52</strong> · 스키마 <strong>13</strong></dd></div>
+    <div><dt>상태</dt><dd>배포 가능 · <strong>시험 42개 스위트 전부 통과</strong></dd></div>
+    <div><dt>남은 문제</dt><dd><strong>5건</strong> (차단 1 · 주의 3 · 경미 1)</dd></div>
     <div><dt>작성</dt><dd>2026-09-15</dd></div>
   </dl>
 </header>
@@ -233,10 +233,10 @@
   </div>
 
   <div class="figs">
-    <div class="fg"><b>41 / 41</b><span>시험 스위트 전부 통과</span></div>
+    <div class="fg"><b>42 / 42</b><span>시험 스위트 전부 통과</span></div>
     <div class="fg"><b>104</b><span>저장·잠금·복구 검사</span></div>
     <div class="fg"><b>0.00e+00</b><span>참조 구현과의 최대 오차 (1,227 person-month)</span></div>
-    <div class="fg"><b>6</b><span>남아 있는 문제</span></div>
+    <div class="fg"><b>5</b><span>남아 있는 문제</span></div>
   </div>
 </section>
 
@@ -264,6 +264,15 @@
     <p>회의실 문에 <strong>이름표를 거는 방식</strong>입니다. 방을 쓰는 사람이 누구인지 분명하고 빈방은 바로 알 수 있지만, <strong>한 방에 두 사람이 각자 다른 책상에서 일할 수는 없습니다.</strong> 그것이 요청하신 레코드 단위 편집이고, 4부의 구조 변경입니다.</p>
   </div>
 
+  <h3>새로 들어간 것 — 마일스톤 색 표시 (v1.22)</h3>
+  <p>타임라인은 모든 마일스톤을 <strong>같은 검은 삼각형</strong>으로 그렸습니다. 그래서 읽는 사람이 실제로 찾는 두세 개 — 실사, 밀린 날짜, 위에서 묻는 그 날짜 — 가 <strong>계획에 적혀 있을 뿐인 스무 개와 구별되지 않았습니다.</strong></p>
+  <p>이제 마일스톤 표의 <strong>날짜 옆 칸</strong>에서 색을 고르면, 그 마일스톤이 <strong>두 타임라인 모두</strong>(<code>Overall</code> 과 프로젝트 자기 탭)에서 그 색으로, 조금 크게 그려집니다. 표의 칸에는 색 사각형이 붙고, 범례에는 <strong>실제로 쓰인 색만</strong> 나옵니다.</p>
+  <div class="analogy">
+    <span class="ml">색 목록은 쓰는 사람의 것입니다</span>
+    <p>색은 <code>Lists</code> 시트에 있고, 앱이 읽는 것은 값 안의 <strong>색 단어</strong>입니다. 그래서 팀이 <code>Highlight (Red) — 지연</code> 처럼 <strong>뜻을 덧붙여도 색은 그대로</strong>이고, <strong>범례가 그 문구를 그대로 되돌려 줍니다.</strong> 코드를 고칠 필요가 없습니다.</p>
+  </div>
+  <p>소스 스키마가 <strong>12에서 13으로</strong> 올라갔습니다. <strong>기존 파일은 그대로 열립니다</strong> — 색 칸이 없을 뿐이고, 앱이 버전을 한 번 알립니다. <strong>숫자는 하나도 움직이지 않습니다.</strong></p>
+
   <h3>배포는 이렇게 돌아갑니다</h3>
   <p>담당자 한 사람이 버전마다 10~15분 쓰고, 사용자는 <strong>압축을 풀고 더블클릭</strong>합니다.</p>
   <figure>
@@ -277,12 +286,13 @@
   </figure>
 
   <h3>무엇으로 그렇게 말하는가</h3>
-  <pre class="pass"><code>전체 41개 스위트          41 통과 · 0 실패
+  <pre class="pass"><code>전체 42개 스위트          42 통과 · 0 실패
 test_storage_py          104 passed   저장·잠금·만료·복구·기준판본
 test_python_app            0 failed   실제 구동 + 화면 숫자 대조
   EVERY FIGURE EQUALS THE PYTHON REFERENCE IMPLEMENTATION
   1,227 person-months compared, worst difference 0.00e+00
 test_no_python            42 검사     파이썬 없는 PC 경로 (런처·번들·PC점검)
+test_highlight            12 검사     마일스톤 색 표시 (신규)
 두 인스턴스 실전 확인      "이서연 (DM) is editing this plan. Started 09:29, active now."</code></pre>
   <p><strong>윈도우에서 실제로 확인된 것과 아직인 것을 구분해 둡니다.</strong> 담당자 PC(윈도우)에서 <strong>빌드와 런타임 동봉까지는 실행되었습니다.</strong> 아직 확인되지 않은 것은 <strong>공유 폴더에서의 동작</strong>이며, 그것이 2부 첫 항목입니다.</p>
 </section>
@@ -290,8 +300,8 @@ test_no_python            42 검사     파이썬 없는 PC 경로 (런처·번�
 <!-- ===== 2 ===== -->
 <section class="part" id="s2">
   <span class="pnum">2부</span>
-  <h2>남아 있는 문제 — 여섯 건</h2>
-  <p>해결된 것은 <a href="#s6">부록</a>에 한 줄씩만 남기고 본문에서 덜어냈습니다. 지금 판단에 필요한 것은 아래 여섯 건입니다.</p>
+  <h2>남아 있는 문제 — 다섯 건</h2>
+  <p>해결된 것은 <a href="#s6">부록</a>에 한 줄씩만 남기고 본문에서 덜어냈습니다. 지금 판단에 필요한 것은 아래 다섯 건입니다.</p>
 
   <div class="finding caution">
     <div class="fh"><span class="fn">R-1</span><span class="ft">윈도우 공유 폴더에서 실제로 재 본 적이 없습니다</span><span class="chip caution">먼저 할 일</span></div>
@@ -326,11 +336,6 @@ test_no_python            42 검사     파이썬 없는 PC 경로 (런처·번�
     <pre><code>계획서 v2.60 표지:  "Application v1.25 - Gate 4 refinements rounds 1-25 ..."
 실제 앱:             APP_VERSION = 1.51   (웹앱·파이썬앱 모두 동일)</code></pre>
     <p>숫자가 틀린 것이 아니라 <strong>어느 문서가 어느 코드를 설명하는지 판단할 근거가 흐려지는</strong> 것이 문제입니다. 표지 한 줄을 갱신하면 됩니다.</p>
-  </div>
-
-  <div class="finding minor">
-    <div class="fh"><span class="fn">R-6</span><span class="ft">데스크톱(Electron) 셸의 스키마 번호가 옛 값입니다</span><span class="chip minor">배포 대상 아님</span></div>
-    <p><code>src/storage/desktop/workspace.js</code> 의 <code>SCHEMA_EXPECTED</code> 가 <strong>5</strong> 입니다. 화면과 파이썬 셸은 <strong>12</strong> 입니다. <strong>지금 배포하는 것은 파이썬 셸이므로 당장 영향은 없습니다</strong> — 다만 Electron 셸을 쓰기로 하면 열 때마다 “스키마가 다르다”는 잘못된 경고가 납니다.</p>
   </div>
 
   <div class="finding minor">
@@ -537,11 +542,13 @@ test_no_python            42 검사     파이썬 없는 PC 경로 (런처·번�
       <tr><td><strong>결함 F</strong></td><td>파이썬 설치 관문</td><td class="yes">사내 PC에 파이썬이 있음을 확인했고, <strong>없는 PC를 위해 런타임 동봉 배포</strong>를 만들었습니다 — 설치 없이 동작</td></tr>
       <tr><td><strong>결함 H</strong></td><td>파일 대화상자가 전체를 멈춤</td><td class="yes">대화상자 계열을 전역 잠금 밖으로 분리</td></tr>
       <tr><td><strong>결함 I</strong></td><td>동봉 템플릿이 7세대 구버전</td><td class="yes">현행 <code>Template v1.16</code>(schema 12)으로 교체. 문서 생성기의 파일명 표기가 원인이었고, 같은 부류를 잡는 검사 규칙을 추가</td></tr>
-      <tr><td><strong>결함 9</strong></td><td>파이썬 셸의 스키마 번호 불일치</td><td class="yes">5 → 12. <em>(데스크톱 셸은 R-6 으로 남아 있습니다)</em></td></tr>
+      <tr><td><strong>결함 9</strong></td><td>파이썬 셸의 스키마 번호 불일치</td><td class="yes">맞춤. 스키마가 13으로 올라간 지금도 화면·파이썬 셸·데스크톱 셸이 모두 13입니다 — 시험이 <code>core/</code> 의 값과 대조해 강제합니다</td></tr>
       <tr><td><strong>D-6</strong></td><td>“미승인 스펙 위에서 개발 중”</td><td class="yes">미승인이 아니라 <strong>표지 문구가 낡은 것</strong>이었습니다. 표지와 버전 이력 4행을 정정</td></tr>
       <tr><td><strong>D-10</strong></td><td>가이드의 계산 공식이 틀림</td><td class="yes">틀린 공식은 <strong>기계가 읽는 계약 파일</strong>에 있었습니다. 사양서의 세 줄과 재현 가능한 예제로 교체</td></tr>
       <tr><td><strong>항목 13</strong></td><td>공유 계획 폴더 미구현</td><td class="yes">구현 + 화면 연결 (결함 E와 함께)</td></tr>
       <tr><td><strong>항목 12</strong></td><td>배선을 검사하는 시험이 없음</td><td class="yes">저장·잠금·복구 <strong>104건</strong>과 실구동 검사 추가. 세 공백이 다시 끊기면 시험이 먼저 멈춥니다</td></tr>
+      <tr><td><strong>R-6</strong></td><td>데스크톱 셸의 스키마 번호가 8판 뒤처짐</td><td class="yes">5 → 13. 스키마가 13으로 움직인 김에 맞췄습니다 — 그대로 두는 것은 <strong>틀린 경고를 유지하기로 선택하는 것</strong>이었습니다</td></tr>
+      <tr><td><strong>R-50</strong></td><td>마일스톤을 눈에 띄게 할 방법이 없음</td><td class="yes">색 표시 추가(스키마 13). 두 타임라인·표·범례에 반영되고, 색 목록은 <code>Lists</code> 시트에 있어 팀이 뜻을 덧붙여도 색이 유지됩니다</td></tr>
       <tr><td>배포 도구 3건</td><td>배포본 미생성 · 검증 명령 중단 · 빌드 경고</td><td class="yes">점검이 앱을 실행해 버리던 것, 시험 도구가 없으면 전부 멈추던 것, 빌드가 경고를 찍던 것 — 모두 수정하고 <strong>각각을 잡는 시험</strong>을 넣었습니다</td></tr>
     </tbody>
   </table></div>
@@ -553,7 +560,7 @@ test_no_python            42 검사     파이썬 없는 PC 경로 (런처·번�
 
 <footer>
   <p>5판은 <strong>현재 상태 문서</strong>입니다. 1~4판의 지적 중 해결된 것은 본문에서 덜어내고 부록에 한 줄씩만 남겼습니다 — 상세 이력은 저장소(<code>docs/review/</code>)에 판본별로 보존되어 있습니다.</p>
-  <p>본문의 수치는 모두 실행으로 얻은 것입니다. 시험 41개 스위트, 저장·잠금·복구 104건, 참조 구현과의 대조 1,227 person-month(최대 오차 0.00e+00). <strong>다만 그 실행은 리눅스에서 이루어졌습니다</strong> — 윈도우 공유 폴더에서의 동작은 <code>check_share.py</code> 가 현장에서 답합니다(2부 R-1). 그것이 지금 남아 있는 가장 중요한 미지수입니다.</p>
+  <p>본문의 수치는 모두 실행으로 얻은 것입니다. 시험 42개 스위트, 저장·잠금·복구 104건, 참조 구현과의 대조 1,227 person-month(최대 오차 0.00e+00). <strong>다만 그 실행은 리눅스에서 이루어졌습니다</strong> — 윈도우 공유 폴더에서의 동작은 <code>check_share.py</code> 가 현장에서 답합니다(2부 R-1). 그것이 지금 남아 있는 가장 중요한 미지수입니다.</p>
 </footer>
 
 <script>
