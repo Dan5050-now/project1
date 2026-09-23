@@ -84,8 +84,8 @@
    "what": "agent_guide_workbook",
    "path": "docs/PRAP_AI_Agent_Guide_v1.0.xlsx",
    "exists": true,
-   "bytes": 36527,
-   "sha256": "17717df8a7a6d97090f82f2e3ef94c9aac1875389bae6117d01d30759e043341"
+   "bytes": 36526,
+   "sha256": "4faa40f4a548558ea44731ddfd300fcda4e78176c9bf24d13123e318e8b944b4"
   }
  ]
 }
