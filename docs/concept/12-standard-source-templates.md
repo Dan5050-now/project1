@@ -190,6 +190,7 @@ DP-12-6 확정에 따라 **결합형이 기본**입니다. 이미 만들고 있�
 | `RANDDT` | | date | 무작위배정일 |
 | `ANCHORDT` | ● | date | **방문 윈도우 기준일**. 시험 설정에 따라 RANDDT 또는 첫 투여일 |
 | `LASTVISDT` | | date | 마지막 방문일 |
+| `SITETRFDT` | | date | **사이트 이전일.** 이전이 있었던 경우. 없으면 파일 추출일로 대체되며 경고 |
 | `DSCONTDT` | | date | 중도탈락일 |
 | `DSCONTRS` | | text | 중도탈락 사유 |
 | `STRATA1`~`STRATA5` | | text | 층화 인자. **눈가림 마스킹 대상** |

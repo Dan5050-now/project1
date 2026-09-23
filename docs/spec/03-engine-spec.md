@@ -186,47 +186,68 @@ projected_enrollment(plan, to_date) =
 
 ### 2.9 사이트 귀속과 이전 (검토 반영)
 
-피험자의 사이트 이전이 발생할 수 있으므로([02](02-data-model.md) 1.4), 항목의 사이트는 **활동이 일어난 곳**으로 정합니다.
+피험자가 사이트를 이전하면 **그 피험자의 데이터 전체가 새 사이트로 이동**합니다 ([02](02-data-model.md) 1.4). 분모·분자·backlog가 모두 함께 갑니다.
 
 ```
 function attribute_site(subject, visit):
-    if visit.occurred:
-        return visit_actual.site_id                      # DS02의 SITEID
-    h = subject_site_history.covering(visit.target_on)
-    return h.site_id if h else subject.site_id
+    return subject.site_id, subject.country_id      # 항상 현재 소속
 ```
 
-#### 이전 감지
+`visit_actual.site_id`(그 방문을 실제 수행한 사이트)는 사실로 보관하되 **롤업에 쓰지 않습니다.** 드릴다운과 Subject 360에서 참고 정보로만 표시합니다.
+
+#### 이전 처리
 
 ```
-function detect_transfer(subject, drop_row):
+function handle_transfer(subject, drop_row, drop):
     if drop_row.SITEID == subject.site_id:  return
-    close_current_history(subject, valid_to = drop.src_extract_on - 1)
-    open_history(subject, site = drop_row.SITEID,
-                 valid_from = drop.src_extract_on, source_drop = drop)
-    subject.site_id = drop_row.SITEID
+
+    transfer_on = drop_row.SITETRFDT
+    source      = 'DECLARED'
+    if transfer_on is None:
+        transfer_on = drop.src_extract_on
+        source      = 'INFERRED'
+
+    # ① 운영 규칙 점검 — 이전 시점에 미종결 항목이 있었는가
+    open_n = count_items(subject, status in (PENDING, OVERDUE), as_of = transfer_on)
+    if open_n > 0:
+        record_finding('X9', subject,
+            f'이전 시점({transfer_on})에 미종결 항목 {open_n}건. '
+            f'{drop_row.SITEID}가 이전 사이트의 backlog를 인계받음')
+
+    # ② 이력
+    close_history(subject, valid_to = transfer_on - 1 day)
+    open_history(subject, site = drop_row.SITEID, valid_from = transfer_on,
+                 transfer_date_source = source, open_items_at_transfer = open_n)
+
+    # ③ 전 항목 재귀속
+    subject.site_id, subject.country_id = resolve(drop_row.SITEID)
+    n = reattribute_all_items(subject)        # 분모·분자·backlog 전부
+
     audit(action='UPDATE', entity='Subject', actor_type='ENGINE',
-          reason=f'Site transfer detected: {old} → {new}')
-    reattribute_pending_items(subject)
+          reason=f'Site transfer {old} → {new} on {transfer_on}; {n} items reattributed')
 ```
+
+①이 이 절의 핵심입니다. **운영 규칙은 이전 전에 모든 pending 항목을 종결하는 것**이지만, 앱은 그것을 강제할 수 없습니다. 강제하는 대신 **규칙이 지켜지지 않았다는 사실을 드러냅니다.** 막으면 업무가 멈추고, 침묵하면 새 사이트가 이유 없이 나빠 보입니다.
 
 #### 재귀속 범위
 
 ```
-function reattribute_pending_items(subject):
-    for item in items(subject) where not item.visit.occurred:
-        item.site_id, item.country_id = attribute_site(subject, item.visit)
+reattribute_all_items(subject):
+    UPDATE expectation_item SET site_id=:new, country_id=:new_c WHERE subject_id=:s
+    UPDATE issue_object     SET site_id=:new, country_id=:new_c WHERE subject_id=:s
 ```
 
-**발생한 방문의 항목은 건드리지 않습니다.** Site A에서 수행된 방문의 폼은 이후 이전이 있어도 A의 backlog로 남습니다.
+발생 여부와 상태를 가리지 않습니다. 피험자당 수백~수천 행이므로 배치로 처리하고 건수를 `engine_run`에 기록합니다.
 
 #### 과거 스냅샷
 
-이전은 **과거 `metric_fact`를 바꾸지 않습니다.** 이전 전에 생성된 스냅샷은 그 당시 귀속을 유지하며, 이것이 [개념 08](../concept/08-platform-services.md) 4.2 규칙 3과 일관됩니다. 비교 모드에서 사이트별 수치가 달라 보일 수 있으므로, 이전이 있었던 피험자를 포함하는 비교에는 안내를 표시합니다.
+이전은 **과거 `metric_fact`를 바꾸지 않습니다.** 이전 전에 생성된 스냅샷은 그 당시 귀속을 유지합니다.
 
-#### 한계
+결과적으로 **이전을 사이에 둔 두 스냅샷을 비교하면 사이트별 수치가 옮겨 보입니다.** 이것은 오류가 아니라 사실이므로, 비교 모드에서 해당 기간에 이전이 있었으면 안내를 표시합니다.
 
-실제 이전일이 아니라 **앱이 인지한 시점**이 기준입니다. 표준 파일에 이전일 컬럼이 없기 때문이며, 미발생 방문의 귀속에 최대 한 전송 주기의 오차가 생길 수 있습니다 (S-02-5).
+#### 사이트 지표의 의미
+
+전 항목이 이동하므로 사이트별 수치는 **"그 사이트가 수행한 것"이 아니라 "현재 그 사이트가 책임지는 것"** 입니다. 지표 정의 등록부에 이 정의를 명시합니다.
 
 ## 3. ProgressEngine
 
@@ -558,3 +579,4 @@ GROUP BY i.country_id, i.site_id;
 | ~~S-03-6~~ | ~~`blocked_stages`를 건별 단계 지정 방식으로 확장~~ | **확정 — Phase 2 이후.** 유형 기반 규칙(3.7)으로 Phase 1 대응 |
 | S-03-7 | `CFG10` 규칙 미정의 시 예외 처리하지 않는 방침에 동의하는가 | **동의 권고** (3.7) |
 | S-03-8 | 사이트 이전 시 비교 모드 안내 문구 | 이전 포함 비교에 배너 표시 (2.9) |
+| S-03-9 | 이전 시점 미종결 항목 점검(`X9`)을 경고로 둘 것인가 확정 거부로 둘 것인가 | **경고 권고.** 막으면 업무가 멈춤 |

@@ -1,7 +1,7 @@
 ﻿METRIC_CODE,LEVEL,SITEID,BASIS,STAGE_CODE,GROUP_KEY,DUE_COUNT,COMPLETED_COUNT,BACKLOG_COUNT,OVERDUE_COUNT,WAIVED_COUNT,RATE,NOTE
 edc.entry.rate,TRIAL,,DUE,entered,,11,9,2,1,0,0.8182,
-edc.entry.rate,SITE,S01,DUE,entered,,6,5,1,1,0,0.8333,
-edc.entry.rate,SITE,S02,DUE,entered,,5,4,1,0,0,0.8000,
+edc.entry.rate,SITE,S01,DUE,entered,,5,4,1,1,0,0.8000,
+edc.entry.rate,SITE,S02,DUE,entered,,6,5,1,0,0,0.8333,
 edc.sdv.rate,TRIAL,,DUE,sdv,,5,0,5,4,0,0.0000,
 edc.sdv.rate,SITE,S01,DUE,sdv,,2,0,2,1,0,0.0000,
 edc.sdv.rate,SITE,S02,DUE,sdv,,3,0,3,3,0,0.0000,
@@ -10,8 +10,8 @@ edc.coding.rate,SITE,S01,DUE,coding,,1,0,1,1,1,0.0000,
 edc.freeze.rate,TRIAL,,DUE,freeze,,3,0,3,0,0,0.0000,
 edc.freeze.rate,SITE,S02,DUE,freeze,,3,0,3,0,0,0.0000,
 rtsm.visit.rate,TRIAL,,DUE,occurred,,16,11,5,4,0,0.6875,
-rtsm.visit.rate,SITE,S01,DUE,occurred,,9,6,3,3,0,0.6667,
-rtsm.visit.rate,SITE,S02,DUE,occurred,,7,5,2,1,0,0.7143,
+rtsm.visit.rate,SITE,S01,DUE,occurred,,8,5,3,3,0,0.6250,
+rtsm.visit.rate,SITE,S02,DUE,occurred,,8,6,2,1,0,0.7500,
 edc.lock.rate,TRIAL,,DUE,lock,,0,0,0,0,0,,E1 분모 0 → RATE 공란(N/A). 0%가 아님
 edc.sign.pending_all,TRIAL,,DUE,sign,,,,7,,0,,E11 rate·due 없음. 건수만
 edc.sign.pending_sae,TRIAL,,DUE,sign,SAE,,,1,,,,SAE 데이터 별도 집계
@@ -29,5 +29,6 @@ rtsm.visit.missed,TRIAL,,DUE,occurred,,,,4,,,,"G-002 V2·V3, G-006 V2, G-007 V3"
 rtsm.visit.compliance_rate,TRIAL,,DUE,occurred,,11,10,1,,,0.9091,윈도우 내 방문 / 발생 방문
 quality.duplicate_key,TRIAL,,DUE,,,,,1,,,,E8 G-001 V1 DM 중복
 quality.missing_completion_date,TRIAL,,DUE,,,,,2,,,,"G-006 V1 DM, G-006 V1 AE"
-quality.site_transfer,TRIAL,,DUE,,,,,1,,,,E20 G-007 S01 → S02
+quality.site_transfer,TRIAL,,DUE,,,,,1,,,,E20 G-007 S01 → S02 (2026-07-10)
+quality.transfer_with_open_items,TRIAL,,DUE,,,,,1,,,,E20 이전 시점 미종결 1건 → 운영 규칙 위반
 quality.waiver_rule_undefined,TRIAL,,DUE,,,,,0,,,,CFG10 규칙 미정의 해결불가 이슈 수

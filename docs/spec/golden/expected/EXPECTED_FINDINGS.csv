@@ -2,5 +2,6 @@
 I1,WARN,G-001,V1,DM,동일 매칭 키 중복 행 2건. 진행된 상태 채택
 X1,WARN,G-006,V1,DM,ENTERFL=Y 이나 ENTERDT 결측
 X1,WARN,G-006,V1,AE,ENTERFL=Y 이나 ENTERDT 결측
-X7,WARN,G-007,,,SITEID가 이전 Drop과 다름 (S01 → S02). 미발생 방문 항목 재귀속
+X7,WARN,G-007,,,"SITEID가 이전 Drop과 다름 (S01 → S02, 이전일 2026-07-10). 전 항목 재귀속"
+X9,WARN,G-007,V1,DM,이전 시점(2026-07-10)에 미종결 항목 1건 (sign). S02가 backlog 인계
 S4,WARN,G-006,V1,DM,QUERYOWNER 미지정 → DEFAULT 유예 적용 (Q-006)

@@ -51,10 +51,16 @@ def test_waiver_scope_follows_issue_type():
     assert status(item, 'coding') == 'WAIVED'
     assert status(item, 'sign')   == 'PENDING'      # 전부 막으면 실패
 
-def test_site_attribution_follows_activity():
-    # E20 — 이전 전 활동은 이전 사이트에 남는다
-    assert site_of(item_of('G-007', 'V1', 'DM')) == 'S01'
+def test_transfer_moves_whole_subject():
+    # E20 — 이전 시 전 항목이 새 사이트로 이동한다
+    assert site_of(item_of('G-007', 'V1', 'DM')) == 'S02'   # S01에서 수행됐지만 S02
     assert site_of(item_of('G-007', 'V2', 'VS')) == 'S02'
+    assert count_items(site='S01', subject='G-007') == 0     # S01에 흔적 없음
+
+def test_transfer_with_open_items_is_flagged():
+    # E20 — 이전 시점 미종결은 막지 않되 반드시 드러낸다
+    assert metric('quality.transfer_with_open_items').value == 1
+    assert finding('X9', subject='G-007') is not None
 ```
 
 ### 2.4 Simpson 회귀 테스트
@@ -107,7 +113,8 @@ def test_waiver_beats_completion():
 | I-6 | DS03 먼저, DS01 나중 | `I2` 보류 후 자동 재처리 |
 | I-7 | 증분 전송 | 기간 밖 항목 상태 불변 |
 | I-8 | 일 배치 (날짜만 경과) | `PENDING` → `OVERDUE` 전이, 항목 생성 없음 |
-| I-9 | 사이트 이전 Drop 반영 | `X7` 경고, 이력 추가, **미발생 방문만 재귀속**, 과거 스냅샷 불변 |
+| I-9 | 사이트 이전 Drop 반영 | `X7` 경고, 이력 추가, **전 항목 재귀속**, 과거 스냅샷 불변 |
+| I-11 | `SITETRFDT` 없는 이전 | 추출일로 대체, `X10` 경고, `transfer_date_source='INFERRED'` |
 | I-10 | `CFG10` 규칙 없는 해결 불가 이슈 | 예외 처리 안 됨, `X8` 경고, backlog 유지 |
 
 I-4가 [개념 08](../concept/08-platform-services.md) 4.2 규칙 3의 검증입니다.
