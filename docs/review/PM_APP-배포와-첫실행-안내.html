@@ -139,6 +139,10 @@
   </dl>
 </header>
 
+<div class="note"><span class="lbl">1.22에서 달라진 것</span>
+<p><strong>마일스톤에 색을 표시할 수 있습니다.</strong> 마일스톤 표의 날짜 옆 칸에서 색을 고르면 <strong>Project timeline에서 그 마일스톤만 그 색으로</strong> 그려집니다 — 실사, 밀린 날짜처럼 눈에 띄어야 하는 것을 위한 기능입니다. 색 목록은 서식의 <code>Lists</code> 시트에 있어 팀이 직접 바꿀 수 있습니다.</p>
+<p><strong>기존 계획서는 그대로 열립니다.</strong> 색 칸이 없을 뿐이고, 숫자는 하나도 달라지지 않습니다.</p></div>
+
 <div class="lede">
   <p><strong>먼저 큰 그림 하나만.</strong> 이 앱은 <strong>각자 PC에서 돌고</strong>, <strong>계획서 파일만 공유 폴더에 둡니다.</strong> 프로그램을 공유 폴더에 놓고 거기서 실행하는 방식이 아닙니다 — 그 이유는 아래 <a href="#warn">주의사항</a>에 있습니다.</p>
   <p><strong>그리고 파이썬은 따로 손댈 일이 없습니다.</strong> 파이썬 런타임은 <strong>나눠 드리는 압축본 안에 이미 들어 있습니다.</strong> 사용자는 압축을 한 번 풀 뿐, 파이썬을 내려받지도 설치하지도 않습니다 — 내려받는 것은 <strong>준비 담당자가 딱 한 번</strong>입니다.</p>
@@ -195,7 +199,7 @@
 
   <li><div>
     <b>런타임을 앱 폴더에 넣고 압축본 만들기</b>
-    <pre><code>python tools\bundle_runtime.py python-3.14.7-embed-amd64.zip --zip</code></pre>
+    <pre><code>python tools\bundle_runtime.py python-3.13.15-embed-amd64.zip --zip</code></pre>
     <p><code>dist\PM_APP_python_v1.22_with_runtime.zip</code> 이 만들어집니다. <strong>이것이 나눠 주실 파일입니다.</strong></p>
     <p><strong>파이썬 압축을 푸는 일은 여기서 끝납니다.</strong> 이 명령이 1번에서 받은 zip 을 앱 폴더 안 <code>runtime\</code> 으로 풀어 넣고, 그 상태를 통째로 다시 압축합니다. 사용자 PC에서는 파이썬을 다시 풀 일이 없습니다.</p>
     <div class="note stop"><span class="lbl">이 순서를 반드시 지키십시오</span>
