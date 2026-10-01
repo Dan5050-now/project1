@@ -277,7 +277,12 @@ document.addEventListener("click", e => {
   if (vt){
     const [id, mode] = vt.dataset.setview.split("|");
     S.genView[id] = mode;
-    keepScroll(renderGenTab);
+    /* renderTab rather than renderGenTab, which is what this used to call. The pane it
+       builds is identical - renderTab looks the function up and calls it - but it is also
+       where a pane is put back into the state it was in, and going straight to the
+       renderer was the one path that skipped that. Switching Role factors between Matrix
+       and Rows while it had the whole screen gave the page back. */
+    keepScroll(() => renderTab("t-gen"));
     return;
   }
   /* V-34, opened from wherever it is marked: the panel row, its button, the tile above
@@ -969,6 +974,46 @@ document.addEventListener("change", e => {
     S.model.config.capacity_unit = e.target.value;
     renderKeepingTab();
   }
+});
+
+/* ---------------------------------------------- one section, the whole screen
+   See 11b_zoom.js. The state and the classes are the ui layer's; re-measuring the
+   scroll regions is the shell's, because the bars are drawn here - and every region in
+   the panel has just changed size by a factor of three, so the measurement is not
+   optional. */
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("button.zoombtn");
+  if (!b) return;
+  const panel = b.closest(".panel[data-panel]"), sec = b.closest("section.tab");
+  if (!panel || !sec) return;
+  setZoom(sec.id, panel.classList.contains("zoom") ? null : panel.dataset.panel);
+  cueScrollers();
+  /* Keep the control under the pointer. The button is relabelled in place rather than
+     replaced, so the same spot now says Close - and the second click undoes the first
+     without the reader having to find anything. */
+  const again = (zoomTarget() || panel).querySelector("button.zoombtn");
+  if (again) again.focus();
+});
+/* CAPTURE, and this is the whole reason: Escape already closes the filter drop-downs and
+   clears a picked series, and those handlers are bound earlier on the same element, so by
+   the time a bubbling handler ran there would be nothing left to find and every Escape
+   would throw away the screen as well. Running first, this can see the more local thing
+   and stand aside for it - one Escape per layer, innermost first. Nothing is consumed, so
+   those handlers still get their turn. */
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || !S.zoom) return;
+  if (document.querySelector("details.ms[open]")) return;   // a drop-down is open
+  if (document.querySelector("svg.chart.picked")) return;   // a series is picked out
+  if (document.querySelector("dialog[open]")) return;       // a dialog is in front of it
+  setZoom(S.zoom.tab, null);
+  cueScrollers();
+}, true);
+/* The band wraps at narrow widths, so the height the section starts at is a function of
+   the window - and the regions inside it are bounded by what is left. */
+addEventListener("resize", () => {
+  if (!S.zoom) return;
+  fitZoom();
+  cueScrollers();
 });
 
 el("saveBtn").onclick = saveEdits;

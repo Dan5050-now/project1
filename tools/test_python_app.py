@@ -322,6 +322,44 @@ def main():
                 check(svgs + rows > 0, f"'{label}' draws",
                       f"{svgs} chart(s), {rows} row(s)")
 
+            # ---- a section at full screen, UNDER this shell's own chrome -----
+            # REQ-DSH-18 lifts the edit bar above the section so Save stays reachable.
+            # This shell puts its OWN title and status strips above everything the page
+            # draws, at a higher stacking level than either - so a section that started at
+            # the top of the window would slide under them, and the band with it. The
+            # strips declare themselves with data-topchrome and the offset is measured from
+            # them; nothing in the page layer names this shell.
+            pg.click('button[role=tab][data-tab="t-proj"]')
+            pg.wait_for_timeout(700)
+            pg.evaluate("""() => { window.scrollTo(0, 0); document.querySelector(
+              '#t-proj .panel[data-panel="projects"] button.zoombtn').click(); }""")
+            pg.wait_for_timeout(600)
+            z = pg.evaluate("""() => {
+              const p = document.querySelector('.panel.zoom');
+              if (!p) return null;
+              const bar = document.getElementById('stickybar').getBoundingClientRect();
+              const low = Math.max(...[...document.querySelectorAll('[data-topchrome]')]
+                .filter(e => e.getBoundingClientRect().height > 0)
+                .map(e => Math.round(e.getBoundingClientRect().bottom)));
+              const sv = document.getElementById('saveBtn');
+              const sr = sv.getBoundingClientRect();
+              const hit = document.elementFromPoint(sr.left + sr.width / 2,
+                                                    sr.top + sr.height / 2);
+              return {chrome: low, barTop: Math.round(bar.top),
+                      panelTop: Math.round(p.getBoundingClientRect().top),
+                      barBottom: Math.round(bar.bottom),
+                      save: hit && sv.contains(hit) ? 'in front' : 'covered'};
+            }""")
+            check(z and z["barTop"] == z["chrome"] and z["panelTop"] == z["barBottom"]
+                  and z["save"] == "in front",
+                  "a section at full screen starts under this shell's own strips, "
+                  "and Save is still in front of it (REQ-DSH-18)",
+                  f"strips end at {z['chrome']}px, edit bar {z['barTop']}–{z['barBottom']}, "
+                  f"section from {z['panelTop']}, Save {z['save']}" if z
+                  else "no section went full screen")
+            pg.keyboard.press("Escape")
+            pg.wait_for_timeout(400)
+
             # ---- saving, and reading it back --------------------------------
             print("\nkeeping it, which is the other half of why this exists")
             plan = str(home / "PM_APP" / "data" / "test.prap")

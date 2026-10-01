@@ -54,7 +54,7 @@ CHROME_CSS = """
 """
 
 CHROME_HTML = """
-<div id="pm-title">Project Management APP</div>
+<div id="pm-title" data-topchrome>Project Management APP</div>
 <div id="pm-strip">
   <span class="pm-pill" id="pm-who">not signed in</span>
   <span class="pm-pill" id="pm-hold" hidden></span>

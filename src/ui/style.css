@@ -462,6 +462,84 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var
 .stack1>*{min-width:0}
 @media(max-width:900px){.two{grid-template-columns:1fr}}
 
+/* --- one section, the whole screen ---------------------------------------
+   See 11b_zoom.js for why the panel is dressed rather than moved. The whole of the
+   feature's appearance is here; the script only puts the two classes on and measures
+   the band.
+
+   The button sits at the far right of the panel's head, after the scope pills, which
+   their own margin-left:auto has already pushed over - so it needs no auto of its own
+   and must not have one, or the two would split the free space and the pills would
+   drift into the middle of the head. The one case that does need it is a head with no
+   pill and no button of its own, where the control would otherwise sit against the
+   title; `h2 + .zoombtn` is exactly that case and nothing else. */
+.phead > h2 + .zoombtn{margin-left:auto}
+.zoombtn{flex:none}
+
+/* The page beneath cannot scroll while a section has the screen: a wheel over the
+   backdrop that moved the hidden page would put the reader somewhere else when they
+   closed it. The scroll position is kept, not reset, because overflow:hidden parks the
+   page rather than rewinding it. */
+body.zoomed{overflow:hidden}
+
+/* The band comes OUT of the flow and sits above the panel. Sticky is no use here: with
+   the page parked, a sticky element stays wherever it happened to be in the document,
+   which is usually well below the top of the window - measured at y=400 in a 950px window
+   with the page at the top, which is a strip of the old page showing above a full screen.
+   It starts at --zoomchrome rather than at 0 because the Python and desktop shells put
+   their own title and status strips above everything this stylesheet draws; on the web
+   page that variable is 0 and the band is at the top. Its inner padding keeps the same
+   1400px column the page uses, so Save does not jump across the screen as the section
+   opens. */
+body.zoomed #stickybar{position:fixed;top:var(--zoomchrome,0px);left:0;right:0;z-index:45;
+ margin:0;padding:0 var(--sp-5) 8px;box-shadow:0 1px 0 var(--hairline)}
+body.zoomed #stickybar > *{max-width:1400px;margin-left:auto;margin-right:auto}
+body.zoomed #editbar,body.zoomed #stickybar nav{margin-top:8px}
+
+/* --zoomtop is the measured height of that band - see fitZoom(). The fallback of 0 is
+   deliberate: if the measurement has not happened yet the section covers the band for one
+   frame, which is a flicker; starting it lower would leave a strip of the page showing
+   under a full screen, which reads as a rendering fault. */
+.panel.zoom{position:fixed;left:0;right:0;bottom:0;top:var(--zoomtop,0px);z-index:40;
+ margin:0;border-radius:0;box-shadow:none;overflow:hidden;
+ padding:10px var(--sp-5) 12px;
+ display:flex;flex-direction:column}
+.panel.zoom:focus{outline:none}
+/* The caption stays - it is what says how the figures are made - but it stops reserving
+   a reading column it does not need on a screen this wide, and the head loses the space
+   it uses to separate cards that are no longer there. */
+.panel.zoom > .phead{margin-bottom:2px}
+.panel.zoom > .cap{margin-bottom:8px;max-width:120ch}
+/* THE SCROLL REGION TAKES WHATEVER IS LEFT, which is the entire point: `.scrollx.tall`
+   is 340px on the page and becomes the height of the screen here. Both the wrapper the
+   cue machinery inserts and a bare region are matched, because a panel that has not been
+   through cueScrollers() yet has the latter. min-height:0 is what lets a flex child be
+   SHORTER than its content - without it the region grows to its natural height and the
+   panel scrolls instead, which loses the sticky headings.
+
+   THE BASIS IS 0 AND THE CAP IS max-content, which between them answer the two cases a
+   panel can be in. A basis of `auto` shares the room in proportion to how tall the
+   content ALREADY is, so the role factors - a matrix of several hundred rows above a
+   matrix of eight - gave the second one twenty pixels, which is not a section anybody can
+   read. A basis of 0 shares it evenly; the max-content cap then hands back whatever a
+   region does not need, so a short table ends where its last row does instead of trailing
+   several hundred pixels of empty panel with its own scrollbar stranded at the foot of
+   them, and a tall one takes all of what is left. */
+.panel.zoom > .cue,.panel.zoom > .scrollx{flex:1 1 0;min-height:0;max-height:max-content}
+.panel.zoom .scrollx{max-height:none}
+/* AND THE WRAPPER HAS TO PASS THE HEIGHT ON, which is a second step and not an obvious
+   one. The flex child is the .cue wrapper the cue machinery inserts, not the scrolling box
+   inside it; while that wrapper was an ordinary block, bounding IT left the box at its own
+   content height - 4,105px on the 62-project grid - overflowing the panel by 3,350px with
+   the drawn scrollbar, which is a child of the wrapper, stranded that far below the last
+   row it describes. Making the wrapper a flex column is the whole fix: the box is then a
+   flex item with the default shrink, and shrinks to the height it has been given. Caught
+   by looking at it - every height involved reads as a success on its own. */
+.panel.zoom > .cue{display:flex;flex-direction:column}
+/* A sub-heading between two regions keeps its own height rather than taking a share. */
+.panel.zoom > .subhead{flex:none;margin:10px 0 6px}
+.panel.zoom > .note,.panel.zoom > .fnote,.panel.zoom > .controls{flex:none}
+
 /* --- tables --------------------------------------------------------------
    Hairline rules, not a drawn grid. A heavy border round every cell competes
    with the numbers it is meant to organise; a light rule is enough to keep the

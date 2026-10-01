@@ -209,6 +209,12 @@ function showTab(id){
   for (const b of document.querySelectorAll("nav button"))
     b.setAttribute("aria-selected", String(b.dataset.tab === id));
   for (const s of document.querySelectorAll("section.tab")) s.hidden = (s.id !== id);
+  /* A section that had the whole screen belongs to the tab it was on, and a hidden pane
+     draws nothing - so a full screen left open across a tab change would be a panel
+     nobody can see with the page still parked behind it. applyZoom() drops a state whose
+     panel is no longer on screen, which is this case and every other one. Before the
+     scroll cues below, so they measure the geometry they end up with. */
+  applyZoom();
   /* cueScrollers, not paintCue: a hidden pane measures zero, so its bars were sized
      against nothing and have to be redone now it is on screen - and a render that did
      not go through keepScroll leaves fresh .scrollx elements with no wrapper at all, so
@@ -371,6 +377,11 @@ function adopt(sheets, name, opts){
      connects the two. */
   S.colf = {};
   S.selProj = null; S.selPers = null; S.selAsg = null;
+  /* And a section left full screen is put back, for the reason the banner exists: a load
+     reports what it found, and the one thing that must not happen is for that report to
+     appear behind a panel covering the window. A new plan is read whole before it is read
+     one section at a time. */
+  S.zoom = null;
   defaultHorizon();
   fillFilters();
   el("empty").hidden = true; el("tabs").hidden = false; el("filterbar").hidden = false;

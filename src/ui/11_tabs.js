@@ -60,7 +60,7 @@ function renderOverall(){
   const scope = `${G.length} months &#183; ${pids.length} project(s) &#183; ${sids.length} people`;
   el("t-overall").innerHTML =
     `<div class="tiles">${tiles}</div>
-    <div class="panel">
+    <div class="panel" data-panel="trend">
       <div class="phead"><h2>Monthly resource trend</h2>
         <span class="scope k">${scope}</span></div>
       <p class="cap">One line per project, sharing one baseline. The stacked charts below say what
@@ -75,26 +75,26 @@ function renderOverall(){
           chart is what the tab is for; it is not last because something whose whole
           danger is being silent does not belong under six panels of charts. */
       gapSection}
-    <div class="panel">
+    <div class="panel" data-panel="timeline">
       <div class="phead"><h2>Project timeline</h2>
         <span class="scope k">${pids.length} project(s)</span></div>
       <p class="cap">One row per project, with its start, end and length under the name. Bands are
         coloured by period and shaded darker as the period weight rises. The two DB locks are red —
         they are what the period derivation hangs on. <strong>Hover any band or marker</strong> for detail.</p>
       <div class="scrollx xl">${chartGantt(pids.slice().sort(byRank))}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="stack-proj">
       <div class="phead"><h2>Monthly demand by project</h2>
         <span class="scope k">${scope}</span></div>
       <p class="cap">One band per project, ordered by total resource with the largest on the baseline.
         <strong>Hover any band</strong> for the project, its ${unitLabel()} that month and who is on it.</p>
       <div class="scrollx xl">${chartStacked(pids)}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="table-proj">
       <div class="phead"><h2>Resource by project</h2>
         <span class="scope k">${pids.length} project(s)</span></div>
       <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
         <strong>Click a project name</strong> to expand it to the people and roles on it.</p>
       <div class="scrollx xl">${tableProjects(pids)}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="stack-pers">
       <div class="phead"><h2>Monthly demand by person</h2>
         <span class="scope k">${scope}</span></div>
       <p class="cap">The same months as <strong>Monthly demand by project</strong> above, cut the
@@ -103,7 +103,7 @@ function renderOverall(){
         where that person's own month crosses the ${M.OVER.toFixed(2)} ceiling or the
         ${M.UNDER.toFixed(2)} floor. <strong>Hover any band</strong> for the projects behind it.</p>
       <div class="scrollx xl">${chartPeople(sids)}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="table-pers">
       <div class="phead"><h2>Resource by person</h2>
         <span class="scope k">${sids.length} people</span></div>
       <p class="cap">Summed across every project. &#9650; above the ceiling, &#9660; below the floor.
@@ -134,7 +134,7 @@ function renderProjTab(){
     el("t-proj").innerHTML = Object.keys(M.projects).length
       ? `<div class="panel"><p class="note">No projects match the current filters. `
         + `<strong>Reset filters</strong> above to see them all.</p></div>`
-      : `<div class="panel">
+      : `<div class="panel" data-panel="projects">
           <div class="phead"><h2>Projects</h2>
             <span class="scope k">${drafts.length ? `${drafts.length} being entered`
                                                   : "nothing yet"}</span></div>
@@ -161,14 +161,14 @@ function renderProjTab(){
   const derived = per.some(p => p.__derived);
 
   el("t-proj").innerHTML =
-    `<div class="panel">
+    `<div class="panel" data-panel="trend">
       <div class="phead"><h2>Monthly resource trend</h2>
         <span class="scope k">${grid().length} months &#183; ${pids.length} project(s)</span></div>
       <p class="cap">One line per project, so the project selected below can be read against the
         others rather than on its own. <strong>Hover any line</strong> for its total, mean and
         peak month.</p>
       <div class="scrollx fit">${projectLines(pids)}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="projects">
       <div class="phead"><h2>Projects</h2>
         <span class="scope k">${rows.length} in the current filter</span></div>
       <p class="cap">Every field is editable — click a cell and type. Clicking a row also selects it,
@@ -253,7 +253,7 @@ function projDetail(pid){
     .sort((a,b) => (a.milestone_date||0) - (b.milestone_date||0));
   const per = (M.periods[pid] || []);
   const derived = per.some(p => p.__derived);
-  return `<div class="panel">
+  return `<div class="panel" data-panel="proj-timeline">
       <div class="phead"><h2>Project timeline — ${esc(pr.project_name)}</h2>
         <span class="scope k">${per.length} period(s) &#183; ${ms.length} milestone(s)</span></div>
       <p class="cap">The same run-chart as the Overall tab, for this project alone: one band per
@@ -265,7 +265,7 @@ function projDetail(pid){
            + (pr.total_period_months ? ` &middot; ${pr.total_period_months} months` : "")
            + ` &middot; ${(M.periods[pid] || []).length} period(s). Edit the two tables below and `
            + `this redraws.`})}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="proj-util">
       <div class="phead"><h2>Utilisation — ${esc(pr.project_name)}</h2>
         <span class="scope k">${grid().length} months &#183; stacked by person</span></div>
       <p class="cap">Monthly resource for the selected project, <strong>each bar split into the
@@ -277,7 +277,7 @@ function projDetail(pid){
       <div class="scrollx fit">${util.svg}</div></div>
     ${manualPanel("project", pid)}
     <div class="two">
-      <div class="panel">
+      <div class="panel" data-panel="proj-ms">
         <div class="phead"><h2>Milestones — ${esc(pr.project_name)}</h2>
           <button class="btn tiny" data-act="blankms" data-pid="${att(pid)}"
             data-tip="${att(HELP.blankms)}">Blank list</button>
@@ -286,7 +286,7 @@ function projDetail(pid){
           <strong>Blank list</strong> lays out the standard milestone names with their dates
           empty, so only the dates have to be typed.</p>
         ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_highlight","milestone_seq","note_1"])}</div>
-      <div class="panel">
+      <div class="panel" data-panel="proj-per">
         <div class="phead"><h2>Periods — ${esc(pr.project_name)}</h2>
           ${periodGenButton(pr, pid)}
           <span class="scope k">${per.length} row(s)${derived ? " &#183; derived" : ""}</span></div>
@@ -332,7 +332,7 @@ function scratchProject(draft){
                  : [];
   const per = pid ? childrenOf(M.raw.ProjectPeriod, "project_id", pid) : [];
   return `<div class="two">
-      <div class="panel">
+      <div class="panel" data-panel="proj-ms">
         <div class="phead"><h2>Milestones${who}</h2>
           ${pid ? `<button class="btn tiny" data-act="blankms" data-pid="${att(pid)}"
             data-tip="${att(HELP.blankms)}">Blank list</button>` : ""}
@@ -342,7 +342,7 @@ function scratchProject(draft){
           eight names are markers.</p>
         ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_highlight","milestone_seq","note_1"],
                     null, null, null, lock)}</div>
-      <div class="panel">
+      <div class="panel" data-panel="proj-per">
         <div class="phead"><h2>Periods${who}</h2>
           ${pid ? `<button class="btn tiny" data-act="autoper" data-pid="${att(pid)}"
             data-tip="${att(HELP.autoper)}">Auto derivation</button>` : ""}
@@ -369,7 +369,7 @@ function scratchPerson(draft){
   const ppw = aid ? M.raw.PersonPeriodWeight.filter(w =>
     w.assignment_id === aid || (w.__new && !w.assignment_id)) : [];
   return `<div class="stack1">
-      <div class="panel">
+      <div class="panel" data-panel="pers-asg">
         <div class="phead"><h2>Assignments${who}</h2>
           <span class="scope k">${asg.length} row(s)</span></div>
         <p class="cap">One row per person + project + role. Type the project NAME and
@@ -379,7 +379,7 @@ function scratchPerson(draft){
           ["assignment_id","project_name","project_id","role_name","assign_start_date",
            "assign_end_date","person_weight","note_1","note_2","note_3"],
           "assignment_id", aid, null, lock)}</div>
-      <div class="panel">
+      <div class="panel" data-panel="pers-ppw">
         <div class="phead"><h2>Weight overrides${who}</h2>
           <span class="scope k">${ppw.length} window(s)</span></div>
         <p class="cap">Only needed where someone's share of a project CHANGES for a stretch of
@@ -415,7 +415,7 @@ function renderPersTab(){
     el("t-pers").innerHTML = Object.keys(M.people).length
       ? `<div class="panel"><p class="note">Nobody matches the current filters. `
         + `<strong>Reset filters</strong> above to see everyone.</p></div>`
-      : `<div class="panel">
+      : `<div class="panel" data-panel="people">
           <div class="phead"><h2>People</h2>
             <span class="scope k">${drafts.length ? `${drafts.length} being entered`
                                                   : "nothing yet"}</span></div>
@@ -437,7 +437,7 @@ function renderPersTab(){
   const prows = M.raw.Person.filter(r => keepP.has(r.person_id) || r.__new
                                       || !hasKey("Person", r));
   el("t-pers").innerHTML =
-    `<div class="panel">
+    `<div class="panel" data-panel="trend">
       <div class="phead"><h2>Monthly load trend</h2>
         <span class="scope k">${grid().length} months &#183; ${sids.length} people</span></div>
       <p class="cap">One line per person, sharing one baseline, with the over-allocation ceiling
@@ -445,7 +445,7 @@ function renderPersTab(){
         these lines say who is rising and who is falling.
         <strong>Hover any line</strong> for its total, mean and peak month.</p>
       <div class="scrollx fit">${personLines(sids)}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="people">
       <div class="phead"><h2>People</h2>
         <span class="scope k">${prows.length} in the current filter</span></div>
       <p class="cap">Editable, same rules as the project table — clicking a row selects it, and
@@ -466,7 +466,7 @@ function persDetail(sid){
   // window this person carries across every project at once, which is a list of things
   // that have nothing to do with each other.
   const aid = selectedAssignment(asg);
-  return `<div class="panel">
+  return `<div class="panel" data-panel="pers-util">
       <div class="phead"><h2>Utilisation — ${esc(pe.person_name)} (${esc(sid)})</h2>
         <span class="scope k">${grid().length} months &#183; stacked by project</span></div>
       <p class="cap">Monthly load across the horizon, <strong>each bar split into the projects that
@@ -484,7 +484,7 @@ function persDetail(sid){
          Full width and stacked reads them in the order they are worked in: pick the
          assignment, then its overrides, then its months. */""}
     <div class="stack1">
-      <div class="panel">
+      <div class="panel" data-panel="pers-asg">
         <div class="phead"><h2>Assignments — ${esc(pe.person_name)} (${esc(sid)})</h2>
           <span class="scope k">${asg.length} row(s)</span></div>
         <p class="cap">Fill in <code>project_name</code> — <code>project_id</code> is derived from it.
@@ -547,7 +547,7 @@ function overridesPanel(sid){
   const aid = selectedAssignment(asg);
   const ppw = M.raw.PersonPeriodWeight.filter(w =>
     (aid && w.assignment_id === aid) || (w.__new && !w.assignment_id));
-  return `<div class="panel">
+  return `<div class="panel" data-panel="pers-ppw">
       <div class="phead"><h2>Weight overrides — ${esc(pe.person_name)} (${esc(sid)})</h2>
         <span class="scope k">${ppw.length} window(s)</span></div>
       ${assignmentLine(aid)}
@@ -670,7 +670,7 @@ function renderGenTab(){
         + `<td class="num">${v.length}</td></tr>`).join("")}</tbody></table></div>`;
 
   el("t-gen").innerHTML =
-    `<div class="panel">
+    `<div class="panel" data-panel="gen-pws">
       <div class="phead"><h2>Standard period FTE for project types</h2>
         <span class="scope">PeriodFTEStandard</span>${viewToggle("pws")}</div>
       <p class="cap">The monthly FTE a project of this type, clinical phase and work scope takes in
@@ -681,7 +681,7 @@ function renderGenTab(){
         <strong>Rows &amp; editing</strong> to add, change or delete individual rows.
         <strong>Others</strong> projects are hand-entered per project instead.</p>
       ${pws}</div>
-    <div class="panel">
+    <div class="panel" data-panel="gen-rf">
       <div class="phead"><h2>Role factors</h2>
         <span class="scope">RoleFactor</span>
         <span class="scope k">${rfRows.length} row(s)</span>${viewToggle("rf")}</div>
@@ -690,7 +690,7 @@ function renderGenTab(){
         role's burden moves over the life of a project. ${rfRows.length} rows in all.</p>
       ${rf}</div>
     <div class="two">
-      <div class="panel">
+      <div class="panel" data-panel="gen-cfg">
         <div class="phead"><h2>Configuration</h2>
           <span class="scope">Config</span>
           <span class="scope k">${M.raw.Config.length} setting(s)</span></div>
@@ -701,7 +701,7 @@ function renderGenTab(){
           <div class="ctl"><label>Display unit</label><select id="unitSel">
             <option${M.UNIT!=="hours"?" selected":""}>FTE</option>
             <option${M.UNIT==="hours"?" selected":""}>hours</option></select></div></div></div>
-      <div class="panel">
+      <div class="panel" data-panel="gen-lists">
         <div class="phead"><h2>Value lists</h2>
           <span class="scope">Lists</span>
           <span class="scope k">${Object.keys(grouped).length} list(s)</span>${viewToggle("lists")}</div>
@@ -720,6 +720,11 @@ function renderTab(id){
   const fn = TAB_RENDER[id];
   if (!fn) return;
   fn();
+  /* A section that had the whole screen has just been replaced along with everything
+     else in its pane, so the state is put back on the panel that now carries its name -
+     and every full-screen button is labelled for the state it is in. Here rather than at
+     each of the dozen call sites: this is the one place a pane's DOM is built. */
+  applyZoom();
   S.stale.delete(id);
 }
 

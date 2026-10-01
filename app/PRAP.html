@@ -479,6 +479,84 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var
 .stack1>*{min-width:0}
 @media(max-width:900px){.two{grid-template-columns:1fr}}
 
+/* --- one section, the whole screen ---------------------------------------
+   See 11b_zoom.js for why the panel is dressed rather than moved. The whole of the
+   feature's appearance is here; the script only puts the two classes on and measures
+   the band.
+
+   The button sits at the far right of the panel's head, after the scope pills, which
+   their own margin-left:auto has already pushed over - so it needs no auto of its own
+   and must not have one, or the two would split the free space and the pills would
+   drift into the middle of the head. The one case that does need it is a head with no
+   pill and no button of its own, where the control would otherwise sit against the
+   title; `h2 + .zoombtn` is exactly that case and nothing else. */
+.phead > h2 + .zoombtn{margin-left:auto}
+.zoombtn{flex:none}
+
+/* The page beneath cannot scroll while a section has the screen: a wheel over the
+   backdrop that moved the hidden page would put the reader somewhere else when they
+   closed it. The scroll position is kept, not reset, because overflow:hidden parks the
+   page rather than rewinding it. */
+body.zoomed{overflow:hidden}
+
+/* The band comes OUT of the flow and sits above the panel. Sticky is no use here: with
+   the page parked, a sticky element stays wherever it happened to be in the document,
+   which is usually well below the top of the window - measured at y=400 in a 950px window
+   with the page at the top, which is a strip of the old page showing above a full screen.
+   It starts at --zoomchrome rather than at 0 because the Python and desktop shells put
+   their own title and status strips above everything this stylesheet draws; on the web
+   page that variable is 0 and the band is at the top. Its inner padding keeps the same
+   1400px column the page uses, so Save does not jump across the screen as the section
+   opens. */
+body.zoomed #stickybar{position:fixed;top:var(--zoomchrome,0px);left:0;right:0;z-index:45;
+ margin:0;padding:0 var(--sp-5) 8px;box-shadow:0 1px 0 var(--hairline)}
+body.zoomed #stickybar > *{max-width:1400px;margin-left:auto;margin-right:auto}
+body.zoomed #editbar,body.zoomed #stickybar nav{margin-top:8px}
+
+/* --zoomtop is the measured height of that band - see fitZoom(). The fallback of 0 is
+   deliberate: if the measurement has not happened yet the section covers the band for one
+   frame, which is a flicker; starting it lower would leave a strip of the page showing
+   under a full screen, which reads as a rendering fault. */
+.panel.zoom{position:fixed;left:0;right:0;bottom:0;top:var(--zoomtop,0px);z-index:40;
+ margin:0;border-radius:0;box-shadow:none;overflow:hidden;
+ padding:10px var(--sp-5) 12px;
+ display:flex;flex-direction:column}
+.panel.zoom:focus{outline:none}
+/* The caption stays - it is what says how the figures are made - but it stops reserving
+   a reading column it does not need on a screen this wide, and the head loses the space
+   it uses to separate cards that are no longer there. */
+.panel.zoom > .phead{margin-bottom:2px}
+.panel.zoom > .cap{margin-bottom:8px;max-width:120ch}
+/* THE SCROLL REGION TAKES WHATEVER IS LEFT, which is the entire point: `.scrollx.tall`
+   is 340px on the page and becomes the height of the screen here. Both the wrapper the
+   cue machinery inserts and a bare region are matched, because a panel that has not been
+   through cueScrollers() yet has the latter. min-height:0 is what lets a flex child be
+   SHORTER than its content - without it the region grows to its natural height and the
+   panel scrolls instead, which loses the sticky headings.
+
+   THE BASIS IS 0 AND THE CAP IS max-content, which between them answer the two cases a
+   panel can be in. A basis of `auto` shares the room in proportion to how tall the
+   content ALREADY is, so the role factors - a matrix of several hundred rows above a
+   matrix of eight - gave the second one twenty pixels, which is not a section anybody can
+   read. A basis of 0 shares it evenly; the max-content cap then hands back whatever a
+   region does not need, so a short table ends where its last row does instead of trailing
+   several hundred pixels of empty panel with its own scrollbar stranded at the foot of
+   them, and a tall one takes all of what is left. */
+.panel.zoom > .cue,.panel.zoom > .scrollx{flex:1 1 0;min-height:0;max-height:max-content}
+.panel.zoom .scrollx{max-height:none}
+/* AND THE WRAPPER HAS TO PASS THE HEIGHT ON, which is a second step and not an obvious
+   one. The flex child is the .cue wrapper the cue machinery inserts, not the scrolling box
+   inside it; while that wrapper was an ordinary block, bounding IT left the box at its own
+   content height - 4,105px on the 62-project grid - overflowing the panel by 3,350px with
+   the drawn scrollbar, which is a child of the wrapper, stranded that far below the last
+   row it describes. Making the wrapper a flex column is the whole fix: the box is then a
+   flex item with the default shrink, and shrinks to the height it has been given. Caught
+   by looking at it - every height involved reads as a success on its own. */
+.panel.zoom > .cue{display:flex;flex-direction:column}
+/* A sub-heading between two regions keeps its own height rather than taking a share. */
+.panel.zoom > .subhead{flex:none;margin:10px 0 6px}
+.panel.zoom > .note,.panel.zoom > .fnote,.panel.zoom > .controls{flex:none}
+
 /* --- tables --------------------------------------------------------------
    Hairline rules, not a drawn grid. A heavy border round every cell competes
    with the numbers it is meant to organise; a light rule is enough to keep the
@@ -1170,7 +1248,7 @@ td.cell.gapnew:focus:empty::before{content:""}
 
 <script>
 "use strict";
-const APP_VERSION = "1.52";
+const APP_VERSION = "1.53";
 const SCHEMA_EXPECTED = 13;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1179,11 +1257,11 @@ const SCHEMA_EXPECTED = 13;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.61.xlsx",          ver:"2.61",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.62.xlsx",          ver:"2.62",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.32.xlsx", ver:"1.32",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.33.xlsx", ver:"1.33",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
-  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.2.xlsx",          ver:"2.2",
+  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.3.xlsx",          ver:"2.3",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
           + "R-13 to R-46, which added 22 components and made five of the old entries wrong; "
           + "v2.1 closes X-04 — row virtualisation is not built and, at the volume REQ-NFR-03 now "
@@ -5186,6 +5264,11 @@ const S = {
   f:{type:new Set(), phase:new Set(), out:new Set(), proj:new Set(),
      pers:new Set(), role:new Set(), dept:new Set()},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
+  /* Which section, if any, has the whole screen: {tab, name} against the panel's own
+     data-panel. A NAME rather than an element or a position, because a render replaces
+     every panel and the detail sections differ in number and in heading from one
+     selected row to the next - see 11b_zoom.js. */
+  zoom:null,
   /* Which tabs no longer match the model. Three of the four panes are hidden at any
      moment, so renderAll() marks them all stale and draws only the one on screen;
      showTab() draws a pane the moment it is asked for. See renderAll() in 11_tabs.js
@@ -6752,7 +6835,7 @@ function renderOverall(){
   const scope = `${G.length} months &#183; ${pids.length} project(s) &#183; ${sids.length} people`;
   el("t-overall").innerHTML =
     `<div class="tiles">${tiles}</div>
-    <div class="panel">
+    <div class="panel" data-panel="trend">
       <div class="phead"><h2>Monthly resource trend</h2>
         <span class="scope k">${scope}</span></div>
       <p class="cap">One line per project, sharing one baseline. The stacked charts below say what
@@ -6767,26 +6850,26 @@ function renderOverall(){
           chart is what the tab is for; it is not last because something whose whole
           danger is being silent does not belong under six panels of charts. */
       gapSection}
-    <div class="panel">
+    <div class="panel" data-panel="timeline">
       <div class="phead"><h2>Project timeline</h2>
         <span class="scope k">${pids.length} project(s)</span></div>
       <p class="cap">One row per project, with its start, end and length under the name. Bands are
         coloured by period and shaded darker as the period weight rises. The two DB locks are red —
         they are what the period derivation hangs on. <strong>Hover any band or marker</strong> for detail.</p>
       <div class="scrollx xl">${chartGantt(pids.slice().sort(byRank))}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="stack-proj">
       <div class="phead"><h2>Monthly demand by project</h2>
         <span class="scope k">${scope}</span></div>
       <p class="cap">One band per project, ordered by total resource with the largest on the baseline.
         <strong>Hover any band</strong> for the project, its ${unitLabel()} that month and who is on it.</p>
       <div class="scrollx xl">${chartStacked(pids)}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="table-proj">
       <div class="phead"><h2>Resource by project</h2>
         <span class="scope k">${pids.length} project(s)</span></div>
       <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
         <strong>Click a project name</strong> to expand it to the people and roles on it.</p>
       <div class="scrollx xl">${tableProjects(pids)}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="stack-pers">
       <div class="phead"><h2>Monthly demand by person</h2>
         <span class="scope k">${scope}</span></div>
       <p class="cap">The same months as <strong>Monthly demand by project</strong> above, cut the
@@ -6795,7 +6878,7 @@ function renderOverall(){
         where that person's own month crosses the ${M.OVER.toFixed(2)} ceiling or the
         ${M.UNDER.toFixed(2)} floor. <strong>Hover any band</strong> for the projects behind it.</p>
       <div class="scrollx xl">${chartPeople(sids)}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="table-pers">
       <div class="phead"><h2>Resource by person</h2>
         <span class="scope k">${sids.length} people</span></div>
       <p class="cap">Summed across every project. &#9650; above the ceiling, &#9660; below the floor.
@@ -6826,7 +6909,7 @@ function renderProjTab(){
     el("t-proj").innerHTML = Object.keys(M.projects).length
       ? `<div class="panel"><p class="note">No projects match the current filters. `
         + `<strong>Reset filters</strong> above to see them all.</p></div>`
-      : `<div class="panel">
+      : `<div class="panel" data-panel="projects">
           <div class="phead"><h2>Projects</h2>
             <span class="scope k">${drafts.length ? `${drafts.length} being entered`
                                                   : "nothing yet"}</span></div>
@@ -6853,14 +6936,14 @@ function renderProjTab(){
   const derived = per.some(p => p.__derived);
 
   el("t-proj").innerHTML =
-    `<div class="panel">
+    `<div class="panel" data-panel="trend">
       <div class="phead"><h2>Monthly resource trend</h2>
         <span class="scope k">${grid().length} months &#183; ${pids.length} project(s)</span></div>
       <p class="cap">One line per project, so the project selected below can be read against the
         others rather than on its own. <strong>Hover any line</strong> for its total, mean and
         peak month.</p>
       <div class="scrollx fit">${projectLines(pids)}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="projects">
       <div class="phead"><h2>Projects</h2>
         <span class="scope k">${rows.length} in the current filter</span></div>
       <p class="cap">Every field is editable — click a cell and type. Clicking a row also selects it,
@@ -6945,7 +7028,7 @@ function projDetail(pid){
     .sort((a,b) => (a.milestone_date||0) - (b.milestone_date||0));
   const per = (M.periods[pid] || []);
   const derived = per.some(p => p.__derived);
-  return `<div class="panel">
+  return `<div class="panel" data-panel="proj-timeline">
       <div class="phead"><h2>Project timeline — ${esc(pr.project_name)}</h2>
         <span class="scope k">${per.length} period(s) &#183; ${ms.length} milestone(s)</span></div>
       <p class="cap">The same run-chart as the Overall tab, for this project alone: one band per
@@ -6957,7 +7040,7 @@ function projDetail(pid){
            + (pr.total_period_months ? ` &middot; ${pr.total_period_months} months` : "")
            + ` &middot; ${(M.periods[pid] || []).length} period(s). Edit the two tables below and `
            + `this redraws.`})}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="proj-util">
       <div class="phead"><h2>Utilisation — ${esc(pr.project_name)}</h2>
         <span class="scope k">${grid().length} months &#183; stacked by person</span></div>
       <p class="cap">Monthly resource for the selected project, <strong>each bar split into the
@@ -6969,7 +7052,7 @@ function projDetail(pid){
       <div class="scrollx fit">${util.svg}</div></div>
     ${manualPanel("project", pid)}
     <div class="two">
-      <div class="panel">
+      <div class="panel" data-panel="proj-ms">
         <div class="phead"><h2>Milestones — ${esc(pr.project_name)}</h2>
           <button class="btn tiny" data-act="blankms" data-pid="${att(pid)}"
             data-tip="${att(HELP.blankms)}">Blank list</button>
@@ -6978,7 +7061,7 @@ function projDetail(pid){
           <strong>Blank list</strong> lays out the standard milestone names with their dates
           empty, so only the dates have to be typed.</p>
         ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_highlight","milestone_seq","note_1"])}</div>
-      <div class="panel">
+      <div class="panel" data-panel="proj-per">
         <div class="phead"><h2>Periods — ${esc(pr.project_name)}</h2>
           ${periodGenButton(pr, pid)}
           <span class="scope k">${per.length} row(s)${derived ? " &#183; derived" : ""}</span></div>
@@ -7024,7 +7107,7 @@ function scratchProject(draft){
                  : [];
   const per = pid ? childrenOf(M.raw.ProjectPeriod, "project_id", pid) : [];
   return `<div class="two">
-      <div class="panel">
+      <div class="panel" data-panel="proj-ms">
         <div class="phead"><h2>Milestones${who}</h2>
           ${pid ? `<button class="btn tiny" data-act="blankms" data-pid="${att(pid)}"
             data-tip="${att(HELP.blankms)}">Blank list</button>` : ""}
@@ -7034,7 +7117,7 @@ function scratchProject(draft){
           eight names are markers.</p>
         ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_highlight","milestone_seq","note_1"],
                     null, null, null, lock)}</div>
-      <div class="panel">
+      <div class="panel" data-panel="proj-per">
         <div class="phead"><h2>Periods${who}</h2>
           ${pid ? `<button class="btn tiny" data-act="autoper" data-pid="${att(pid)}"
             data-tip="${att(HELP.autoper)}">Auto derivation</button>` : ""}
@@ -7061,7 +7144,7 @@ function scratchPerson(draft){
   const ppw = aid ? M.raw.PersonPeriodWeight.filter(w =>
     w.assignment_id === aid || (w.__new && !w.assignment_id)) : [];
   return `<div class="stack1">
-      <div class="panel">
+      <div class="panel" data-panel="pers-asg">
         <div class="phead"><h2>Assignments${who}</h2>
           <span class="scope k">${asg.length} row(s)</span></div>
         <p class="cap">One row per person + project + role. Type the project NAME and
@@ -7071,7 +7154,7 @@ function scratchPerson(draft){
           ["assignment_id","project_name","project_id","role_name","assign_start_date",
            "assign_end_date","person_weight","note_1","note_2","note_3"],
           "assignment_id", aid, null, lock)}</div>
-      <div class="panel">
+      <div class="panel" data-panel="pers-ppw">
         <div class="phead"><h2>Weight overrides${who}</h2>
           <span class="scope k">${ppw.length} window(s)</span></div>
         <p class="cap">Only needed where someone's share of a project CHANGES for a stretch of
@@ -7107,7 +7190,7 @@ function renderPersTab(){
     el("t-pers").innerHTML = Object.keys(M.people).length
       ? `<div class="panel"><p class="note">Nobody matches the current filters. `
         + `<strong>Reset filters</strong> above to see everyone.</p></div>`
-      : `<div class="panel">
+      : `<div class="panel" data-panel="people">
           <div class="phead"><h2>People</h2>
             <span class="scope k">${drafts.length ? `${drafts.length} being entered`
                                                   : "nothing yet"}</span></div>
@@ -7129,7 +7212,7 @@ function renderPersTab(){
   const prows = M.raw.Person.filter(r => keepP.has(r.person_id) || r.__new
                                       || !hasKey("Person", r));
   el("t-pers").innerHTML =
-    `<div class="panel">
+    `<div class="panel" data-panel="trend">
       <div class="phead"><h2>Monthly load trend</h2>
         <span class="scope k">${grid().length} months &#183; ${sids.length} people</span></div>
       <p class="cap">One line per person, sharing one baseline, with the over-allocation ceiling
@@ -7137,7 +7220,7 @@ function renderPersTab(){
         these lines say who is rising and who is falling.
         <strong>Hover any line</strong> for its total, mean and peak month.</p>
       <div class="scrollx fit">${personLines(sids)}</div></div>
-    <div class="panel">
+    <div class="panel" data-panel="people">
       <div class="phead"><h2>People</h2>
         <span class="scope k">${prows.length} in the current filter</span></div>
       <p class="cap">Editable, same rules as the project table — clicking a row selects it, and
@@ -7158,7 +7241,7 @@ function persDetail(sid){
   // window this person carries across every project at once, which is a list of things
   // that have nothing to do with each other.
   const aid = selectedAssignment(asg);
-  return `<div class="panel">
+  return `<div class="panel" data-panel="pers-util">
       <div class="phead"><h2>Utilisation — ${esc(pe.person_name)} (${esc(sid)})</h2>
         <span class="scope k">${grid().length} months &#183; stacked by project</span></div>
       <p class="cap">Monthly load across the horizon, <strong>each bar split into the projects that
@@ -7176,7 +7259,7 @@ function persDetail(sid){
          Full width and stacked reads them in the order they are worked in: pick the
          assignment, then its overrides, then its months. */""}
     <div class="stack1">
-      <div class="panel">
+      <div class="panel" data-panel="pers-asg">
         <div class="phead"><h2>Assignments — ${esc(pe.person_name)} (${esc(sid)})</h2>
           <span class="scope k">${asg.length} row(s)</span></div>
         <p class="cap">Fill in <code>project_name</code> — <code>project_id</code> is derived from it.
@@ -7239,7 +7322,7 @@ function overridesPanel(sid){
   const aid = selectedAssignment(asg);
   const ppw = M.raw.PersonPeriodWeight.filter(w =>
     (aid && w.assignment_id === aid) || (w.__new && !w.assignment_id));
-  return `<div class="panel">
+  return `<div class="panel" data-panel="pers-ppw">
       <div class="phead"><h2>Weight overrides — ${esc(pe.person_name)} (${esc(sid)})</h2>
         <span class="scope k">${ppw.length} window(s)</span></div>
       ${assignmentLine(aid)}
@@ -7362,7 +7445,7 @@ function renderGenTab(){
         + `<td class="num">${v.length}</td></tr>`).join("")}</tbody></table></div>`;
 
   el("t-gen").innerHTML =
-    `<div class="panel">
+    `<div class="panel" data-panel="gen-pws">
       <div class="phead"><h2>Standard period FTE for project types</h2>
         <span class="scope">PeriodFTEStandard</span>${viewToggle("pws")}</div>
       <p class="cap">The monthly FTE a project of this type, clinical phase and work scope takes in
@@ -7373,7 +7456,7 @@ function renderGenTab(){
         <strong>Rows &amp; editing</strong> to add, change or delete individual rows.
         <strong>Others</strong> projects are hand-entered per project instead.</p>
       ${pws}</div>
-    <div class="panel">
+    <div class="panel" data-panel="gen-rf">
       <div class="phead"><h2>Role factors</h2>
         <span class="scope">RoleFactor</span>
         <span class="scope k">${rfRows.length} row(s)</span>${viewToggle("rf")}</div>
@@ -7382,7 +7465,7 @@ function renderGenTab(){
         role's burden moves over the life of a project. ${rfRows.length} rows in all.</p>
       ${rf}</div>
     <div class="two">
-      <div class="panel">
+      <div class="panel" data-panel="gen-cfg">
         <div class="phead"><h2>Configuration</h2>
           <span class="scope">Config</span>
           <span class="scope k">${M.raw.Config.length} setting(s)</span></div>
@@ -7393,7 +7476,7 @@ function renderGenTab(){
           <div class="ctl"><label>Display unit</label><select id="unitSel">
             <option${M.UNIT!=="hours"?" selected":""}>FTE</option>
             <option${M.UNIT==="hours"?" selected":""}>hours</option></select></div></div></div>
-      <div class="panel">
+      <div class="panel" data-panel="gen-lists">
         <div class="phead"><h2>Value lists</h2>
           <span class="scope">Lists</span>
           <span class="scope k">${Object.keys(grouped).length} list(s)</span>${viewToggle("lists")}</div>
@@ -7412,6 +7495,11 @@ function renderTab(id){
   const fn = TAB_RENDER[id];
   if (!fn) return;
   fn();
+  /* A section that had the whole screen has just been replaced along with everything
+     else in its pane, so the state is put back on the panel that now carries its name -
+     and every full-screen button is labelled for the state it is in. Here rather than at
+     each of the dozen call sites: this is the one place a pane's DOM is built. */
+  applyZoom();
   S.stale.delete(id);
 }
 
@@ -7440,6 +7528,177 @@ function renderAll(){
   renderDirty();
 }
 
+/* ============================================== 11b. one section, the whole screen */
+
+/* WHY. The page is 1400px wide at most and every scroll region is deliberately bounded
+ * on both axes (REQ-DSH-13), which is right for reading and wrong for typing: the
+ * entry tables cap at 340px, so a twenty-two column sheet is filled in through a window
+ * about a fifth of its own size, and every committed cell costs a re-scroll in two
+ * directions. The complaint was about entering data, not about looking at it, so this is
+ * for the panels that hold the tables - the charts get it too because the rule that
+ * decides which panels offer it is "is there a bounded region in here", which is the
+ * honest test rather than a list somebody maintains.
+ *
+ * HOW, AND WHY NOT THE OBVIOUS WAY. The panel is not moved anywhere. Every edit commits
+ * through renderKeepingTab(), which replaces a whole pane's innerHTML - so a node lifted
+ * out into an overlay would be orphaned by the first keystroke that was saved, which is
+ * precisely the keystroke the full screen exists for. A <dialog> opened with showModal()
+ * has that fault and a worse one: it makes the rest of the document inert, and the rest
+ * of the document is where the Save button is.
+ *
+ * So the panel stays exactly where it is in the DOM and is DRESSED as full screen -
+ * position:fixed, the viewport for a box. Nothing is detached, so every delegated
+ * handler in the application keeps working without knowing this feature exists: the cell
+ * editor, the type-ahead, the column filters, the tooltips, the legend picks. What has to
+ * survive a re-render is one small object in S, and applyZoom() puts the class back on
+ * whichever panel now carries that name.
+ *
+ * WHICH IS WHY PANELS HAVE NAMES. data-panel on each of them, and the state holds the
+ * name rather than an element or an index. An element does not survive the render. An
+ * index does not survive the data: selecting a different project changes how many panels
+ * its detail section draws, and the heading cannot be the key either, because half of
+ * them end in the name of the row that is selected - "Periods - IMM-106 Phase 2" is a
+ * different string for every project and the same section throughout.
+ *
+ * THE STICKY BAND IS LIFTED ABOVE IT, NEVER COVERED. A full screen that hides the Save
+ * button is a trap: the reader fills in a wide comfortable table and then has nowhere to
+ * commit it, and the one thing this feature is for is editing. So #stickybar - the edit
+ * state, Save, Leave without change, and the tabs - is promoted to the top of the
+ * viewport and the panel starts underneath it. The filter bar above it IS covered, and
+ * that is the trade: Escape brings the whole page back, and the per-column filters, which
+ * are the ones used while entering data, are inside the tables and come with them.
+ */
+
+/** Panel names are ours, from the templates in 11_tabs / 12b_manual / 13c_gap, so the
+ *  selector is built rather than escaped - but only after checking the name looks like
+ *  one of ours, because a name that reached a selector unchecked would be the one place
+ *  in this file where state could become markup. */
+const ZOOM_NAME = /^[a-z][a-z0-9-]*$/;
+
+/** The element the state currently names, or null if nothing is drawn under that name. */
+function zoomTarget(){
+  const z = S.zoom;
+  if (!z || !ZOOM_NAME.test(z.name) || z.tab !== S.tab) return null;
+  const sec = el(z.tab);
+  return sec ? sec.querySelector(`.panel[data-panel="${z.name}"]`) : null;
+}
+
+/* The pop-up is the same on every one of these buttons, so it says what the thing IS -
+   including what it does not cover, because the filter bar going behind it is the one
+   surprise, and a reader who meets that without warning reads it as a fault. */
+const ZOOM_HELP =
+  "<b>Full screen</b><br>Give this section the whole window. The table or chart keeps "
+  + "every column it has and grows to the height of the screen, which is what makes a wide "
+  + "sheet usable to type into.<br><br>Editing works exactly as it does here, and the bar "
+  + "at the top stays with you — the tabs, the unsaved-change count and <b>Save</b>. The "
+  + "filter bar goes behind it; each table's own column filters come with it. "
+  + "<b>Esc</b> brings the page back.";
+
+/** Put the full-screen state back after a render, and keep every button in step with it.
+ *
+ *  Called at the end of renderTab() and from showTab(), which between them cover every
+ *  path that can redraw or reveal a pane - so there is no code anywhere else that has to
+ *  remember this feature exists. It is idempotent, and with no zoom open it does nothing
+ *  but the one pass that labels the buttons.
+ */
+function applyZoom(){
+  const t = zoomTarget();
+  // The section it named is not on screen any more - a tab change, a different project
+  // selected, a view toggled from a matrix to rows. Drop it rather than leave a state
+  // nothing can be seen to be in.
+  if (S.zoom && !t) S.zoom = null;
+  for (const p of document.querySelectorAll(".panel.zoom"))
+    if (p !== t) p.classList.remove("zoom");
+  if (t) t.classList.add("zoom");
+  document.body.classList.toggle("zoomed", !!t);
+  zoomButtons();
+  fitZoom();
+}
+
+/** The button, added here rather than written into the panel templates.
+ *
+ *  A render replaces each panel wholesale, so the markup would have to carry the button in
+ *  all thirty-one places a panel is emitted and keep every one of them in step; one pass
+ *  after each render cannot drift. It is also the only way the label can say CLOSE on the panel that is open
+ *  without every template knowing about the state.
+ *
+ *  A panel with no bounded region is offered nothing. There is nothing to enlarge in a
+ *  panel of prose or a panel whose message is that there is no data, and a control that
+ *  does nothing visible teaches the reader that the feature is broken.
+ */
+function zoomButtons(){
+  for (const p of document.querySelectorAll("section.tab .panel[data-panel]")){
+    const head = p.querySelector(":scope > .phead");
+    if (!head) continue;
+    let b = head.querySelector(":scope > button.zoombtn");
+    if (!p.querySelector(".scrollx")){ if (b) b.remove(); continue; }
+    if (!b){
+      b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn tiny zoombtn";
+      b.setAttribute("data-tip", ZOOM_HELP);
+      head.appendChild(b);
+    }
+    const on = p.classList.contains("zoom");
+    b.dataset.zoom = p.dataset.panel;
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    /* The WORD carries the state, not a colour and not a glyph (D-04). "Full screen"
+       went out with an up-down arrow at first and the arrow was the wrong statement -
+       it reads as "make this taller", which is half of what happens - and a symbol
+       outside the common range is a tofu box on whatever font the next PC has. The
+       cross on Close is kept because it is in every font there is and means exactly
+       one thing. */
+    b.innerHTML = on ? "&#10005; Close" : "Full screen";
+    b.title = on ? "Back to the page (Esc)" : "Give this section the whole window";
+  }
+}
+
+/** How much room is taken above the section, measured rather than assumed.
+ *
+ *  Two things can be up there and neither is a constant.
+ *
+ *  THE EDIT BAR wraps on a narrow window and its guide text changes length as you work,
+ *  so its height moves WHILE the screen is open - the band grows the moment the first
+ *  unsaved change appears. Read after the class is on, so the figure is the one the band
+ *  has while fixed rather than the one it had in the flow.
+ *
+ *  AND THE SHELL MAY HAVE ITS OWN BAR ABOVE THAT. The web page has nothing there; the
+ *  Python and desktop shells both put a title strip and a status strip at the top of the
+ *  window, above everything this layer draws. ui/ must not know their markup, so the
+ *  shells declare themselves with data-topchrome and this measures whatever answers -
+ *  which is also why the figure is taken from the DOM rather than from a stylesheet
+ *  constant per shell, three of which would have to be kept in step by hand.
+ *
+ *  An element that has scrolled away is not above the section any more, so anything whose
+ *  top has left the upper half of the window is not counted.
+ */
+function fitZoom(){
+  const on = document.body.classList.contains("zoomed");
+  let chrome = 0;
+  if (on) for (const e of document.querySelectorAll("[data-topchrome]")){
+    const r = e.getBoundingClientRect();
+    if (r.height > 0 && r.top < innerHeight / 2) chrome = Math.max(chrome, Math.round(r.bottom));
+  }
+  const bar = el("stickybar");
+  const h = (on && bar) ? Math.round(bar.getBoundingClientRect().height) : 0;
+  const root = document.documentElement.style;
+  root.setProperty("--zoomchrome", chrome + "px");
+  root.setProperty("--zoomtop", (chrome + h) + "px");
+}
+
+/** Open the named section full screen, or close whatever is open.
+ *
+ *  The caller re-measures the scroll regions afterwards - the shell owns those bars, and
+ *  every region in the panel has just changed size by a factor of three.
+ */
+function setZoom(tab, name){
+  S.zoom = name ? {tab, name} : null;
+  applyZoom();
+  // Focus is the caller's: the control is inside the panel's own head, so putting it
+  // back on the control - which the shell does, because the control is relabelled rather
+  // than replaced - already leaves the keyboard inside the section. Doing it here as well
+  // would be two things moving the focus and only one of them winning.
+}
 /* ============================================================ 12. editing + IO */
 
 /* An edit is provisional until confirmed. The change is applied to the model straight
@@ -8435,7 +8694,7 @@ function manualPanel(scope, id){
       scope === "assignment" ? assignmentLine(id) : ""}`;
 
   if (!on)
-    return `<div class="panel">${head}
+    return `<div class="panel" data-panel="est">${head}
       <p class="cap">This ${what}'s months are <strong>calculated</strong>:
         ${scope === "project"
           ? "<strong>standard FTE × period weight × the part of the month this project "
@@ -8487,7 +8746,7 @@ function manualPanel(scope, id){
          in the findings and in the change log either way.</p></div>`
     : "";
 
-  return `<div class="panel">${head}
+  return `<div class="panel" data-panel="est">${head}
     ${clashNote}
     <p class="cap">These figures are <strong>stated, not calculated</strong>.
       ${scope === "project"
@@ -9114,7 +9373,7 @@ function gapPanel(pids){
   const over = rows.filter(r => r.dir === "over");
   const projects = new Set(rows.map(r => r.pid));
   if (!rows.length)
-    return `<div class="panel" id="gappanel">
+    return `<div class="panel" id="gappanel" data-panel="gap">
       <div class="phead"><h2>Standard vs staffed</h2>
         <span class="scope k">nothing to report</span></div>
       <p class="cap">Every project in view is drawing exactly what its own standard says
@@ -9139,7 +9398,7 @@ function gapPanel(pids){
         >Check and fix</button></td></tr>`;
   }).join("");
 
-  return `<div class="panel" id="gappanel">
+  return `<div class="panel" id="gappanel" data-panel="gap">
     <div class="phead"><h2>Standard vs staffed</h2>
       <span class="scope k">${rows.length} month(s) across ${projects.size}
         project(s)</span></div>
@@ -9616,6 +9875,12 @@ function showTab(id){
   for (const b of document.querySelectorAll("nav button"))
     b.setAttribute("aria-selected", String(b.dataset.tab === id));
   for (const s of document.querySelectorAll("section.tab")) s.hidden = (s.id !== id);
+  /* A section that had the whole screen belongs to the tab it was on, and a hidden pane
+     draws nothing - so a full screen left open across a tab change would be a panel
+     nobody can see with the page still parked behind it. applyZoom() drops a state whose
+     panel is no longer on screen, which is this case and every other one. Before the
+     scroll cues below, so they measure the geometry they end up with. */
+  applyZoom();
   /* cueScrollers, not paintCue: a hidden pane measures zero, so its bars were sized
      against nothing and have to be redone now it is on screen - and a render that did
      not go through keepScroll leaves fresh .scrollx elements with no wrapper at all, so
@@ -9778,6 +10043,11 @@ function adopt(sheets, name, opts){
      connects the two. */
   S.colf = {};
   S.selProj = null; S.selPers = null; S.selAsg = null;
+  /* And a section left full screen is put back, for the reason the banner exists: a load
+     reports what it found, and the one thing that must not happen is for that report to
+     appear behind a panel covering the window. A new plan is read whole before it is read
+     one section at a time. */
+  S.zoom = null;
   defaultHorizon();
   fillFilters();
   el("empty").hidden = true; el("tabs").hidden = false; el("filterbar").hidden = false;
@@ -10108,7 +10378,12 @@ document.addEventListener("click", e => {
   if (vt){
     const [id, mode] = vt.dataset.setview.split("|");
     S.genView[id] = mode;
-    keepScroll(renderGenTab);
+    /* renderTab rather than renderGenTab, which is what this used to call. The pane it
+       builds is identical - renderTab looks the function up and calls it - but it is also
+       where a pane is put back into the state it was in, and going straight to the
+       renderer was the one path that skipped that. Switching Role factors between Matrix
+       and Rows while it had the whole screen gave the page back. */
+    keepScroll(() => renderTab("t-gen"));
     return;
   }
   /* V-34, opened from wherever it is marked: the panel row, its button, the tile above
@@ -10800,6 +11075,46 @@ document.addEventListener("change", e => {
     S.model.config.capacity_unit = e.target.value;
     renderKeepingTab();
   }
+});
+
+/* ---------------------------------------------- one section, the whole screen
+   See 11b_zoom.js. The state and the classes are the ui layer's; re-measuring the
+   scroll regions is the shell's, because the bars are drawn here - and every region in
+   the panel has just changed size by a factor of three, so the measurement is not
+   optional. */
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("button.zoombtn");
+  if (!b) return;
+  const panel = b.closest(".panel[data-panel]"), sec = b.closest("section.tab");
+  if (!panel || !sec) return;
+  setZoom(sec.id, panel.classList.contains("zoom") ? null : panel.dataset.panel);
+  cueScrollers();
+  /* Keep the control under the pointer. The button is relabelled in place rather than
+     replaced, so the same spot now says Close - and the second click undoes the first
+     without the reader having to find anything. */
+  const again = (zoomTarget() || panel).querySelector("button.zoombtn");
+  if (again) again.focus();
+});
+/* CAPTURE, and this is the whole reason: Escape already closes the filter drop-downs and
+   clears a picked series, and those handlers are bound earlier on the same element, so by
+   the time a bubbling handler ran there would be nothing left to find and every Escape
+   would throw away the screen as well. Running first, this can see the more local thing
+   and stand aside for it - one Escape per layer, innermost first. Nothing is consumed, so
+   those handlers still get their turn. */
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || !S.zoom) return;
+  if (document.querySelector("details.ms[open]")) return;   // a drop-down is open
+  if (document.querySelector("svg.chart.picked")) return;   // a series is picked out
+  if (document.querySelector("dialog[open]")) return;       // a dialog is in front of it
+  setZoom(S.zoom.tab, null);
+  cueScrollers();
+}, true);
+/* The band wraps at narrow widths, so the height the section starts at is a function of
+   the window - and the regions inside it are bounded by what is left. */
+addEventListener("resize", () => {
+  if (!S.zoom) return;
+  fitZoom();
+  cueScrollers();
 });
 
 el("saveBtn").onclick = saveEdits;

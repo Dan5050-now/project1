@@ -400,7 +400,7 @@ function manualPanel(scope, id){
       scope === "assignment" ? assignmentLine(id) : ""}`;
 
   if (!on)
-    return `<div class="panel">${head}
+    return `<div class="panel" data-panel="est">${head}
       <p class="cap">This ${what}'s months are <strong>calculated</strong>:
         ${scope === "project"
           ? "<strong>standard FTE × period weight × the part of the month this project "
@@ -452,7 +452,7 @@ function manualPanel(scope, id){
          in the findings and in the change log either way.</p></div>`
     : "";
 
-  return `<div class="panel">${head}
+  return `<div class="panel" data-panel="est">${head}
     ${clashNote}
     <p class="cap">These figures are <strong>stated, not calculated</strong>.
       ${scope === "project"

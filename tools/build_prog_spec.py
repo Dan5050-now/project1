@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.32"
+DOC_VERSION = "1.33"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.61.xlsx"
+PLAN = "PRAP_Development_Plan_v2.62.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,23 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.33", "2026-10-01", "Claude Code", "Dan",
+         "R-51, REQ-DSH-18. ANY SECTION CAN TAKE THE WHOLE WINDOW, AND IS STILL EDITABLE "
+         "THERE. Sheet 06 gains the rule under Global, because it applies to every panel "
+         "on every tab rather than to one of them: a panel holding a bounded scroll "
+         "region carries a control in its head that draws that panel against the viewport "
+         "instead of against the page column, and the region then takes the height of the "
+         "screen rather than the cap REQ-DSH-13 gives it. NOTHING IS MOVED AND NOTHING IS "
+         "COPIED - it is the same panel in the same place in the page, which is why every "
+         "behaviour specified elsewhere in this document still holds inside it: the cell "
+         "editor, the validation, the type-ahead, the column filters and the pop-ups are "
+         "none of them told it is happening. The sticky band carrying the unsaved-edit "
+         "counter, Save and the tab bar is lifted ABOVE the section rather than covered "
+         "by it; the filter bar is covered, and Escape gives the page back. Panels now "
+         "carry a stable name, which is what the state is held as - an element does not "
+         "survive the re-render every committed edit causes, and a position does not "
+         "survive a change of selected row. No schema change, no validation rule, and no "
+         "figure moves.", "Draft"],
         ["1.32", "2026-09-23", "Claude Code", "Dan",
          "R-50, REQ-PRJ-14. SOURCE SCHEMA STEPS 12 TO 13: Milestone gains "
          "milestone_highlight, beside the date it marks. A milestone may be marked in a "
@@ -1354,6 +1371,7 @@ glob = [
     ["Findings banner", "Appears when the last load or edit produced findings; opens the full report on click.", "REQ-IMP-02"],
     ["Unsaved-edit counter", "Always visible once any edit exists, and states the validation standing of those edits - 'n unsaved edits, all n pass validation'. Warns before unload or a new import. An edit that fails a rule is rejected at entry and never enters the buffer, so everything counted here is exportable.", "REQ-IMP-08, REQ-IMP-09"],
     ["Empty state", "With nothing loaded, every tab shows the same load panel plus a template download link.", "REQ-IMP-03"],
+    ["Full screen", "Every panel holding a bounded scroll region carries a control in its head that gives that panel the whole window: same table, every column, at the height of the screen rather than the cap REQ-DSH-13 applies. The panel is NOT moved - it is drawn against the viewport where it stands - so editing, validation, the type-ahead, the column filters and the pop-ups behave exactly as they do on the page. The sticky band (unsaved-edit counter, Save, tab bar) is lifted above it and stays reachable; the filter bar is covered. A shell with its own window bars - the desktop and Python editions - keeps those in front as well, with the section starting below them; the room they take is MEASURED from elements the shell marks as its own top chrome, so this layer names no shell. Escape closes it, as does changing tab or loading a plan. A panel with no bounded region offers no control.", "REQ-DSH-18, REQ-DSH-13"],
 ]
 r = table(ws, r, ["Component", "Behaviour", "REQ-ID"], glob, [24, 90, 20], wrap_cols=(2,))
 

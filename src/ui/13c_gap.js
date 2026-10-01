@@ -90,7 +90,7 @@ function gapPanel(pids){
   const over = rows.filter(r => r.dir === "over");
   const projects = new Set(rows.map(r => r.pid));
   if (!rows.length)
-    return `<div class="panel" id="gappanel">
+    return `<div class="panel" id="gappanel" data-panel="gap">
       <div class="phead"><h2>Standard vs staffed</h2>
         <span class="scope k">nothing to report</span></div>
       <p class="cap">Every project in view is drawing exactly what its own standard says
@@ -115,7 +115,7 @@ function gapPanel(pids){
         >Check and fix</button></td></tr>`;
   }).join("");
 
-  return `<div class="panel" id="gappanel">
+  return `<div class="panel" id="gappanel" data-panel="gap">
     <div class="phead"><h2>Standard vs staffed</h2>
       <span class="scope k">${rows.length} month(s) across ${projects.size}
         project(s)</span></div>

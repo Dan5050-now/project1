@@ -59,6 +59,14 @@ SRC = "5_source"
 SKIP_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
 SKIP_SUFFIX = {".pyc", ".pyo"}
 
+# The one GENERATED file that lives inside src/. tools/build_desktop.py emits the desktop
+# shell's page there, beside its hand-written main.js and preload.js, and .gitignore skips
+# it for the same reason this does: an archive of what is WRITTEN must not carry a build
+# output, and this one would make the archive's bytes depend on whether anybody had run
+# build_desktop.py - which is exactly the reproducibility the fixed epoch below buys.
+# It was absent from a fresh clone, so this went unnoticed until a build put it there.
+SKIP_FILES = {"src/shell/desktop/index.html"}
+
 # Documents that are not versioned in a filename and so cannot be read out of the
 # manifest's version list, plus the two decks and the PDF.
 EXTRA_DOCS = [
@@ -128,6 +136,8 @@ def plan():
             if not p.is_file() or p.suffix in SKIP_SUFFIX:
                 continue
             if any(d in p.parts for d in SKIP_DIRS):
+                continue
+            if p.relative_to(ROOT).as_posix() in SKIP_FILES:
                 continue
             add(f"{SRC}/{p.relative_to(ROOT)}", p)
 

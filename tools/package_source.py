@@ -31,6 +31,7 @@ problem rather than something a reader discovers by unzipping.
 """
 
 import hashlib
+import importlib.util
 import pathlib
 import shutil
 import subprocess
@@ -47,6 +48,14 @@ TREES = ("src", "tools")
 
 SKIP_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
 SKIP_SUFFIX = {".pyc", ".pyo"}
+
+# The one GENERATED file that lives inside src/. tools/build_desktop.py emits the desktop
+# shell's page there, beside its hand-written main.js and preload.js, and .gitignore skips
+# it for the same reason this does: an archive of what is WRITTEN must not carry a build
+# output, and this one would make the archive's bytes depend on whether anybody had run
+# build_desktop.py - which is exactly the reproducibility the fixed epoch below buys.
+# It was absent from a fresh clone, so this went unnoticed until a build put it there.
+SKIP_FILES = {"src/shell/desktop/index.html"}
 
 NOTE = """PRAP / Project Management APP - development source
 ==================================================
@@ -70,10 +79,11 @@ WHAT IS NOT IN HERE
 
 HOW TO REBUILD THE APPLICATION FROM THIS
 
-  python tools/build_app.py            -> app/PRAP.html, from src/ in 29 parts
+  python tools/build_app.py            -> app/PRAP.html, from src/ in {parts} parts
   python tools/build_python_app.py     -> dist/PM_APP_py, the desktop edition
   python tools/check_consistency.py    -> holds every document to every other
-  python tools/test_<name>.py          -> 38 suites, each standalone
+  python tools/test_<name>.py          -> {suites} suites, each standalone (plus
+                                         tools/test_storage.mjs, which runs in Node)
 
   build_app.py rebuilds app/PRAP.html BYTE-IDENTICALLY from src/, and this archive
   was not written until that was demonstrated from a fresh extract of itself.
@@ -89,6 +99,19 @@ No executable is included. Everything here is plain text.
 """
 
 
+def note():
+    """The note, with its two figures counted rather than typed.
+
+    Both of them had gone stale - the note said 29 parts and 38 suites while the tree held
+    30 and 42 - which is the same fault the archive itself had, and for the same reason: a
+    number written by hand beside a thing that changes.
+    """
+    spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
+    build_app = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build_app)
+    return NOTE.format(parts=len(build_app.PARTS),
+                       suites=len(list((ROOT / "tools").glob("test_*.py"))))
+
 def collect():
     out = []
     for top in TREES:
@@ -98,6 +121,8 @@ def collect():
             if any(part in SKIP_DIRS for part in p.parts):
                 continue
             if p.suffix in SKIP_SUFFIX:
+                continue
+            if p.relative_to(ROOT).as_posix() in SKIP_FILES:
                 continue
             out.append(p)
     return out
@@ -123,7 +148,7 @@ def write(files, dst):
             # the archive's setting and falls back to the default, which cost 3 KB.
             z.writestr(info, data, compresslevel=9)
 
-        add("READ ME FIRST.txt", NOTE.encode("utf-8"))
+        add("READ ME FIRST.txt", note().encode("utf-8"))
         for p in files:                                # collect() already sorts
             add(str(p.relative_to(ROOT)), p.read_bytes())
 

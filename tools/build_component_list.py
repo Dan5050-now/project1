@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.2.xlsx
+Output: docs/PRAP_UI_Component_List_v2.3.xlsx
 """
 
 from pathlib import Path
@@ -40,8 +40,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.2"
-DATE = "2026-09-13"
+VERSION = "2.3"
+DATE = "2026-10-01"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
@@ -625,6 +625,17 @@ C = [
      "The two bars settle against each other before either is drawn, because each costs the "
      "region space and one can be what pushes the content past the other edge.",
      "REQ-DSH-13", A, "", "R-23; the settling fix at R-45."),
+    ("X-14", "Layout", "[NEW v2.3] A section can take the whole screen",
+     "Every panel holding a bounded scroll region carries a control in its head that gives that "
+     "panel the whole window - the same table with every column it has, at the height of the "
+     "screen rather than the cap X-01 puts on it. The panel is not moved anywhere: it is drawn "
+     "against the viewport where it stands, so editing, validation, the type-ahead, the column "
+     "filters and the pop-ups all behave exactly as they do on the page. The sticky band carrying "
+     "the unsaved-edit count, Save and the tabs is lifted ABOVE it and stays reachable; the filter "
+     "bar is covered, and Escape gives the page back.",
+     "REQ-DSH-18, REQ-DSH-13", A, "", "R-51. For entering data rather than reading it: the entry "
+     "tables are capped at 340px on a page 1400px wide, so a sheet twenty-two columns wide was "
+     "filled in through a window about a fifth of its size."),
     ("G-13", "Global", "[NEW v2.0] Start with no file",
      "The application opens without a workbook and seeds the delivered defaults - value "
      "lists, settings, standard period weights and role factors - so a plan can be entered "

@@ -8,6 +8,11 @@ const S = {
   f:{type:new Set(), phase:new Set(), out:new Set(), proj:new Set(),
      pers:new Set(), role:new Set(), dept:new Set()},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
+  /* Which section, if any, has the whole screen: {tab, name} against the panel's own
+     data-panel. A NAME rather than an element or a position, because a render replaces
+     every panel and the detail sections differ in number and in heading from one
+     selected row to the next - see 11b_zoom.js. */
+  zoom:null,
   /* Which tabs no longer match the model. Three of the four panes are hidden at any
      moment, so renderAll() marks them all stale and draws only the one on screen;
      showTab() draws a pane the moment it is asked for. See renderAll() in 11_tabs.js
