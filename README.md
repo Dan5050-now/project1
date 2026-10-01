@@ -97,6 +97,39 @@ templates/    Blank source-data workbook           (from Step 4)
 output/       Exported results and test evidence   (from Step 5)
 ```
 
+### Carrying it to another PC
+
+Two packagers, because two different readers ask. Neither writes anything until it has
+proved the archive can re-derive what it carries.
+
+```
+python tools/package_source.py    # dist/PRAP_source_src_tools.zip    — what is written
+python tools/package_release.py   # dist/PRAP_release_package.zip     — what was produced
+```
+
+`package_source.py` carries `src/` and `tools/` and nothing generated from them.
+`package_release.py` carries the other side: the application, the desktop program, the
+current documents, the workbooks, and `src/` + `tools/` beside them under `5_source/`.
+
+Both extract themselves to a temporary folder and rebuild before writing. The release
+packager runs four checks — the application must come out **byte-identical** from the
+source inside the archive, every file of the program must too, every path
+`docs/PRAP_Manifest.json` calls current must be present, and every Python file in the
+program must compile. Each was demonstrated against the breach it is for before being
+trusted; the fourth is not redundant with the second, because a syntax error present in
+both the source and the build rebuilds byte-identically and passes it.
+
+**Only the current issue of each document goes in.** The repository keeps every
+superseded version alongside — sixty-odd development plans, thirty-odd specifications —
+and `PRAP_Manifest.json` exists to say which is in force. Carrying all of them would
+quadruple the archive and leave the reader to work out which plan is the plan. The list
+is read from the manifest and from this file's own "current" labels rather than typed into
+the packager, so it cannot drift from them, and `tools/check_consistency.py` check 11
+already holds those two to each other.
+
+`dist/` is gitignored, so after a fresh clone the program and the deck are not there yet;
+the packager says which command builds each rather than failing part-way through.
+
 ## If you are an AI agent, start here
 
 **[`docs/PRAP_AI_Agent_Guide.md`](docs/PRAP_AI_Agent_Guide.md)** — instructions and
