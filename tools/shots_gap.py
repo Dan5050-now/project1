@@ -54,7 +54,16 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(800)
     shot(pg, None, "gap_2_list.png")
 
-    # 3. AND A MONTH ON TOP OF IT, not instead of it: Escape comes back to the list,
+    # 3. NARROWED (R-53). The reading under the controls is a consequence of what is set
+    #    in them - "17 of 66" - while the control in the panel head behind goes on saying
+    #    66, because that one is the alarm. Both are in this picture on purpose.
+    pg.evaluate("""() => document.querySelector('[data-gapdir="short"]').click()""")
+    pg.wait_for_timeout(700)
+    shot(pg, None, "gap_4_narrowed.png")
+    pg.evaluate("""() => document.querySelector('[data-gapclear]').click()""")
+    pg.wait_for_timeout(600)
+
+    # 4. AND A MONTH ON TOP OF IT, not instead of it: Escape comes back to the list,
     #    which is where the next month somebody wants to look at is.
     pg.evaluate("() => document.querySelector('#gapsBody tr.gaprow').click()")
     pg.wait_for_timeout(900)
