@@ -394,6 +394,23 @@ with sync_playwright() as pw:
           "EDITING ONE STOPS TO ASK, at the cell, naming both figures",
           f"{got['title']!r}; {got['yes']!r} / {got['no']!r}")
 
+    # AND THE MARK DRAWS WHAT IT IS MEANT TO. The class alone was all this asked for, and
+    # the class was being applied correctly the whole time the rule behind it printed the
+    # text \26A0 instead of a warning sign - a doubled backslash in the stylesheet, so
+    # the escape was never an escape. Asked of a real cell in the document, because a
+    # detached one has no computed ::after at all. tools/test_layers.py catches the same
+    # fault statically; this is what proves the character that lands.
+    glyph = pg.evaluate("""() => {
+      const td = document.createElement('td');
+      td.className = 'cell clash';
+      document.body.appendChild(td);
+      const c = getComputedStyle(td, '::after').content.replace(/^"|"$/g, '');
+      td.remove();
+      return c;}""")
+    check(glyph == "\u26a0",
+          "and the mark on that cell is a warning sign, not the name of one",
+          f"drew {glyph!r}")
+
     # 'Put it back' really puts it back - the figure, the pending entry and the mark.
     pg.evaluate("() => document.getElementById('estNo').click()")
     pg.wait_for_timeout(500)

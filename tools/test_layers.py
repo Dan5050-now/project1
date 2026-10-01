@@ -260,6 +260,35 @@ check(not noisy,
       "; ".join(noisy[:3]) if noisy else
       f"{len(list(SRC.rglob('*.py'))) + len(list((ROOT / 'tools').glob('*.py')))} files, quiet")
 
+# ---- the stylesheet's own escapes -------------------------------------------
+#
+# FOUND BY A READER ASKING WHAT A SYMBOL MEANT. Three rules drew a glyph through
+# `content:` and every one of them had a DOUBLED backslash:
+#
+#     td.c.gapc.over::after{content:"\\25B2"}      drew the text  \25B2
+#     td.c.gapc.short::after{content:"\\25BC"}     drew the text  \25BC
+#     td.cell.clash::after{content:"\\26A0"}       drew the text  \26A0
+#
+# In CSS `\25B2` IS the escape; `\\25B2` is an escaped backslash followed by five
+# ordinary characters. So the three marks that REQ-DSH-15 and V-33 put on a cell - the
+# arrow that carries the direction when colour alone must not (D-04) - printed their own
+# source code, in nine-pixel type, in the corner of every marked month. It had been
+# shipping for weeks. The suite that covers those marks asked only whether `content` was
+# non-empty, which `\25B2` satisfies perfectly.
+#
+# This is the cheap half of the cure and it needs no browser: in this stylesheet a
+# doubled backslash inside content: has no legitimate use, so finding one is the finding.
+# The other half is in test_gap.py and test_manual.py, which now compare the RENDERED
+# character against the one that was meant.
+print("\nthe stylesheet's own escapes")
+css = (SRC / "ui" / "style.css").read_text(encoding="utf-8")
+doubled = [ln.strip()[:70] for ln in css.splitlines() if 'content:"\\\\' in ln]
+check(not doubled,
+      "no content: rule escapes its own backslash - which would print the escape "
+      "instead of the character it names",
+      "; ".join(doubled[:3]) if doubled
+      else f"{len(re.findall(chr(99) + 'ontent:', css))} content: rules, all clean")
+
 print()
 print("FAILURES: " + (", ".join(fails) if fails else "none"))
 sys.exit(1 if fails else 0)

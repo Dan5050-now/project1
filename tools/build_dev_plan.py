@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.64"
+DOC_VERSION = "2.65"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.52, source schema 13 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, and milestone highlighting.")
@@ -397,6 +397,37 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.65", "2026-10-01", "Claude Code", "Pending",
+     "R-54. TWO THINGS, BOTH RAISED BY A READER LOOKING AT THE SCREEN. "
+     "(a) A DEFECT: THREE MARKS WERE PRINTING THEIR OWN SOURCE CODE. The arrow that "
+     "REQ-DSH-15 puts on a month off its standard, in both directions, and the warning "
+     "sign V-33 puts on a clashing cell, were written in the stylesheet with a DOUBLED "
+     "backslash - content:\"\\\\25B2\" where content:\"\\25B2\" was meant. In CSS "
+     "the single backslash IS the escape; the doubled one is an escaped backslash "
+     "followed by five ordinary characters. So every marked month carried the text "
+     "\\25B2 or \\25BC in nine-pixel type in its corner, and every clashing cell "
+     "carried \\26A0, for weeks. It was reported as a question - what does this symbol "
+     "mean - which is how a reader meets a mark that says nothing. "
+     "THE SUITE COVERED IT AND PASSED. tools/test_gap.py asked whether the ::after "
+     "content was non-empty, and \\25B2 is non-empty. A mark that is PRESENT but says "
+     "the wrong thing is precisely what that question cannot see, and it is the failure "
+     "D-04 is about: amber and red are the confusable pair, so where the two directions "
+     "are drawn in them the ARROW is the whole of what tells them apart. Three guards "
+     "now: a static one in tools/test_layers.py, since a doubled backslash inside a "
+     "content: rule has no legitimate use in this stylesheet, and two that compare the "
+     "RENDERED character against the one that was meant, in test_gap.py and "
+     "test_manual.py. Each was proved by putting the fault back. "
+     "(b) THE ORDER COLUMN IS NO LONGER DRAWN ON MILESTONES. Asked for, and safe for that "
+     "table only: milestone_seq orders NOTHING. Both engines place a milestone on the "
+     "timeline by its DATE, and nothing anywhere sorts by the sequence - so the column's "
+     "own pop-up, which said 'display order along the timeline', was a false statement "
+     "about the screen it was on. It is still allocated on insert and still written to "
+     "the file, because a column the workbook carries must survive a round trip whether "
+     "or not a screen draws it. PERIODS KEEP THEIRS, deliberately: period_seq is what "
+     "both engines sort the periods by, V-18 reports a duplicate as an ERROR, and V-05 "
+     "and the no-period-covers-these-days message name a period BY its sequence. Hiding "
+     "it would leave a reader told to fix something they could not see.",
+     "Issued for review"],
     [f"{MARK_NEW}2.64", "2026-10-01", "Claude Code", "Pending",
      "R-53. TWO THINGS ASKED FOR FROM THE FIELD, both about finding your way around a "
      "screen rather than about what is on it. "
@@ -2438,7 +2469,7 @@ mile = [
     [f"{MARK_CHG}milestone_name", "List", "Yes", "Standard list (10) at v1.1: 'Protocol (v1)', 'CTA submission', 'FPI', 'First SIV', 'LPI', 'interim DB lock cut-off', 'interim DB lock', 'final DB lock cut-off', 'final DB lock', 'Inspection'. FPI returns as the fallback for First SIV; Inspection is new and MAY REPEAT within a project. Held in Lists, not fixed in code.", "REQ-PRJ-05, REQ-PRJ-13"],
     ["milestone_date", "Date", "Yes", "Planned date.", "REQ-PRJ-05"],
     [f"{MARK_NEW}milestone_highlight", "List", "No", "OPTIONAL, schema 13. Marks this milestone on every Project timeline in a colour - the Overall tab's and the project's own. Held in Lists ('Highlight (Red)' and four more); what is read is the COLOUR WORD inside the value, so a team may add what their colour means and keep both. Empty means no mark, which is what every milestone was before schema 13. A value naming no colour is reported as V-37 and drawn unmarked.", "REQ-PRJ-14"],
-    ["milestone_seq", "Integer", "No", "Display order on the timeline.", "REQ-PRJ-05"],
+    ["milestone_seq", "Integer", "No", "Carried in the file and kept on export; allocated on insert. It ORDERS NOTHING - both engines place a milestone on the timeline by its date - and since R-54 the application does not draw it.", "REQ-PRJ-05"],
     [f"{MARK_NEW}note_1", "Text", "No", "Free extension column.", "REQ-PRJ-07"],
 ]
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
@@ -3189,6 +3220,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-54", "UI", "Two raised from the screen: three cell marks were printing their own CSS escape, and the Order column on Milestones is not wanted.", "Both applied. The marks were written with a doubled backslash, so \\25B2, \\25BC and \\26A0 were drawn as text instead of the arrows and the warning sign; three guards added, one static and two on the rendered character. milestone_seq is no longer drawn - it orders nothing, and its pop-up said otherwise. period_seq is kept: both engines sort by it and V-18 reports a duplicate as an error.", "Applied"],
     ["R-53", "UI", "Let the Standard vs staffed list be narrowed, and keep a project's identity on screen while its table scrolls sideways.", "Both applied. The list gains three controls - direction, project, smallest gap - which narrow the LIST only; the tile and the control in the panel head go on counting everything, because they are the alarm. The Project table freezes the row handle, project_id and project_name at its left edge. REQ-DSH-15 amended and REQ-DSH-19 added.", "Applied"],
     ["R-52", "UI", "Move Standard vs staffed onto Resource by project and open it from a control there.", "Applied. The list is now a dialog opened from that panel's head; a row opens the month on top of it. What the move costs - a list behind a click - is paid back by the control, which states how many months are off their standard and in which direction instead of naming the screen. REQ-DSH-15 amended. It also exposed a defect of its own: the tile that was supposed to jump to the old panel had never worked, because the pop-up handler runs in the capture phase and swallowed the click on a div that declares role=button.", "Applied"],
     ["R-51", "UI", "Give every section a control that opens it full screen, so wide tables can be read and typed into at the size they actually are.", "Applied. The panel is drawn against the viewport rather than moved into an overlay or a dialog - an edit re-renders the pane it lives in, so a detached node would be orphaned by the first keystroke saved, and a modal would make Save inert. The sticky band carrying Save and the tabs is lifted above the section instead of being covered. Panels gained names so the state survives a re-render and a change of selected row. REQ-DSH-18 added.", "Applied"],

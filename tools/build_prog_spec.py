@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.35"
+DOC_VERSION = "1.36"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.64.xlsx"
+PLAN = "PRAP_Development_Plan_v2.65.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,17 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.36", "2026-10-01", "Claude Code", "Dan",
+         "R-54. A DEFECT AND A COLUMN. The three cell marks drawn through CSS content: - "
+         "the two gap arrows and the V-33 warning sign - escaped their own backslash, so "
+         "each printed the text of its escape instead of the character it names. Fixed, "
+         "and guarded three ways; the suite that covered them asked only whether the "
+         "content was non-empty, which the wrong string satisfies. And milestone_seq is "
+         "no longer drawn in the Milestones table: it orders nothing, since both engines "
+         "place a milestone by its DATE, and it is still carried in the file and "
+         "allocated on insert. period_seq is NOT hidden - sheet 05's period derivation "
+         "sorts by it, V-18 reports a duplicate as an error, and V-05 names a period by "
+         "it. No schema change and no figure moves.", "Draft"],
         ["1.35", "2026-10-01", "Claude Code", "Dan",
          "R-53, REQ-DSH-15 amended and REQ-DSH-19 added. (a) The Standard vs staffed list "
          "takes three controls - direction, project, smallest gap - and sheet 06 records "

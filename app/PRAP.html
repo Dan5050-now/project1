@@ -1018,7 +1018,7 @@ dialog.big .dlg-b{max-height:84vh}
 /* A stated figure the project's own figure overrode (V-33). Marked as well as said:
    the dialog is dismissed and forgotten, and the mark is what is still there tomorrow. */
 td.cell.clash{background:var(--overbg);box-shadow:inset 0 0 0 1px var(--crit)}
-td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
+td.cell.clash::after{content:"\26A0";color:var(--crit);font-size:var(--t-xs);
  margin-left:5px;vertical-align:middle}
 .estclash{background:var(--overbg);border-left:3px solid var(--crit);
  border-radius:var(--r-sm);padding:8px 11px;margin:0 0 8px}
@@ -1098,8 +1098,8 @@ td.c.gapc.over{box-shadow:inset 0 0 0 2px var(--crit)}
    whole grid and a glyph in the flow would shift it out of column with its neighbours. */
 td.c.gapc::after{position:absolute;top:1px;left:3px;font-size:9px;line-height:1;
  font-weight:700}
-td.c.gapc.short::after{content:"\\25BC";color:var(--underink)}
-td.c.gapc.over::after{content:"\\25B2";color:var(--crit)}
+td.c.gapc.short::after{content:"\25BC";color:var(--underink)}
+td.c.gapc.over::after{content:"\25B2";color:var(--crit)}
 /* And on the project's own utilisation chart. Dashed, so it cannot be mistaken for the
    solid tinted outline the person chart already uses for a threshold breach. */
 rect.gapmark{fill:none;stroke-width:1.6;stroke-dasharray:3 2}
@@ -1350,7 +1350,7 @@ td.cell.gapnew:focus:empty::before{content:""}
 
 <script>
 "use strict";
-const APP_VERSION = "1.55";
+const APP_VERSION = "1.56";
 const SCHEMA_EXPECTED = 13;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1359,9 +1359,9 @@ const SCHEMA_EXPECTED = 13;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.64.xlsx",          ver:"2.64",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.65.xlsx",          ver:"2.65",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.35.xlsx", ver:"1.35",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.36.xlsx", ver:"1.36",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v2.5.xlsx",          ver:"2.5",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
@@ -2679,7 +2679,11 @@ const COLUMN_HELP = {
   status:"Planned, Active, On hold or Completed.",
   milestone_name:"From the standard list of ten. 'Inspection' may appear on several rows; nothing else should (V-20).",
   milestone_date:"Planned date. CTA submission and the DB locks are what the period derivation hangs on.",
-  milestone_seq:"Display order along the timeline.",
+  /* NOT shown in the application (R-54): the timeline orders milestones by DATE,
+     here and in the reference implementation, so this never ordered anything. It is
+     still allocated on insert and still written to the file, because a column the
+     workbook carries must survive a round trip whether or not a screen draws it. */
+  milestone_seq:"Carried in the file and kept on export. It orders nothing: the timeline places a milestone by its DATE.",
   period_name:"One of the seven clinical periods, or the three 'Others' periods. UNIQUE within a project — with project_id it identifies the row.",
   period_seq:"Orders the periods along the timeline. Carries order, not identity.",
   period_start:"Inclusive. Periods must not overlap or leave a gap (V-06, V-12).",
@@ -7200,7 +7204,7 @@ function projDetail(pid){
         <p class="cap">CTA submission and the DB locks set the period boundaries.
           <strong>Blank list</strong> lays out the standard milestone names with their dates
           empty, so only the dates have to be typed.</p>
-        ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_highlight","milestone_seq","note_1"])}</div>
+        ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_highlight","note_1"])}</div>
       <div class="panel" data-panel="proj-per">
         <div class="phead"><h2>Periods — ${esc(pr.project_name)}</h2>
           ${periodGenButton(pr, pid)}
@@ -7255,7 +7259,7 @@ function scratchProject(draft){
         <p class="cap">CTA submission and a DB lock are the two the period derivation hangs
           on — enter those and the seven clinical periods are computed for you. The other
           eight names are markers.</p>
-        ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_highlight","milestone_seq","note_1"],
+        ${dataTable("Milestone", ms, ["milestone_name","milestone_date","milestone_highlight","note_1"],
                     null, null, null, lock)}</div>
       <div class="panel" data-panel="proj-per">
         <div class="phead"><h2>Periods${who}</h2>

@@ -261,7 +261,11 @@ const COLUMN_HELP = {
   status:"Planned, Active, On hold or Completed.",
   milestone_name:"From the standard list of ten. 'Inspection' may appear on several rows; nothing else should (V-20).",
   milestone_date:"Planned date. CTA submission and the DB locks are what the period derivation hangs on.",
-  milestone_seq:"Display order along the timeline.",
+  /* NOT shown in the application (R-54): the timeline orders milestones by DATE,
+     here and in the reference implementation, so this never ordered anything. It is
+     still allocated on insert and still written to the file, because a column the
+     workbook carries must survive a round trip whether or not a screen draws it. */
+  milestone_seq:"Carried in the file and kept on export. It orders nothing: the timeline places a milestone by its DATE.",
   period_name:"One of the seven clinical periods, or the three 'Others' periods. UNIQUE within a project — with project_id it identifies the row.",
   period_seq:"Orders the periods along the timeline. Carries order, not identity.",
   period_start:"Inclusive. Periods must not overlap or leave a gap (V-06, V-12).",

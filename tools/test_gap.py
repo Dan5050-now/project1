@@ -399,12 +399,24 @@ with sync_playwright() as pw:
     check(pg.evaluate("""() => [...document.querySelectorAll('#t-overall td.c.gapc')]
             .every(t => t.dataset.gap && t.dataset.gk)"""),
           "and each one opens its own month rather than the panel in general")
-    check(pg.evaluate("""() => {
-            const t = document.querySelector('#t-overall td.c.gapc');
-            const s = getComputedStyle(t, '::after').content;
-            return s && s !== 'none' && s !== 'normal';}"""),
-          "carrying an arrow as well as a colour — amber and red are the confusable "
-          "pair, and they are the two directions (D-04)")
+    # THE CHARACTER, not merely "something". This asked whether ::after content was
+    # non-empty, and passed for weeks while those cells printed the text \25B2 - a
+    # doubled backslash in the stylesheet, so the escape was never an escape. A mark that
+    # is present but says the wrong thing is exactly what "non-empty" cannot see, and it
+    # is the failure D-04 is about: where amber and red are the confusable pair, the arrow
+    # is the whole of what tells the two directions apart.
+    arrows = pg.evaluate("""() => {
+        const out = {};
+        for (const dir of ['short', 'over']){
+          const t = document.querySelector('#t-overall td.c.gapc.' + dir);
+          out[dir] = t ? getComputedStyle(t, '::after').content.replace(/^"|"$/g, '')
+                       : 'no such cell';
+        }
+        return out;}""")
+    check(arrows.get("short") == "\u25bc" and arrows.get("over") == "\u25b2",
+          "carrying an ARROW as well as a colour — amber and red are the confusable "
+          "pair, and they are the two directions (D-04)",
+          f"short {arrows.get('short')!r}, over {arrows.get('over')!r}")
 
     print("\n7. the tile counts what the panel lists")
     tile = pg.evaluate("""() => {
