@@ -134,12 +134,62 @@ function gapButton(pids){
     + "</button>";
 }
 
+/** What the list is narrowed to, applied to the rows the model offers (R-53).
+ *
+ *  NARROWS THE LIST, NEVER THE COUNT. gapRows() is what the tile and the control in
+ *  Resource by project's head read, and they must go on counting every month off its
+ *  standard whatever is set here: a figure that moved when somebody narrowed their own
+ *  view would be an alarm that lies, which is worse than no alarm. So this is applied in
+ *  one place - where the rows are drawn - and nowhere else.
+ */
+function gapKept(rows){
+  const f = S.gapf;
+  const min = Math.abs(num(f.min) ?? 0);
+  return rows.filter(r => (!f.dir || r.dir === f.dir)
+                       && (!f.proj || r.pid === f.proj)
+                       && Math.abs(r.gap) + 1e-9 >= min);
+}
+
+const gapNarrowed = () => !!(S.gapf.dir || S.gapf.proj || (num(S.gapf.min) ?? 0) > 0);
+
+/** The controls. Three, and each answers a question somebody actually arrives with:
+ *  which direction am I chasing, which project is this about, and what is big enough to
+ *  be worth my morning. A fourth would be the month, and the horizon above the page
+ *  already is that. */
+function gapControls(all){
+  const f = S.gapf;
+  const projects = [...new Set(all.map(r => r.pid))]
+    .sort((a, b) => (projectNameOf(a) || a) < (projectNameOf(b) || b) ? -1 : 1);
+  const dir = [["", "All"], ["short", "&#9660; Short"], ["over", "&#9650; Over"]]
+    .map(([v, l]) => `<button class="btn tiny${f.dir === v ? " on" : ""}" `
+      + `data-gapdir="${att(v)}">${l}</button>`).join("");
+  return `<div class="gapf">
+    <span class="vtog">${dir}</span>
+    <label class="ctl"><span>Project</span>
+      <select id="gapfProj"><option value="">All (${projects.length})</option>
+        ${projects.map(p => `<option value="${att(p)}"${f.proj === p ? " selected" : ""}>`
+          + `${esc(projectNameOf(p) || p)}</option>`).join("")}</select></label>
+    <label class="ctl"><span>Gap at least</span>
+      <input id="gapfMin" type="number" min="0" step="0.25" inputmode="decimal"
+        value="${att(f.min || "")}" placeholder="0.00"></label>
+    ${gapNarrowed() ? `<button class="btn tiny" data-gapclear="1">Clear</button>` : ""}
+  </div>`;
+}
+
 /** The body of that dialog. The panel this replaces carried the same thing. */
 function gapList(pids){
-  const M = S.model, rows = gapRows(pids);
+  const M = S.model, all = gapRows(pids), rows = gapKept(all);
   const short = rows.filter(r => r.dir === "short");
   const over = rows.filter(r => r.dir === "over");
   const projects = new Set(rows.map(r => r.pid));
+  /* NOTHING TO REPORT AND NOTHING LEFT AFTER FILTERING ARE DIFFERENT ANSWERS, and only
+     one of them is good news. Saying "every project is on its standard" to somebody who
+     has just narrowed to one project and a 5.00 floor would be a plain untruth, and the
+     way out - clear the filter - is not the way out of the other. */
+  if (!rows.length && all.length)
+    return gapControls(all)
+      + `<p class="cap">All <strong>${all.length}</strong> of them are hidden by the
+        filter above. <strong>Clear</strong> brings them back.</p>`;
   if (!rows.length)
     return `<p class="cap">Every project in view is drawing exactly what its own standard
       says it needs — <strong>standard FTE × period weight × the part of the month it
@@ -163,8 +213,9 @@ function gapList(pids){
         >Check and fix</button></td></tr>`;
   }).join("");
 
-  return `<p class="cap"><span class="scope k">${rows.length} month(s) across
-      ${projects.size} project(s)</span><br>What each project <strong>needs</strong> — standard FTE × period
+  return `<p class="cap"><span class="scope k">${gapNarrowed()
+      ? `${rows.length} of ${all.length} month(s)` : `${rows.length} month(s)`}
+      across ${projects.size} project(s)</span><br>What each project <strong>needs</strong> — standard FTE × period
       weight × the part of the month it runs — against what it is actually
       <strong>being given</strong>. These are the two figures that can come apart. The
       project's month against the sum of its people cannot: the month is built from those
@@ -173,6 +224,7 @@ function gapList(pids){
       <strong>deliberately</strong>, in every case, which is why this reports rather than
       refuses. <strong>Click any row</strong> to see the month and change the figures
       behind it.</p>
+    ${gapControls(all)}
     <div class="gtot">
       <span class="gpill short">&#9660; ${short.length} month(s) short of the standard</span>
       <span class="gpill over">&#9650; ${over.length} month(s) over it</span>
@@ -183,8 +235,9 @@ function gapList(pids){
         <th>Staffed</th><th>Gap</th><th>Direction</th><th></th></tr></thead>
       <tbody>${body}</tbody></table></div>
     ${rows.length > GAP_SHOW
-      ? `<p class="note">Showing the ${GAP_SHOW} largest of ${rows.length}. The rest are
-         in the findings report, which lists every one of them by project.</p>` : ""}
+      ? `<p class="note">Showing the ${GAP_SHOW} largest of ${rows.length}${
+          gapNarrowed() ? ` that match the filter (${all.length} in all)` : ""}. The rest
+         are in the findings report, which lists every one of them by project.</p>` : ""}
     <p class="note">V-34 reports this as a <strong>warning</strong>: it reaches the
       findings report, the load banner and the archived change log, and it never stops a
       save or asks a question. Departing from the standard is the point of a manual

@@ -102,6 +102,22 @@ el("gapdlg").addEventListener("close", () => closeGap());
 /* The list the month is opened FROM. Nothing to clear when it shuts - what it shows is
    derived from S.calc and redrawn each time it is opened - so the close listener only
    exists so Escape and the backdrop go through the same function the button does. */
+/* The smallest-gap field answers as it is typed rather than on blur - the figure is a
+   dial being turned, not a value being committed - so the list is redrawn and the focus
+   and caret put back where they were. Redrawing is what keeps the pills and the "n of m"
+   line honest; leaving the field alone and filtering the rows only would let those two
+   disagree with what is on screen. */
+document.addEventListener("input", e => {
+  if (e.target.id !== "gapfMin") return;
+  S.gapf.min = e.target.value;
+  const at = e.target.selectionStart;
+  openGaps();
+  const again = el("gapfMin");
+  if (again){
+    again.focus();
+    try { again.setSelectionRange(at, at); } catch (_){ /* number inputs may refuse */ }
+  }
+});
 el("gapsClose").onclick = () => closeGaps();
 el("gapsdlg").addEventListener("close", () => closeGaps());
 el("cfgClose").onclick = () => el("cfgchg").close();
@@ -297,6 +313,17 @@ document.addEventListener("click", e => {
   /* The tile, and the control in Resource by project's head, open the same list (R-52).
      The tile still has to change tab first - it may be reached from a chart pop-up on
      another tab - while the control is already on Overall. */
+  /* The list's own filter (R-53). Redraws the list in place - the dialog stays open,
+     because the whole point of narrowing is to go on reading the same screen. Before the
+     row handler below, since these controls sit above the rows rather than inside one. */
+  const gd = e.target.closest("[data-gapdir]");
+  if (gd){ e.stopPropagation(); S.gapf.dir = gd.dataset.gapdir; openGaps(); return; }
+  if (e.target.closest("[data-gapclear]")){
+    e.stopPropagation();
+    S.gapf = {dir:"", proj:"", min:0};
+    openGaps();
+    return;
+  }
   const gj = e.target.closest("[data-gapjump], [data-gapopen]");
   if (gj){
     e.stopPropagation();
@@ -983,6 +1010,7 @@ const CAL = (() => {
 })();
 
 document.addEventListener("change", e => {
+  if (e.target.id === "gapfProj"){ S.gapf.proj = e.target.value; openGaps(); return; }
   if (e.target.id === "unitSel"){
     S.model.UNIT = e.target.value;
     S.model.config.capacity_unit = e.target.value;

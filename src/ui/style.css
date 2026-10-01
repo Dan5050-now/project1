@@ -613,6 +613,64 @@ td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .data-t td.num{text-align:right;font-variant-numeric:tabular-nums}
 .data-t td.muted{color:var(--muted)}
 .data-t td.vals{white-space:normal;color:var(--ink2)}
+
+/* --- the columns that stay put while the table scrolls sideways (R-53) ---------
+   See PINNED in 10_tables.js for which, and why those. The widths are FIXED here rather
+   than left to the content, because that is what makes the left offsets below arithmetic
+   instead of a measurement: each pinned column starts where the ones before it end, and a
+   column whose width depended on the longest project name in the file would move the two
+   beside it every time somebody typed. The name is allowed to WRAP rather than be clipped
+   - a row grows taller, which costs nothing, where an ellipsis in a cell you are about to
+   type into hides the thing you are checking. */
+.data-t[data-pin]{--pin-row:116px;--pin1:110px;--pin2:210px}
+.data-t[data-pin] th.ins,.data-t[data-pin] td.ins,
+.data-t[data-pin] .pin1,.data-t[data-pin] .pin2{position:sticky;z-index:2}
+.data-t[data-pin] th.ins,.data-t[data-pin] td.ins{left:0;
+ min-width:var(--pin-row);max-width:var(--pin-row)}
+/* EACH ONE OVERLAPS ITS NEIGHBOUR BY A PIXEL, and the pixel is not decorative. Laid out
+   exactly edge to edge - measured, left and right agreeing to three decimal places - a
+   one-device-pixel seam still opens between two stuck cells where the rounding of the
+   sticky offset and the scroll position disagree, and the row sliding underneath shows
+   through it. It reads as a stray vertical mark beside the identifier, on some rows and
+   not others, because it is only visible where something dark happens to be behind it:
+   found by magnifying a screenshot, not by reading the rule. Each cell therefore starts a
+   pixel before the one before it ends, under its neighbour's own border - the second one
+   by TWO, because the first has already moved left by one and the overlap has to survive
+   that - and the block's right edge lands two pixels early, which nothing can tell. Its own border-left keeps the
+   rule between the columns, which would otherwise be the covered pixel. */
+.data-t[data-pin] .pin1{left:calc(var(--pin-row) - 1px);
+ min-width:var(--pin1);max-width:var(--pin1);border-left:1px solid var(--grid)}
+.data-t[data-pin] .pin2{left:calc(var(--pin-row) + var(--pin1) - 2px);
+ min-width:var(--pin2);max-width:var(--pin2);white-space:normal;
+ border-left:1px solid var(--grid)}
+/* The heading row is already sticky downwards; where the two meet, the corner has to
+   out-rank both or whichever scrolls under it paints over it. */
+.data-t[data-pin] thead th.ins,.data-t[data-pin] thead .pin1,
+.data-t[data-pin] thead .pin2{z-index:4}
+/* A SEAM, so the frozen block reads as held rather than as overlapping. Drawn with a
+   box-shadow on the last pinned column rather than a border, which would take part in
+   the table's own grid and move the columns by a pixel. */
+.data-t[data-pin] .pin2{box-shadow:6px 0 8px -8px var(--shade)}
+
+/* AND THEY HAVE TO BE OPAQUE. Every background in this table is a color-mix against
+   TRANSPARENT - zebra, hover, selection, an edited cell - which is right for a cell that
+   sits on the panel and wrong for one that has rows sliding underneath it: the row
+   passing behind shows straight through. So each of those four states is restated for a
+   pinned cell against the surface instead of against nothing, in the same order, so the
+   same one wins. */
+.data-t[data-pin] th.ins,.data-t[data-pin] td.ins,
+.data-t[data-pin] .pin1,.data-t[data-pin] .pin2{background:var(--surface)}
+.data-t[data-pin] tbody tr:nth-child(even) td.ins,
+.data-t[data-pin] tbody tr:nth-child(even) .pin1,
+.data-t[data-pin] tbody tr:nth-child(even) .pin2{
+ background:color-mix(in srgb,var(--ink) 2%,var(--surface))}
+.data-t[data-pin] tr.sel td.ins,.data-t[data-pin] tr.sel .pin1,
+.data-t[data-pin] tr.sel .pin2{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.data-t[data-pin] tbody tr:hover td.ins,.data-t[data-pin] tbody tr:hover .pin1,
+.data-t[data-pin] tbody tr:hover .pin2{
+ background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+.data-t[data-pin] td.edited.pin1,.data-t[data-pin] td.edited.pin2{
+ background:color-mix(in srgb,var(--warn) 20%,var(--surface))}
 td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 
 /* --- pills ---------------------------------------------------------------- */
@@ -981,6 +1039,17 @@ td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
 #gapsdlg .cap{max-width:none}
 #gapsdlg > .dlg-b > .cue{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
 #gapsdlg .scrollx{flex:1 1 auto;min-height:0;max-height:none}
+
+/* The list's own filter (R-53): one row above the pills, so the reading under it is
+   plainly a consequence of what is set here. */
+.gapf{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+.gapf .ctl{display:flex;align-items:center;gap:6px;margin:0}
+.gapf .ctl > span{font-size:var(--t-xs);color:var(--muted);white-space:nowrap}
+.gapf select,.gapf input{font-family:inherit;font-size:var(--t-sm);color:var(--ink);
+ background:var(--surface);border:1px solid var(--grid);border-radius:var(--r-xs);
+ padding:3px 7px}
+.gapf select{max-width:260px}
+.gapf input{width:88px;text-align:right;font-variant-numeric:tabular-nums}
 
 .gapbtn{gap:6px}
 .gapbtn.on{background:var(--underbg);box-shadow:none}

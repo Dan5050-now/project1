@@ -469,6 +469,37 @@ const colHead = c => COLUMN_LABEL[c]
   ? `<b>${esc(COLUMN_LABEL[c])}</b> <span class="tr">${esc(c)}</span>`
   : `<b>${esc(c)}</b>`;
 
+/* WHICH COLUMNS STAY PUT WHILE THE TABLE SCROLLS SIDEWAYS (R-53).
+ *
+ * The Project sheet is twenty-five columns and about 3,070px wide; the panel that holds
+ * it is 1,316px, so less than half of it is on screen at once and a reader who scrolls
+ * out to 'Figures come from' is editing an unlabelled row. What they have lost is not
+ * the data, it is WHICH PROJECT THIS IS - and that is two columns, not twenty-five.
+ *
+ * So the identity travels with the view: the row's own handle, its identifier and its
+ * name are frozen at the left edge and everything else slides under them. It is declared
+ * HERE, per sheet, rather than passed in at each call site - the same sheet pinned one
+ * way in one place and another way in another would be a defect rather than a choice -
+ * and only a LEADING run of columns can be frozen, because what makes the arithmetic of
+ * the offsets work is that there is nothing between them and the edge.
+ *
+ * The cost is honest and bounded: 116 + 110 + 210 = 436px of the panel, which is about
+ * six data columns on screen at a time instead of ten. Six you can attribute to a project
+ * beats ten you cannot.
+ */
+const PINNED = {Project: ["project_id", "project_name"]};
+
+/** The pin class for each column position, "" where there is none. */
+function pinCols(sheet, cols){
+  const want = PINNED[sheet] || [];
+  const out = cols.map(() => "");
+  for (let i = 0; i < cols.length && i < want.length; i++){
+    if (!want.includes(cols[i])) break;
+    out[i] = "pin" + (i + 1);
+  }
+  return out;
+}
+
 function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable){
   derived = derived || {};
   if (filterable) FTABLE[sheet] = {rows, cols, derived};
@@ -478,8 +509,10 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
   const shown = filterable
     ? rows.filter(r => r.__new || passColFilters(sheet, [r], cols, derived, null).length)
     : rows;
+  const PIN = pinCols(sheet, cols);
+  const pinned = PIN.filter(Boolean).length;
   const head = `<th class="ins" data-tip="${att(HELP.rowactions)}">Row</th>`
-    + cols.map(c => {
+    + cols.map((c, ci) => {
         const h = COLUMN_HELP[c], px = proxyFor(sheet, c);
         const d = derived[c] ? " · shown for context, looked up from its master row and not editable"
           : px ? ` · type the name here and ${esc(px.into)} follows. Not stored on this row — `
@@ -509,7 +542,7 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
            real column of its sheet, and it keeps the identifier in the DOM for anything
            else that needs it, now that the text no longer carries it. */
         const lab = COLUMN_LABEL[c] || c;
-        return `<th class="hasinfo" data-cid="${att(c)}" `
+        return `<th class="hasinfo${PIN[ci] ? " " + PIN[ci] : ""}" data-cid="${att(c)}" `
           + `data-tip="${att(`${colHead(c)}<br>${(h||"")}${d}`)}">`
           + `<span class="lab">${esc(lab)}</span>`
           + `${derived[c] ? ' <span class="drv">lookup</span>'
@@ -518,14 +551,15 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
       }).join("");
   const body = shown.map(r => {
     const sel = (selKey && r[selKey] === selVal) ? ' class="sel"' : "";
-    const tds = cols.map(c => {
+    const tds = cols.map((c, ci) => {
+      const pin = PIN[ci] ? " " + PIN[ci] : "";
       if (derived[c]){
         const dv = derived[c](r) ?? "";
         /* NAMED, so the stylesheet can give one derivation the width it needs without
            widening every lookup column in the application. data-drv rather than data-col:
            data-col is what makes a cell editable and what the editing code writes back
            through, and a read-only cell must not carry it. */
-        return `<td class="muted drvcell" data-drv="${att(c)}" data-tip="${att(
+        return `<td class="muted drvcell${pin}" data-drv="${att(c)}" data-tip="${att(
             `${colHead(c)}<br>${esc(dv).replace(/\n/g, "<br>") || "&mdash;"}`
           + `<br><span class="tr">looked up, not stored on this row</span>`)}">${esc(dv)}</td>`;
       }
@@ -533,7 +567,7 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
       if (px){
         const pv = px.show(r) ?? "";
         const marked = S.editedCells.has(`${sheet}|${r.__row}|${px.into}`) ? " edited" : "";
-        return `<td class="cell${marked}" contenteditable="true" data-sheet="${att(sheet)}" `
+        return `<td class="cell${marked}${pin}" contenteditable="true" data-sheet="${att(sheet)}" `
           + `data-row="${r.__row}" data-col="${att(c)}" data-tip="${att(
               `${colHead(c)}<br>${pv === "" ? "<i>empty</i>" : esc(pv)}`
               + `<br><span class="tr">typing a name here sets ${esc(px.into)}</span>`)}">${esc(pv)}</td>`;
@@ -550,7 +584,7 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
          one stray keystroke and the mark becomes text nobody meant to type. A pseudo
          element cannot be edited, selected or copied by accident. */
       const hl = c === "milestone_highlight" ? hlToken(v) : "";
-      return `<td class="cell${marked}" contenteditable="true" data-sheet="${att(sheet)}" `
+      return `<td class="cell${marked}${pin}" contenteditable="true" data-sheet="${att(sheet)}" `
         + `data-row="${r.__row}" data-col="${att(c)}"${hl ? ` data-hl="${att(hl)}"` : ""} `
         + `data-tip="${att(tip)}">${esc(disp)}</td>`;
     }).join("");
@@ -594,6 +628,7 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
       + `column filters are on. <button class="btn tiny" data-fclear="${att(sheet)}">`
       + `Clear them</button></p>` : "";
   return note + `<div class="scrollx tall"><table class="data-t" data-sheet="${att(sheet)}"`
+    + `${pinned ? ` data-pin="${pinned}"` : ""}`
     + `${filterable ? ' data-filterable="1"' : ""}>`
     + `<thead><tr>${head}</tr></thead><tbody>${body}${empty}</tbody></table></div>`;
 }

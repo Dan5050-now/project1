@@ -630,6 +630,64 @@ td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .data-t td.num{text-align:right;font-variant-numeric:tabular-nums}
 .data-t td.muted{color:var(--muted)}
 .data-t td.vals{white-space:normal;color:var(--ink2)}
+
+/* --- the columns that stay put while the table scrolls sideways (R-53) ---------
+   See PINNED in 10_tables.js for which, and why those. The widths are FIXED here rather
+   than left to the content, because that is what makes the left offsets below arithmetic
+   instead of a measurement: each pinned column starts where the ones before it end, and a
+   column whose width depended on the longest project name in the file would move the two
+   beside it every time somebody typed. The name is allowed to WRAP rather than be clipped
+   - a row grows taller, which costs nothing, where an ellipsis in a cell you are about to
+   type into hides the thing you are checking. */
+.data-t[data-pin]{--pin-row:116px;--pin1:110px;--pin2:210px}
+.data-t[data-pin] th.ins,.data-t[data-pin] td.ins,
+.data-t[data-pin] .pin1,.data-t[data-pin] .pin2{position:sticky;z-index:2}
+.data-t[data-pin] th.ins,.data-t[data-pin] td.ins{left:0;
+ min-width:var(--pin-row);max-width:var(--pin-row)}
+/* EACH ONE OVERLAPS ITS NEIGHBOUR BY A PIXEL, and the pixel is not decorative. Laid out
+   exactly edge to edge - measured, left and right agreeing to three decimal places - a
+   one-device-pixel seam still opens between two stuck cells where the rounding of the
+   sticky offset and the scroll position disagree, and the row sliding underneath shows
+   through it. It reads as a stray vertical mark beside the identifier, on some rows and
+   not others, because it is only visible where something dark happens to be behind it:
+   found by magnifying a screenshot, not by reading the rule. Each cell therefore starts a
+   pixel before the one before it ends, under its neighbour's own border - the second one
+   by TWO, because the first has already moved left by one and the overlap has to survive
+   that - and the block's right edge lands two pixels early, which nothing can tell. Its own border-left keeps the
+   rule between the columns, which would otherwise be the covered pixel. */
+.data-t[data-pin] .pin1{left:calc(var(--pin-row) - 1px);
+ min-width:var(--pin1);max-width:var(--pin1);border-left:1px solid var(--grid)}
+.data-t[data-pin] .pin2{left:calc(var(--pin-row) + var(--pin1) - 2px);
+ min-width:var(--pin2);max-width:var(--pin2);white-space:normal;
+ border-left:1px solid var(--grid)}
+/* The heading row is already sticky downwards; where the two meet, the corner has to
+   out-rank both or whichever scrolls under it paints over it. */
+.data-t[data-pin] thead th.ins,.data-t[data-pin] thead .pin1,
+.data-t[data-pin] thead .pin2{z-index:4}
+/* A SEAM, so the frozen block reads as held rather than as overlapping. Drawn with a
+   box-shadow on the last pinned column rather than a border, which would take part in
+   the table's own grid and move the columns by a pixel. */
+.data-t[data-pin] .pin2{box-shadow:6px 0 8px -8px var(--shade)}
+
+/* AND THEY HAVE TO BE OPAQUE. Every background in this table is a color-mix against
+   TRANSPARENT - zebra, hover, selection, an edited cell - which is right for a cell that
+   sits on the panel and wrong for one that has rows sliding underneath it: the row
+   passing behind shows straight through. So each of those four states is restated for a
+   pinned cell against the surface instead of against nothing, in the same order, so the
+   same one wins. */
+.data-t[data-pin] th.ins,.data-t[data-pin] td.ins,
+.data-t[data-pin] .pin1,.data-t[data-pin] .pin2{background:var(--surface)}
+.data-t[data-pin] tbody tr:nth-child(even) td.ins,
+.data-t[data-pin] tbody tr:nth-child(even) .pin1,
+.data-t[data-pin] tbody tr:nth-child(even) .pin2{
+ background:color-mix(in srgb,var(--ink) 2%,var(--surface))}
+.data-t[data-pin] tr.sel td.ins,.data-t[data-pin] tr.sel .pin1,
+.data-t[data-pin] tr.sel .pin2{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.data-t[data-pin] tbody tr:hover td.ins,.data-t[data-pin] tbody tr:hover .pin1,
+.data-t[data-pin] tbody tr:hover .pin2{
+ background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+.data-t[data-pin] td.edited.pin1,.data-t[data-pin] td.edited.pin2{
+ background:color-mix(in srgb,var(--warn) 20%,var(--surface))}
 td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
 
 /* --- pills ---------------------------------------------------------------- */
@@ -999,6 +1057,17 @@ td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
 #gapsdlg > .dlg-b > .cue{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
 #gapsdlg .scrollx{flex:1 1 auto;min-height:0;max-height:none}
 
+/* The list's own filter (R-53): one row above the pills, so the reading under it is
+   plainly a consequence of what is set here. */
+.gapf{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+.gapf .ctl{display:flex;align-items:center;gap:6px;margin:0}
+.gapf .ctl > span{font-size:var(--t-xs);color:var(--muted);white-space:nowrap}
+.gapf select,.gapf input{font-family:inherit;font-size:var(--t-sm);color:var(--ink);
+ background:var(--surface);border:1px solid var(--grid);border-radius:var(--r-xs);
+ padding:3px 7px}
+.gapf select{max-width:260px}
+.gapf input{width:88px;text-align:right;font-variant-numeric:tabular-nums}
+
 .gapbtn{gap:6px}
 .gapbtn.on{background:var(--underbg);box-shadow:none}
 .gapbtn.on:hover{background:var(--underbg);filter:brightness(.96)}
@@ -1281,7 +1350,7 @@ td.cell.gapnew:focus:empty::before{content:""}
 
 <script>
 "use strict";
-const APP_VERSION = "1.54";
+const APP_VERSION = "1.55";
 const SCHEMA_EXPECTED = 13;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1290,11 +1359,11 @@ const SCHEMA_EXPECTED = 13;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.63.xlsx",          ver:"2.63",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.64.xlsx",          ver:"2.64",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.34.xlsx", ver:"1.34",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.35.xlsx", ver:"1.35",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
-  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.4.xlsx",          ver:"2.4",
+  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.5.xlsx",          ver:"2.5",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
           + "R-13 to R-46, which added 22 components and made five of the old entries wrong; "
           + "v2.1 closes X-04 — row virtualisation is not built and, at the volume REQ-NFR-03 now "
@@ -5302,6 +5371,12 @@ const S = {
      every panel and the detail sections differ in number and in heading from one
      selected row to the next - see 11b_zoom.js. */
   zoom:null,
+  /* What the Standard vs staffed list is narrowed to: direction, one project, and a
+     smallest gap worth looking at. It narrows THE LIST ONLY. The tile and the control in
+     Resource by project's head go on counting every month off its standard, because they
+     are the alarm and an alarm that quietly reported a subset would be worse than none
+     (R-53). Cleared on load, like S.colf and for the same reason. */
+  gapf:{dir:"", proj:"", min:0},
   /* Which tabs no longer match the model. Three of the four panes are hidden at any
      moment, so renderAll() marks them all stale and draws only the one on screen;
      showTab() draws a pane the moment it is asked for. See renderAll() in 11_tabs.js
@@ -6671,6 +6746,37 @@ const colHead = c => COLUMN_LABEL[c]
   ? `<b>${esc(COLUMN_LABEL[c])}</b> <span class="tr">${esc(c)}</span>`
   : `<b>${esc(c)}</b>`;
 
+/* WHICH COLUMNS STAY PUT WHILE THE TABLE SCROLLS SIDEWAYS (R-53).
+ *
+ * The Project sheet is twenty-five columns and about 3,070px wide; the panel that holds
+ * it is 1,316px, so less than half of it is on screen at once and a reader who scrolls
+ * out to 'Figures come from' is editing an unlabelled row. What they have lost is not
+ * the data, it is WHICH PROJECT THIS IS - and that is two columns, not twenty-five.
+ *
+ * So the identity travels with the view: the row's own handle, its identifier and its
+ * name are frozen at the left edge and everything else slides under them. It is declared
+ * HERE, per sheet, rather than passed in at each call site - the same sheet pinned one
+ * way in one place and another way in another would be a defect rather than a choice -
+ * and only a LEADING run of columns can be frozen, because what makes the arithmetic of
+ * the offsets work is that there is nothing between them and the edge.
+ *
+ * The cost is honest and bounded: 116 + 110 + 210 = 436px of the panel, which is about
+ * six data columns on screen at a time instead of ten. Six you can attribute to a project
+ * beats ten you cannot.
+ */
+const PINNED = {Project: ["project_id", "project_name"]};
+
+/** The pin class for each column position, "" where there is none. */
+function pinCols(sheet, cols){
+  const want = PINNED[sheet] || [];
+  const out = cols.map(() => "");
+  for (let i = 0; i < cols.length && i < want.length; i++){
+    if (!want.includes(cols[i])) break;
+    out[i] = "pin" + (i + 1);
+  }
+  return out;
+}
+
 function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable){
   derived = derived || {};
   if (filterable) FTABLE[sheet] = {rows, cols, derived};
@@ -6680,8 +6786,10 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
   const shown = filterable
     ? rows.filter(r => r.__new || passColFilters(sheet, [r], cols, derived, null).length)
     : rows;
+  const PIN = pinCols(sheet, cols);
+  const pinned = PIN.filter(Boolean).length;
   const head = `<th class="ins" data-tip="${att(HELP.rowactions)}">Row</th>`
-    + cols.map(c => {
+    + cols.map((c, ci) => {
         const h = COLUMN_HELP[c], px = proxyFor(sheet, c);
         const d = derived[c] ? " · shown for context, looked up from its master row and not editable"
           : px ? ` · type the name here and ${esc(px.into)} follows. Not stored on this row — `
@@ -6711,7 +6819,7 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
            real column of its sheet, and it keeps the identifier in the DOM for anything
            else that needs it, now that the text no longer carries it. */
         const lab = COLUMN_LABEL[c] || c;
-        return `<th class="hasinfo" data-cid="${att(c)}" `
+        return `<th class="hasinfo${PIN[ci] ? " " + PIN[ci] : ""}" data-cid="${att(c)}" `
           + `data-tip="${att(`${colHead(c)}<br>${(h||"")}${d}`)}">`
           + `<span class="lab">${esc(lab)}</span>`
           + `${derived[c] ? ' <span class="drv">lookup</span>'
@@ -6720,14 +6828,15 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
       }).join("");
   const body = shown.map(r => {
     const sel = (selKey && r[selKey] === selVal) ? ' class="sel"' : "";
-    const tds = cols.map(c => {
+    const tds = cols.map((c, ci) => {
+      const pin = PIN[ci] ? " " + PIN[ci] : "";
       if (derived[c]){
         const dv = derived[c](r) ?? "";
         /* NAMED, so the stylesheet can give one derivation the width it needs without
            widening every lookup column in the application. data-drv rather than data-col:
            data-col is what makes a cell editable and what the editing code writes back
            through, and a read-only cell must not carry it. */
-        return `<td class="muted drvcell" data-drv="${att(c)}" data-tip="${att(
+        return `<td class="muted drvcell${pin}" data-drv="${att(c)}" data-tip="${att(
             `${colHead(c)}<br>${esc(dv).replace(/\n/g, "<br>") || "&mdash;"}`
           + `<br><span class="tr">looked up, not stored on this row</span>`)}">${esc(dv)}</td>`;
       }
@@ -6735,7 +6844,7 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
       if (px){
         const pv = px.show(r) ?? "";
         const marked = S.editedCells.has(`${sheet}|${r.__row}|${px.into}`) ? " edited" : "";
-        return `<td class="cell${marked}" contenteditable="true" data-sheet="${att(sheet)}" `
+        return `<td class="cell${marked}${pin}" contenteditable="true" data-sheet="${att(sheet)}" `
           + `data-row="${r.__row}" data-col="${att(c)}" data-tip="${att(
               `${colHead(c)}<br>${pv === "" ? "<i>empty</i>" : esc(pv)}`
               + `<br><span class="tr">typing a name here sets ${esc(px.into)}</span>`)}">${esc(pv)}</td>`;
@@ -6752,7 +6861,7 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
          one stray keystroke and the mark becomes text nobody meant to type. A pseudo
          element cannot be edited, selected or copied by accident. */
       const hl = c === "milestone_highlight" ? hlToken(v) : "";
-      return `<td class="cell${marked}" contenteditable="true" data-sheet="${att(sheet)}" `
+      return `<td class="cell${marked}${pin}" contenteditable="true" data-sheet="${att(sheet)}" `
         + `data-row="${r.__row}" data-col="${att(c)}"${hl ? ` data-hl="${att(hl)}"` : ""} `
         + `data-tip="${att(tip)}">${esc(disp)}</td>`;
     }).join("");
@@ -6796,6 +6905,7 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
       + `column filters are on. <button class="btn tiny" data-fclear="${att(sheet)}">`
       + `Clear them</button></p>` : "";
   return note + `<div class="scrollx tall"><table class="data-t" data-sheet="${att(sheet)}"`
+    + `${pinned ? ` data-pin="${pinned}"` : ""}`
     + `${filterable ? ' data-filterable="1"' : ""}>`
     + `<thead><tr>${head}</tr></thead><tbody>${body}${empty}</tbody></table></div>`;
 }
@@ -9447,12 +9557,62 @@ function gapButton(pids){
     + "</button>";
 }
 
+/** What the list is narrowed to, applied to the rows the model offers (R-53).
+ *
+ *  NARROWS THE LIST, NEVER THE COUNT. gapRows() is what the tile and the control in
+ *  Resource by project's head read, and they must go on counting every month off its
+ *  standard whatever is set here: a figure that moved when somebody narrowed their own
+ *  view would be an alarm that lies, which is worse than no alarm. So this is applied in
+ *  one place - where the rows are drawn - and nowhere else.
+ */
+function gapKept(rows){
+  const f = S.gapf;
+  const min = Math.abs(num(f.min) ?? 0);
+  return rows.filter(r => (!f.dir || r.dir === f.dir)
+                       && (!f.proj || r.pid === f.proj)
+                       && Math.abs(r.gap) + 1e-9 >= min);
+}
+
+const gapNarrowed = () => !!(S.gapf.dir || S.gapf.proj || (num(S.gapf.min) ?? 0) > 0);
+
+/** The controls. Three, and each answers a question somebody actually arrives with:
+ *  which direction am I chasing, which project is this about, and what is big enough to
+ *  be worth my morning. A fourth would be the month, and the horizon above the page
+ *  already is that. */
+function gapControls(all){
+  const f = S.gapf;
+  const projects = [...new Set(all.map(r => r.pid))]
+    .sort((a, b) => (projectNameOf(a) || a) < (projectNameOf(b) || b) ? -1 : 1);
+  const dir = [["", "All"], ["short", "&#9660; Short"], ["over", "&#9650; Over"]]
+    .map(([v, l]) => `<button class="btn tiny${f.dir === v ? " on" : ""}" `
+      + `data-gapdir="${att(v)}">${l}</button>`).join("");
+  return `<div class="gapf">
+    <span class="vtog">${dir}</span>
+    <label class="ctl"><span>Project</span>
+      <select id="gapfProj"><option value="">All (${projects.length})</option>
+        ${projects.map(p => `<option value="${att(p)}"${f.proj === p ? " selected" : ""}>`
+          + `${esc(projectNameOf(p) || p)}</option>`).join("")}</select></label>
+    <label class="ctl"><span>Gap at least</span>
+      <input id="gapfMin" type="number" min="0" step="0.25" inputmode="decimal"
+        value="${att(f.min || "")}" placeholder="0.00"></label>
+    ${gapNarrowed() ? `<button class="btn tiny" data-gapclear="1">Clear</button>` : ""}
+  </div>`;
+}
+
 /** The body of that dialog. The panel this replaces carried the same thing. */
 function gapList(pids){
-  const M = S.model, rows = gapRows(pids);
+  const M = S.model, all = gapRows(pids), rows = gapKept(all);
   const short = rows.filter(r => r.dir === "short");
   const over = rows.filter(r => r.dir === "over");
   const projects = new Set(rows.map(r => r.pid));
+  /* NOTHING TO REPORT AND NOTHING LEFT AFTER FILTERING ARE DIFFERENT ANSWERS, and only
+     one of them is good news. Saying "every project is on its standard" to somebody who
+     has just narrowed to one project and a 5.00 floor would be a plain untruth, and the
+     way out - clear the filter - is not the way out of the other. */
+  if (!rows.length && all.length)
+    return gapControls(all)
+      + `<p class="cap">All <strong>${all.length}</strong> of them are hidden by the
+        filter above. <strong>Clear</strong> brings them back.</p>`;
   if (!rows.length)
     return `<p class="cap">Every project in view is drawing exactly what its own standard
       says it needs — <strong>standard FTE × period weight × the part of the month it
@@ -9476,8 +9636,9 @@ function gapList(pids){
         >Check and fix</button></td></tr>`;
   }).join("");
 
-  return `<p class="cap"><span class="scope k">${rows.length} month(s) across
-      ${projects.size} project(s)</span><br>What each project <strong>needs</strong> — standard FTE × period
+  return `<p class="cap"><span class="scope k">${gapNarrowed()
+      ? `${rows.length} of ${all.length} month(s)` : `${rows.length} month(s)`}
+      across ${projects.size} project(s)</span><br>What each project <strong>needs</strong> — standard FTE × period
       weight × the part of the month it runs — against what it is actually
       <strong>being given</strong>. These are the two figures that can come apart. The
       project's month against the sum of its people cannot: the month is built from those
@@ -9486,6 +9647,7 @@ function gapList(pids){
       <strong>deliberately</strong>, in every case, which is why this reports rather than
       refuses. <strong>Click any row</strong> to see the month and change the figures
       behind it.</p>
+    ${gapControls(all)}
     <div class="gtot">
       <span class="gpill short">&#9660; ${short.length} month(s) short of the standard</span>
       <span class="gpill over">&#9650; ${over.length} month(s) over it</span>
@@ -9496,8 +9658,9 @@ function gapList(pids){
         <th>Staffed</th><th>Gap</th><th>Direction</th><th></th></tr></thead>
       <tbody>${body}</tbody></table></div>
     ${rows.length > GAP_SHOW
-      ? `<p class="note">Showing the ${GAP_SHOW} largest of ${rows.length}. The rest are
-         in the findings report, which lists every one of them by project.</p>` : ""}
+      ? `<p class="note">Showing the ${GAP_SHOW} largest of ${rows.length}${
+          gapNarrowed() ? ` that match the filter (${all.length} in all)` : ""}. The rest
+         are in the findings report, which lists every one of them by project.</p>` : ""}
     <p class="note">V-34 reports this as a <strong>warning</strong>: it reaches the
       findings report, the load banner and the archived change log, and it never stops a
       save or asks a question. Departing from the standard is the point of a manual
@@ -10303,6 +10466,22 @@ el("gapdlg").addEventListener("close", () => closeGap());
 /* The list the month is opened FROM. Nothing to clear when it shuts - what it shows is
    derived from S.calc and redrawn each time it is opened - so the close listener only
    exists so Escape and the backdrop go through the same function the button does. */
+/* The smallest-gap field answers as it is typed rather than on blur - the figure is a
+   dial being turned, not a value being committed - so the list is redrawn and the focus
+   and caret put back where they were. Redrawing is what keeps the pills and the "n of m"
+   line honest; leaving the field alone and filtering the rows only would let those two
+   disagree with what is on screen. */
+document.addEventListener("input", e => {
+  if (e.target.id !== "gapfMin") return;
+  S.gapf.min = e.target.value;
+  const at = e.target.selectionStart;
+  openGaps();
+  const again = el("gapfMin");
+  if (again){
+    again.focus();
+    try { again.setSelectionRange(at, at); } catch (_){ /* number inputs may refuse */ }
+  }
+});
 el("gapsClose").onclick = () => closeGaps();
 el("gapsdlg").addEventListener("close", () => closeGaps());
 el("cfgClose").onclick = () => el("cfgchg").close();
@@ -10498,6 +10677,17 @@ document.addEventListener("click", e => {
   /* The tile, and the control in Resource by project's head, open the same list (R-52).
      The tile still has to change tab first - it may be reached from a chart pop-up on
      another tab - while the control is already on Overall. */
+  /* The list's own filter (R-53). Redraws the list in place - the dialog stays open,
+     because the whole point of narrowing is to go on reading the same screen. Before the
+     row handler below, since these controls sit above the rows rather than inside one. */
+  const gd = e.target.closest("[data-gapdir]");
+  if (gd){ e.stopPropagation(); S.gapf.dir = gd.dataset.gapdir; openGaps(); return; }
+  if (e.target.closest("[data-gapclear]")){
+    e.stopPropagation();
+    S.gapf = {dir:"", proj:"", min:0};
+    openGaps();
+    return;
+  }
   const gj = e.target.closest("[data-gapjump], [data-gapopen]");
   if (gj){
     e.stopPropagation();
@@ -11184,6 +11374,7 @@ const CAL = (() => {
 })();
 
 document.addEventListener("change", e => {
+  if (e.target.id === "gapfProj"){ S.gapf.proj = e.target.value; openGaps(); return; }
   if (e.target.id === "unitSel"){
     S.model.UNIT = e.target.value;
     S.model.config.capacity_unit = e.target.value;

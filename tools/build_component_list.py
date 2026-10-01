@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.4.xlsx
+Output: docs/PRAP_UI_Component_List_v2.5.xlsx
 """
 
 from pathlib import Path
@@ -40,7 +40,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.4"
+VERSION = "2.5"
 DATE = "2026-10-01"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
@@ -522,7 +522,9 @@ C = [
      "STATES THE COUNT AND THE DIRECTION rather than naming the screen behind it, so the "
      "alarm is on the page with nothing opened: that was the whole reason the list was not "
      "put behind a click in the first place. Drawn even when there is nothing to report.",
-     "REQ-DSH-15, V-34", A, "", "R-42; moved and the control given the count at R-52."),
+     "REQ-DSH-15, V-34", A, "", "R-42; moved and the control given the count at R-52; "
+     "narrowed by direction, project and smallest gap at R-53 — which narrows the LIST and "
+     "never the count, since the count is the alarm."),
     ("O-13", "Overall", "[NEW v2.0] Month detail dialog (from the list)",
      "Opens the month itself: the project figure, every assigned person's stated figure, and "
      "the calculated one beside it. EVERY STATED CELL IS EDITABLE HERE, including for somebody "
@@ -639,6 +641,15 @@ C = [
      "REQ-DSH-18, REQ-DSH-13", A, "", "R-51. For entering data rather than reading it: the entry "
      "tables are capped at 340px on a page 1400px wide, so a sheet twenty-two columns wide was "
      "filled in through a window about a fifth of its size."),
+    ("X-15", "Layout", "[NEW v2.5] A row's identity stays put while its table scrolls sideways",
+     "The Project sheet is twenty-five columns and about 3,070px wide in a panel of 1,316px, so "
+     "scrolling out to the far columns leaves you editing a row with nothing on screen to say "
+     "which project it is. The row's handle, its identifier and its name are frozen at the left "
+     "edge; the rest slides under them. They are ordinary editable cells where they stand. Which "
+     "columns is declared per SHEET, so one sheet cannot be pinned two ways. The cost is 436px — "
+     "about six data columns at a time instead of ten, which is the right trade: six you can "
+     "attribute to a project beat ten you cannot.",
+     "REQ-DSH-19, REQ-DSH-13", A, "", "R-53."),
     ("G-13", "Global", "[NEW v2.0] Start with no file",
      "The application opens without a workbook and seeds the delivered defaults - value "
      "lists, settings, standard period weights and role factors - so a plan can be entered "

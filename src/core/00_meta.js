@@ -1,4 +1,4 @@
-const APP_VERSION = "1.54";
+const APP_VERSION = "1.55";
 const SCHEMA_EXPECTED = 13;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -7,11 +7,11 @@ const SCHEMA_EXPECTED = 13;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.63.xlsx",          ver:"2.63",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.64.xlsx",          ver:"2.64",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.34.xlsx", ver:"1.34",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.35.xlsx", ver:"1.35",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
-  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.4.xlsx",          ver:"2.4",
+  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.5.xlsx",          ver:"2.5",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
           + "R-13 to R-46, which added 22 components and made five of the old entries wrong; "
           + "v2.1 closes X-04 — row virtualisation is not built and, at the volume REQ-NFR-03 now "

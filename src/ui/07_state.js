@@ -13,6 +13,12 @@ const S = {
      every panel and the detail sections differ in number and in heading from one
      selected row to the next - see 11b_zoom.js. */
   zoom:null,
+  /* What the Standard vs staffed list is narrowed to: direction, one project, and a
+     smallest gap worth looking at. It narrows THE LIST ONLY. The tile and the control in
+     Resource by project's head go on counting every month off its standard, because they
+     are the alarm and an alarm that quietly reported a subset would be worse than none
+     (R-53). Cleared on load, like S.colf and for the same reason. */
+  gapf:{dir:"", proj:"", min:0},
   /* Which tabs no longer match the model. Three of the four panes are hidden at any
      moment, so renderAll() marks them all stale and draws only the one on screen;
      showTab() draws a pane the moment it is asked for. See renderAll() in 11_tabs.js

@@ -270,6 +270,89 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(700)
     check(pg.evaluate("() => document.getElementById('gapsdlg').open"),
           "the tile opens the same list — one list, reached two ways")
+
+    # ---- R-53: the list can be narrowed, and the ALARM must not move with it --------
+    # Three controls, each answering a question somebody arrives with. The one that has
+    # to be held hardest is the last check here: narrowing a view must never change what
+    # the tile and the control in the panel head report, or the alarm would be lying
+    # about the plan to suit whoever last touched a drop-down.
+    def nrows():
+        return pg.evaluate("() => document.querySelectorAll('#gapsBody tr.gaprow').length")
+
+    def alarm():
+        # r""" again: the JS carries a regex, and \s in an ordinary Python string is an
+        # invalid escape that test_layers.py fails the build on.
+        return pg.evaluate(r"""() => { const b = document.querySelector(
+          '#t-overall .panel[data-panel="table-proj"] .phead .gapbtn');
+          const tile = [...document.querySelectorAll('#t-overall .tile')]
+            .find(x => /OFF THEIR STANDARD/i.test(x.innerText));
+          return [b.innerText.replace(/\s+/g, ' ').trim(),
+                  tile.innerText.replace(/\s+/g, ' ').trim()]; }""")
+
+    before = alarm()
+    check(nrows() == 2, "both months are listed to begin with", f"{nrows()} row(s)")
+    pg.click('[data-gapdir="short"]')
+    pg.wait_for_timeout(600)
+    only = pg.evaluate("""() => [...new Set([...document.querySelectorAll('#gapsBody tr.gaprow')]
+      .map(r => r.classList.contains('short') ? 'short' : 'over'))]""")
+    check(nrows() == 1 and only == ["short"],
+          "narrowing to SHORT leaves the short one and nothing else", str(only))
+    check(pg.evaluate("() => (document.querySelector('#gapsBody .scope')||{}).textContent")
+          .replace("\n", " ").split("across")[0].strip().startswith("1 of 2"),
+          "and the heading says how many of how many, so a narrowed list cannot read as "
+          "the whole of it")
+    # Redrawn first, deliberately. Narrowing the list does not redraw the panel behind it,
+    # so reading the control straight after would pass against a build where the count
+    # DOES follow the filter - it would simply be showing a stale figure. The page is put
+    # through a full render, and only then asked.
+    pg.evaluate("() => renderKeepingTab()")
+    pg.wait_for_timeout(900)
+    check(alarm() == before,
+          "THE TILE AND THE CONTROL DO NOT MOVE, through a full redraw with the filter "
+          "still on. They are the alarm; a figure that followed somebody's drop-down "
+          "would be an alarm that lies", str(alarm()))
+    check(nrows() == 1, "and the list is still narrowed after that redraw", f"{nrows()} row(s)")
+
+    pg.click('[data-gapdir="over"]')
+    pg.wait_for_timeout(600)
+    check(nrows() == 1, "and OVER leaves the other one", f"{nrows()} row(s)")
+    # Both gaps so far belong to PRJ-A, so the project control cannot empty the list on
+    # its own here - it is the one that CAN, combined with a floor, and the message when
+    # it does is what matters.
+    opts = pg.evaluate("""() => [...document.querySelectorAll('#gapfProj option')]
+      .map(o => o.value)""")
+    check(opts == ["", "PRJ-A"],
+          "the project control offers only the projects that actually have a gap — a list "
+          "of sixty-two projects to narrow two rows would be a worse screen", str(opts))
+    pg.select_option("#gapfProj", "PRJ-A")
+    pg.wait_for_timeout(600)
+    check(nrows() == 1, "picking the one project that has them changes nothing, which is "
+                        "the honest answer")
+    pg.fill("#gapfMin", "99")
+    pg.wait_for_timeout(700)
+    check(nrows() == 0, "and a floor nothing reaches empties it")
+    body = pg.evaluate("() => el('gapsBody').innerText")
+    check("hidden by the filter" in body and "Clear" in body,
+          "and it says they are HIDDEN rather than that there is nothing to report — the "
+          "two are different answers and only one of them is good news")
+    pg.click("[data-gapclear]")
+    pg.wait_for_timeout(600)
+    check(nrows() == 2 and alarm() == before,
+          "Clear brings them all back", f"{nrows()} row(s)")
+
+    # The smallest-gap field answers as it is typed, and keeps the caret.
+    pg.fill("#gapfMin", "4")
+    pg.wait_for_timeout(700)
+    kept = pg.evaluate("() => document.activeElement.id")
+    check(nrows() == 2 and kept == "gapfMin",
+          "a floor of 4.00 keeps both 5.00 gaps, and the field keeps the focus as it is "
+          "typed into", f"{nrows()} row(s), focus on {kept!r}")
+    pg.fill("#gapfMin", "6")
+    pg.wait_for_timeout(700)
+    check(nrows() == 0, "a floor of 6.00 keeps neither")
+    pg.click("[data-gapclear]")
+    pg.wait_for_timeout(600)
+
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(500)
 
