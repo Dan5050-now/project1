@@ -226,12 +226,13 @@ with sync_playwright() as pw:
     # than naming the screen. If it ever reads as a plain label again, this says so.
     pg.click('nav [data-tab="t-overall"]')
     pg.wait_for_timeout(1400)
-    btn = pg.evaluate("""() => { const b = document.querySelector(
+    # r""" because the JS carries a regex: \s in an ordinary Python string is an invalid
+    # escape, which still works and still warns - and tools/test_layers.py fails the build
+    # on a warning, because a build the preparer is told to trust must not print one.
+    btn = pg.evaluate(r"""() => { const b = document.querySelector(
       '#t-overall .panel[data-panel="table-proj"] .phead .gapbtn');
       return b ? {txt: b.innerText.replace(/\s+/g, ' ').trim(),
-                  on: b.classList.contains('on'),
-                  last: b.parentElement.lastElementChild === b
-                        || b.nextElementSibling.classList.contains('zoombtn')} : null; }""")
+                  on: b.classList.contains('on')} : null; }""")
     check(btn and btn["on"] and "1 short" in btn["txt"] and "1 over" in btn["txt"],
           "the control in Resource by project's head STATES the finding, it does not just "
           "name the screen behind it", btn["txt"] if btn else "no control")
