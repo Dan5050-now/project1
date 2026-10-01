@@ -964,6 +964,29 @@ td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
 .tile[data-gapjump]:hover{box-shadow:var(--shadow-lift)}
 .gshort{color:var(--underink);font-weight:590}
 .gover{color:var(--crit);font-weight:590}
+/* The control in Resource by project's head (R-52). It carries the count, so it is a
+   reading rather than a label - and when there is something to read it is given the same
+   ground the warning pills use, so the head says there is a problem at a glance and not
+   only to somebody who parses the number. Quiet and uncoloured when there is nothing: a
+   control that looks alarmed while reporting nothing teaches people to ignore the
+   colour. The arrows inside it carry the direction as well as the colour (D-04). */
+/* THE LIST IN ITS DIALOG (R-52). The body scrolls, and so does the table inside it - two
+   scrollers one inside the other, with the result that the trailing note about V-34 being
+   a warning sat below the fold of the inner one and the reader had to scroll twice to
+   reach it. So the body is laid out as a column, the table takes whatever is left, and
+   everything that is not the table stays where it was put. Same shape as the full-screen
+   panel in the layout section above, for the same reason and with the same two steps -
+   the wrapper has to pass the height on to the region inside it. */
+#gapsdlg .dlg-b{display:flex;flex-direction:column;overflow:hidden}
+#gapsdlg .cap{max-width:none}
+#gapsdlg > .dlg-b > .cue{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+#gapsdlg .scrollx{flex:1 1 auto;min-height:0;max-height:none}
+
+.gapbtn{gap:6px}
+.gapbtn.on{background:var(--underbg);box-shadow:none}
+.gapbtn.on:hover{background:var(--underbg);filter:brightness(.96)}
+.gapbtn .gshort,.gapbtn .gover{font-weight:650}
+.gapbtn .lbl{color:var(--ink2);font-weight:540}
 .gtot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
 .gpill{font-size:var(--t-xs);font-weight:590;border-radius:999px;padding:3px 10px}
 .gpill.short{background:var(--underbg);color:var(--underink)}

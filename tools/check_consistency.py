@@ -19,8 +19,8 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.62.xlsx"
-SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.33.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.63.xlsx"
+SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.34.xlsx"
 TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.17.xlsx"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.19.xlsx"
 DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.11.xlsx"
@@ -515,7 +515,7 @@ if spec_traced - plan_reqs:
 # undocumented components and five entries that had become actively WRONG. The lesson
 # is not "remember to update it"; it is that an artefact nobody checks is an artefact
 # that rots. So it is checked.
-COMPONENTS = ROOT / "docs" / "PRAP_UI_Component_List_v2.3.xlsx"
+COMPONENTS = ROOT / "docs" / "PRAP_UI_Component_List_v2.4.xlsx"
 if not COMPONENTS.exists():
     problems.append(f"{COMPONENTS.name} is missing")
 else:
@@ -568,7 +568,8 @@ else:
                         f"names: {unnamed}")
 
     DIALOGS = {"report": "findings", "confirm": "confirm", "replace": "replace",
-               "estchg": "switch-estimation", "gapdlg": "month detail",
+               "estchg": "switch-estimation", "gapsdlg": "standard vs staffed",
+               "gapdlg": "month detail",
                "cfgchg": "settings-change", "changes": "change log"}
     body = (ROOT / "src" / "shell" / "web" / "page.body.html").read_text()
     have = set(re.findall(r'<dialog[^>]*id="(\w+)"', body))

@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.3.xlsx
+Output: docs/PRAP_UI_Component_List_v2.4.xlsx
 """
 
 from pathlib import Path
@@ -40,7 +40,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.3"
+VERSION = "2.4"
 DATE = "2026-10-01"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
@@ -252,7 +252,7 @@ C = [
     ("O-05", "Overall", "Summary tiles",
      "Projects, people, total demand, over-allocated months, under-allocation runs, "
      "and months off their own standard. " + FIX + "v1.0 said five tiles; R-42 added the "
-     "sixth, 'Off their standard', which jumps to the Standard vs staffed panel.",
+     "sixth, 'Off their standard', which opens the Standard vs staffed list (R-52). It had never done so: the pop-up handler runs in the capture phase and swallowed the click on a div declaring role=button. Role now counts as well as tag.",
      "REQ-DSH-08", K, "", "Unchanged."),
     ("O-06", "Overall", "[CHANGED] Demand chart",
      "Stacked monthly demand, one band per project, largest on the baseline. THIS chart still "
@@ -513,14 +513,17 @@ C = [
      "because in a stack every band's baseline moves with the bands beneath it. Hover gives "
      "the line's total, mean and peak month.",
      "REQ-DSH-02", A, "", "R-38. First panel on Overall, and on both source-data tabs."),
-    ("O-12", "Overall", "[NEW v2.0] Standard vs staffed (panel)",
+    ("O-12", "Overall", "[CHANGED v2.4] Standard vs staffed (from Resource by project)",
      "Every month where a project is not being given what its own standard asks for: what it "
      "needs, what it is getting, and the gap. Both directions are counted APART and never "
-     "netted off - short of the standard and over it are different facts. Sits second, "
-     "directly under the trend it explains, and always in the same place: a panel that "
-     "appears only when there is something to say is one nobody learns the position of.",
-     "REQ-DSH-15, V-34", A, "", "R-42."),
-    ("O-13", "Overall", "[NEW v2.0] Month detail dialog (from the gap panel)",
+     "netted off - short of the standard and over it are different facts. It was a panel of "
+     "its own under the tiles; it now opens from a control in RESOURCE BY PROJECT's head, "
+     "where its figures live - every month it lists is a cell in that table. THE CONTROL "
+     "STATES THE COUNT AND THE DIRECTION rather than naming the screen behind it, so the "
+     "alarm is on the page with nothing opened: that was the whole reason the list was not "
+     "put behind a click in the first place. Drawn even when there is nothing to report.",
+     "REQ-DSH-15, V-34", A, "", "R-42; moved and the control given the count at R-52."),
+    ("O-13", "Overall", "[NEW v2.0] Month detail dialog (from the list)",
      "Opens the month itself: the project figure, every assigned person's stated figure, and "
      "the calculated one beside it. EVERY STATED CELL IS EDITABLE HERE, including for somebody "
      "still on automatic - for whom the application first asks, because switching seeds every "

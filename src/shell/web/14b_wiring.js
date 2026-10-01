@@ -99,6 +99,11 @@ el("gapClose").onclick = () => closeGap();
 // Escape and the backdrop close it too; GAP_AT has to be cleared either way or a
 // later edit would redraw a dialog nobody has open.
 el("gapdlg").addEventListener("close", () => closeGap());
+/* The list the month is opened FROM. Nothing to clear when it shuts - what it shows is
+   derived from S.calc and redrawn each time it is opened - so the close listener only
+   exists so Escape and the backdrop go through the same function the button does. */
+el("gapsClose").onclick = () => closeGaps();
+el("gapsdlg").addEventListener("close", () => closeGaps());
 el("cfgClose").onclick = () => el("cfgchg").close();
 el("chgBtn").onclick = () => { renderChanges(); el("changes").showModal(); };
 el("chgClose").onclick = () => el("changes").close();
@@ -289,12 +294,14 @@ document.addEventListener("click", e => {
      it, or the marked cell in Resource by project. stopPropagation because a marked
      cell sits inside a row whose own click expands it - without this, asking about the
      month would also toggle the project open underneath the dialog. */
-  const gj = e.target.closest("[data-gapjump]");
+  /* The tile, and the control in Resource by project's head, open the same list (R-52).
+     The tile still has to change tab first - it may be reached from a chart pop-up on
+     another tab - while the control is already on Overall. */
+  const gj = e.target.closest("[data-gapjump], [data-gapopen]");
   if (gj){
     e.stopPropagation();
-    showTab("t-overall");
-    const p = el("gappanel");
-    if (p) p.scrollIntoView({block:"start", behavior:"smooth"});
+    if (gj.hasAttribute("data-gapjump")) showTab("t-overall");
+    openGaps();
     return;
   }
   const gp = e.target.closest("[data-gap]");
@@ -943,8 +950,15 @@ const CAL = (() => {
 
   document.addEventListener("click", e => {
     const el_ = e.target.closest("[data-tip]");
-    // A control with its own job keeps it; the pop-up is explanation, not the action.
-    const isControl = e.target.closest("button, a, select, input, summary, [contenteditable='true']");
+    /* A control with its own job keeps it; the pop-up is explanation, not the action.
+       ROLE COUNTS AS WELL AS TAG, and this listener is in the CAPTURE phase, so getting
+       that list wrong does not merely pin a pop-up - it swallows the click before the
+       element ever sees it. The "Off their standard" tile is a div carrying both a tip
+       and role="button", and it had been silently unclickable for exactly that reason:
+       everything that was supposed to happen when it was pressed never ran, and nothing
+       anywhere said so. A thing that declares itself a button is a button. */
+    const isControl = e.target.closest(
+      "button, a, select, input, summary, [contenteditable='true'], [role='button']");
     if (el_ && !isControl){
       e.stopPropagation();
       pinned = (pinned === el_) ? null : el_;

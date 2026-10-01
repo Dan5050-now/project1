@@ -187,6 +187,16 @@
 <!-- One project-month whose demand and staffing have come apart (V-34). Carries the
      figures that caused it as EDITABLE cells over the MonthlyEstimate sheet, so the
      existing editing path handles them - there is no second way to change a figure. -->
+<!-- The list, opened from Resource by project's own head (R-52). Separate from the
+     month dialog below rather than one dialog swapping its contents: a row in here opens
+     that one ON TOP, and closing it comes back to the list you were reading, which is
+     where the next row you want is. -->
+<dialog id="gapsdlg" class="big">
+  <div class="dlg-h"><strong>Standard vs staffed</strong>
+    <button class="btn primary" style="margin-left:auto" id="gapsClose">Close</button></div>
+  <div class="dlg-b" id="gapsBody"></div>
+</dialog>
+
 <dialog id="gapdlg">
   <div class="dlg-h"><strong id="gapTitle"></strong>
     <button class="btn primary" style="margin-left:auto" id="gapClose">Close</button></div>

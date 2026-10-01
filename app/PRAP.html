@@ -981,6 +981,29 @@ td.cell.clash::after{content:"\\26A0";color:var(--crit);font-size:var(--t-xs);
 .tile[data-gapjump]:hover{box-shadow:var(--shadow-lift)}
 .gshort{color:var(--underink);font-weight:590}
 .gover{color:var(--crit);font-weight:590}
+/* The control in Resource by project's head (R-52). It carries the count, so it is a
+   reading rather than a label - and when there is something to read it is given the same
+   ground the warning pills use, so the head says there is a problem at a glance and not
+   only to somebody who parses the number. Quiet and uncoloured when there is nothing: a
+   control that looks alarmed while reporting nothing teaches people to ignore the
+   colour. The arrows inside it carry the direction as well as the colour (D-04). */
+/* THE LIST IN ITS DIALOG (R-52). The body scrolls, and so does the table inside it - two
+   scrollers one inside the other, with the result that the trailing note about V-34 being
+   a warning sat below the fold of the inner one and the reader had to scroll twice to
+   reach it. So the body is laid out as a column, the table takes whatever is left, and
+   everything that is not the table stays where it was put. Same shape as the full-screen
+   panel in the layout section above, for the same reason and with the same two steps -
+   the wrapper has to pass the height on to the region inside it. */
+#gapsdlg .dlg-b{display:flex;flex-direction:column;overflow:hidden}
+#gapsdlg .cap{max-width:none}
+#gapsdlg > .dlg-b > .cue{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+#gapsdlg .scrollx{flex:1 1 auto;min-height:0;max-height:none}
+
+.gapbtn{gap:6px}
+.gapbtn.on{background:var(--underbg);box-shadow:none}
+.gapbtn.on:hover{background:var(--underbg);filter:brightness(.96)}
+.gapbtn .gshort,.gapbtn .gover{font-weight:650}
+.gapbtn .lbl{color:var(--ink2);font-weight:540}
 .gtot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
 .gpill{font-size:var(--t-xs);font-weight:590;border-radius:999px;padding:3px 10px}
 .gpill.short{background:var(--underbg);color:var(--underink)}
@@ -1226,6 +1249,16 @@ td.cell.gapnew:focus:empty::before{content:""}
 <!-- One project-month whose demand and staffing have come apart (V-34). Carries the
      figures that caused it as EDITABLE cells over the MonthlyEstimate sheet, so the
      existing editing path handles them - there is no second way to change a figure. -->
+<!-- The list, opened from Resource by project's own head (R-52). Separate from the
+     month dialog below rather than one dialog swapping its contents: a row in here opens
+     that one ON TOP, and closing it comes back to the list you were reading, which is
+     where the next row you want is. -->
+<dialog id="gapsdlg" class="big">
+  <div class="dlg-h"><strong>Standard vs staffed</strong>
+    <button class="btn primary" style="margin-left:auto" id="gapsClose">Close</button></div>
+  <div class="dlg-b" id="gapsBody"></div>
+</dialog>
+
 <dialog id="gapdlg">
   <div class="dlg-h"><strong id="gapTitle"></strong>
     <button class="btn primary" style="margin-left:auto" id="gapClose">Close</button></div>
@@ -1248,7 +1281,7 @@ td.cell.gapnew:focus:empty::before{content:""}
 
 <script>
 "use strict";
-const APP_VERSION = "1.53";
+const APP_VERSION = "1.54";
 const SCHEMA_EXPECTED = 13;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1257,11 +1290,11 @@ const SCHEMA_EXPECTED = 13;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.62.xlsx",          ver:"2.62",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.63.xlsx",          ver:"2.63",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.33.xlsx", ver:"1.33",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.34.xlsx", ver:"1.34",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
-  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.3.xlsx",          ver:"2.3",
+  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.4.xlsx",          ver:"2.4",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
           + "R-13 to R-46, which added 22 components and made five of the old entries wrong; "
           + "v2.1 closes X-04 — row virtualisation is not built and, at the volume REQ-NFR-03 now "
@@ -6823,14 +6856,13 @@ function renderOverall(){
      + "month it runs — is not what it is being GIVEN. An automatic month always has the two equal, "
      + "because the people on it divide the month rather than each adding to it. A figure stated by "
      + "hand replaces the standard rather than adjusting it, which is what puts them out of step. The "
-     + "two directions are counted apart and never netted. V-34 reports it; <b>Standard vs staffed</b> "
-     + "below lists every one and lets you change the figures behind it."],
+     + "two directions are counted apart and never netted. V-34 reports it, and <b>Standard vs staffed</b> "
+     + "— in <b>Resource by project</b>'s own head, and from this tile — lists every one and lets you change the figures behind it."],
   ].map(([l,v,s,c,h]) => `<div class="tile ${c}" data-tip="${att(`<b>${l}</b><br>${h}`)}"`
     + `${c === "gap" ? ' data-gapjump="1" tabindex="0" role="button"' : ""}>`
     + `<div class="tl">${l}</div>`
     + `<div class="tv">${c==="over"?"&#9650; ":c==="under"?"&#9660; ":""}${v}</div>`
     + `<div class="ts">${s}</div></div>`).join("");
-  const gapSection = gapPanel(pids);
 
   const scope = `${G.length} months &#183; ${pids.length} project(s) &#183; ${sids.length} people`;
   el("t-overall").innerHTML =
@@ -6843,13 +6875,6 @@ function renderOverall(){
         because in a stack every band's baseline moves with the bands beneath it.
         <strong>Hover any line</strong> for its total, mean and peak month.</p>
       <div class="scrollx fit">${projectLines(pids)}</div></div>
-    ${/* Second, directly under the trend it explains, and ALWAYS in the same place -
-          a panel that appears only when there is something to say is a panel nobody
-          learns the position of, and one whose absence cannot be told from one that was
-          scrolled past. The tile above jumps here. It is not first because the trend
-          chart is what the tab is for; it is not last because something whose whole
-          danger is being silent does not belong under six panels of charts. */
-      gapSection}
     <div class="panel" data-panel="timeline">
       <div class="phead"><h2>Project timeline</h2>
         <span class="scope k">${pids.length} project(s)</span></div>
@@ -6864,8 +6889,13 @@ function renderOverall(){
         <strong>Hover any band</strong> for the project, its ${unitLabel()} that month and who is on it.</p>
       <div class="scrollx xl">${chartStacked(pids)}</div></div>
     <div class="panel" data-panel="table-proj">
+      ${/* STANDARD VS STAFFED OPENS FROM HERE (R-52). It was a panel of its own under the
+            tiles; it belongs on this table, because every month it lists is a cell in this
+            table and the two were a scroll apart. What that move costs - a list nobody
+            meets unless they go looking - is paid back by the control, which states the
+            count and the direction rather than naming the screen behind it. */""}
       <div class="phead"><h2>Resource by project</h2>
-        <span class="scope k">${pids.length} project(s)</span></div>
+        <span class="scope k">${pids.length} project(s)</span>${gapButton(pids)}</div>
       <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
         <strong>Click a project name</strong> to expand it to the people and roles on it.</p>
       <div class="scrollx xl">${tableProjects(pids)}</div></div>
@@ -9298,12 +9328,23 @@ function setWho(name){
    drew a smaller project and said nothing. A study needing ten people and staffed with
    five looked exactly like a study that only ever needed five.
 
-   THIS SECTION IS WHERE THAT IS SAID, and it is deliberately not a tab. A tab is the
-   surface you only visit once you already suspect a problem, which is the wrong property
-   for something whose whole danger is that it is silent. So the finding reaches the
-   report, the load banner and the archived log by being a rule; the figure carries a
-   mark wherever it is drawn; and this panel sits on the Overall tab, under the tiles,
-   where somebody looking at the plan will meet it without going to find it.
+   WHERE THIS IS SAID, and how it stays loud behind a click (R-52).
+
+   It was a panel under the tiles, on the ground that a surface you only visit once you
+   already suspect a problem is the wrong place for something whose whole danger is that
+   it is silent. Asked for from the field: move it onto Resource by project, which is the
+   table the figures belong to, and open it from there. That is the right home - every
+   month in this list is a cell in that table, and the two were a scroll apart - but it
+   costs the one property the panel was placed for, so the cost is paid back rather than
+   accepted.
+
+   THE CONTROL CARRIES THE COUNT. The button in that panel's head does not read
+   "Standard vs staffed"; it reads how many months are off the standard and in which
+   direction, with the same arrow and the same colour the cells use. So the alarm is on
+   screen without anything being opened, which is what the panel was there for, and the
+   LIST - which nobody reads until they are investigating - is one click away. The tile
+   above still counts it, every cell is still marked where it is drawn, and V-34 still
+   carries it to the findings report, the load banner and the archived log.
 
    AND IT IS NOT A LIST YOU HAVE TO ACT ON SOMEWHERE ELSE. Every row opens a dialog
    carrying the month's own figures - the demand term by term, everybody on it, and the
@@ -9363,25 +9404,62 @@ function gapTag(pid, k){
     + `${Math.abs(g.gap).toFixed(2)} ${g.dir} of standard</span>`;
 }
 
-/* ------------------------------------------------------------------- the panel */
+/* ------------------------------------------------- the control, and the list behind it */
 
 const GAP_SHOW = 40;      // rows drawn; the rest are counted, not listed
 
-function gapPanel(pids){
+/** The control in Resource by project's head.
+ *
+ *  IT STATES THE FINDING, it does not merely name the screen behind it. "Standard vs
+ *  staffed" would be a label; "3 short, 1 over" is the fact the old panel was on the page
+ *  to deliver, and it is delivered without anything being opened - which is the whole of
+ *  what moving the list into a dialog had to pay back (R-52).
+ *
+ *  It is drawn even when there is nothing to report, quietly and without a count. A
+ *  control that comes and goes is one nobody learns the position of, and its absence
+ *  cannot be told from a screen that has not been looked at; present and silent says
+ *  "this was checked" where missing says nothing at all.
+ */
+function gapButton(pids){
+  const rows = gapRows(pids);
+  if (!rows.length)
+    return `<button class="btn tiny gapbtn" data-gapopen="1" data-tip="${att(
+      "<b>Standard vs staffed</b><br>What each project needs against what it is being "
+      + "given. Nothing in view is off its standard, which is what an automatic month "
+      + "always does — the people on it divide the month rather than each adding to it.")
+      }">Standard vs staffed</button>`;
+  const short = rows.filter(r => r.dir === "short").length;
+  const over = rows.length - short;
+  return `<button class="btn tiny gapbtn on" data-gapopen="1" data-tip="${att(
+    `<b>Standard vs staffed</b><br>${rows.length} project-month(s) are not being given `
+    + "what the project's own standard says they need — a figure stated by hand replaces "
+    + "the standard rather than adjusting it. Counted apart and never netted: three short "
+    + "in March and three over in April is not a plan in balance. Open it to see every "
+    + "one and change the figures behind it.")}">`
+    /* The words first, so the two figures are read as what they are rather than as a
+       pair of numbers in a button. Each part is its own element and the spacing is the
+       flex gap: .btn.tiny is an inline-flex box, which DROPS the whitespace between its
+       children, so spaces written into the string render as nothing - which is how this
+       first went out reading "17 short&#183;49 overof standard". */
+    + `<span class="lbl">Off standard</span>`
+    + (short ? `<span class="gshort">&#9660; ${short} short</span>` : "")
+    + (over ? `<span class="gover">&#9650; ${over} over</span>` : "")
+    + "</button>";
+}
+
+/** The body of that dialog. The panel this replaces carried the same thing. */
+function gapList(pids){
   const M = S.model, rows = gapRows(pids);
   const short = rows.filter(r => r.dir === "short");
   const over = rows.filter(r => r.dir === "over");
   const projects = new Set(rows.map(r => r.pid));
   if (!rows.length)
-    return `<div class="panel" id="gappanel" data-panel="gap">
-      <div class="phead"><h2>Standard vs staffed</h2>
-        <span class="scope k">nothing to report</span></div>
-      <p class="cap">Every project in view is drawing exactly what its own standard says
-        it needs — <strong>standard FTE × period weight × the part of the month it
-        runs</strong>. That is what an automatic month always does, because the people on
-        it divide the month rather than each adding to it. A figure stated by hand, on a
-        project or on one assignment, replaces the standard rather than adjusting it, and
-        this panel is where the difference is listed when there is one.</p></div>`;
+    return `<p class="cap">Every project in view is drawing exactly what its own standard
+      says it needs — <strong>standard FTE × period weight × the part of the month it
+      runs</strong>. That is what an automatic month always does, because the people on
+      it divide the month rather than each adding to it. A figure stated by hand, on a
+      project or on one assignment, replaces the standard rather than adjusting it, and
+      this is where the difference is listed when there is one.</p>`;
 
   const body = rows.slice(0, GAP_SHOW).map(r => {
     const pr = M.projects[r.pid] || {};
@@ -9398,11 +9476,8 @@ function gapPanel(pids){
         >Check and fix</button></td></tr>`;
   }).join("");
 
-  return `<div class="panel" id="gappanel" data-panel="gap">
-    <div class="phead"><h2>Standard vs staffed</h2>
-      <span class="scope k">${rows.length} month(s) across ${projects.size}
-        project(s)</span></div>
-    <p class="cap">What each project <strong>needs</strong> — standard FTE × period
+  return `<p class="cap"><span class="scope k">${rows.length} month(s) across
+      ${projects.size} project(s)</span><br>What each project <strong>needs</strong> — standard FTE × period
       weight × the part of the month it runs — against what it is actually
       <strong>being given</strong>. These are the two figures that can come apart. The
       project's month against the sum of its people cannot: the month is built from those
@@ -9427,10 +9502,32 @@ function gapPanel(pids){
       findings report, the load banner and the archived change log, and it never stops a
       save or asks a question. Departing from the standard is the point of a manual
       figure — somebody part way through a trial knows better than the assumptions — so
-      the application says so and leaves the decision where it belongs.</p></div>`;
+      the application says so and leaves the decision where it belongs.</p>`;
 }
 
-/* ------------------------------------------------------------------ the dialog */
+/* --------------------------------------------------------------- the list dialog */
+
+/** Open the list. Drawn at the moment it is asked for, never kept up to date while shut:
+ *  what it lists is derived entirely from S.calc, so there is nothing to keep. */
+function openGaps(){
+  el("gapsBody").innerHTML = gapList(activeProjects());
+  const dlg = el("gapsdlg");
+  if (!dlg.open) dlg.showModal();
+  cueScrollers();          // the table inside it has a bounded region of its own
+}
+
+function closeGaps(){
+  const dlg = el("gapsdlg");
+  if (dlg.open) dlg.close();
+}
+
+/** Redraw it after an edit, for the reason gapRefresh() gives below: a list still
+ *  showing the gap you have just closed reads as an edit that did nothing. This one also
+ *  has to redraw when the gap was closed from the MONTH dialog on top of it, which is the
+ *  ordinary way it happens. */
+function gapsRefresh(){ if (el("gapsdlg").open) openGaps(); }
+
+/* ------------------------------------------------------------- the month dialog */
 
 let GAP_AT = null;         // {pid, k} while the dialog is open, so an edit can redraw it
 
@@ -9451,7 +9548,10 @@ function closeGap(){
 /** Redraw the open dialog after an edit. Called from the render path, so a figure
  *  changed in the dialog moves the numbers IN the dialog as well as behind it - a panel
  *  that kept showing the gap you had just closed would read as an edit that did nothing. */
-function gapRefresh(){ if (GAP_AT && el("gapdlg").open) drawGap(); }
+function gapRefresh(){
+  if (GAP_AT && el("gapdlg").open) drawGap();
+  gapsRefresh();
+}
 
 function drawGap(){
   const M = S.model, {pid, k} = GAP_AT;
@@ -10200,6 +10300,11 @@ el("gapClose").onclick = () => closeGap();
 // Escape and the backdrop close it too; GAP_AT has to be cleared either way or a
 // later edit would redraw a dialog nobody has open.
 el("gapdlg").addEventListener("close", () => closeGap());
+/* The list the month is opened FROM. Nothing to clear when it shuts - what it shows is
+   derived from S.calc and redrawn each time it is opened - so the close listener only
+   exists so Escape and the backdrop go through the same function the button does. */
+el("gapsClose").onclick = () => closeGaps();
+el("gapsdlg").addEventListener("close", () => closeGaps());
 el("cfgClose").onclick = () => el("cfgchg").close();
 el("chgBtn").onclick = () => { renderChanges(); el("changes").showModal(); };
 el("chgClose").onclick = () => el("changes").close();
@@ -10390,12 +10495,14 @@ document.addEventListener("click", e => {
      it, or the marked cell in Resource by project. stopPropagation because a marked
      cell sits inside a row whose own click expands it - without this, asking about the
      month would also toggle the project open underneath the dialog. */
-  const gj = e.target.closest("[data-gapjump]");
+  /* The tile, and the control in Resource by project's head, open the same list (R-52).
+     The tile still has to change tab first - it may be reached from a chart pop-up on
+     another tab - while the control is already on Overall. */
+  const gj = e.target.closest("[data-gapjump], [data-gapopen]");
   if (gj){
     e.stopPropagation();
-    showTab("t-overall");
-    const p = el("gappanel");
-    if (p) p.scrollIntoView({block:"start", behavior:"smooth"});
+    if (gj.hasAttribute("data-gapjump")) showTab("t-overall");
+    openGaps();
     return;
   }
   const gp = e.target.closest("[data-gap]");
@@ -11044,8 +11151,15 @@ const CAL = (() => {
 
   document.addEventListener("click", e => {
     const el_ = e.target.closest("[data-tip]");
-    // A control with its own job keeps it; the pop-up is explanation, not the action.
-    const isControl = e.target.closest("button, a, select, input, summary, [contenteditable='true']");
+    /* A control with its own job keeps it; the pop-up is explanation, not the action.
+       ROLE COUNTS AS WELL AS TAG, and this listener is in the CAPTURE phase, so getting
+       that list wrong does not merely pin a pop-up - it swallows the click before the
+       element ever sees it. The "Off their standard" tile is a div carrying both a tip
+       and role="button", and it had been silently unclickable for exactly that reason:
+       everything that was supposed to happen when it was pressed never ran, and nothing
+       anywhere said so. A thing that declares itself a button is a button. */
+    const isControl = e.target.closest(
+      "button, a, select, input, summary, [contenteditable='true'], [role='button']");
     if (el_ && !isControl){
       e.stopPropagation();
       pinned = (pinned === el_) ? null : el_;

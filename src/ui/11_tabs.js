@@ -48,14 +48,13 @@ function renderOverall(){
      + "month it runs — is not what it is being GIVEN. An automatic month always has the two equal, "
      + "because the people on it divide the month rather than each adding to it. A figure stated by "
      + "hand replaces the standard rather than adjusting it, which is what puts them out of step. The "
-     + "two directions are counted apart and never netted. V-34 reports it; <b>Standard vs staffed</b> "
-     + "below lists every one and lets you change the figures behind it."],
+     + "two directions are counted apart and never netted. V-34 reports it, and <b>Standard vs staffed</b> "
+     + "— in <b>Resource by project</b>'s own head, and from this tile — lists every one and lets you change the figures behind it."],
   ].map(([l,v,s,c,h]) => `<div class="tile ${c}" data-tip="${att(`<b>${l}</b><br>${h}`)}"`
     + `${c === "gap" ? ' data-gapjump="1" tabindex="0" role="button"' : ""}>`
     + `<div class="tl">${l}</div>`
     + `<div class="tv">${c==="over"?"&#9650; ":c==="under"?"&#9660; ":""}${v}</div>`
     + `<div class="ts">${s}</div></div>`).join("");
-  const gapSection = gapPanel(pids);
 
   const scope = `${G.length} months &#183; ${pids.length} project(s) &#183; ${sids.length} people`;
   el("t-overall").innerHTML =
@@ -68,13 +67,6 @@ function renderOverall(){
         because in a stack every band's baseline moves with the bands beneath it.
         <strong>Hover any line</strong> for its total, mean and peak month.</p>
       <div class="scrollx fit">${projectLines(pids)}</div></div>
-    ${/* Second, directly under the trend it explains, and ALWAYS in the same place -
-          a panel that appears only when there is something to say is a panel nobody
-          learns the position of, and one whose absence cannot be told from one that was
-          scrolled past. The tile above jumps here. It is not first because the trend
-          chart is what the tab is for; it is not last because something whose whole
-          danger is being silent does not belong under six panels of charts. */
-      gapSection}
     <div class="panel" data-panel="timeline">
       <div class="phead"><h2>Project timeline</h2>
         <span class="scope k">${pids.length} project(s)</span></div>
@@ -89,8 +81,13 @@ function renderOverall(){
         <strong>Hover any band</strong> for the project, its ${unitLabel()} that month and who is on it.</p>
       <div class="scrollx xl">${chartStacked(pids)}</div></div>
     <div class="panel" data-panel="table-proj">
+      ${/* STANDARD VS STAFFED OPENS FROM HERE (R-52). It was a panel of its own under the
+            tiles; it belongs on this table, because every month it lists is a cell in this
+            table and the two were a scroll apart. What that move costs - a list nobody
+            meets unless they go looking - is paid back by the control, which states the
+            count and the direction rather than naming the screen behind it. */""}
       <div class="phead"><h2>Resource by project</h2>
-        <span class="scope k">${pids.length} project(s)</span></div>
+        <span class="scope k">${pids.length} project(s)</span>${gapButton(pids)}</div>
       <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
         <strong>Click a project name</strong> to expand it to the people and roles on it.</p>
       <div class="scrollx xl">${tableProjects(pids)}</div></div>

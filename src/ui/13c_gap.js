@@ -15,12 +15,23 @@
    drew a smaller project and said nothing. A study needing ten people and staffed with
    five looked exactly like a study that only ever needed five.
 
-   THIS SECTION IS WHERE THAT IS SAID, and it is deliberately not a tab. A tab is the
-   surface you only visit once you already suspect a problem, which is the wrong property
-   for something whose whole danger is that it is silent. So the finding reaches the
-   report, the load banner and the archived log by being a rule; the figure carries a
-   mark wherever it is drawn; and this panel sits on the Overall tab, under the tiles,
-   where somebody looking at the plan will meet it without going to find it.
+   WHERE THIS IS SAID, and how it stays loud behind a click (R-52).
+
+   It was a panel under the tiles, on the ground that a surface you only visit once you
+   already suspect a problem is the wrong place for something whose whole danger is that
+   it is silent. Asked for from the field: move it onto Resource by project, which is the
+   table the figures belong to, and open it from there. That is the right home - every
+   month in this list is a cell in that table, and the two were a scroll apart - but it
+   costs the one property the panel was placed for, so the cost is paid back rather than
+   accepted.
+
+   THE CONTROL CARRIES THE COUNT. The button in that panel's head does not read
+   "Standard vs staffed"; it reads how many months are off the standard and in which
+   direction, with the same arrow and the same colour the cells use. So the alarm is on
+   screen without anything being opened, which is what the panel was there for, and the
+   LIST - which nobody reads until they are investigating - is one click away. The tile
+   above still counts it, every cell is still marked where it is drawn, and V-34 still
+   carries it to the findings report, the load banner and the archived log.
 
    AND IT IS NOT A LIST YOU HAVE TO ACT ON SOMEWHERE ELSE. Every row opens a dialog
    carrying the month's own figures - the demand term by term, everybody on it, and the
@@ -80,25 +91,62 @@ function gapTag(pid, k){
     + `${Math.abs(g.gap).toFixed(2)} ${g.dir} of standard</span>`;
 }
 
-/* ------------------------------------------------------------------- the panel */
+/* ------------------------------------------------- the control, and the list behind it */
 
 const GAP_SHOW = 40;      // rows drawn; the rest are counted, not listed
 
-function gapPanel(pids){
+/** The control in Resource by project's head.
+ *
+ *  IT STATES THE FINDING, it does not merely name the screen behind it. "Standard vs
+ *  staffed" would be a label; "3 short, 1 over" is the fact the old panel was on the page
+ *  to deliver, and it is delivered without anything being opened - which is the whole of
+ *  what moving the list into a dialog had to pay back (R-52).
+ *
+ *  It is drawn even when there is nothing to report, quietly and without a count. A
+ *  control that comes and goes is one nobody learns the position of, and its absence
+ *  cannot be told from a screen that has not been looked at; present and silent says
+ *  "this was checked" where missing says nothing at all.
+ */
+function gapButton(pids){
+  const rows = gapRows(pids);
+  if (!rows.length)
+    return `<button class="btn tiny gapbtn" data-gapopen="1" data-tip="${att(
+      "<b>Standard vs staffed</b><br>What each project needs against what it is being "
+      + "given. Nothing in view is off its standard, which is what an automatic month "
+      + "always does — the people on it divide the month rather than each adding to it.")
+      }">Standard vs staffed</button>`;
+  const short = rows.filter(r => r.dir === "short").length;
+  const over = rows.length - short;
+  return `<button class="btn tiny gapbtn on" data-gapopen="1" data-tip="${att(
+    `<b>Standard vs staffed</b><br>${rows.length} project-month(s) are not being given `
+    + "what the project's own standard says they need — a figure stated by hand replaces "
+    + "the standard rather than adjusting it. Counted apart and never netted: three short "
+    + "in March and three over in April is not a plan in balance. Open it to see every "
+    + "one and change the figures behind it.")}">`
+    /* The words first, so the two figures are read as what they are rather than as a
+       pair of numbers in a button. Each part is its own element and the spacing is the
+       flex gap: .btn.tiny is an inline-flex box, which DROPS the whitespace between its
+       children, so spaces written into the string render as nothing - which is how this
+       first went out reading "17 short&#183;49 overof standard". */
+    + `<span class="lbl">Off standard</span>`
+    + (short ? `<span class="gshort">&#9660; ${short} short</span>` : "")
+    + (over ? `<span class="gover">&#9650; ${over} over</span>` : "")
+    + "</button>";
+}
+
+/** The body of that dialog. The panel this replaces carried the same thing. */
+function gapList(pids){
   const M = S.model, rows = gapRows(pids);
   const short = rows.filter(r => r.dir === "short");
   const over = rows.filter(r => r.dir === "over");
   const projects = new Set(rows.map(r => r.pid));
   if (!rows.length)
-    return `<div class="panel" id="gappanel" data-panel="gap">
-      <div class="phead"><h2>Standard vs staffed</h2>
-        <span class="scope k">nothing to report</span></div>
-      <p class="cap">Every project in view is drawing exactly what its own standard says
-        it needs — <strong>standard FTE × period weight × the part of the month it
-        runs</strong>. That is what an automatic month always does, because the people on
-        it divide the month rather than each adding to it. A figure stated by hand, on a
-        project or on one assignment, replaces the standard rather than adjusting it, and
-        this panel is where the difference is listed when there is one.</p></div>`;
+    return `<p class="cap">Every project in view is drawing exactly what its own standard
+      says it needs — <strong>standard FTE × period weight × the part of the month it
+      runs</strong>. That is what an automatic month always does, because the people on
+      it divide the month rather than each adding to it. A figure stated by hand, on a
+      project or on one assignment, replaces the standard rather than adjusting it, and
+      this is where the difference is listed when there is one.</p>`;
 
   const body = rows.slice(0, GAP_SHOW).map(r => {
     const pr = M.projects[r.pid] || {};
@@ -115,11 +163,8 @@ function gapPanel(pids){
         >Check and fix</button></td></tr>`;
   }).join("");
 
-  return `<div class="panel" id="gappanel" data-panel="gap">
-    <div class="phead"><h2>Standard vs staffed</h2>
-      <span class="scope k">${rows.length} month(s) across ${projects.size}
-        project(s)</span></div>
-    <p class="cap">What each project <strong>needs</strong> — standard FTE × period
+  return `<p class="cap"><span class="scope k">${rows.length} month(s) across
+      ${projects.size} project(s)</span><br>What each project <strong>needs</strong> — standard FTE × period
       weight × the part of the month it runs — against what it is actually
       <strong>being given</strong>. These are the two figures that can come apart. The
       project's month against the sum of its people cannot: the month is built from those
@@ -144,10 +189,32 @@ function gapPanel(pids){
       findings report, the load banner and the archived change log, and it never stops a
       save or asks a question. Departing from the standard is the point of a manual
       figure — somebody part way through a trial knows better than the assumptions — so
-      the application says so and leaves the decision where it belongs.</p></div>`;
+      the application says so and leaves the decision where it belongs.</p>`;
 }
 
-/* ------------------------------------------------------------------ the dialog */
+/* --------------------------------------------------------------- the list dialog */
+
+/** Open the list. Drawn at the moment it is asked for, never kept up to date while shut:
+ *  what it lists is derived entirely from S.calc, so there is nothing to keep. */
+function openGaps(){
+  el("gapsBody").innerHTML = gapList(activeProjects());
+  const dlg = el("gapsdlg");
+  if (!dlg.open) dlg.showModal();
+  cueScrollers();          // the table inside it has a bounded region of its own
+}
+
+function closeGaps(){
+  const dlg = el("gapsdlg");
+  if (dlg.open) dlg.close();
+}
+
+/** Redraw it after an edit, for the reason gapRefresh() gives below: a list still
+ *  showing the gap you have just closed reads as an edit that did nothing. This one also
+ *  has to redraw when the gap was closed from the MONTH dialog on top of it, which is the
+ *  ordinary way it happens. */
+function gapsRefresh(){ if (el("gapsdlg").open) openGaps(); }
+
+/* ------------------------------------------------------------- the month dialog */
 
 let GAP_AT = null;         // {pid, k} while the dialog is open, so an edit can redraw it
 
@@ -168,7 +235,10 @@ function closeGap(){
 /** Redraw the open dialog after an edit. Called from the render path, so a figure
  *  changed in the dialog moves the numbers IN the dialog as well as behind it - a panel
  *  that kept showing the gap you had just closed would read as an edit that did nothing. */
-function gapRefresh(){ if (GAP_AT && el("gapdlg").open) drawGap(); }
+function gapRefresh(){
+  if (GAP_AT && el("gapdlg").open) drawGap();
+  gapsRefresh();
+}
 
 function drawGap(){
   const M = S.model, {pid, k} = GAP_AT;

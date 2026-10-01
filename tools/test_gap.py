@@ -213,10 +213,64 @@ with sync_playwright() as pw:
           "even though they sum to zero — which is exactly why a net figure is never "
           "shown: it would report this plan as in balance",
           f"net {sum(r[3] for r in rows):.2f}")
-    panel = pg.evaluate("() => gapPanel(activeProjects())")
+    panel = pg.evaluate("() => gapList(activeProjects())")
     check(panel.count("month(s) short of the standard") == 1
           and panel.count("month(s) over it") == 1,
-          "and the panel says each direction in its own words, side by side")
+          "and the list says each direction in its own words, side by side")
+
+    # ---- R-52: the list moved into a dialog, so the CONTROL has to carry the alarm ----
+    # The list used to be a panel under the tiles, on the ground that something whose
+    # danger is being silent must not sit behind a click. It now opens from Resource by
+    # project's own head - the right home, since every month in it is a cell in that
+    # table - and what that move costs is paid back by the button saying the count rather
+    # than naming the screen. If it ever reads as a plain label again, this says so.
+    pg.click('nav [data-tab="t-overall"]')
+    pg.wait_for_timeout(1400)
+    btn = pg.evaluate("""() => { const b = document.querySelector(
+      '#t-overall .panel[data-panel="table-proj"] .phead .gapbtn');
+      return b ? {txt: b.innerText.replace(/\s+/g, ' ').trim(),
+                  on: b.classList.contains('on'),
+                  last: b.parentElement.lastElementChild === b
+                        || b.nextElementSibling.classList.contains('zoombtn')} : null; }""")
+    check(btn and btn["on"] and "1 short" in btn["txt"] and "1 over" in btn["txt"],
+          "the control in Resource by project's head STATES the finding, it does not just "
+          "name the screen behind it", btn["txt"] if btn else "no control")
+    check(pg.evaluate("() => !document.getElementById('gappanel')"),
+          "and the panel it replaced is gone from the tab")
+    pg.click('#t-overall .panel[data-panel="table-proj"] .phead .gapbtn')
+    pg.wait_for_timeout(700)
+    opened = pg.evaluate("""() => ({open: document.getElementById('gapsdlg').open,
+      rows: document.querySelectorAll('#gapsBody tr.gaprow').length})""")
+    check(opened["open"] and opened["rows"] == 2,
+          "clicking it opens the list, with every month in it",
+          f"{opened['rows']} row(s)")
+    # A row opens the MONTH on top of the list, and one Escape comes back to the list -
+    # which is where the next month you want to look at is.
+    pg.click("#gapsBody tr.gaprow")
+    pg.wait_for_timeout(800)
+    stack = pg.evaluate("""() => ({list: document.getElementById('gapsdlg').open,
+      month: document.getElementById('gapdlg').open,
+      top: (document.elementFromPoint(innerWidth / 2, innerHeight / 2)
+            .closest('dialog') || {}).id})""")
+    check(stack["list"] and stack["month"] and stack["top"] == "gapdlg",
+          "a row opens the month ON TOP of the list, not instead of it")
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(600)
+    back = pg.evaluate("""() => ({list: document.getElementById('gapsdlg').open,
+      month: document.getElementById('gapdlg').open})""")
+    check(back["list"] and not back["month"],
+          "and Escape comes back to the list rather than to the page")
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(500)
+    check(not pg.evaluate("() => document.getElementById('gapsdlg').open"),
+          "a second Escape closes the list")
+    # The tile above opens the same thing, so there is one list and not two.
+    pg.click("#t-overall .tile.gap")
+    pg.wait_for_timeout(700)
+    check(pg.evaluate("() => document.getElementById('gapsdlg').open"),
+          "the tile opens the same list — one list, reached two ways")
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(500)
 
     print("\n4. an assignment can do it too, and V-34 reports either")
     pg.click('nav [data-tab="t-pers"]')

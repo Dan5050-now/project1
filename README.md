@@ -282,9 +282,17 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.62.xlsx` — **current.** 88 requirements, 38 live
-  validation rules, source schema version 13. The latest change is **R-51 —
-  `REQ-DSH-18`, any section can take the whole screen**: the page is 1400px wide at most
+- `docs/PRAP_Development_Plan_v2.63.xlsx` — **current.** 88 requirements, 38 live
+  validation rules, source schema version 13. The latest change is **R-52 —
+  `REQ-DSH-15` amended, Standard vs staffed moves onto Resource by project**: every month
+  that list names is a cell in that table, and the two sat a scroll apart. It opens from a
+  control in that panel's head — and the control **states the finding** rather than naming
+  the screen behind it (how many project-months are off their standard, and in which
+  direction), because the reason the list was a panel at all was that a silent fault must
+  not sit behind a click. The move also exposed a defect of its own: the tile that was
+  meant to jump to the list had never once worked — the pop-up handler runs in the
+  **capture** phase and swallowed the click on a `div` declaring `role="button"`. Before
+  it, **R-51 — `REQ-DSH-18`, any section can take the whole screen**: the page is 1400px wide at most
   and an entry table is capped at 340px, so a sheet twenty-two columns wide was filled in
   through a window about a fifth of its size. Every panel holding a bounded scroll region
   now carries a control that draws it against the viewport instead of the column — the
@@ -323,8 +331,9 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.33.xlsx` — **current specification.** Schema 13.
-  Sheet 06's `Global` section carries the full-screen rule (R-51), where it belongs
+- `docs/PRAP_Programming_Specification_v1.34.xlsx` — **current specification.** Schema 13.
+  Sheet 06 records where Standard vs staffed now opens from and what its control must say
+  (R-51 before it, R-52 now). Its `Global` section carries the full-screen rule (R-51), where it belongs
   because it applies to every panel on every tab rather than to one of them.
   Sheet 03 carries `Milestone.milestone_highlight` and sheet 07 gains `V-37` (R-50);
   before them, sheet 07 gained `V-36` (R-48) and sheet 06's Table A the unallocated
@@ -333,8 +342,9 @@ document through the manifest rather than by sorting filenames.
   and states the quantity it had been missing: the Overall tab's cost follows
   `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same
   rendering problem.
-- `docs/PRAP_UI_Component_List_v2.3.xlsx` — **current component list.** 69 components;
-  `X-14` is new — a section can take the whole screen (R-51). Closes `X-04`, the one item v2.0 left open: row virtualisation is not built and, at the
+- `docs/PRAP_UI_Component_List_v2.4.xlsx` — **current component list.** 69 components;
+  `X-14` is new — a section can take the whole screen (R-51) — and `O-12` moves onto
+  Resource by project (R-52). Closes `X-04`, the one item v2.0 left open: row virtualisation is not built and, at the
   volume `REQ-NFR-03` now names, not required — recorded as a decision with its figures
   rather than as a defect.
 - `docs/PRAP_Development_Plan_v2.40.xlsx` — superseded. 81 requirements, 31 live
