@@ -1,0 +1,20 @@
+﻿DOMAIN,STAGE_CODE,STAGE_LABEL,PHASE,NOTE
+EDC,entered,데이터 입력,1,반복 폼(LOG)은 분모 제외
+EDC,sdv,Source Data Verification,1,partial SDV 범위 적용
+EDC,review,Data review,1,시험별 on/off. 끈 시험에서는 선택 불가
+EDC,coding,Medical coding,1,코딩 대상 폼만
+EDC,sign,Investigator sign,1,유예 기간 없음. 미서명 건수만 집계
+EDC,freeze,Freeze,1,DBL 계획일 기준
+EDC,lock,Lock,1,전 단계 완료 전제
+VISIT,occurred,방문 발생,1,윈도우 종료일까지 발생
+SAMPLE,collected,채취,2,
+SAMPLE,received_central,Central lab 도착,2,채취일 기준 기한
+SAMPLE,received_bioanalytics,분석랩 도착,2,
+SAMPLE,assigned,분석 배정,2,
+SAMPLE,analyzed,분석 완료,2,
+IMAGE,taken,영상 획득,2,
+IMAGE,uploaded,BICR 업로드,2,
+IMAGE,qc_passed,QC 통과,2,
+IMAGE,assigned,판독자 배정,2,
+IMAGE,read,판독 완료,2,
+*,ALL_INCOMPLETE,(특수값) 미완료 required 단계 전부,1,해당 항목 이후 작업이 전부 불가할 때만

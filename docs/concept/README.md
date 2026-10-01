@@ -33,7 +33,7 @@
 | 14 | [AI 활용 확장성](14-ai-extensibility.md) | AI 권한 모델, Tool API, 행위자 구분 감사 추적 |
 | 15 | [지표 계산 명세](15-metric-specification.md) | 처리 조건과 계산식, 재현 가능성 |
 | 16 | [External Data Source Format — Draft v0.1](16-external-data-format-draft.md) | 벤치마킹 기반 external data reconciliation file 형식 초안 |
-| — | [`templates/`](templates/) | 실물 template CSV + **DTS 협의 worksheet** (Excel로 열어 검토 가능) |
+| — | [`templates/`](templates/) | 실물 template CSV, **DTS 협의 worksheet**, **`CFG10` 예외 규칙 worksheet** (Excel로 열어 검토 가능) |
 
 ## 확정된 전제
 
