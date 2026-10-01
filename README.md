@@ -111,6 +111,19 @@ python tools/package_release.py   # dist/PRAP_release_package.zip     — what w
 `package_release.py` carries the other side: the application, the desktop program, the
 current documents, the workbooks, and `src/` + `tools/` beside them under `5_source/`.
 
+**`PRAP_source_src_tools.zip` is committed at the repository root**, because `dist/` is
+gitignored and a gitignored file cannot be downloaded from the repository page.
+`package_source.py` writes that copy as well, rather than leaving it to somebody
+remembering — left to memory it went six files behind, with `build_deck.py`,
+`build_fte_doc.py`, `check_deck.py`, `fte_examples.py`, `package_release.py` and
+`test_highlight.py` all written after it and none of them in it, while its name went on
+saying it was the source. `check_consistency.py` check 13 now hashes it against a fresh
+build and names the drift — which files are missing, which are left over, or that content
+changed. It reports rather than fails on purpose: every commit touching `src/` or `tools/`
+puts the copy one file behind, and making that a problem would oblige each such commit to
+carry a freshly built megabyte of binary that git cannot delta. The fault was never that
+drift existed, it was that nothing said so.
+
 Both extract themselves to a temporary folder and rebuild before writing. The release
 packager runs four checks — the application must come out **byte-identical** from the
 source inside the archive, every file of the program must too, every path

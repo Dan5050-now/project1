@@ -8,9 +8,12 @@ a check, so this is the check.
 """
 
 import hashlib
+import importlib.util
 import json
 import re
 import sys
+import tempfile
+import zipfile
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -698,6 +701,66 @@ notes.append(f"fixture filenames named outside a version history: {named}, all o
              f"the current {', '.join(sorted(CURRENT.values()))}"
              if not any("is not the current fixture" in x for x in problems)
              else f"fixture filenames named outside a version history: {named}")
+
+# ---- 13. the committed source zip vs a fresh build of itself ----------------
+#
+# ALSO FOUND BY BREACH. PRAP_source_src_tools.zip sits at the repository root, committed,
+# because dist/ is gitignored and a gitignored file cannot be downloaded from the
+# repository page. Nothing rebuilt it, so it drifted: five files written after it -
+# build_deck.py, build_fte_doc.py, check_deck.py, fte_examples.py, test_highlight.py -
+# were missing from an archive whose name still said it was the source. Anyone who
+# unzipped it got a tree that could not build the deck or the PDF and would have no idea
+# why.
+#
+# A committed build output is a thing that goes stale silently, and the answer is not to
+# remember harder. tools/package_source.py now writes this copy as well as dist/, and
+# this holds the committed bytes to what that would write today. It is cheap because the
+# archive is REPRODUCIBLE - package_source.py stamps every entry with a fixed epoch - so
+# "the same source gives the same bytes" is an assertion rather than a hope, and
+# comparing one sha256 settles it without extracting anything.
+#
+# THIS REPORTS, IT DOES NOT FAIL, and that is deliberate. Every commit that touches src/
+# or tools/ puts the committed copy one file behind, so making drift a PROBLEM would
+# oblige each such commit to carry a freshly built ~1 MB binary blob. Zips do not delta,
+# so git would store every one of them whole - tens of megabytes of history to spare the
+# repository a few days of drift in a convenience download. That is the worse trade. What
+# went wrong before was not that drift existed but that NOTHING SAID SO for five files and
+# several weeks; a note that names the count, the files and the command fixes that, and
+# package_source.py refreshes the copy as a side effect of building the handout, which is
+# the moment it actually needs to be right.
+spec_ps = importlib.util.spec_from_file_location(
+    "package_source", ROOT / "tools" / "package_source.py")
+_ps = importlib.util.module_from_spec(spec_ps)
+spec_ps.loader.exec_module(_ps)
+with tempfile.TemporaryDirectory() as td:
+    fresh = Path(td) / "fresh.zip"
+    _ps.write(_ps.collect(), fresh)
+    want = hashlib.sha256(fresh.read_bytes()).hexdigest()
+    with zipfile.ZipFile(fresh) as zf:
+        want_names = zf.namelist()
+if not _ps.COMMITTED.exists():
+    notes.append(f"STALE: {_ps.COMMITTED.name} is not at the repository root at all - "
+                 f"run python tools/package_source.py")
+else:
+    have = hashlib.sha256(_ps.COMMITTED.read_bytes()).hexdigest()
+    if have == want:
+        notes.append(f"committed {_ps.COMMITTED.name}: {len(want_names)} entries, "
+                     f"byte-identical to a fresh build from src/ and tools/")
+    else:
+        with zipfile.ZipFile(_ps.COMMITTED) as zf:
+            inside = set(zf.namelist())
+        # Name what it is short of, not just that it differs: "stale" alone does not say
+        # how, and the breach this was written for was five named files.
+        gone = [n for n in want_names if n not in inside]
+        extra = [n for n in inside if n not in set(want_names)]
+        how = ", ".join(
+            x for x in (f"missing {len(gone)} file(s) ({', '.join(gone[:5])})" if gone else "",
+                        f"carrying {len(extra)} file(s) no longer in the source"
+                        if extra else "",
+                        "content changed" if not gone and not extra else "") if x)
+        notes.append(f"STALE: committed {_ps.COMMITTED.name} is not what src/ and tools/ "
+                     f"would produce today - {how}. Run python tools/package_source.py "
+                     f"before handing it out")
 
 # ---- report ---------------------------------------------------------------
 print(f"plan       {PLAN.name}")

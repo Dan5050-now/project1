@@ -18,7 +18,16 @@ and the way to know is to try it rather than to reason about it.
     python tools/package_source.py
     python tools/package_source.py --no-verify     skip the rebuild (faster, weaker)
 
-Output: dist/PRAP_source_src_tools.zip
+Output: dist/PRAP_source_src_tools.zip, and the SAME BYTES at the repository root.
+
+The root copy is committed, because dist/ is gitignored and the archive is handed out from
+the repository page where a gitignored file does not appear. It is written here rather than
+copied by hand afterwards for the reason it needed refreshing: left to somebody
+remembering, it went five files stale - build_deck.py, build_fte_doc.py, check_deck.py,
+fte_examples.py and test_highlight.py were all written after it and none was in it, while
+its name went on saying it was the source. tools/check_consistency.py check 12 now holds
+the committed copy to a fresh build of itself, so the next time it drifts it is a reported
+problem rather than something a reader discovers by unzipping.
 """
 
 import hashlib
@@ -31,6 +40,9 @@ import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT / "dist" / "PRAP_source_src_tools.zip"
+# The committed copy. Same bytes - the fixed EPOCH below is what makes "same bytes"
+# something that can be asserted rather than hoped for.
+COMMITTED = ROOT / OUT.name
 TREES = ("src", "tools")
 
 SKIP_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
@@ -158,14 +170,23 @@ def main(check=True):
             return 1
 
     staged.replace(OUT)
-    size = OUT.stat().st_size
+    data = OUT.read_bytes()
+    was = (hashlib.sha256(COMMITTED.read_bytes()).hexdigest()
+           if COMMITTED.exists() else None)
+    COMMITTED.write_bytes(data)
+
+    size = len(data)
     counts = {t: sum(1 for p in files if p.parts[len(ROOT.parts)] == t) for t in TREES}
     print(f"\nPackaged  {OUT.relative_to(ROOT)}")
     print(f"  {len(files)} files ("
           + ", ".join(f"{n} under {t}/" for t, n in counts.items())
           + ") + READ ME FIRST.txt")
     print(f"  size    {size:,} bytes ({size / 1024:.0f} KB)")
-    print(f"  sha256  {hashlib.sha256(OUT.read_bytes()).hexdigest()}")
+    sha = hashlib.sha256(data).hexdigest()
+    print(f"  sha256  {sha}")
+    print(f"  also    {COMMITTED.relative_to(ROOT)}  "
+          + ("unchanged" if was == sha else
+             f"refreshed (was {was[:16]}…)" if was else "written, new"))
     return 0
 
 
