@@ -25,13 +25,22 @@ adjusting it, and the application then simply drew a different project: a study 
      contenteditable cells over MonthlyEstimate - so the one editing path validates,
      logs and undoes them. Changing one there closes the gap and redraws the dialog.
 
+THE FIXTURE RUNS FROM THIS MONTH, not from a date written into the file. Section 6 reads
+the marks DRAWN in Resource by project, and the table only draws the months in the
+horizon - which defaults to twenty-four months starting with the current one. With the
+three months hard-coded as 2026-09 to 2026-11, the first of them fell off the left edge of
+that horizon the moment the calendar passed it, and the check looking for three marks found
+the two that were still on screen. Every other check in this file kept passing, because
+they read projGap and gapRows, which know nothing about the horizon. A fixture dated in the
+past is a test that expires.
+
     python tools/test_gap.py
 """
 
 import pathlib
 import sys
 import tempfile
-from datetime import date
+from datetime import date, timedelta
 
 from playwright.sync_api import sync_playwright
 
@@ -45,8 +54,30 @@ import prap_io                                                       # noqa: E40
 
 fails = []
 BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.17.xlsx")
-SEP = 2026 * 12 + 8
-OCT = 2026 * 12 + 9
+
+# The project runs for the three months beginning with THIS one, so it is inside the
+# default horizon whenever this is run - see the note in the docstring above.
+TODAY = date.today()
+M0 = TODAY.year * 12 + TODAY.month - 1          # the application's month key for "now"
+SEP, OCT = M0, M0 + 1                           # the short month, then the over one
+
+
+def first(n):
+    """The first day of the month n months after the start."""
+    m = M0 + n
+    return date(m // 12, m % 12 + 1, 1)
+
+
+def last(n):
+    """The last day of that month."""
+    nxt = first(n + 1)
+    return date(nxt.year, nxt.month, 1) - timedelta(days=1)
+
+
+def mkey(n):
+    """How MonthlyEstimate writes it: YYYY-MM."""
+    d = first(n)
+    return f"{d.year}-{d.month:02d}"
 
 
 def check(ok, label, detail=""):
@@ -60,12 +91,12 @@ def fixture():
     S = {k: (list(v) if isinstance(v, list) else v) for k, v in BASE.items()}
     S["Project"] = [{"project_id": pid, "project_name": nm, "project_type": "NewDrug CT",
                      "clinical_phase": "Phase 3", "work_scope_type": "fully in-housed",
-                     "project_category": "Onc", "start_date": date(2026, 9, 1),
-                     "end_date": date(2026, 11, 30), "status": "Active", "__row": 2 + i}
+                     "project_category": "Onc", "start_date": first(0),
+                     "end_date": last(2), "status": "Active", "__row": 2 + i}
                     for i, (pid, nm) in enumerate([("PRJ-A", "Alpha"), ("PRJ-B", "Bravo")])]
     S["Milestone"] = []
     S["ProjectPeriod"] = [{"project_id": pid, "period_name": "Start-up", "period_seq": 1,
-                           "period_start": date(2026, 9, 1), "period_end": date(2026, 11, 30),
+                           "period_start": first(0), "period_end": last(2),
                            "weight": 1.0, "__row": 2 + i}
                           for i, pid in enumerate(["PRJ-A", "PRJ-B"])]
     S["PeriodFTEStandard"] = [{"project_type": "NewDrug CT", "clinical_phase": "Phase 3",
@@ -133,6 +164,14 @@ with sync_playwright() as pw:
     pg.wait_for_selector("#tabs:not([hidden])", timeout=40000)
     pg.wait_for_timeout(1500)
 
+    # Said out loud, because section 6 depends on it and depended on it silently before:
+    # the marks it looks for are only drawn for months the table draws.
+    span = pg.evaluate("() => [S.from, S.to]")
+    check(span[0] <= SEP and span[1] >= SEP + 2,
+          "all three of the fixture's months are inside the default horizon — the table "
+          "only draws what is in it, so a month outside it has no mark to find",
+          f"horizon {span[0]}..{span[1]}, fixture {SEP}..{SEP + 2}")
+
     print("1. an automatic plan is exactly its standard, and reports nothing")
     check(pg.evaluate(SUMS) == [],
           "every project-month equals the sum of its own people — the pair that CANNOT "
@@ -153,7 +192,7 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(300)
     pg.click("#estYes")
     pg.wait_for_timeout(1200)
-    set_fte(pg, "project", "PRJ-A", "2026-09", 5.00)
+    set_fte(pg, "project", "PRJ-A", mkey(0), 5.00)
     g = dict((r[0], r) for r in pg.evaluate(GAPS))
     check(g.get("PRJ-A|" + str(SEP)) == ["PRJ-A|" + str(SEP), 10, 5, -5.0, "short"],
           "needs 10.00, given 5.00, short by 5.00", str(g.get("PRJ-A|" + str(SEP))))
@@ -162,7 +201,7 @@ with sync_playwright() as pw:
           "stated figure, which is what REQ-CAL-18 does")
 
     print("\n3. both directions, counted apart and never netted")
-    set_fte(pg, "project", "PRJ-A", "2026-10", 15.00)
+    set_fte(pg, "project", "PRJ-A", mkey(1), 15.00)
     rows = pg.evaluate("() => gapRows(activeProjects()).map(r => [r.pid, r.k, r.dir, "
                        "+r.gap.toFixed(2)])")
     short = [r for r in rows if r[2] == "short"]
@@ -188,7 +227,7 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(300)
     pg.click("#estYes")
     pg.wait_for_timeout(1200)
-    set_fte(pg, "assignment", "ASG-003", "2026-10", 14.00)
+    set_fte(pg, "assignment", "ASG-003", mkey(1), 14.00)
     g = dict((r[0], r) for r in pg.evaluate(GAPS))
     check(g.get("PRJ-B|" + str(OCT)) and g["PRJ-B|" + str(OCT)][4] == "over"
           and g["PRJ-B|" + str(OCT)][1] == 10,
@@ -241,7 +280,7 @@ with sync_playwright() as pw:
           "and splits them by direction rather than netting them", str(tile))
 
     print("\n8. the dialog carries the figures that caused it, and they are editable")
-    pg.evaluate("() => openGap('PRJ-A', 2026 * 12 + 8)")
+    pg.evaluate("k => openGap('PRJ-A', k)", SEP)
     pg.wait_for_timeout(700)
     body = pg.evaluate("() => el('gapBody').innerText")
     check(pg.evaluate("() => el('gapdlg').open"), "it opens")
@@ -271,7 +310,7 @@ with sync_playwright() as pw:
         t.dispatchEvent(new Event('input', {bubbles: true}));
         t.blur();}""")
     pg.wait_for_timeout(1200)
-    check(pg.evaluate("() => S.calc.projGap.has('PRJ-A|' + (2026 * 12 + 8))") is False,
+    check(pg.evaluate("k => S.calc.projGap.has('PRJ-A|' + k)", SEP) is False,
           "September is back on its standard")
     check(pg.evaluate("() => S.pending.length") == before + 1,
           "and the edit is in the pending list like any other — logged, listed under "
@@ -285,7 +324,7 @@ with sync_playwright() as pw:
     check(pg.evaluate("() => !el('gapdlg').open"), "Close closes it")
 
     print("\n10. a person still on AUTO can be given a figure here too")
-    pg.evaluate("() => openGap('PRJ-B', 2026 * 12 + 9)")
+    pg.evaluate("k => openGap('PRJ-B', k)", OCT)
     pg.wait_for_timeout(700)
     cells = pg.evaluate("""() => [...el('gapBody').querySelectorAll('td.cell')]
         .map(t => [t.dataset.gapnew || ('row ' + t.dataset.row), t.isContentEditable])""")
@@ -325,7 +364,7 @@ with sync_playwright() as pw:
           "every month is seeded, not just the one typed — the other two would count as "
           "0.00 otherwise, which is the one change that silently zeroes a figure",
           str(got["months"]))
-    check(dict(got["months"])["2026-10"] == 3.5,
+    check(dict(got["months"])[mkey(1)] == 3.5,
           "and the month typed carries what was typed", str(got["months"]))
     check(pg.evaluate("() => S.pending.length") - n0 == 5,
           "logged as what it is: the switch, three seeded months, and the one change",
@@ -335,14 +374,14 @@ with sync_playwright() as pw:
           "the dialog redrew and now shows that person as MANUAL")
 
     print("\n11. already manual with no figure for this month (V-31) does NOT ask")
-    pg.evaluate("""() => { const rs = S.model.raw.MonthlyEstimate;
+    pg.evaluate("""mk => { const rs = S.model.raw.MonthlyEstimate;
         const i = rs.findIndex(r => r.scope === 'assignment' && r.ref_id === 'ASG-004'
-                                 && r.month === '2026-11');
-        rs.splice(i, 1); rebuild(true); renderKeepingTab();}""")
+                                 && r.month === mk);
+        rs.splice(i, 1); rebuild(true); renderKeepingTab();}""", mkey(2))
     pg.wait_for_timeout(900)
     check(pg.evaluate("() => (S.model.findings||[]).filter(f => f.rule === 'V-31').length")
           == 1, "the missing month is V-31 — counted as 0.00 until it is filled in")
-    pg.evaluate("() => openGap('PRJ-B', 2026 * 12 + 10)")
+    pg.evaluate("k => openGap('PRJ-B', k)", M0 + 2)
     pg.wait_for_timeout(700)
     n1 = pg.evaluate("() => S.pending.length")
     pg.evaluate("""() => { const t = el('gapBody')
@@ -354,9 +393,9 @@ with sync_playwright() as pw:
     check(not pg.evaluate("() => el('estchg').open"),
           "no question this time: the months are already this person's, so asking would "
           "be asking permission for something already given")
-    check(pg.evaluate("""() => S.model.raw.MonthlyEstimate.filter(
+    check(pg.evaluate("""mk => S.model.raw.MonthlyEstimate.filter(
             r => r.scope === 'assignment' && r.ref_id === 'ASG-004'
-              && r.month === '2026-11').map(r => r.fte)""") == [2],
+              && r.month === mk).map(r => r.fte)""", mkey(2)) == [2],
           "the figure is simply written")
     check(pg.evaluate("() => S.pending.length") - n1 == 1,
           "as one ordinary logged edit")
@@ -364,7 +403,7 @@ with sync_playwright() as pw:
     print("\n12. and a figure that is not one is refused, not written")
     # PRJ-A in October: its two people were never switched, so both their cells are
     # still offering to create a row - which is the path being checked.
-    pg.evaluate("() => openGap('PRJ-A', 2026 * 12 + 9)")
+    pg.evaluate("k => openGap('PRJ-A', k)", OCT)
     pg.wait_for_timeout(700)
     n2 = pg.evaluate("() => S.pending.length")
     before_rows = pg.evaluate("() => S.model.raw.MonthlyEstimate.length")
