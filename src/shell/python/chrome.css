@@ -6,8 +6,16 @@
    one visible difference from the desktop build, and the reason this file is
    longer than the Electron shell's chrome. */
 
+/* OPAQUE, and the way it is made opaque matters. It was painted with --fill alone,
+   which is a 12% grey (24% in the dark theme) - right for a tint laid on a surface, and
+   wrong for a bar the page scrolls UNDER: the rows passing behind showed straight
+   through the menu, and the menu's own words were read against a table. The same tint
+   is now laid on the page colour instead of on nothing, so at rest it looks exactly as
+   it always did - that is what it was compositing against at the top of the page - and
+   once the page moves there is nothing behind it to show. */
 #pm-title{position:sticky;top:0;z-index:70;display:flex;gap:14px;align-items:center;
-  padding:7px 14px;font-size:12.5px;color:var(--ink2);background:var(--fill);
+  padding:7px 14px;font-size:12.5px;color:var(--ink2);
+  background:linear-gradient(var(--fill),var(--fill)),var(--page);
   border-bottom:1px solid var(--grid)}
 #pm-title b{font-weight:600;color:var(--ink)}
 

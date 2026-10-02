@@ -360,6 +360,29 @@ def main():
             pg.keyboard.press("Escape")
             pg.wait_for_timeout(400)
 
+            # ---- the window's own bars are OPAQUE -----------------------------
+            # The page scrolls UNDER them, so a bar with any transparency shows the rows
+            # passing behind it through its own text. The menu bar did: it was painted
+            # with --fill, a 12% grey meant for tinting a surface, and the File / Edit
+            # menu read against whatever table was underneath. Asked of the COMPUTED
+            # colour, because what matters is what lands - a layered background reports
+            # its base colour here, and that base is what must be solid.
+            pg.evaluate("() => window.scrollTo(0, 900)")
+            pg.wait_for_timeout(400)
+            bars = pg.evaluate("""() => [...document.querySelectorAll('[data-topchrome]')]
+              .filter(e => e.getBoundingClientRect().height > 0)
+              .map(e => { const c = getComputedStyle(e).backgroundColor;
+                const m = c.match(/rgba?\(([^)]+)\)/);
+                const a = m ? parseFloat((m[1].split(',')[3] || '1').trim()) : 0;
+                return [e.id, c, a]; })""")
+            see = [b for b in bars if b[2] < 1]
+            check(bars and not see,
+                  "the menu bar and the strips under it are opaque, so the page "
+                  "scrolling beneath cannot show through the menu",
+                  "; ".join(f"{i} {c}" for i, c, _ in see) if see
+                  else ", ".join(i for i, _, _ in bars) + " - all solid")
+            pg.evaluate("() => window.scrollTo(0, 0)")
+
             # ---- saving, and reading it back --------------------------------
             print("\nkeeping it, which is the other half of why this exists")
             plan = str(home / "PM_APP" / "data" / "test.prap")

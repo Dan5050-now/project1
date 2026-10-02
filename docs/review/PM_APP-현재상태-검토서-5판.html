@@ -184,12 +184,12 @@
 
 <header class="mast">
   <p class="eyebrow">설계 검토 · 운영 적합성 분석</p>
-  <span class="edition">개정 5판 · 현재 상태 (v1.23)</span>
+  <span class="edition">개정 5판 · 현재 상태 (v1.27)</span>
   <h1>PM_APP 현재 상태와 서버 전환 방안</h1>
   <p class="dek">5판은 <strong>지금 이 프로그램이 어디에 있는가</strong>만 다룹니다. 1~4판에서 지적하고 <strong>이미 해결한 문제는 전부 덜어냈고</strong>, 남은 것은 <a href="#s2">2부</a>의 여섯 건입니다. <strong>공유 폴더에서 여러 명이 같은 계획을 여는 사용은 이제 작업이 사라지지 않습니다</strong> — 다만 파일 단위 잠금이므로 한 번에 한 사람이며, 요청하신 레코드 단위 차단과 권한 분리는 <a href="#s4">4부</a>의 서버 전환이 필요합니다.</p>
   <dl class="mast-meta">
-    <div><dt>대상</dt><dd>PM_APP Python <strong>1.23</strong> · 엔진 <strong>v1.53</strong> · 스키마 <strong>13</strong></dd></div>
-    <div><dt>상태</dt><dd>배포 가능 · <strong>시험 43개 스위트 전부 통과</strong></dd></div>
+    <div><dt>대상</dt><dd>PM_APP Python <strong>1.27</strong> · 엔진 <strong>v1.56</strong> · 스키마 <strong>13</strong></dd></div>
+    <div><dt>상태</dt><dd>배포 가능 · <strong>시험 44개 스위트 전부 통과</strong></dd></div>
     <div><dt>남은 문제</dt><dd><strong>5건</strong> (차단 1 · 주의 3 · 경미 1)</dd></div>
     <div><dt>작성</dt><dd>2026-09-15</dd></div>
   </dl>
@@ -264,7 +264,7 @@
     <p>회의실 문에 <strong>이름표를 거는 방식</strong>입니다. 방을 쓰는 사람이 누구인지 분명하고 빈방은 바로 알 수 있지만, <strong>한 방에 두 사람이 각자 다른 책상에서 일할 수는 없습니다.</strong> 그것이 요청하신 레코드 단위 편집이고, 4부의 구조 변경입니다.</p>
   </div>
 
-  <h3>새로 들어간 것 — 마일스톤 색 표시 (v1.23)</h3>
+  <h3>새로 들어간 것 — 마일스톤 색 표시 (v1.27)</h3>
   <p>타임라인은 모든 마일스톤을 <strong>같은 검은 삼각형</strong>으로 그렸습니다. 그래서 읽는 사람이 실제로 찾는 두세 개 — 실사, 밀린 날짜, 위에서 묻는 그 날짜 — 가 <strong>계획에 적혀 있을 뿐인 스무 개와 구별되지 않았습니다.</strong></p>
   <p>이제 마일스톤 표의 <strong>날짜 옆 칸</strong>에서 색을 고르면, 그 마일스톤이 <strong>두 타임라인 모두</strong>(<code>Overall</code> 과 프로젝트 자기 탭)에서 그 색으로, 조금 크게 그려집니다. 표의 칸에는 색 사각형이 붙고, 범례에는 <strong>실제로 쓰인 색만</strong> 나옵니다.</p>
   <div class="analogy">
@@ -286,7 +286,7 @@
   </figure>
 
   <h3>무엇으로 그렇게 말하는가</h3>
-  <pre class="pass"><code>전체 43개 스위트          43 통과 · 0 실패
+  <pre class="pass"><code>전체 44개 스위트          44 통과 · 0 실패
 test_storage_py          104 passed   저장·잠금·만료·복구·기준판본
 test_python_app            0 failed   실제 구동 + 화면 숫자 대조
   EVERY FIGURE EQUALS THE PYTHON REFERENCE IMPLEMENTATION
@@ -560,7 +560,7 @@ test_highlight            12 검사     마일스톤 색 표시 (신규)
 
 <footer>
   <p>5판은 <strong>현재 상태 문서</strong>입니다. 1~4판의 지적 중 해결된 것은 본문에서 덜어내고 부록에 한 줄씩만 남겼습니다 — 상세 이력은 저장소(<code>docs/review/</code>)에 판본별로 보존되어 있습니다.</p>
-  <p>본문의 수치는 모두 실행으로 얻은 것입니다. 시험 43개 스위트, 저장·잠금·복구 104건, 참조 구현과의 대조 1,227 person-month(최대 오차 0.00e+00). <strong>다만 그 실행은 리눅스에서 이루어졌습니다</strong> — 윈도우 공유 폴더에서의 동작은 <code>check_share.py</code> 가 현장에서 답합니다(2부 R-1). 그것이 지금 남아 있는 가장 중요한 미지수입니다.</p>
+  <p>본문의 수치는 모두 실행으로 얻은 것입니다. 시험 44개 스위트, 저장·잠금·복구 104건, 참조 구현과의 대조 1,227 person-month(최대 오차 0.00e+00). <strong>다만 그 실행은 리눅스에서 이루어졌습니다</strong> — 윈도우 공유 폴더에서의 동작은 <code>check_share.py</code> 가 현장에서 답합니다(2부 R-1). 그것이 지금 남아 있는 가장 중요한 미지수입니다.</p>
 </footer>
 
 <script>

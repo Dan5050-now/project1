@@ -39,7 +39,9 @@ CHROME_CSS = """
    The window, not the product. Everything below this line styles the frame
    around the application; nothing in it decides a number. */
 #pm-title{position:sticky;top:0;z-index:60;text-align:center;padding:8px;
-  font-size:12.5px;color:var(--ink2);background:var(--fill);
+  font-size:12.5px;color:var(--ink2);
+  /* opaque - see the same rule in src/shell/python/chrome.css for why */
+  background:linear-gradient(var(--fill),var(--fill)),var(--page);
   border-bottom:1px solid var(--grid);-webkit-app-region:drag}
 #pm-strip{position:sticky;top:33px;z-index:60;display:flex;gap:8px;align-items:center;
   flex-wrap:wrap;padding:8px 16px;background:var(--surface);

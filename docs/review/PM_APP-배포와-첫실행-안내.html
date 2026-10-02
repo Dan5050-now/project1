@@ -128,7 +128,7 @@
 <div class="wrap">
 
 <header>
-  <p class="kicker">PM_APP 1.23 · Windows</p>
+  <p class="kicker">PM_APP 1.27 · Windows</p>
   <h1>PM_APP 배포와 첫 실행</h1>
   <p class="dek">어느 PC에 어떤 폴더를 두고, 어떤 순서로 실행하는지. <strong>사용자 PC에는 아무것도 설치하지 않습니다</strong> — 파이썬이 없는 PC도 포함해서입니다.</p>
   <dl class="facts">
@@ -138,6 +138,14 @@
     <div><dt>사용자 1인 소요</dt><dd>2~3분</dd></div>
   </dl>
 </header>
+
+<div class="note"><span class="lbl">1.24 ~ 1.27에서 달라진 것</span>
+<p><strong>메뉴 막대가 불투명해졌습니다.</strong> 화면을 위아래로 움직이면 표와 그래프가 메뉴 막대 <em>밑으로</em> 지나가는데, 그동안 막대가 반투명이라 File · Edit · View 글자 뒤로 그 내용이 비쳐 읽기 어려웠습니다. 이제 막대가 단색이라 무엇이 지나가든 메뉴 글자만 보입니다.</p>
+<p><strong>Standard vs staffed 가 Resource by project 안으로 들어갔습니다.</strong> Overall 탭의 따로 있던 구역 대신, Resource by project 오른쪽 위의 단추로 엽니다. 단추에는 열지 않아도 <strong>기준보다 모자란 달과 넘친 달의 수</strong>가 적혀 있습니다. 열린 목록은 방향 · 과제 · 최소 차이로 좁힐 수 있고, 좁혀도 단추와 위쪽 타일의 숫자는 그대로입니다 — 그 둘은 경보이기 때문입니다.</p>
+<p><strong>Projects 표에서 과제 ID와 이름이 고정됩니다.</strong> 오른쪽 열까지 옆으로 스크롤해도 맨 왼쪽의 행 단추 · Project ID · Project name 이 그 자리에 남아, 지금 어느 과제를 고치고 있는지 늘 보입니다.</p>
+<p><strong>표시가 제대로 그려집니다.</strong> 기준에서 벗어난 달의 모서리에 <strong>▲ ▼</strong> 대신 <code>\25B2</code> 같은 글자가 찍히던 오류를 고쳤습니다. 충돌한 칸의 <strong>⚠</strong> 도 마찬가지입니다.</p>
+<p><strong>Milestones 표의 Order 열은 보이지 않습니다.</strong> 타임라인은 마일스톤을 날짜로 배치하므로 그 열은 아무것도 정하지 않았습니다. 파일에는 그대로 남습니다. Periods 의 Order 는 기간 순서를 정하므로 그대로 둡니다.</p>
+<p><strong>숫자는 하나도 달라지지 않습니다.</strong></p></div>
 
 <div class="note"><span class="lbl">1.23에서 달라진 것</span>
 <p><strong>어느 구역이든 화면 전체로 넓혀 볼 수 있습니다.</strong> 표나 그래프가 든 구역의 오른쪽 위에 <strong>Full screen</strong> 단추가 생겼습니다. 누르면 그 구역이 창 전체를 차지합니다 — 열은 그대로이고 높이만 화면만큼 늘어나므로, 열이 스무 개 넘는 표를 좁은 창으로 내다보며 입력하지 않아도 됩니다. <strong>그 상태에서 그대로 고치고 저장할 수 있습니다</strong>: 칸을 눌러 입력하는 것, 검증, 자동완성, 열 필터가 평소와 똑같이 동작하고, 위쪽의 <strong>저장</strong> 단추와 탭도 가려지지 않고 그대로 보입니다. 필터 막대는 가려지며, <strong>Esc</strong> 를 누르면 원래 화면으로 돌아옵니다.</p>
@@ -204,7 +212,7 @@
   <li><div>
     <b>런타임을 앱 폴더에 넣고 압축본 만들기</b>
     <pre><code>python tools\bundle_runtime.py python-3.13.15-embed-amd64.zip --zip</code></pre>
-    <p><code>dist\PM_APP_python_v1.23_with_runtime.zip</code> 이 만들어집니다. <strong>이것이 나눠 주실 파일입니다.</strong></p>
+    <p><code>dist\PM_APP_python_v1.27_with_runtime.zip</code> 이 만들어집니다. <strong>이것이 나눠 주실 파일입니다.</strong></p>
     <p><strong>파이썬 압축을 푸는 일은 여기서 끝납니다.</strong> 이 명령이 1번에서 받은 zip 을 앱 폴더 안 <code>runtime\</code> 으로 풀어 넣고, 그 상태를 통째로 다시 압축합니다. 사용자 PC에서는 파이썬을 다시 풀 일이 없습니다.</p>
     <div class="note stop"><span class="lbl">이 순서를 반드시 지키십시오</span>
     <p><code>build_python_app.py --zip</code> 으로 압축하지 마십시오. 그 명령은 <strong>먼저 다시 빌드</strong>하는데, 다시 빌드하면 앱 폴더가 비워지면서 <strong>런타임도 함께 지워집니다.</strong> 그렇게 만든 압축본에는 런타임이 없고, 아무 경고도 없습니다.</p>
@@ -239,7 +247,7 @@
 <ol class="steps">
   <li><div>
     <b>압축본을 내 PC로 복사</b>
-    <p><code>\\서버\공유\PRAP\배포\</code> 에서 <code>PM_APP_python_v1.23_with_runtime.zip</code> 을 <strong>자기 PC로 복사</strong>하십시오.</p>
+    <p><code>\\서버\공유\PRAP\배포\</code> 에서 <code>PM_APP_python_v1.27_with_runtime.zip</code> 을 <strong>자기 PC로 복사</strong>하십시오.</p>
   </div></li>
 
   <li><div>
@@ -271,7 +279,7 @@
   <li><div>
     <b>PM_APP.cmd 더블클릭</b>
     <p>검은 창이 뜨고 브라우저가 열립니다. 창에는 이렇게 나옵니다.</p>
-    <pre class="out"><code>  version      1.23
+    <pre class="out"><code>  version      1.27
   application  C:\Users\...\Documents\PM_APP
   your data    C:\Users\...\Documents\PM_APP\data\users\&lt;내계정&gt;
   chosen by    3 - writable data\ beside the application
@@ -404,7 +412,7 @@
 <p><strong>폴더를 지우면 끝입니다.</strong> 레지스트리에 남는 것도, PATH에 더해진 것도, 시작 프로그램에 등록된 것도 없습니다. 공유 폴더의 계획서는 그대로 남습니다.</p>
 
 <footer>
-  <p>이 안내서의 경로·화면 출력·폴더 구조는 모두 PM_APP 1.23 을 실제로 실행해 얻은 것입니다. 버전이 올라가면 <code>version.txt</code> 와 압축본 이름이 달라집니다.</p>
+  <p>이 안내서의 경로·화면 출력·폴더 구조는 모두 PM_APP 1.27 을 실제로 실행해 얻은 것입니다. 버전이 올라가면 <code>version.txt</code> 와 압축본 이름이 달라집니다.</p>
 </footer>
 
 </div>
