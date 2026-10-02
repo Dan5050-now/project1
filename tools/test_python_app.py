@@ -369,7 +369,7 @@ def main():
             # its base colour here, and that base is what must be solid.
             pg.evaluate("() => window.scrollTo(0, 900)")
             pg.wait_for_timeout(400)
-            bars = pg.evaluate("""() => [...document.querySelectorAll('[data-topchrome]')]
+            bars = pg.evaluate(r"""() => [...document.querySelectorAll('[data-topchrome]')]
               .filter(e => e.getBoundingClientRect().height > 0)
               .map(e => { const c = getComputedStyle(e).backgroundColor;
                 const m = c.match(/rgba?\(([^)]+)\)/);
