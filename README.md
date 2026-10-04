@@ -174,8 +174,9 @@ interchangeable in both directions.
 
 **[`docs/PRAP_AI_Analysis_Guide.md`](docs/PRAP_AI_Analysis_Guide.md)** is the method for
 handing a plan to an AI for analysis: a 0–100 score, what is short or overloaded, what
-is coming, what to change, and a manager's "what if". The arithmetic is done in code
-and the AI explains it:
+is coming, what to change, and a manager's "what if". A Korean edition is
+[`docs/PRAP_AI_Analysis_Guide_ko.md`](docs/PRAP_AI_Analysis_Guide_ko.md). The arithmetic
+is done in code and the AI explains it:
 
 ```bash
 python tools/prap_analyze.py score   MyPlan_CalculatedFTE.xlsx --out analysis --pseudonymise

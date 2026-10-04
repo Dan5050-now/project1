@@ -140,7 +140,7 @@
 </header>
 
 <div class="note"><span class="lbl">1.28에서 달라진 것</span>
-<p><strong>Export calculated FTE 파일이 과제별 부족·초과를 담습니다.</strong> <code>ProjectMonth</code> 시트의 각 과제·월 행에 <code>demand_fte</code>(기준이 요구하는 양), <code>staffed_fte</code>(실제 배정된 양), <code>gap_fte</code>(둘의 차이, 음수는 부족), <code>gap_dir</code>(short · over · unallocated)이 붙습니다. <strong>아무도 배정되지 않은 달도 이제 행으로 나옵니다</strong> — 예전에는 빠져서 가장 큰 부족이 파일에 보이지 않았습니다. <code>Flags</code> 시트에는 과제별 부족 · 초과 · 미배정 구간이, <code>Summary</code> 에는 그 합계가 추가됩니다. <code>PersonMonth</code> 에는 재직 중이지만 아무 과제에도 배정되지 않은 달이 <code>fte</code> 0, <code>flag</code> = <code>unassigned</code> 로 나옵니다 — 여유 인력입니다. 파일을 엑셀이나 외부 분석(AI 포함)에 쓸 때 이 열을 쓰십시오. AI 분석 방법은 <code>docs/PRAP_AI_Analysis_Guide.md</code> 에 있습니다. 이 파일에는 사람 이름이 들어 있으니, 밖으로 보내기 전에 회사 규정을 확인하십시오.</p>
+<p><strong>Export calculated FTE 파일이 과제별 부족·초과를 담습니다.</strong> <code>ProjectMonth</code> 시트의 각 과제·월 행에 <code>demand_fte</code>(기준이 요구하는 양), <code>staffed_fte</code>(실제 배정된 양), <code>gap_fte</code>(둘의 차이, 음수는 부족), <code>gap_dir</code>(short · over · unallocated)이 붙습니다. <strong>아무도 배정되지 않은 달도 이제 행으로 나옵니다</strong> — 예전에는 빠져서 가장 큰 부족이 파일에 보이지 않았습니다. <code>Flags</code> 시트에는 과제별 부족 · 초과 · 미배정 구간이, <code>Summary</code> 에는 그 합계가 추가됩니다. <code>PersonMonth</code> 에는 재직 중이지만 아무 과제에도 배정되지 않은 달이 <code>fte</code> 0, <code>flag</code> = <code>unassigned</code> 로 나옵니다 — 여유 인력입니다. 파일을 엑셀이나 외부 분석(AI 포함)에 쓸 때 이 열을 쓰십시오. AI 분석 방법은 <code>docs/PRAP_AI_Analysis_Guide_ko.md</code>(한국어)와 <code>docs/PRAP_AI_Analysis_Guide.md</code>(영문)에 있습니다. 이 파일에는 사람 이름이 들어 있으니, 밖으로 보내기 전에 회사 규정을 확인하십시오.</p>
 <p><strong>숫자는 하나도 달라지지 않습니다.</strong> 내보내는 열이 늘었을 뿐입니다.</p></div>
 
 <div class="note"><span class="lbl">1.24 ~ 1.27에서 달라진 것</span>
