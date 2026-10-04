@@ -434,7 +434,7 @@ function calculate(M){
      and no line to read a period off. Two answers from one function rather than one
      answer and a second lookup that could drift from it. */
   return {projMonth, persMonth, persProj, projPers, cell, who, projPeriod, projGap,
-          projUnallocated,
+          projDemand, projUnallocated,
           sharers, periodAt, shareCount, staffed, effectiveFactor, gaps, lines,
           lo:isFinite(lo)?lo:0, hi:isFinite(hi)?hi:0};
 }

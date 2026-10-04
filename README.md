@@ -170,6 +170,23 @@ every person-month equal to 1e-6, on both worked examples. The application also 
 `.prap.json` directly and has an **Export JSON** button, so text and workbook are
 interchangeable in both directions.
 
+### Analysing a plan — diagnosis, recommendations, what-if
+
+**[`docs/PRAP_AI_Analysis_Guide.md`](docs/PRAP_AI_Analysis_Guide.md)** is the method for
+handing a plan to an AI for analysis: a 0–100 score, what is short or overloaded, what
+is coming, what to change, and a manager's "what if". The arithmetic is done in code
+and the AI explains it:
+
+```bash
+python tools/prap_analyze.py score   MyPlan_CalculatedFTE.xlsx --out analysis --pseudonymise
+python tools/prap_analyze.py compare before.prap.json after.prap.json --out scenario
+```
+
+Either command reads the calculated export or a source plan. `tools/test_analyze.py`
+proves that the application's export and the Python reference give the same scorecard.
+Read the guide's data-handling section before anything leaves your PC: the export
+names people.
+
 [`docs/PRAP_Manifest.json`](docs/PRAP_Manifest.json) says which file is current, with a
 sha256 for each — the repository keeps every superseded version alongside, so resolve a
 document through the manifest rather than by sorting filenames.
@@ -282,8 +299,19 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.65.xlsx` — **current.** 89 requirements, 38 live
-  validation rules, source schema version 13. The latest change is **R-54**, both halves
+- `docs/PRAP_Development_Plan_v2.66.xlsx` — **current.** 89 requirements, 38 live
+  validation rules, source schema version 13. The latest change is **R-55**: the
+  **calculated-FTE export now says which projects are short**, so it can be analysed
+  outside the application — by a person or by an AI. `ProjectMonth` gains `demand_fte`,
+  `staffed_fte`, `gap_fte` and `gap_dir`, and a row for every month a project's periods
+  ask for and **nobody is on** (`V-36`), which used to be dropped — the largest shortfall
+  was the one the file could not show. `Flags` gains project runs (short of standard, over
+  standard, unallocated demand) and `Summary` the matching totals. The gap is always the
+  *whole project's*, whatever filter is on, and the ReadMe warns against summing
+  `Detail.demand_fte`, which repeats on every person's row. `PersonMonth` gains the months
+  a person is employed and on nothing (`flag = unassigned`), so the file shows who is
+  free. Alongside it, `tools/prap_analyze.py` and `docs/PRAP_AI_Analysis_Guide.md` turn
+  the export into a scorecard an AI can explain. Before it, **R-54**, both halves
   of it raised by a reader looking at the screen. **Three cell marks were printing their
   own CSS escape**: the arrow `REQ-DSH-15` puts on a month off its standard, in both
   directions, and the warning sign `V-33` puts on a clashing cell, were written
@@ -350,7 +378,9 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.36.xlsx` — **current specification.** Schema 13.
+- `docs/PRAP_Programming_Specification_v1.37.xlsx` — **current specification.** Schema 13.
+  Sheet 08's results workbook carries each project-month's demand, staffed figure and gap,
+  and the project flags beside the person ones (R-55).
   Sheet 06 records what the Standard vs staffed controls may narrow and what they may not
   (R-53), which columns a source-data table may freeze (R-53), where that list opens from
   and what its control must say (R-52). Its `Global` section carries the full-screen rule (R-51), where it belongs

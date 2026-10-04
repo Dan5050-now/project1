@@ -72,6 +72,7 @@ SKIP_FILES = {"src/shell/desktop/index.html"}
 EXTRA_DOCS = [
     "docs/PRAP_AI_Agent_Guide.md",
     "docs/PRAP_AI_Agent_Guide_v1.0.xlsx",
+    "docs/PRAP_AI_Analysis_Guide.md",
     "docs/PRAP_Manifest.json",
     "docs/prap_contract.json",
     "docs/STEP2_OPEN_POINTS.md",

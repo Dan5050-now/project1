@@ -18,7 +18,7 @@
      00_ReadMe      what this file is, what it is not, and the formula
      Summary        the tiles - projects, people, total demand, the flags
      ProjectMonth   one row per project per month
-     PersonMonth    one row per person per month, against their capacity
+     PersonMonth    one row per person per month employed, against their capacity
      Detail         one row per ASSIGNMENT per month, with every term of the
                     multiplication that produced it
      Flags          the over-allocated months and under-allocated runs
@@ -142,22 +142,57 @@ function buildResults(M, C, scope){
     bump(sAcc, k + "|" + sid, fte, pid);
   }
 
+  /* ---- STANDARD AGAINST STAFFED, on the same row (R-55) ---------------------------
+     The figures above say what each project is GIVEN. Without what it NEEDS beside
+     them, the file cannot answer the first question anybody analysing it asks - which
+     projects are short - and the obvious way to get it from Detail is a trap: demand_fte
+     is repeated on every person's row, so adding it up multiplies a project's demand by
+     its headcount. So the project's own figures are put here, once per project-month,
+     taken from the calculation rather than recomputed:
+
+       demand_fte    what the project's standard asks for that month (REQ-CAL-19)
+       staffed_fte   what its people are given in all, WHOLE PROJECT, whatever the filter
+       gap_fte       staffed_fte - demand_fte: negative is short, positive is over
+       gap_dir       short / over / unallocated, or empty where they agree
+
+     staffed_fte is the WHOLE project's and fte is the part of it in view. Unfiltered
+     they are the same number; filtered to one department they are not, and the gap has
+     to be the project's real gap rather than one invented by the filter - a project is
+     not short because the reader chose not to look at half of its people.
+
+     A MONTH NOBODY IS ON IS A ROW TOO. Before this a project-month without a figure was
+     skipped, which made the largest shortfall of all - a project nobody is assigned to
+     (V-36, R-49) - the one the file could not show. It comes from projUnallocated, the
+     same map the tables draw, with fte 0, staffed 0 and the whole demand as its gap. */
   const projMonth = [["month", "month_iso", "project_id", "project_name", "project_type",
                       "clinical_phase", "work_scope_type", "status", "period_name",
+                      "demand_fte", "staffed_fte", "gap_fte", "gap_dir",
                       "fte", "hours", "people"]];
+  const unalloc = C.projUnallocated || new Map(), demandOf = C.projDemand || new Map();
+  const gapsOf = C.projGap || new Map(), stOf = C.projMonth || new Map();
+  const projDir = new Map();                   // pid|k -> {dir, gap}, for Flags and Summary
   for (const pid of scope.projects){
     const p = M.projects[pid] || {};
     for (const k of months){
-      const e = pAcc.get(iso(k) + "|" + pid);
-      if (!e) continue;                        // a month it does not run in is not a row
+      const e = pAcc.get(iso(k) + "|" + pid), qk = pid + "|" + k;
+      const un = unalloc.get(qk);
+      if (!e && un === undefined) continue;    // a month it does not run in is not a row
       const seg = (M.periods[pid] || []).find(s =>
         s.period_start && s.period_end
         && s.period_start.getTime() <= Date.UTC(Math.floor(k / 12), k % 12, 1)
         && Date.UTC(Math.floor(k / 12), k % 12, 1) <= s.period_end.getTime());
+      const g = gapsOf.get(qk);
+      const demand = un !== undefined ? un : (demandOf.has(qk) ? demandOf.get(qk) : null);
+      const staffed = un !== undefined ? 0 : (stOf.has(qk) ? stOf.get(qk) : null);
+      const gap = un !== undefined ? -un : g ? g.gap : demand === null ? null : 0;
+      const dir = un !== undefined ? "unallocated" : g ? g.dir : null;
+      if (dir) projDir.set(qk, {dir, gap});
       projMonth.push([label(k), iso(k), pid, p.project_name ?? null,
         p.project_type ?? null, p.clinical_phase ?? null, p.work_scope_type ?? null,
         p.status ?? null, seg ? seg.period_name : null,
-        r4(e.fte), r2(e.fte * HOURS), e.others.size]);
+        demand === null ? null : r4(demand), staffed === null ? null : r4(staffed),
+        gap === null ? null : r4(gap), dir,
+        e ? r4(e.fte) : 0, e ? r2(e.fte * HOURS) : 0, e ? e.others.size : 0]);
     }
   }
 
@@ -165,12 +200,32 @@ function buildResults(M, C, scope){
                       "primary_role", "capacity_fte", "fte", "hours", "projects",
                       "vs_capacity", "flag"]];
   const persFte = new Map();                   // used by Flags and Summary alike
+  /* A MONTH SOMEBODY IS EMPLOYED AND ON NOTHING IS A ROW TOO (R-55), with fte 0 and the
+     flag 'unassigned'. Without it the file could say who is overloaded and never who is
+     free - and "who could take this on" is the next question after "what is short".
+     Only months inside employment_start..employment_end, so somebody who has left is
+     not offered as spare capacity. Not under-allocated: a month on nothing is a
+     different statement, and it breaks an under-allocation run rather than extending
+     it, exactly as the Overall tab counts them. */
+  const employed = (who, k) => {
+    const first = Date.UTC(Math.floor(k / 12), k % 12, 1);
+    const last = Date.UTC(Math.floor(k / 12), k % 12 + 1, 0);
+    const s = who.employment_start, f = who.employment_end;
+    return !(s instanceof Date && s.getTime() > last)
+        && !(f instanceof Date && f.getTime() < first);
+  };
   for (const sid of scope.people){
     const who = M.people[sid] || {};
     const cap = num(who.capacity_fte);
     for (const k of months){
       const e = sAcc.get(iso(k) + "|" + sid);
-      if (!e) continue;
+      if (!e){
+        if (employed(who, k))
+          persMonth.push([label(k), iso(k), sid, who.person_name ?? null,
+            who.department ?? null, who.primary_role ?? null, cap,
+            0, 0, 0, cap ? 0 : null, "unassigned"]);
+        continue;
+      }
       const v = r4(e.fte);
       persFte.set(sid + "|" + k, v);
       persMonth.push([label(k), iso(k), sid, who.person_name ?? null,
@@ -182,8 +237,11 @@ function buildResults(M, C, scope){
   }
 
   // ---- Flags: exactly what the Overall tab counts ---------------------------------
-  const flags = [["kind", "person_id", "person_name", "from", "to", "months",
-                  "fte", "threshold"]];
+  /* project_id and project_name were added for the project flags below (R-55). Every
+     column is on every row and the ones that do not apply are empty, so a reader can
+     filter the sheet on `kind` without the columns changing meaning underneath them. */
+  const flags = [["kind", "person_id", "person_name", "project_id", "project_name",
+                  "from", "to", "months", "fte", "threshold"]];
   let over = 0, runs = 0;
   for (const sid of scope.people){
     const who = M.people[sid] || {};
@@ -192,8 +250,8 @@ function buildResults(M, C, scope){
       const v = persFte.get(sid + "|" + k) || 0;
       if (v > M.OVER){
         over++;
-        flags.push(["over-allocated", sid, who.person_name ?? null, label(k), label(k),
-                    1, r4(v), M.OVER]);
+        flags.push(["over-allocated", sid, who.person_name ?? null, null, null,
+                    label(k), label(k), 1, r4(v), M.OVER]);
       }
       // A month a person is not on anything at all is not an under-allocated month -
       // they are unassigned, which is a different statement and breaks the run rather
@@ -202,7 +260,7 @@ function buildResults(M, C, scope){
       else {
         if (run.length >= M.MINM){
           runs++;
-          flags.push(["under-allocated run", sid, who.person_name ?? null,
+          flags.push(["under-allocated run", sid, who.person_name ?? null, null, null,
                       label(run[0]), label(run[run.length - 1]), run.length, null, M.UNDER]);
         }
         run = [];
@@ -210,9 +268,38 @@ function buildResults(M, C, scope){
     }
     if (run.length >= M.MINM){
       runs++;
-      flags.push(["under-allocated run", sid, who.person_name ?? null,
+      flags.push(["under-allocated run", sid, who.person_name ?? null, null, null,
                   label(run[0]), label(run[run.length - 1]), run.length, null, M.UNDER]);
     }
+  }
+
+  /* The PROJECT flags (R-55): a run of consecutive months a project is off its standard
+     the same way, one row per run. A run rather than a row per month because the same
+     shortfall for eight months is one fact about the plan, and eight rows of it would
+     outweigh everything else on the sheet. fte is the run's gap in total, as a positive
+     amount - the kind already says which way. Short and over are never netted (V-34),
+     so a project short in March and over in April is two rows, not one row of nothing. */
+  const PKIND = {short:"short of standard", over:"over standard",
+                 unallocated:"unallocated demand"};
+  const pTot = {short:[0, 0], over:[0, 0], unallocated:[0, 0]};   // [cents, months]
+  for (const pid of scope.projects){
+    const p = M.projects[pid] || {};
+    let run = null;
+    const close = () => {
+      if (!run) return;
+      flags.push([PKIND[run.dir], null, null, pid, p.project_name ?? null,
+                  label(run.from), label(run.to), run.n, fromCents(run.cents), null]);
+      run = null;
+    };
+    for (const k of months){
+      const d = projDir.get(pid + "|" + k);
+      if (!d){ close(); continue; }
+      const c = Math.abs(toCents(d.gap));
+      pTot[d.dir][0] += c; pTot[d.dir][1]++;
+      if (run && run.dir === d.dir && run.to === k - 1){ run.to = k; run.n++; run.cents += c; }
+      else { close(); run = {dir:d.dir, from:k, to:k, n:1, cents:c}; }
+    }
+    close();
   }
 
   // ---- Summary: the tiles, as figures somebody can paste into a report ------------
@@ -220,6 +307,10 @@ function buildResults(M, C, scope){
   // the Detail column and exactly the total of each monthly sheet.
   let total = 0;
   for (const row of detail.slice(1)) total += row[col.fte];
+  const pcol = Object.fromEntries(projMonth[0].map((h, i) => [h, i]));
+  let stdCents = 0;
+  for (const row of projMonth.slice(1)) stdCents += toCents(row[pcol.demand_fte] || 0);
+  const stdTotal = fromCents(stdCents);
   const summary = [["measure", "value", "unit", "note"],
     ["Months in view", months.length, "months",
      `${label(months[0])} to ${label(months[months.length - 1])}`],
@@ -228,12 +319,21 @@ function buildResults(M, C, scope){
     ["People in view", scope.people.length, "people",
      `of ${Object.keys(M.people).length} in the source file`],
     ["Total demand", r4(total), "FTE-months",
-     "the sum of every person-month in this file"],
+     "the STAFFED figure: the sum of every person-month in this file"],
     ["Total demand", r2(total * HOURS), "hours",
      `at ${HOURS} hours to 1.00 FTE`],
     ["Over-allocated", over, "person-months", `above ${M.OVER} FTE`],
     ["Under-allocation runs", runs, "runs",
      `${M.MINM}+ consecutive months below ${M.UNDER} FTE`],
+    /* R-55: the project side, summed from ProjectMonth so the two cannot disagree. */
+    ["Standard demand", r4(stdTotal), "FTE-months",
+     "what the projects' own standards ask for (ProjectMonth.demand_fte, whole projects)"],
+    ["Short of standard", pTot.short[1], "project-months",
+     `${fromCents(pTot.short[0]).toFixed(2)} FTE-months below the standard in all`],
+    ["Over standard", pTot.over[1], "project-months",
+     `${fromCents(pTot.over[0]).toFixed(2)} FTE-months above the standard in all`],
+    ["Unallocated demand", pTot.unallocated[1], "project-months",
+     `${fromCents(pTot.unallocated[0]).toFixed(2)} FTE-months that nobody is assigned to`],
     ["Detail rows", detail.length - 1, "assignment-months",
      "each one a single multiplication; the two monthly sheets are their sums"],
   ];
@@ -318,6 +418,32 @@ function buildResults(M, C, scope){
      + "combination and the factor was taken as 1.00 (V-23). Both are reported in the "
      + "application's findings, and both mean the figure is short of something rather "
      + "than wrong in itself."],
+    [],
+    ["STANDARD AGAINST STAFFED — WHICH PROJECTS ARE SHORT OR OVER"],
+    ["ProjectMonth carries what each project NEEDS beside what it is GIVEN, once per "
+     + "project-month. Use these columns for any question about shortage or excess - "
+     + "never add up demand_fte on Detail, which repeats the project's demand on every "
+     + "person's row and so multiplies it by the headcount."],
+    ["demand_fte", "what the project's standard asks for that month: standard_fte x "
+     + "period weight x month_run."],
+    ["staffed_fte", "what the project's people are given that month, ALL of them, "
+     + "whatever filter was on when this file was exported."],
+    ["gap_fte", "staffed_fte - demand_fte. Negative is short of the standard, positive "
+     + "is over it, 0 is on it. An all-automatic month is always 0: the people divide "
+     + "the demand exactly. A gap only appears where somebody stated a figure by hand "
+     + "(V-34) or nobody is assigned at all (V-36)."],
+    ["gap_dir", "short / over / unallocated, or empty where demand and staffed agree. "
+     + "'unallocated' is a month the project's periods ask for and nobody is on: fte 0, "
+     + "people 0, and the whole demand as the gap."],
+    ["fte", "the part of staffed_fte that is IN VIEW. Unfiltered it equals staffed_fte; "
+     + "filtered to some people it is their share only, and the gap is still the "
+     + "project's own."],
+    ["PersonMonth has a row for every month a person is employed, including the months "
+     + "they are on nothing: fte 0 and flag 'unassigned'. That is spare capacity, and it "
+     + "is the place to look for somebody to cover a shortfall."],
+    ["The Flags sheet lists the same thing as runs: one row per project per stretch of "
+     + "consecutive months off the standard the same way, with the run's gap in total. "
+     + "Short and over are never netted against each other."],
     [],
     ["WHAT IS COVERED"],
     ["This file holds what was ON SCREEN when it was exported — the horizon and any "

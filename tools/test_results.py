@@ -24,8 +24,10 @@ What is checked, and why each one matters:
     python tools/test_results.py
 """
 
+import calendar
 import pathlib
 import sys
+from datetime import date, timedelta
 import tempfile
 from collections import defaultdict
 
@@ -128,13 +130,14 @@ with sync_playwright() as pw:
     bad = [k for k, v in byproj.items()
            if abs(v - next((x["fte"] for x in pmn
                             if x["month_iso"] == k[0] and x["project_id"] == k[1]), 0)) > 1e-9]
-    check(not bad and len(byproj) == len(pmn),
+    # Rows with no person on them (gap_dir 'unallocated', R-55) have no detail to sum.
+    check(not bad and len(byproj) == sum(1 for r in pmn if r["gap_dir"] != "unallocated"),
           "EVERY PROJECT-MONTH IS EXACTLY THE SUM OF ITS DETAIL ROWS",
           f"{len(pmn)} project-months" + (f"; {len(bad)} differ" if bad else ""))
     bad = [k for k, v in bypers.items()
            if abs(v - next((x["fte"] for x in smn
                             if x["month_iso"] == k[0] and x["person_id"] == k[1]), 0)) > 1e-9]
-    check(not bad and len(bypers) == len(smn),
+    check(not bad and len(bypers) == sum(1 for r in smn if r["flag"] != "unassigned"),
           "and every person-month too",
           f"{len(smn)} person-months" + (f"; {len(bad)} differ" if bad else ""))
 
@@ -260,6 +263,162 @@ with sync_playwright() as pw:
           "THE SOURCE EXPORT STILL ROUND-TRIPS, with every sheet the reader expects",
           f"{sum(len(v) for v in back.values() if isinstance(v, list))} rows across "
           f"{len(back)} sheets")
+
+    # ---- R-55: standard against staffed, on the file -----------------------------------
+    # A plan with all three kinds in it. The fixture already has stated figures that
+    # leave projects short and over their standard (V-34); taking every assignment off
+    # one active project adds months nobody is on (V-36), which the file used to drop.
+    print("\n  R-55 — what each project NEEDS beside what it is GIVEN")
+    src2 = prap_io.read_xlsx(FIX)
+    # One with no gap of its own, so removing it leaves the short and over months intact.
+    gapped = {pid for (pid, _k) in prap_io.calculate(prap_io.Model(src2))["proj_gap"]}
+    gone = next(p["project_id"] for p in src2["Project"]
+                if str(p.get("status") or "") != "Completed" and p["project_id"] not in gapped
+                and any(a["project_id"] == p["project_id"] for a in src2["Assignment"]))
+    src2["Assignment"] = [a for a in src2["Assignment"] if a["project_id"] != gone]
+    for sh in ("PersonPeriodWeight", "MonthlyEstimate"):
+        if sh in src2:
+            keep = {a["assignment_id"] for a in src2["Assignment"]}
+            src2[sh] = [r for r in src2[sh]
+                        if not r.get("assignment_id") or r["assignment_id"] in keep]
+    # And two people whose employment does not cover the whole horizon - one leaving,
+    # one joining - so "employed months only" has something to be wrong about.
+    t = date.today()
+    def month_end(n):
+        y, m = divmod(t.month - 1 + n, 12)
+        y += t.year
+        return date(y, m + 1, calendar.monthrange(y, m + 1)[1])
+    leaver, joiner = src2["Person"][-1], src2["Person"][-2]
+    leaver["employment_end"] = month_end(3)
+    joiner["employment_start"] = month_end(5) + timedelta(days=1)
+    fix2 = TMP / "unstaffed.xlsx"
+    prap_io.write_xlsx(src2, fix2)
+    pg.set_input_files("#picker", str(fix2))
+    pg.wait_for_timeout(3500)
+    pg.evaluate("() => { S.f.pers = new Set(); fillFilters(); renderAll(); showTab(S.tab); }")
+    pg.wait_for_timeout(500)
+    view = set(pg.evaluate("() => grid().map(k => `${Math.floor(k/12)}-${String(k%12+1).padStart(2,'0')}`)"))
+    inview = set(pg.evaluate("() => activeProjects()"))
+    wb3 = load_workbook(export(pg, "#exportCalcBtn", "calc_gap.xlsx"))
+    p3, f3, s3 = sheet(wb3, "ProjectMonth"), sheet(wb3, "Flags"), sheet(wb3, "Summary")
+    rm3 = " ".join(str(c.value or "") for r in wb3["00_ReadMe"].iter_rows() for c in r)
+
+    M3 = prap_io.Model(src2)
+    C3 = prap_io.calculate(M3)
+    want_gap = {(prap_io.iso_month(k), pid): g for (pid, k), g in C3["proj_gap"].items()
+                if prap_io.iso_month(k) in view and pid in inview}
+    want_un = {(prap_io.iso_month(k), pid): d for (pid, k), d in C3["proj_unallocated"].items()
+               if prap_io.iso_month(k) in view and pid in inview}
+    got = {(r["month_iso"], r["project_id"]): r for r in p3}
+
+    check(all(k in p3[0] for k in ("demand_fte", "staffed_fte", "gap_fte", "gap_dir")),
+          "PROJECTMONTH CARRIES demand_fte, staffed_fte, gap_fte AND gap_dir")
+    bad = [k for k, r in got.items()
+           if r["demand_fte"] is None
+           or abs(r["staffed_fte"] - r["demand_fte"] - r["gap_fte"]) > 1e-9]
+    check(not bad, "on every row the gap IS staffed minus demand",
+          f"{len(got)} rows" + (f"; {len(bad)} do not" if bad else ""))
+    bad = [k for k, r in got.items()
+           if r["gap_dir"] != "unallocated" and abs(r["fte"] - r["staffed_fte"]) > 1e-9]
+    check(not bad, "and unfiltered, the figure in view is the whole project's",
+          f"{len(bad)} differ" if bad else "")
+
+    have_gap = {k: r for k, r in got.items() if r["gap_dir"] in ("short", "over")}
+    bad = [k for k in set(want_gap) | set(have_gap)
+           if k not in want_gap or k not in have_gap
+           or have_gap[k]["gap_dir"] != want_gap[k]["dir"]
+           or abs(have_gap[k]["gap_fte"] - want_gap[k]["gap"]) > 1e-9]
+    check(want_gap and not bad,
+          "EVERY PROJECT-MONTH OFF ITS STANDARD IS ON THE FILE, short or over, with the "
+          "gap the Python reference finds (V-34)",
+          f"{len(want_gap)} project-month(s)" + (f"; {len(bad)} differ" if bad else ""))
+    have_un = {k: r for k, r in got.items() if r["gap_dir"] == "unallocated"}
+    bad = [k for k in set(want_un) | set(have_un)
+           if k not in want_un or k not in have_un
+           or abs(have_un[k]["demand_fte"] - want_un[k]) > 1e-9
+           or have_un[k]["fte"] != 0 or have_un[k]["people"] != 0
+           or abs(have_un[k]["gap_fte"] + want_un[k]) > 1e-9]
+    check(want_un and not bad and any(k[1] == gone for k in have_un),
+          "A MONTH NOBODY IS ON IS A ROW, with fte 0 and the whole demand as its gap — "
+          "the largest shortfall is no longer the one the file cannot show (V-36)",
+          f"{len(want_un)} month(s), {gone} among them" + (f"; {len(bad)} differ" if bad else ""))
+
+    pflags = [r for r in f3 if r["project_id"]]
+    for kind, dir_ in (("short of standard", "short"), ("over standard", "over"),
+                       ("unallocated demand", "unallocated")):
+        rows = [r for r in got.values() if r["gap_dir"] == dir_]
+        fl = [r for r in pflags if r["kind"] == kind]
+        check(rows and sum(r["months"] for r in fl) == len(rows)
+              and abs(sum(r["fte"] for r in fl) - sum(abs(r["gap_fte"]) for r in rows)) < 1e-6,
+              f"Flags '{kind}': its runs cover exactly the {dir_} months, and add to their gap",
+              f"{len(fl)} run(s) over {len(rows)} month(s)")
+    check(all(r["person_id"] is None for r in pflags)
+          and all(r["project_id"] is None for r in f3 if r["person_id"]),
+          "a flag names a person or a project, never both")
+    summ3 = {(r["measure"], r["unit"]): r["value"] for r in s3}
+    std = sum(r["demand_fte"] for r in got.values())
+    check(abs(summ3[("Standard demand", "FTE-months")] - std) < 1e-6
+          and summ3[("Short of standard", "project-months")]
+          == sum(r["gap_dir"] == "short" for r in got.values())
+          and summ3[("Unallocated demand", "project-months")] == len(have_un),
+          "the Summary's project figures are ProjectMonth's, summed",
+          f"standard demand {std:.2f} FTE-months")
+    check("never add up demand_fte on Detail" in rm3 and "gap_fte" in rm3,
+          "THE README WARNS AGAINST SUMMING demand_fte ON DETAIL, and defines the gap columns")
+
+    # Filtered to one person, the gap is still the project's own - a project is not short
+    # because the reader chose not to look at the rest of its people.
+    who3 = next(r["person_id"] for r in sheet(wb3, "Detail")
+                if (r["month_iso"], r["project_id"]) in have_gap)
+    pg.evaluate("""(sid) => { S.f.pers = new Set([sid]); fillFilters(); renderAll();
+                              showTab(S.tab); }""", who3)
+    pg.wait_for_timeout(900)
+    p4 = sheet(load_workbook(export(pg, "#exportCalcBtn", "calc_gap_one.xlsx")), "ProjectMonth")
+    both = [(r, got[(r["month_iso"], r["project_id"])]) for r in p4
+            if (r["month_iso"], r["project_id"]) in got and r["gap_dir"] != "unallocated"]
+    check(both and all(a["gap_fte"] == b["gap_fte"] and a["staffed_fte"] == b["staffed_fte"]
+                       for a, b in both)
+          and any(a["fte"] < a["staffed_fte"] for a, _ in both),
+          "FILTERED TO ONE PERSON, THE GAP IS STILL THE PROJECT'S — fte falls to their part, "
+          "staffed_fte and gap_fte do not",
+          f"{len(both)} project-month(s)")
+    pg.evaluate("() => { S.f.pers = new Set(); fillFilters(); renderAll(); showTab(S.tab); }")
+    pg.wait_for_timeout(500)
+
+    # Spare capacity: a month somebody is employed and on nothing is a row, so the file
+    # can say who is free as well as who is overloaded - and only while employed.
+    s3m = sheet(wb3, "PersonMonth")
+    idle = [r for r in s3m if r["flag"] == "unassigned"]
+    det3 = {(r["month_iso"], r["person_id"]) for r in sheet(wb3, "Detail")}
+    def employed(p, iso):
+        y, m = map(int, iso.split("-"))
+        first, last = date(y, m, 1), date(y, m, calendar.monthrange(y, m)[1])
+        s_, e_ = p.get("employment_start"), p.get("employment_end")
+        s_ = s_.date() if hasattr(s_, "date") else s_
+        e_ = e_.date() if hasattr(e_, "date") else e_
+        return not (s_ and s_ > last) and not (e_ and e_ < first)
+    roster = {p["person_id"]: p for p in src2["Person"]}
+    # Every month a person is employed, plus any month they carry work in whether or
+    # not they are - an assignment past somebody's leaving date still produces figures,
+    # and dropping them would hide exactly the month that needs fixing.
+    want_rows = {(iso, sid) for sid in {r["person_id"] for r in s3m}
+                 for iso in view if employed(roster[sid], iso)} | {
+                (r["month_iso"], r["person_id"]) for r in s3m if r["flag"] != "unassigned"}
+    have_rows = {(r["month_iso"], r["person_id"]) for r in s3m}
+    gone_idle = [r for r in idle if not employed(roster[r["person_id"]], r["month_iso"])]
+    check(idle and all(r["fte"] == 0 and r["projects"] == 0 for r in idle)
+          and not any((r["month_iso"], r["person_id"]) in det3 for r in idle),
+          "A MONTH SOMEBODY IS ON NOTHING IS A ROW — fte 0, flag 'unassigned', and no "
+          "assignment behind it: the file now says who is free",
+          f"{len(idle)} unassigned person-month(s)")
+    check(have_rows == want_rows and not gone_idle
+          and any(not employed(roster[leaver["person_id"]], iso) for iso in view)
+          and any(not employed(roster[joiner["person_id"]], iso) for iso in view),
+          "and exactly the months each person is EMPLOYED — nobody who has left is "
+          "offered as spare capacity",
+          f"{len(have_rows)} person-months" + (
+              f"; {len(have_rows - want_rows)} extra, {len(want_rows - have_rows)} missing"
+              if have_rows != want_rows else ""))
 
     check(not errors, "no uncaught errors in the page", "; ".join(errors[:2]))
     browser.close()

@@ -35,8 +35,8 @@ CONTRACT_VERSION = "1.0"
 
 # The current issue of each controlled document. check_consistency.py verifies the
 # files exist and that the versions agree with the application's provenance strip.
-PLAN = "PRAP_Development_Plan_v2.65.xlsx"
-SPEC = "PRAP_Programming_Specification_v1.36.xlsx"
+PLAN = "PRAP_Development_Plan_v2.66.xlsx"
+SPEC = "PRAP_Programming_Specification_v1.37.xlsx"
 UIL = "PRAP_UI_Component_List_v2.5.xlsx"   # v1.0 until R-47: never moved when v2.0 was issued
 TEMPLATE = f"PRAP_SourceData_Template_v{B.TEMPLATE_VERSION}.xlsx"
 DUMMY = f"PRAP_SourceData_Dummy_v{B.DUMMY_VERSION}.xlsx"
@@ -575,6 +575,30 @@ RECIPES = [
         "do_not": ["do not send a .prap.json to a person expecting a spreadsheet - convert "
                    "it to .xlsx first, unless they asked for the JSON"],
     },
+    {
+        "task": "Diagnose a plan, recommend changes, or answer a what-if question",
+        "when": "You are handed the calculated-FTE export (or the source plan) and asked how "
+                "healthy the assignments are, what to change, or what happens if something "
+                "changes. docs/PRAP_AI_Analysis_Guide.md is the full method.",
+        "steps": [
+            "Score it in code: python tools/prap_analyze.py score <file> --out <dir>. It "
+            "reads the export or a source plan and writes scorecard.json and scorecard.md - "
+            "the 0-100 score, its five components with their inputs, the projects short, "
+            "over or unallocated, the people over the ceiling, the next six months, and "
+            "candidate moves with spare capacity.",
+            "Explain the scorecard; do not recompute it. Every figure you quote must be in "
+            "it or in the export, with the project, person and months it belongs to.",
+            "For any change - a recommendation you want to stand behind, a new project, a "
+            "person leaving - edit the SOURCE plan (prap_io.py to-json), validate it, and "
+            "run python tools/prap_analyze.py compare <before> <after>. Report the change "
+            "in score and in the rows it moved.",
+        ],
+        "do_not": ["do not add up Detail.demand_fte - it repeats the project's demand on "
+                   "every person's row; use ProjectMonth.demand_fte",
+                   "do not compute FTE yourself for a scenario - absorption, sharers, "
+                   "rounding and manual scaling make that wrong; run the engine",
+                   "do not present a candidate move as a result until compare has run on it"],
+    },
 ]
 
 VERIFICATION = {
@@ -584,6 +608,7 @@ VERIFICATION = {
     "calculation matches the reference implementation":
         "python tools/test_app.py  (drives the real application in a browser)",
     "JSON round-trip and cross-tool agreement": "python tools/test_interop.py",
+    "scorecard identical from the export and from the source": "python tools/test_analyze.py",
     "row insert/delete/identity": "python tools/test_rows.py",
     "type-ahead value lists": "python tools/test_valuelist.py",
     "charts": "python tools/test_charts.py",

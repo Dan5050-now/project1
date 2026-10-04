@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.65"
+DOC_VERSION = "2.66"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.52, source schema 13 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, and milestone highlighting.")
@@ -397,6 +397,41 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.66", "2026-10-04", "Claude Code", "Pending",
+     "R-55, REQ-OUT-06 AMENDED. THE RESULTS EXPORT SAYS WHICH PROJECTS ARE SHORT. Asked "
+     "for so the file can be analysed outside the application - by a person or by an AI - "
+     "and the first question any such analysis asks is which projects have too little or "
+     "too much. The file could not answer it. ProjectMonth carried what each project was "
+     "GIVEN and nothing about what it NEEDS; Flags carried people only; and a month "
+     "nobody is on had no row at all, so the largest shortfall the plan can contain - a "
+     "project with nobody assigned (V-36) - was the one the file could not show. The "
+     "obvious workaround was a trap: demand_fte is on Detail, but repeated on every "
+     "person's row, so adding it up multiplies a project's demand by its headcount. "
+     "ProjectMonth now carries demand_fte, staffed_fte, gap_fte and gap_dir, taken from "
+     "the calculation's own maps rather than recomputed, and a row for every month the "
+     "project's periods ask for and nobody is on, with fte 0 and the whole demand as its "
+     "gap. staffed_fte is the WHOLE project's and fte the part in view: unfiltered they "
+     "are the same, and filtered to one department the gap is still the project's own - "
+     "a project is not short because the reader chose not to look at half of its people. "
+     "Flags gains project_id and project_name and three project kinds - short of "
+     "standard, over standard, unallocated demand - one row per run of consecutive months, "
+     "with the run's gap in total; short and over are never netted (V-34). Summary gains "
+     "the standard demand and the three totals, summed from ProjectMonth so the two "
+     "cannot disagree, and the ReadMe defines the columns and warns against summing "
+     "Detail's demand. PersonMonth gains a row for every month a person is EMPLOYED and on "
+     "nothing - fte 0, flag 'unassigned' - so the file says who is free as well as who is "
+     "overloaded, and somebody who has left is never offered as spare capacity. Checked "
+     "against the Python reference on a plan with all three kinds in it, and each new "
+     "guard proved by putting the fault back. No figure moves. ALONGSIDE IT, NOT IN THE "
+     "APPLICATION: tools/prap_analyze.py scores a plan 0-100 from the export or from a "
+     "source plan, by a fixed formula with every input written out, lists what is short, "
+     "overloaded and coming, proposes candidate moves, and compares two plans for a "
+     "what-if; docs/PRAP_AI_Analysis_Guide.md is the method and the prompt for handing "
+     "that to an AI. It names the shortage the gap column cannot: a project-month IS its "
+     "demand, shared among whoever is on it, so a project with too few people shows as "
+     "its people over the ceiling - and that excess is attributed back to the projects "
+     "making it up. tools/test_analyze.py holds the scorecard identical by both routes.",
+     "Issued for review"],
     [f"{MARK_NEW}2.65", "2026-10-01", "Claude Code", "Pending",
      "R-54. TWO THINGS, BOTH RAISED BY A READER LOOKING AT THE SCREEN. "
      "(a) A DEFECT: THREE MARKS WERE PRINTING THEIR OWN SOURCE CODE. The arrow that "
@@ -2372,7 +2407,7 @@ reqs = [
     [f"{MARK_CHG}REQ-IMP-09", "Import/Export", "Every field is editable, including identifiers. An on-screen edit is re-validated against the same rules as an imported value, so editing cannot introduce data the import would have rejected.", "Must", "Q-20", "4"],
     [f"{MARK_NEW}REQ-IMP-10", "Import/Export", "Editing an identifier that other sheets reference cascades to every referencing row, after showing how many rows will change. Deleting a referenced row is refused, naming what still points at it.", "Must", "Q-20", "4"],
     [f"{MARK_NEW}REQ-IMP-14", "Import/Export", "An import that changes any Config setting says so. The settings in force are captured before the model is replaced and compared by name afterwards; every setting whose value differs, or that the incoming file adds or does not carry, is named on the load banner and listed on a screen of its own with what it was, what it is now, and what it affects - a calculation rule, an allocation threshold, or display only. The settings are APPLIED either way: importing a workbook means taking its settings, which is what makes a plan reproducible from the file alone. This is a check, not a gate. A first load has nothing to compare against and reports nothing.", "Must", "R-28", "4"],
-    [f"{MARK_NEW}REQ-OUT-06", "Output", "The application exports the CALCULATED MONTHLY FTE as well as the source plan, and the export control offers the choice with each option described. The results workbook is derived throughout and cannot be imported, which its first sheet states. It carries: the Overall tab's summary figures; one row per project per month and one per person per month; a DETAIL sheet of one row per assignment per month carrying every term of the multiplication that produced it, so any figure can be checked without the application; the allocation flags; and the settings in force, marked for whether each changed a figure or only its display. Every monthly figure is exactly the sum of its detail rows and every total is exactly the sum of those. The file covers the horizon and filters that were on screen, and names them.", "Must", "R-29", "4"],
+    [f"{MARK_NEW}REQ-OUT-06", "Output", "The application exports the CALCULATED MONTHLY FTE as well as the source plan, and the export control offers the choice with each option described. The results workbook is derived throughout and cannot be imported, which its first sheet states. It carries: the Overall tab's summary figures; one row per project per month and one per person per month; a DETAIL sheet of one row per assignment per month carrying every term of the multiplication that produced it, so any figure can be checked without the application; the allocation flags; and the settings in force, marked for whether each changed a figure or only its display. Every monthly figure is exactly the sum of its detail rows and every total is exactly the sum of those. The file covers the horizon and filters that were on screen, and names them. SINCE R-55 IT ALSO SAYS WHAT EACH PROJECT NEEDS: every project-month carries its demand, its staffed figure, the gap between the two and the direction of the gap, once per project-month, so nobody has to derive demand from the detail rows, where it repeats on every row of the month; a month the periods ask for and nobody is on is a row of its own, because the largest shortfall must not be the one the file cannot show; the gap is the WHOLE project's whatever filter is on; and the flags carry project runs short of, over and unallocated against the standard beside the person flags. Every month a person is employed and on nothing is a person-month row of its own, at 0, so the file shows spare capacity as well as overload.", "Must", "R-29", "4"],
     [f"{MARK_NEW}REQ-IMP-12", "Import/Export", "A column that holds a DATE offers a calendar panel beside the cell being edited, and the cell stays fully typeable while it is open: the caret does not move, every key still reaches the cell, and what is typed steers the panel to that month. Picking a day commits it through the ordinary edit path, so it is validated exactly like a typed one. Deliberately not the browser's own date control, which would give one editing model for text cells and another for dates - a different keyboard contract, a browser-dependent display format, and no way to leave a date deliberately blank the way every other cell does.", "Should", "R-21", "4"],
     [f"{MARK_NEW}REQ-IMP-13", "Import/Export", "Every validation rule carries a CLASS saying what the application may do about it, separately from its severity. MUST: something is wrong with the row itself and it is refused, on the cell edit and at Save. CONDITIONAL: the row is sound but something it depends on is missing, so the figures that need it are short an assumption - never refused, and at Save the application names every one that this batch of edits leaves unresolved and asks the user to confirm before keeping them. INCOMPLETE: the row is still being built and the finding will answer itself - reported, never questioned. The class is shown beside the severity wherever findings are listed.", "Must", "R-25", "4"],
     [f"{MARK_NEW}REQ-IMP-11", "Import/Export", "A new row can be inserted into any editable table, positioned immediately below the row the user acts on rather than appended at the end, and validated on entry like any other edit.", "Must", "P-01, S-01", "4"],
@@ -3220,6 +3255,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-55", "Output", "Make the calculated-FTE export usable for analysis outside the application, including by an AI: which projects are short or over, and by how much.", "Applied. ProjectMonth gains demand_fte, staffed_fte, gap_fte and gap_dir, and a row for every month nobody is on (V-36), which used to be dropped. Flags gains project runs - short, over, unallocated - and Summary the matching totals. The gap is the project's own whatever filter is on. PersonMonth gains the months a person is employed and on nothing, as spare capacity. REQ-OUT-06 amended. Alongside: tools/prap_analyze.py (scorecard and what-if comparison) and docs/PRAP_AI_Analysis_Guide.md.", "Applied"],
     ["R-54", "UI", "Two raised from the screen: three cell marks were printing their own CSS escape, and the Order column on Milestones is not wanted.", "Both applied. The marks were written with a doubled backslash, so \\25B2, \\25BC and \\26A0 were drawn as text instead of the arrows and the warning sign; three guards added, one static and two on the rendered character. milestone_seq is no longer drawn - it orders nothing, and its pop-up said otherwise. period_seq is kept: both engines sort by it and V-18 reports a duplicate as an error.", "Applied"],
     ["R-53", "UI", "Let the Standard vs staffed list be narrowed, and keep a project's identity on screen while its table scrolls sideways.", "Both applied. The list gains three controls - direction, project, smallest gap - which narrow the LIST only; the tile and the control in the panel head go on counting everything, because they are the alarm. The Project table freezes the row handle, project_id and project_name at its left edge. REQ-DSH-15 amended and REQ-DSH-19 added.", "Applied"],
     ["R-52", "UI", "Move Standard vs staffed onto Resource by project and open it from a control there.", "Applied. The list is now a dialog opened from that panel's head; a row opens the month on top of it. What the move costs - a list behind a click - is paid back by the control, which states how many months are off their standard and in which direction instead of naming the screen. REQ-DSH-15 amended. It also exposed a defect of its own: the tile that was supposed to jump to the old panel had never worked, because the pop-up handler runs in the capture phase and swallowed the click on a div that declares role=button.", "Applied"],

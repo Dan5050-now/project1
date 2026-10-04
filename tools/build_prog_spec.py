@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.36"
+DOC_VERSION = "1.37"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.65.xlsx"
+PLAN = "PRAP_Development_Plan_v2.66.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,18 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.37", "2026-10-04", "Claude Code", "Dan",
+         "R-55, REQ-OUT-06 amended. Sheet 08's results workbook: ProjectMonth gains "
+         "demand_fte, staffed_fte (the whole project's, whatever filter is on), gap_fte = "
+         "staffed - demand and gap_dir (short / over / unallocated / empty), and a row for "
+         "every month in projUnallocated, with fte 0 and people 0. All four come from the "
+         "calculation's maps - projDemand, projMonth, projGap, projUnallocated - and none is "
+         "recomputed. Flags gains project_id and project_name and three project kinds, one "
+         "row per run of consecutive months the same way; Summary gains Standard demand and "
+         "the three totals, summed from ProjectMonth. PersonMonth gains a row at fte 0, "
+         "flag 'unassigned', for every month in view inside employment_start.."
+         "employment_end that has no figure; it breaks an under-allocation run rather than "
+         "extending it. Seven sheets still, and no figure moves.", "Draft"],
         ["1.36", "2026-10-01", "Claude Code", "Dan",
          "R-54. A DEFECT AND A COLUMN. The three cell marks drawn through CSS content: - "
          "the two gap arrows and the V-33 warning sign - escaped their own backslash, so "
