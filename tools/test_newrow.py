@@ -78,7 +78,11 @@ with sync_playwright() as pw:
           "Projects: a new row is given the next project_id, one past the highest",
           f"highest was {highest}, allocated {row and row['project_id']}")
 
-    pid = pg.evaluate("S.selProj")
+    # The new project is the selection now (R-56) and has no milestones of its own, so
+    # numbering is checked on a project that does: select one, as a user would by clicking.
+    pid = pg.evaluate("""() => { const p = S.model.raw.Milestone.find(r => !r.__new).project_id;
+        S.selProj = p; renderAll(); showTab('t-proj'); return p; }""")
+    pg.wait_for_timeout(900)
     seqs = pg.evaluate("p => S.model.raw.Milestone.filter(r => r.project_id === p && !r.__new)"
                        ".map(r => r.milestone_seq)", pid)
     row = insert(pg, "#t-proj", "Milestone")
