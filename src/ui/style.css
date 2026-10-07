@@ -326,6 +326,10 @@ body.busy{cursor:progress}
 .msp label:hover{background:var(--fill)}
 .msp input{margin:0}
 .msp .msclear{width:100%;margin-bottom:3px}
+.msp .msq{width:100%;box-sizing:border-box;margin:0 0 4px;padding:5px 8px;font:inherit;
+ font-size:var(--t-md);color:var(--ink);background:var(--page);border:1px solid var(--base);
+ border-radius:var(--r-xs)}
+.msp label[hidden]{display:none}
 
 /* --- sticky bars: vibrancy ----------------------------------------------
    Translucent and blurred rather than opaque, so the content scrolling under
@@ -1083,6 +1087,27 @@ td.c.gapc::after{position:absolute;top:1px;left:3px;font-size:9px;line-height:1;
  font-weight:700}
 td.c.gapc.short::after{content:"\25BC";color:var(--underink)}
 td.c.gapc.over::after{content:"\25B2";color:var(--crit)}
+/* Not staffed, in the list and on the control (R-56): the month nobody is on. Neutral
+   ink and a hollow mark, the same \25E6 the table's own cells use for it. */
+.gunst{color:var(--ink2);font-weight:650}
+.gpill.unstaffed{background:var(--fill);color:var(--ink2)}
+table.gapt td.num.unstaffed{color:var(--ink2);font-weight:600;background:var(--fill)}
+tr.gaprow.unstaffed > th.rh{box-shadow:inset 3px 0 0 var(--ink3)}
+/* How a project's figures are made (R-56). A pill on the row, and a pencil in the
+   corner of a month that carries a stated figure - top RIGHT, because the gap arrow
+   already has the top left. */
+.estb{font-size:var(--t-xs);border-radius:100px;padding:2px 7px;margin-left:6px;
+ white-space:nowrap;font-weight:590}
+.estb.auto{background:var(--fill);color:var(--ink2)}
+.estb.manual{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.estb.mixed{background:color-mix(in srgb,var(--accent) 8%,transparent);color:var(--accent)}
+.estb.sm{font-size:10px;padding:1px 6px}
+td.c.man{position:relative}
+td.c.man::before{content:"\270E";position:absolute;top:1px;right:3px;font-size:9px;
+ line-height:1;color:var(--accent)}
+.ctl.projissue{flex-direction:row;align-items:center;gap:6px;margin:0 0 0 auto}
+.ctl.projissue > span{font-size:var(--t-xs);color:var(--muted);font-weight:510}
+.ctl.projissue select{max-width:260px;padding:3px 6px;font-size:var(--t-sm)}
 /* And on the project's own utilisation chart. Dashed, so it cannot be mistaken for the
    solid tinted outline the person chart already uses for a threshold breach. */
 rect.gapmark{fill:none;stroke-width:1.6;stroke-dasharray:3 2}

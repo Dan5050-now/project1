@@ -510,9 +510,8 @@
       return;
     }
     const sheets = sheetsNow();
-    const stamp = new Date().toISOString().slice(0, 10);
-    const base = (S.fileName || "PRAP_SourceData.xlsx")
-      .replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+    const stamp = fileStamp();                  // R-56: date and time, see 07_state
+    const base = fileBase(S.fileName, "PRAP_SourceData");
     const name = `${base}_${stamp}${asJson ? ".prap.json" : ".xlsx"}`;
     let bytes;
     if (asJson) bytes = new TextEncoder().encode(buildPrapJson(sheets));
@@ -549,9 +548,8 @@
       filters: named.join(" · "), fileName: S.fileName,
       stamp: new Date().toISOString().slice(0, 16).replace("T", " "),
     });
-    const day = new Date().toISOString().slice(0, 10);
-    const base = (S.fileName || "PRAP").replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
-    const name = `${base}_CalculatedFTE_${day}.xlsx`;
+    const base = fileBase(S.fileName, "PRAP");
+    const name = `${base}_CalculatedFTE_${fileStamp()}.xlsx`;
     const bytes = new Uint8Array(await buildXlsx(sheets).arrayBuffer());
     try {
       let out;
@@ -679,7 +677,15 @@
         </div></div>`;
       document.body.appendChild(back);
       const q = s => back.querySelector(s);
-      let here = null, picked = null;
+      let here = null, picked = null, last = null;
+      /* NEWEST FIRST, WITH THE DATE ON EVERY FILE (R-56). The listing used to be by name
+         with only a size, and a folder of exports named PRAP_2026-09-30, PRAP_2026-10-02
+         … gave no way to tell which one somebody last saved - the date in a name is the
+         day it was exported, not the day it was last written. The modified time comes
+         from the file system (fs/list has always carried it); the order can be switched
+         back to by-name from the header, and the choice is kept while the window is
+         open. Folders stay first either way, so the way down is always in one place. */
+      let order = "date";
 
       const done = v => { back.remove(); document.removeEventListener("keydown", onKey);
                           resolve(v); };
@@ -733,18 +739,44 @@
           b.onclick = () => go(r.parent);
           q("[data-crumb]").appendChild(b);
         }
+        last = r;
         const list = q("[data-list]");
         list.innerHTML = "";
         const head = document.createElement("li");
-        head.innerHTML = `<span class="i">📂</span><span class="n">${r.path}</span>`;
+        head.className = "pm-head";
+        head.innerHTML = `<span class="i">📂</span><span class="n"></span>`
+          + `<button class="pm-sort${order === "name" ? " on" : ""}" data-sort="name"
+              title="Sort by name">Name</button>`
+          + `<button class="pm-sort${order === "date" ? " on" : ""}" data-sort="date"
+              title="Newest first">Modified ▾</button>`
+          + `<span class="m sz">Size</span>`;
+        head.querySelector(".n").textContent = r.path;
         head.style.cursor = "default";
+        for (const b of head.querySelectorAll("[data-sort]"))
+          b.onclick = ev => { ev.stopPropagation(); order = b.dataset.sort; go(r.path); };
         list.appendChild(head);
-        for (const e of r.entries) {
+        const byDate = (a, b) => (b.mtime || 0) - (a.mtime || 0)
+                                 || a.name.localeCompare(b.name);
+        const byName = (a, b) => a.name.localeCompare(b.name, undefined,
+                                                      { numeric: true, sensitivity: "base" });
+        const folders = r.entries.filter(e => e.dir).sort(order === "date" ? byDate : byName);
+        const files = r.entries.filter(e => !e.dir).sort(order === "date" ? byDate : byName);
+        const newest = files.reduce((m, e) => (e.mtime || 0) > (m ? m.mtime || 0 : -1) ? e : m,
+                                    null);
+        for (const e of folders.concat(files)) {
           const li = document.createElement("li");
           li.innerHTML = `<span class="i">${e.dir ? "📁" : "📄"}</span>`
             + `<span class="n"></span>`
-            + `<span class="m">${e.dir ? "" : kb(e.size)}</span>`;
+            + `<span class="m dt">${when(e.mtime)}</span>`
+            + `<span class="m sz">${e.dir ? "" : kb(e.size)}</span>`;
           li.querySelector(".n").textContent = e.name;
+          if (e === newest && files.length > 1) {
+            const tag = document.createElement("span");
+            tag.className = "pm-new";
+            tag.textContent = "newest";
+            tag.title = "The most recently modified file in this folder";
+            li.querySelector(".n").append(" ", tag);
+          }
           li.onclick = () => {
             if (e.dir) return go(e.path);
             for (const other of list.querySelectorAll("li")) other.classList.remove("sel");
@@ -764,6 +796,14 @@
       }
       const kb = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB`
                                    : `${Math.max(1, Math.round(n / 1024))} KB`;
+      /* Local time, written out in full and the same way for every row - 2026-10-07 14:32
+         - so a column of them sorts by eye and cannot be misread across locales. */
+      const when = ms => {
+        if (!ms) return "";
+        const d = new Date(ms), p = n => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} `
+          + `${p(d.getHours())}:${p(d.getMinutes())}`;
+      };
       go(opts.start || where.workspaces || where.dataDir);
     });
   }

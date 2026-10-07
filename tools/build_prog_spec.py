@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.37"
+DOC_VERSION = "1.38"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.66.xlsx"
+PLAN = "PRAP_Development_Plan_v2.67.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,18 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.38", "2026-10-07", "Claude Code", "Dan",
+         "R-56. Sheet 06: the Project and Person filters are labelled by name (identifier "
+         "only where a name is blank or shared) and searchable past eight entries, the "
+         "values staying identifiers. A row added with + row on Project or Person is the "
+         "selection (S.newKeys) and is not reset by the filters until a load. Resource by "
+         "project carries estimationPill per project, td.man on a month whose lines carry "
+         "a stated figure, and #projIssue, which narrows the rows only. gapRows() gains "
+         "the projUnallocated months as direction 'unstaffed', so the control, the tile "
+         "and the list count them. Exported names are base_YYYY-MM-DD_HHMM, with an "
+         "earlier stamp removed from the base. Python shell: fs/list carries folders' "
+         "mtime and the browser lists by modified time, newest first. No schema change "
+         "and no figure moves.", "Draft"],
         ["1.37", "2026-10-04", "Claude Code", "Dan",
          "R-55, REQ-OUT-06 amended. Sheet 08's results workbook: ProjectMonth gains "
          "demand_fte, staffed_fte (the whole project's, whatever filter is on), gap_fte = "

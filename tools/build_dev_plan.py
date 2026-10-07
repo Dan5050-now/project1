@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.66"
+DOC_VERSION = "2.67"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.52, source schema 13 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, and milestone highlighting.")
@@ -397,6 +397,39 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.67", "2026-10-07", "Claude Code", "Pending",
+     "R-56. FIVE THINGS ASKED FOR FROM THE FIELD, all about finding your way. "
+     "(a) THE PROJECT AND PERSON FILTERS LIST NAMES. Nobody looks for PRJ-037; they look "
+     "for the study. The label is the name, sorted by name, with the identifier added "
+     "only where the name alone would not say which row it is; the value behind each tick "
+     "is still the identifier, which is what the filter matches and the export's ReadMe "
+     "names. A list long enough to scroll gets a search box that matches name or "
+     "identifier and never ticks anything. "
+     "(b) A NEW PROJECT OR PERSON STAYS SELECTED. + row left the selection on the row it "
+     "was pressed from, and the tab reset any selection the filters did not list to the "
+     "first row - so the milestones, periods and assignments typed next went to somebody "
+     "else's project, and after Save the new one was not even selected. A row added in "
+     "this session is now the selection from the moment it exists, through typing, Save "
+     "and a change of its own identifier. "
+     "(c) RESOURCE BY PROJECT SAYS HOW EACH FIGURE WAS MADE: a pill per project - Auto, "
+     "Manual, or Auto with n assignments stated - a pencil on every month carrying a "
+     "stated figure, and a 'manual' tag on the person rows behind it. A stated figure is "
+     "a judgement about this study and an automatic one is what a study of its kind "
+     "takes; the table drew them identically. "
+     "(d) IT NARROWS TO ITS PROBLEMS - issues only, short, over, not staffed, stated by "
+     "hand - in the months on screen. The rows only: the control beside it and the tiles "
+     "go on counting everything, for the reason R-53 gives. "
+     "(e) NOT STAFFED IS COUNTED. A month the periods ask for with nobody on it is the "
+     "widest gap there is, and the table drew it while the Standard vs staffed control, "
+     "the tile and the list said nothing. All three now count it under its own direction, "
+     "and its row takes you to the project, where people are assigned. "
+     "AND FILES ARE FOUND BY DATE. The Python edition's file browser shows every file's "
+     "modified date and time, lists newest first (switchable back to name) and marks the "
+     "newest; the browser edition has only the operating system's own window, so exported "
+     "names carry the date AND time and an earlier stamp is no longer stacked on. "
+     "tools/test_r56.py covers the web half and test_python_app.py the browser; each "
+     "guard was proved by putting the fault back. No figure moves.",
+     "Issued for review"],
     [f"{MARK_NEW}2.66", "2026-10-04", "Claude Code", "Pending",
      "R-55, REQ-OUT-06 AMENDED. THE RESULTS EXPORT SAYS WHICH PROJECTS ARE SHORT. Asked "
      "for so the file can be analysed outside the application - by a person or by an AI - "
@@ -3255,6 +3288,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-56", "UI", "Filters by name; a new project or person stays selected after Save; Resource by project to show auto vs manual, to filter to problem projects, and to count not-staffed months; file dates when importing and exporting.", "Applied. Project and Person filters list names with a search box. A row added with + row is the selection through typing, Save and a change of identifier. Resource by project gains an estimation pill per project, a mark on stated months and a Show control (issues, short, over, not staffed, stated by hand); not-staffed months are counted on the control, the tile and the Standard vs staffed list. The Python file browser shows modified dates, newest first; exported names carry date and time.", "Applied"],
     ["R-55", "Output", "Make the calculated-FTE export usable for analysis outside the application, including by an AI: which projects are short or over, and by how much.", "Applied. ProjectMonth gains demand_fte, staffed_fte, gap_fte and gap_dir, and a row for every month nobody is on (V-36), which used to be dropped. Flags gains project runs - short, over, unallocated - and Summary the matching totals. The gap is the project's own whatever filter is on. PersonMonth gains the months a person is employed and on nothing, as spare capacity. REQ-OUT-06 amended. Alongside: tools/prap_analyze.py (scorecard and what-if comparison) and docs/PRAP_AI_Analysis_Guide.md.", "Applied"],
     ["R-54", "UI", "Two raised from the screen: three cell marks were printing their own CSS escape, and the Order column on Milestones is not wanted.", "Both applied. The marks were written with a doubled backslash, so \\25B2, \\25BC and \\26A0 were drawn as text instead of the arrows and the warning sign; three guards added, one static and two on the rendered character. milestone_seq is no longer drawn - it orders nothing, and its pop-up said otherwise. period_seq is kept: both engines sort by it and V-18 reports a duplicate as an error.", "Applied"],
     ["R-53", "UI", "Let the Standard vs staffed list be narrowed, and keep a project's identity on screen while its table scrolls sideways.", "Both applied. The list gains three controls - direction, project, smallest gap - which narrow the LIST only; the tile and the control in the panel head go on counting everything, because they are the alarm. The Project table freezes the row handle, project_id and project_name at its left edge. REQ-DSH-15 amended and REQ-DSH-19 added.", "Applied"],

@@ -227,31 +227,53 @@ function showTab(id){
 const FILTER_KEY = {fType:"type", fPhase:"phase", fOut:"out", fProj:"proj",
                     fPers:"pers", fRole:"role", fDept:"dept"};
 
+/* PROJECTS AND PEOPLE ARE LISTED BY NAME (R-56). The value behind each tick is still
+   the identifier - that is what the filter matches on and what the export's ReadMe
+   names - but nobody looks for "PRJ-037"; they look for the study. So the label is the
+   name, sorted by name, with the identifier only where the name alone would not say
+   which row it is: blank, or shared with another row. A list long enough to scroll gets
+   a search box, which matches the identifier as well as the name. */
+const MS_SEARCH_FROM = 9;
+
 function fillFilters(){
   const M = S.model;
-  const set = (id, vals) => {
+  const set = (id, vals, labelOf) => {
     const d = el(id), keep = S.f[FILTER_KEY[id]];
     // A value that has gone from the file cannot stay selected, or the page would be
     // filtered by something the reader can no longer see or clear.
     for (const v of [...keep]) if (!vals.includes(v)) keep.delete(v);
+    let items = vals.map(v => ({v, name: labelOf ? String(labelOf(v) ?? "").trim() : v}));
+    if (labelOf){
+      const seen = {};
+      for (const it of items) seen[it.name] = (seen[it.name] || 0) + 1;
+      for (const it of items)
+        it.label = !it.name ? it.v : seen[it.name] > 1 ? `${it.name} (${it.v})` : it.name;
+      items.sort((a, b) => a.label.localeCompare(b.label, undefined, {numeric:true,
+                                                                      sensitivity:"base"}));
+    } else for (const it of items) it.label = it.v;
     d.querySelector(".msp").innerHTML =
       `<button class="btn tiny msclear" data-msclear="${att(id)}">Clear</button>`
-      + vals.map(v => `<label><input type="checkbox" value="${att(v)}"`
-          + `${keep.has(v) ? " checked" : ""}>${esc(v)}</label>`).join("");
+      + (items.length >= MS_SEARCH_FROM
+          ? `<input type="search" class="msq" placeholder="Search ${items.length}…"
+              aria-label="Search the list">` : "")
+      + items.map(it => `<label data-find="${att((it.label + " " + it.v).toLowerCase())}"`
+          + `${labelOf ? ` title="${att(it.v)}"` : ""}><input type="checkbox" value="${att(it.v)}"`
+          + ` data-label="${att(it.label)}"`
+          + `${keep.has(it.v) ? " checked" : ""}>${esc(it.label)}</label>`).join("");
     msSummary(d);
   };
   set("fType", [...new Set(Object.values(M.projects).map(p => p.project_type))].filter(Boolean));
   set("fPhase", [...new Set(Object.values(M.projects).map(p => p.clinical_phase))].filter(Boolean));
   set("fOut", [...new Set(Object.values(M.projects).map(p => p.work_scope_type))].filter(Boolean));
-  set("fProj", Object.keys(M.projects).sort());
-  set("fPers", Object.keys(M.people).sort());
+  set("fProj", Object.keys(M.projects).sort(), pid => M.projects[pid].project_name);
+  set("fPers", Object.keys(M.people).sort(), sid => M.people[sid].person_name);
   set("fRole", [...new Set(M.assignments.map(a => a.role_name))].filter(Boolean).sort());
   set("fDept", [...new Set(Object.values(M.people).map(p => p.department))].filter(Boolean).sort());
 }
 
 /** What the closed control says: All, the single value, or how many were chosen. */
 function msSummary(d){
-  const on = [...d.querySelectorAll("input:checked")].map(i => i.value);
+  const on = [...d.querySelectorAll("input:checked")].map(i => i.dataset.label || i.value);
   const sum = d.querySelector("summary");
   sum.textContent = on.length === 0 ? "All"
                   : on.length === 1 ? on[0]
@@ -376,7 +398,7 @@ function adopt(sheets, name, opts){
      against the old one - the worst kind of missing data, because nothing on screen
      connects the two. */
   S.colf = {};
-  S.selProj = null; S.selPers = null; S.selAsg = null;
+  S.selProj = null; S.selPers = null; S.selAsg = null; S.newKeys = new Set();
   /* And a section left full screen is put back, for the reason the banner exists: a load
      reports what it found, and the one thing that must not happen is for that report to
      appear behind a panel covering the window. A new plan is read whole before it is read

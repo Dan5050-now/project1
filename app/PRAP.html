@@ -343,6 +343,10 @@ body.busy{cursor:progress}
 .msp label:hover{background:var(--fill)}
 .msp input{margin:0}
 .msp .msclear{width:100%;margin-bottom:3px}
+.msp .msq{width:100%;box-sizing:border-box;margin:0 0 4px;padding:5px 8px;font:inherit;
+ font-size:var(--t-md);color:var(--ink);background:var(--page);border:1px solid var(--base);
+ border-radius:var(--r-xs)}
+.msp label[hidden]{display:none}
 
 /* --- sticky bars: vibrancy ----------------------------------------------
    Translucent and blurred rather than opaque, so the content scrolling under
@@ -1100,6 +1104,27 @@ td.c.gapc::after{position:absolute;top:1px;left:3px;font-size:9px;line-height:1;
  font-weight:700}
 td.c.gapc.short::after{content:"\25BC";color:var(--underink)}
 td.c.gapc.over::after{content:"\25B2";color:var(--crit)}
+/* Not staffed, in the list and on the control (R-56): the month nobody is on. Neutral
+   ink and a hollow mark, the same \25E6 the table's own cells use for it. */
+.gunst{color:var(--ink2);font-weight:650}
+.gpill.unstaffed{background:var(--fill);color:var(--ink2)}
+table.gapt td.num.unstaffed{color:var(--ink2);font-weight:600;background:var(--fill)}
+tr.gaprow.unstaffed > th.rh{box-shadow:inset 3px 0 0 var(--ink3)}
+/* How a project's figures are made (R-56). A pill on the row, and a pencil in the
+   corner of a month that carries a stated figure - top RIGHT, because the gap arrow
+   already has the top left. */
+.estb{font-size:var(--t-xs);border-radius:100px;padding:2px 7px;margin-left:6px;
+ white-space:nowrap;font-weight:590}
+.estb.auto{background:var(--fill);color:var(--ink2)}
+.estb.manual{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.estb.mixed{background:color-mix(in srgb,var(--accent) 8%,transparent);color:var(--accent)}
+.estb.sm{font-size:10px;padding:1px 6px}
+td.c.man{position:relative}
+td.c.man::before{content:"\270E";position:absolute;top:1px;right:3px;font-size:9px;
+ line-height:1;color:var(--accent)}
+.ctl.projissue{flex-direction:row;align-items:center;gap:6px;margin:0 0 0 auto}
+.ctl.projissue > span{font-size:var(--t-xs);color:var(--muted);font-weight:510}
+.ctl.projissue select{max-width:260px;padding:3px 6px;font-size:var(--t-sm)}
 /* And on the project's own utilisation chart. Dashed, so it cannot be mistaken for the
    solid tinted outline the person chart already uses for a threshold breach. */
 rect.gapmark{fill:none;stroke-width:1.6;stroke-dasharray:3 2}
@@ -1350,7 +1375,7 @@ td.cell.gapnew:focus:empty::before{content:""}
 
 <script>
 "use strict";
-const APP_VERSION = "1.57";
+const APP_VERSION = "1.58";
 const SCHEMA_EXPECTED = 13;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1359,9 +1384,9 @@ const SCHEMA_EXPECTED = 13;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.66.xlsx",          ver:"2.66",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.67.xlsx",          ver:"2.67",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.37.xlsx", ver:"1.37",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.38.xlsx", ver:"1.38",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v2.5.xlsx",          ver:"2.5",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
@@ -5496,6 +5521,12 @@ const S = {
   f:{type:new Set(), phase:new Set(), out:new Set(), proj:new Set(),
      pers:new Set(), role:new Set(), dept:new Set()},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
+  /* Projects and people ADDED in this session with + row (R-56). The selection stays on
+     one of them while it is being filled in and after it is saved, whether or not the
+     filters would list it - a row that has only an identifier matches nothing, and the
+     tab used to answer that by jumping to the first project in the list, so the
+     milestones and periods typed next went to somebody else's project. */
+  newKeys:new Set(),
   /* Which section, if any, has the whole screen: {tab, name} against the panel's own
      data-panel. A NAME rather than an element or a position, because a render replaces
      every panel and the detail sections differ in number and in heading from one
@@ -5507,6 +5538,7 @@ const S = {
      are the alarm and an alarm that quietly reported a subset would be worse than none
      (R-53). Cleared on load, like S.colf and for the same reason. */
   gapf:{dir:"", proj:"", min:0},
+  projIssue:"",             // Resource by project narrowed to its problems (R-56)
   /* Which tabs no longer match the model. Three of the four panes are hidden at any
      moment, so renderAll() marks them all stale and draws only the one on screen;
      showTab() draws a pane the moment it is asked for. See renderAll() in 11_tabs.js
@@ -5586,6 +5618,28 @@ function listedPeople(){
     out.push(sid);
   }
   return out;
+}
+/* WHAT AN EXPORTED FILE IS CALLED (R-56). The date AND the local time, so two exports
+   made the same day do not share a name and a folder listed by name lists them in the
+   order they were made - the browser edition has only the operating system's own file
+   window, and a name that sorts by time is the one thing the application can put in it.
+   And the stamp an earlier export added is taken off first: re-exporting
+   Plan_2026-10-04.xlsx used to give Plan_2026-10-04_2026-10-07.xlsx, and again
+   Plan_2026-10-04_2026-10-07_2026-10-09.xlsx. */
+function fileStamp(d){
+  d = d || new Date();
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_`
+    + `${p(d.getHours())}${p(d.getMinutes())}`;
+}
+function fileBase(name, fallback){
+  let b = String(name || fallback).replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+  for (;;){
+    const next = b.replace(/_CalculatedFTE$/i, "")
+                  .replace(/_\d{4}-\d{2}-\d{2}(_\d{4})?$/, "");
+    if (next === b || !next) return b;
+    b = next;
+  }
 }
 const grid = () => { const g = []; for (let k = S.from; k <= S.to; k++) g.push(k); return g; };
 
@@ -6436,9 +6490,97 @@ function monthHead(){
   }).join("");
 }
 
+/* ---------------------------------------------- how a project's figures were made (R-56)
+
+   Resource by project drew every figure the same way, whether the assumptions produced
+   it or somebody typed it - and those are different claims. A stated figure is a
+   judgement about this study; an automatic one is what a study of its kind usually
+   takes. Reading the table without knowing which is which, a reader cannot tell a
+   project that is genuinely light from one somebody has written down as light. */
+
+/** 'manual' (the project's month is stated), 'mixed' (some of its assignments are),
+ *  or 'auto'; and how many assignments are stated. */
+function estimationOf(pid){
+  const M = S.model;
+  if (M.isManual && M.isManual("project", pid)) return {kind:"manual", n:0};
+  const n = M.assignments.filter(a => a.project_id === pid
+                                   && M.isManual && M.isManual("assignment", a.assignment_id)).length;
+  return {kind: n ? "mixed" : "auto", n};
+}
+
+function estimationPill(pid){
+  const e = estimationOf(pid);
+  const [label, tip] = e.kind === "manual"
+    ? ["Manual", "<b>Manual estimation</b><br>This project's monthly total is STATED on "
+       + "MonthlyEstimate rather than worked out from the standard. The people on it are "
+       + "scaled so they add up to the stated figure, and a month can sit above or below "
+       + "what the standard would say — that is what Standard vs staffed reports."]
+    : e.kind === "mixed"
+    ? [`Auto · ${e.n} manual`, `<b>Partly stated</b><br>The project is calculated from the `
+       + `standard, but ${e.n} of its assignment(s) carry a figure stated by hand. Those `
+       + `people's months are what was typed; everyone else divides the rest.`]
+    : ["Auto", "<b>Automatic estimation</b><br>Every figure on this row is worked out from "
+       + "the assumptions: standard FTE × period weight × the part of the month it runs, "
+       + "shared among the people on it."];
+  return `<span class="estb ${e.kind}" data-tip="${att(tip)}">${label}</span>`;
+}
+
+/** Project-months whose figure includes anything stated by hand, as "pid|k". */
+function manualMonths(){
+  const out = new Set();
+  for (const L of (S.calc.lines || []))
+    if (L.manual_assignment || L.manual_project) out.add(L.project_id + "|" + L.month);
+  return out;
+}
+
+/* ----------------------------------------------- narrowing the table to its problems (R-56)
+
+   A portfolio of sixty projects with four in trouble is a table of fifty-six rows to
+   scroll past. The control narrows the ROWS to the projects with a problem IN THE MONTHS
+   ON SCREEN; it does not touch the control beside it or the tiles, which go on counting
+   everything, for the reason R-53 gives: an alarm that followed somebody's view would be
+   an alarm that lies. */
+const PROJ_ISSUES = [
+  ["", "All projects"],
+  ["issues", "Issues only (short, over, not staffed)"],
+  ["short", "\u25BC Short of standard"],
+  ["over", "\u25B2 Over standard"],
+  ["unstaffed", "\u25E6 Not staffed"],
+  ["manual", "\u270E Stated by hand"],
+];
+
+function projIssues(pid, G, man){
+  const C = S.calc, out = new Set();
+  for (const k of G){
+    const g = gapOf(pid, k);
+    if (g) out.add(g.dir);
+    if ((C.projUnallocated.get(pid + "|" + k) || 0) > 0.004) out.add("unstaffed");
+    if (man.has(pid + "|" + k)) out.add("manual");
+  }
+  return out;
+}
+
+function projIssueControl(){
+  return `<label class="ctl projissue"><span>Show</span><select id="projIssue">`
+    + PROJ_ISSUES.map(([v, l]) => `<option value="${v}"${S.projIssue === v ? " selected" : ""}>`
+      + `${esc(l)}</option>`).join("")
+    + `</select></label>`;
+}
+
 function tableProjects(pids){
   const M = S.model, C = S.calc, G = grid();
-  const listed = pids.slice().sort(byRank);
+  const man = manualMonths();
+  const f = S.projIssue || "";
+  const listed = pids.slice().sort(byRank).filter(pid => {
+    if (!f) return true;
+    const has = projIssues(pid, G, man);
+    return f === "issues" ? has.has("short") || has.has("over") || has.has("unstaffed")
+                          : has.has(f);
+  });
+  if (f && !listed.length)
+    return `<p class="note">None of the ${pids.length} project(s) in view has
+      ${esc((PROJ_ISSUES.find(x => x[0] === f) || ["", f])[1].toLowerCase())} in these
+      months. <strong>Show: All projects</strong> brings the full table back.</p>`;
   let vmax = 0;
   for (const p of listed) for (const k of G) vmax = Math.max(vmax, C.projMonth.get(p+"|"+k) || 0);
   const body = [];
@@ -6454,10 +6596,17 @@ function tableProjects(pids){
          project. Both directions are marked and they are marked DIFFERENTLY - short of
          the standard and over it are different facts. */
       const g = gapOf(pid, k);
-      const mark = g ? ` gapc ${g.dir}` : "";
+      const hand = man.has(pid + "|" + k);
+      const handLine = `<span class="tr">&#9998; includes a figure stated by hand `
+        + `(manual estimation)</span><br>`;
+      const mark = (g ? ` gapc ${g.dir}` : "") + (hand ? " man" : "");
       const gtip = g ? ` data-gap="${att(pid)}" data-gk="${k}"`
         + ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${gapLine(pid, k)}`
-        + `<span class="tr">click for the month and the figures behind it</span>`)}"` : "";
+        + (hand ? handLine : "")
+        + `<span class="tr">click for the month and the figures behind it</span>`)}"`
+        : hand ? ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${handLine}`
+        + `<span class="tr">on its standard: the stated figure matches what it needs</span>`)}"`
+        : "";
       if (v <= 0.004){
         /* WHAT THE MONTH ASKS FOR WHEN NOBODY IS ON IT (R-49). A dot here used to be
            the only thing this table said about a month inside the project's own run
@@ -6495,6 +6644,7 @@ function tableProjects(pids){
     body.push(`<tr class="parent" data-k="p-${esc(pid)}" tabindex="0" role="button" `
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
       + `<span class="nm">${esc(M.projects[pid].project_name)}</span>${typePill(pid)}${phasePill(pid)}`
+      + estimationPill(pid)
       + `<span class="sub">${esc(pid)} &middot; starts ${ymd(M.projects[pid].start_date)}${usub}</span></th>`
       + `${tds}<td>${fmt(tot)}</td></tr>`);
     if (!open) continue;
@@ -6508,9 +6658,18 @@ function tableProjects(pids){
         return v > 0.004 ? `<td class="c">${fmt(v)}</td>` : '<td class="c z">&middot;</td>';
       }).join("");
       if (dt <= 0.004) continue;
+      const stated = M.isManual && (M.isManual("assignment", a.assignment_id)
+                                    || M.isManual("project", pid));
       body.push(`<tr class="child"><th class="rh">&#8627; `
         + `${esc((M.people[a.person_id]||{}).person_name || a.person_id)}`
-        + `<span class="role">${esc(a.role_name)}</span></th>${dtds}<td>${fmt(dt)}</td></tr>`);
+        + `<span class="role">${esc(a.role_name)}</span>`
+        + (stated ? `<span class="estb manual sm" data-tip="${att(
+            M.isManual("assignment", a.assignment_id)
+              ? "<b>Stated by hand</b><br>This assignment's months are typed on MonthlyEstimate."
+              : "<b>Scaled to a stated total</b><br>The project's month is stated, and this "
+                + "person's share is scaled so the people add up to it.")}">manual</span>`
+                  : "")
+        + `</th>${dtds}<td>${fmt(dt)}</td></tr>`);
     }
   }
   let gt = 0;
@@ -6518,7 +6677,8 @@ function tableProjects(pids){
     let s = 0; for (const p of listed) s += C.projMonth.get(p+"|"+k) || 0; gt += s;
     return `<td>${fmt(s)}</td>`;
   }).join("");
-  body.push(`<tr class="grand"><th class="rh">All ${listed.length} projects</th>${gtds}<td>${fmt(gt)}</td></tr>`);
+  body.push(`<tr class="grand"><th class="rh">${f ? `${listed.length} of ${pids.length} `
+    + `projects shown` : `All ${listed.length} projects`}</th>${gtds}<td>${fmt(gt)}</td></tr>`);
   /* ON ITS OWN LINE, NEVER ADDED TO THE ONE ABOVE. The row above is what is APPLIED,
      and it is the figure that must equal the person table's grand total (spec sheet 06).
      Unallocated demand belongs to no person, so adding it there would break the one
@@ -7073,7 +7233,8 @@ function renderOverall(){
      not a plan in balance, and one figure would say it was. */
   const gaps = gapRows(pids);
   const gshort = gaps.filter(r => r.dir === "short").length;
-  const gover = gaps.length - gshort;
+  const gover = gaps.filter(r => r.dir === "over").length;
+  const gunst = gaps.filter(r => r.dir === "unstaffed").length;
   const tiles = [
     ["Projects in view", pids.length, `of ${Object.keys(M.projects).length} in the file`, "",
      "Projects matching the current filters that draw resource somewhere in the horizon. Change the "
@@ -7090,12 +7251,14 @@ function renderOverall(){
      `Stretches of ${M.MINM} or more consecutive months below ${M.UNDER.toFixed(2)} FTE. Counted as RUNS, `
      + "not months — three separate amber cells would look like three problems. A month at zero breaks a "
      + "run rather than continuing it: somebody with no assignments is unassigned, not under-allocated."],
-    ["Off their standard", gaps.length, `${gshort} short &#183; ${gover} over`,
+    ["Off their standard", gaps.length, `${gshort} short &#183; ${gover} over`
+     + (gunst ? ` &#183; ${gunst} not staffed` : ""),
      gaps.length ? "gap" : "",
      "Project-months where what the project NEEDS — standard FTE × period weight × the part of the "
      + "month it runs — is not what it is being GIVEN. An automatic month always has the two equal, "
      + "because the people on it divide the month rather than each adding to it. A figure stated by "
-     + "hand replaces the standard rather than adjusting it, which is what puts them out of step. The "
+     + "hand replaces the standard rather than adjusting it, which is what puts them out of step; "
+     + "a month the periods ask for with nobody assigned is counted as NOT STAFFED. The "
      + "two directions are counted apart and never netted. V-34 reports it, and <b>Standard vs staffed</b> "
      + "— in <b>Resource by project</b>'s own head, and from this tile — lists every one and lets you change the figures behind it."],
   ].map(([l,v,s,c,h]) => `<div class="tile ${c}" data-tip="${att(`<b>${l}</b><br>${h}`)}"`
@@ -7135,9 +7298,13 @@ function renderOverall(){
             meets unless they go looking - is paid back by the control, which states the
             count and the direction rather than naming the screen behind it. */""}
       <div class="phead"><h2>Resource by project</h2>
-        <span class="scope k">${pids.length} project(s)</span>${gapButton(pids)}</div>
+        <span class="scope k">${pids.length} project(s)</span>${projIssueControl()}${gapButton(pids)}</div>
       <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
-        <strong>Click a project name</strong> to expand it to the people and roles on it.</p>
+        <strong>Click a project name</strong> to expand it to the people and roles on it.
+        Each project says how its figures are made — <span class="estb auto">Auto</span>
+        from the standard, <span class="estb manual">Manual</span> stated by hand — and a
+        month carrying a stated figure is marked &#9998;. <strong>Show</strong> narrows the
+        table to the projects with a problem in these months.</p>
       <div class="scrollx xl">${tableProjects(pids)}</div></div>
     <div class="panel" data-panel="stack-pers">
       <div class="phead"><h2>Monthly demand by person</h2>
@@ -7156,6 +7323,13 @@ function renderOverall(){
       <div class="scrollx xl">${tablePeople(sids)}</div>
       <p class="note">Under-allocation is counted as a run of ${M.MINM} or more consecutive months, not
         per month — the run is what matters, a single quiet month is not.</p></div>`;
+}
+
+/** Whether the selection is a project or person added in this session that still
+ *  exists - and so stays selected whatever the filters list (R-56). */
+function stickySel(sheet, id){
+  return !!id && S.newKeys.has(id)
+    && S.model.raw[sheet].some(r => r[KEY_COL[sheet]] === id);
 }
 
 function renderProjTab(){
@@ -7194,16 +7368,12 @@ function renderProjTab(){
         ${scratchProject(draft)}`;
     return;
   }
-  if (!S.selProj || !pids.includes(S.selProj)) S.selProj = pids[0];
-  const pid = S.selProj, pr = M.projects[pid];
+  if (!stickySel("Project", S.selProj) && (!S.selProj || !pids.includes(S.selProj)))
+    S.selProj = pids[0];
+  const pid = S.selProj;
   const keep = new Set(pids);
   const rows = M.raw.Project.filter(r => keep.has(r.project_id) || r.__new
-                                      || !hasKey("Project", r));
-  const util = chartProjectUtil(pid);
-  const ms = M.raw.Milestone.filter(m => m.project_id === pid)
-    .sort((a,b) => a.milestone_date - b.milestone_date);
-  const per = (M.periods[pid] || []);
-  const derived = per.some(p => p.__derived);
+                                      || !hasKey("Project", r) || r.project_id === pid);
 
   el("t-proj").innerHTML =
     `<div class="panel" data-panel="trend">
@@ -7475,12 +7645,13 @@ function renderPersTab(){
         ${scratchPerson(draft)}`;
     return;
   }
-  if (!S.selPers || !sids.includes(S.selPers)) S.selPers = sids[0];
+  if (!stickySel("Person", S.selPers) && (!S.selPers || !sids.includes(S.selPers)))
+    S.selPers = sids[0];
   const sid = S.selPers, pe = M.people[sid];
   const keepP = new Set(sids);
 
   const prows = M.raw.Person.filter(r => keepP.has(r.person_id) || r.__new
-                                      || !hasKey("Person", r));
+                                      || !hasKey("Person", r) || r.person_id === sid);
   el("t-pers").innerHTML =
     `<div class="panel" data-panel="trend">
       <div class="phead"><h2>Monthly load trend</h2>
@@ -8360,6 +8531,17 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
                                      from:before, to:v, n:hits.length});
   }
   target[col] = v;
+  /* Renaming the identifier of the row that is selected moves the selection with it,
+     or the next render would look for an identifier that no longer exists and fall
+     back to the first row in the list (R-56). */
+  const follow = (KEY_COL[sheet] === col && before !== v
+                  && (sheet === "Project" || sheet === "Person"));
+  const moveSel = (from, to) => {
+    if (sheet === "Project" && S.selProj === from) S.selProj = to;
+    if (sheet === "Person" && S.selPers === from) S.selPers = to;
+    if (S.newKeys.has(from)){ S.newKeys.delete(from); if (to) S.newKeys.add(to); }
+  };
+  if (follow) moveSel(before, v);
 
   // Re-validate the whole model with the same rules as an import (REQ-IMP-09). An edit
   // that introduces an ERROR is rejected outright rather than left to surface later.
@@ -8368,6 +8550,7 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
   const oldErrors = (S.model.findings || []).filter(blocking);
   if (newErrors.length > oldErrors.length){
     target[col] = before;
+    if (follow) moveSel(v, before);
     rebuild(true);
     flashBad(tdEl, newErrors[newErrors.length - 1].msg);
     return;
@@ -9137,8 +9320,8 @@ function exportWorkbook(asJson){
   for (const s of REQUIRED_SHEETS) sheets[s] = rawToRows(s);
   const blob = asJson ? new Blob([buildPrapJson(sheets)], {type:"application/json"})
                       : buildXlsx(sheets);
-  const stamp = new Date().toISOString().slice(0,10);
-  const base = (S.fileName || "PRAP_SourceData.xlsx").replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+  const stamp = fileStamp();
+  const base = fileBase(S.fileName, "PRAP_SourceData");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   // Never silently overwrite the source: the stamp, and a different extension for the
@@ -9186,11 +9369,10 @@ function exportResults(){
     filters: named.join(" · "), fileName: S.fileName, stamp,
   });
 
-  const day = new Date().toISOString().slice(0, 10);
-  const base = (S.fileName || "PRAP").replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+  const base = fileBase(S.fileName, "PRAP");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(buildXlsx(sheets));
-  a.download = `${base}_CalculatedFTE_${day}.xlsx`;
+  a.download = `${base}_CalculatedFTE_${fileStamp()}.xlsx`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 
@@ -9610,6 +9792,19 @@ function gapRows(pids){
     if (want.size && !want.has(pid)) continue;
     out.push({pid, k, ...g});
   }
+  /* AND THE MONTHS NOBODY IS ON (R-56). A month the project's periods ask for with
+     nobody assigned is the widest gap there is - needs the whole standard, staffed at
+     nothing - and it was the one this list and the control above it left out: the table
+     drew it, in its own ◦ cells, and the alarm said nothing. Its own direction,
+     'unstaffed', because the fix is different: there is no figure to change, somebody
+     has to be assigned. */
+  for (const [qk, u] of (C.projUnallocated || new Map())){
+    if (!(u > 0.004)) continue;
+    const i = qk.lastIndexOf("|");
+    const pid = qk.slice(0, i), k = +qk.slice(i + 1);
+    if (want.size && !want.has(pid)) continue;
+    out.push({pid, k, demand: u, applied: 0, gap: -u, dir: "unstaffed"});
+  }
   out.sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap) || (a.pid < b.pid ? -1 : 1));
   return out;
 }
@@ -9669,13 +9864,15 @@ function gapButton(pids){
       + "always does — the people on it divide the month rather than each adding to it.")
       }">Standard vs staffed</button>`;
   const short = rows.filter(r => r.dir === "short").length;
-  const over = rows.length - short;
+  const over = rows.filter(r => r.dir === "over").length;
+  const unst = rows.filter(r => r.dir === "unstaffed").length;
   return `<button class="btn tiny gapbtn on" data-gapopen="1" data-tip="${att(
     `<b>Standard vs staffed</b><br>${rows.length} project-month(s) are not being given `
-    + "what the project's own standard says they need — a figure stated by hand replaces "
-    + "the standard rather than adjusting it. Counted apart and never netted: three short "
-    + "in March and three over in April is not a plan in balance. Open it to see every "
-    + "one and change the figures behind it.")}">`
+    + "what the project's own standard says they need. Short or over: a figure stated by "
+    + "hand replaces the standard rather than adjusting it. Not staffed: the project's "
+    + "periods ask for the month and nobody is assigned to it. Counted apart and never "
+    + "netted: three short in March and three over in April is not a plan in balance. "
+    + "Open it to see every one and change what is behind it.")}">`
     /* The words first, so the two figures are read as what they are rather than as a
        pair of numbers in a button. Each part is its own element and the spacing is the
        flex gap: .btn.tiny is an inline-flex box, which DROPS the whitespace between its
@@ -9684,6 +9881,7 @@ function gapButton(pids){
     + `<span class="lbl">Off standard</span>`
     + (short ? `<span class="gshort">&#9660; ${short} short</span>` : "")
     + (over ? `<span class="gover">&#9650; ${over} over</span>` : "")
+    + (unst ? `<span class="gunst">&#9702; ${unst} not staffed</span>` : "")
     + "</button>";
 }
 
@@ -9713,7 +9911,8 @@ function gapControls(all){
   const f = S.gapf;
   const projects = [...new Set(all.map(r => r.pid))]
     .sort((a, b) => (projectNameOf(a) || a) < (projectNameOf(b) || b) ? -1 : 1);
-  const dir = [["", "All"], ["short", "&#9660; Short"], ["over", "&#9650; Over"]]
+  const dir = [["", "All"], ["short", "&#9660; Short"], ["over", "&#9650; Over"],
+               ["unstaffed", "&#9702; Not staffed"]]
     .map(([v, l]) => `<button class="btn tiny${f.dir === v ? " on" : ""}" `
       + `data-gapdir="${att(v)}">${l}</button>`).join("");
   return `<div class="gapf">
@@ -9734,6 +9933,7 @@ function gapList(pids){
   const M = S.model, all = gapRows(pids), rows = gapKept(all);
   const short = rows.filter(r => r.dir === "short");
   const over = rows.filter(r => r.dir === "over");
+  const unst = rows.filter(r => r.dir === "unstaffed");
   const projects = new Set(rows.map(r => r.pid));
   /* NOTHING TO REPORT AND NOTHING LEFT AFTER FILTERING ARE DIFFERENT ANSWERS, and only
      one of them is good news. Saying "every project is on its standard" to somebody who
@@ -9753,17 +9953,27 @@ function gapList(pids){
 
   const body = rows.slice(0, GAP_SHOW).map(r => {
     const pr = M.projects[r.pid] || {};
-    return `<tr class="gaprow ${r.dir}" data-gap="${att(r.pid)}" data-gk="${r.k}"
+    const go = r.dir === "unstaffed"
+      ? `data-act="goproj" data-pid="${att(r.pid)}"`
+      : `data-gap="${att(r.pid)}" data-gk="${r.k}"`;
+    return `<tr class="gaprow ${r.dir}" ${go}
         tabindex="0" role="button">
       <th class="rh"><span class="nm">${esc(pr.project_name || r.pid)}</span>
         <span class="sub">${esc(r.pid)}</span></th>
       <td>${keyToLabel(r.k)}</td>
       <td class="num">${r.demand.toFixed(2)}</td>
       <td class="num">${r.applied.toFixed(2)}</td>
-      <td class="num ${r.dir}">${r.gap > 0 ? "&#9650; +" : "&#9660; "}${r.gap.toFixed(2)}</td>
-      <td>${r.dir === "short" ? "short of the standard" : "over the standard"}</td>
-      <td><button class="btn tiny" data-gap="${att(r.pid)}" data-gk="${r.k}"
-        >Check and fix</button></td></tr>`;
+      <td class="num ${r.dir}">${r.dir === "unstaffed" ? "&#9702; "
+        : r.gap > 0 ? "&#9650; +" : "&#9660; "}${r.gap.toFixed(2)}</td>
+      <td>${r.dir === "short" ? "short of the standard"
+          : r.dir === "over" ? "over the standard" : "nobody is assigned"}</td>
+      <td>${r.dir === "unstaffed"
+        /* No figure to change: the fix is an assignment, and assignments are entered on
+           the project's own tab - so the row takes you there with the project selected. */
+        ? `<button class="btn tiny" data-act="goproj" data-pid="${att(r.pid)}"
+            >Assign people</button>`
+        : `<button class="btn tiny" data-gap="${att(r.pid)}" data-gk="${r.k}"
+            >Check and fix</button>`}</td></tr>`;
   }).join("");
 
   return `<p class="cap"><span class="scope k">${gapNarrowed()
@@ -9781,6 +9991,8 @@ function gapList(pids){
     <div class="gtot">
       <span class="gpill short">&#9660; ${short.length} month(s) short of the standard</span>
       <span class="gpill over">&#9650; ${over.length} month(s) over it</span>
+      ${unst.length ? `<span class="gpill unstaffed">&#9702; ${unst.length} month(s) with
+        nobody assigned</span>` : ""}
       <span class="tr">counted apart, never netted — three short in March and three over
         in April is not a plan in balance</span></div>
     <div class="scrollx lg"><table class="grid-t gapt">
@@ -10286,31 +10498,53 @@ function showTab(id){
 const FILTER_KEY = {fType:"type", fPhase:"phase", fOut:"out", fProj:"proj",
                     fPers:"pers", fRole:"role", fDept:"dept"};
 
+/* PROJECTS AND PEOPLE ARE LISTED BY NAME (R-56). The value behind each tick is still
+   the identifier - that is what the filter matches on and what the export's ReadMe
+   names - but nobody looks for "PRJ-037"; they look for the study. So the label is the
+   name, sorted by name, with the identifier only where the name alone would not say
+   which row it is: blank, or shared with another row. A list long enough to scroll gets
+   a search box, which matches the identifier as well as the name. */
+const MS_SEARCH_FROM = 9;
+
 function fillFilters(){
   const M = S.model;
-  const set = (id, vals) => {
+  const set = (id, vals, labelOf) => {
     const d = el(id), keep = S.f[FILTER_KEY[id]];
     // A value that has gone from the file cannot stay selected, or the page would be
     // filtered by something the reader can no longer see or clear.
     for (const v of [...keep]) if (!vals.includes(v)) keep.delete(v);
+    let items = vals.map(v => ({v, name: labelOf ? String(labelOf(v) ?? "").trim() : v}));
+    if (labelOf){
+      const seen = {};
+      for (const it of items) seen[it.name] = (seen[it.name] || 0) + 1;
+      for (const it of items)
+        it.label = !it.name ? it.v : seen[it.name] > 1 ? `${it.name} (${it.v})` : it.name;
+      items.sort((a, b) => a.label.localeCompare(b.label, undefined, {numeric:true,
+                                                                      sensitivity:"base"}));
+    } else for (const it of items) it.label = it.v;
     d.querySelector(".msp").innerHTML =
       `<button class="btn tiny msclear" data-msclear="${att(id)}">Clear</button>`
-      + vals.map(v => `<label><input type="checkbox" value="${att(v)}"`
-          + `${keep.has(v) ? " checked" : ""}>${esc(v)}</label>`).join("");
+      + (items.length >= MS_SEARCH_FROM
+          ? `<input type="search" class="msq" placeholder="Search ${items.length}…"
+              aria-label="Search the list">` : "")
+      + items.map(it => `<label data-find="${att((it.label + " " + it.v).toLowerCase())}"`
+          + `${labelOf ? ` title="${att(it.v)}"` : ""}><input type="checkbox" value="${att(it.v)}"`
+          + ` data-label="${att(it.label)}"`
+          + `${keep.has(it.v) ? " checked" : ""}>${esc(it.label)}</label>`).join("");
     msSummary(d);
   };
   set("fType", [...new Set(Object.values(M.projects).map(p => p.project_type))].filter(Boolean));
   set("fPhase", [...new Set(Object.values(M.projects).map(p => p.clinical_phase))].filter(Boolean));
   set("fOut", [...new Set(Object.values(M.projects).map(p => p.work_scope_type))].filter(Boolean));
-  set("fProj", Object.keys(M.projects).sort());
-  set("fPers", Object.keys(M.people).sort());
+  set("fProj", Object.keys(M.projects).sort(), pid => M.projects[pid].project_name);
+  set("fPers", Object.keys(M.people).sort(), sid => M.people[sid].person_name);
   set("fRole", [...new Set(M.assignments.map(a => a.role_name))].filter(Boolean).sort());
   set("fDept", [...new Set(Object.values(M.people).map(p => p.department))].filter(Boolean).sort());
 }
 
 /** What the closed control says: All, the single value, or how many were chosen. */
 function msSummary(d){
-  const on = [...d.querySelectorAll("input:checked")].map(i => i.value);
+  const on = [...d.querySelectorAll("input:checked")].map(i => i.dataset.label || i.value);
   const sum = d.querySelector("summary");
   sum.textContent = on.length === 0 ? "All"
                   : on.length === 1 ? on[0]
@@ -10435,7 +10669,7 @@ function adopt(sheets, name, opts){
      against the old one - the worst kind of missing data, because nothing on screen
      connects the two. */
   S.colf = {};
-  S.selProj = null; S.selPers = null; S.selAsg = null;
+  S.selProj = null; S.selPers = null; S.selAsg = null; S.newKeys = new Set();
   /* And a section left full screen is put back, for the reason the banner exists: a load
      reports what it found, and the one thing that must not happen is for that report to
      appear behind a panel covering the window. A new plan is read whole before it is read
@@ -10642,15 +10876,26 @@ drop.addEventListener("drop", e => {
 });
 
 for (const id of Object.keys(FILTER_KEY))
-  el(id).addEventListener("change", () => {
+  el(id).addEventListener("change", e => {
+    if (e.target.classList.contains("msq")) return;     // the search box filters nothing
     msSummary(el(id)); readFilters(); fitHorizon(); renderKeepingTab(); });
+
+/* The search box in a long filter list hides the entries that do not match; it never
+   ticks or unticks anything, so what is filtered is still exactly what is ticked. */
+document.addEventListener("input", e => {
+  const q = e.target.closest && e.target.closest(".msq");
+  if (!q) return;
+  const want = q.value.trim().toLowerCase();
+  for (const l of q.parentNode.querySelectorAll("label[data-find]"))
+    l.hidden = !!want && !l.dataset.find.includes(want);
+});
 
 /* Clear one filter without hunting for the ticks that are still on. */
 document.addEventListener("click", e => {
   const c = e.target.closest("[data-msclear]");
   if (!c) return;
   const d = el(c.dataset.msclear);
-  for (const i of d.querySelectorAll("input")) i.checked = false;
+  for (const i of d.querySelectorAll("input[type=checkbox]")) i.checked = false;
   msSummary(d); readFilters(); fitHorizon(); renderKeepingTab();
 });
 /* Keep an open panel inside the window.
@@ -10836,7 +11081,7 @@ document.addEventListener("click", e => {
     e.stopPropagation();
     // Opening the other tab from INSIDE the gap dialog has to shut it first, or the tab
     // it just took you to is drawn behind a modal nobody asked to keep.
-    if (act.dataset.act === "gopers" || act.dataset.act === "goproj") closeGap();
+    if (act.dataset.act === "gopers" || act.dataset.act === "goproj"){ closeGap(); closeGaps(); }
     if (act.dataset.act === "blankms") blankMilestones(act.dataset.pid);
     if (act.dataset.act === "autoper") autoPeriods(act.dataset.pid);
     if (act.dataset.act === "blankper") blankPeriods(act.dataset.pid);
@@ -10877,6 +11122,16 @@ document.addEventListener("click", e => {
       if (S.headers[sheet] && S.headers[sheet].includes(col))
         blank[col] = typeof v === "function" ? v() : v;
     rows.splice(i + 1, 0, blank);                        // directly below, not appended
+    /* A NEW PROJECT OR PERSON IS THE SELECTION FROM THE MOMENT IT EXISTS (R-56). The
+       panels below - milestones, periods, assignments - follow the selection, and so
+       does the parent a child row is seeded with. Left on the row the + was pressed
+       from, the details typed next went to that project instead of the new one. */
+    const nk = blank[KEY_COL[sheet]];
+    if (nk && (sheet === "Project" || sheet === "Person")){
+      S.newKeys.add(nk);
+      if (sheet === "Project") S.selProj = nk;
+      else { S.selPers = nk; S.selAsg = null; }
+    }
     beginEditSession();
     S.pending.push({at:new Date(), sheet, row:blank.__row, col:"(new row)",
                     from:null, to:""});
@@ -11505,6 +11760,7 @@ const CAL = (() => {
 
 document.addEventListener("change", e => {
   if (e.target.id === "gapfProj"){ S.gapf.proj = e.target.value; openGaps(); return; }
+  if (e.target.id === "projIssue"){ S.projIssue = e.target.value; renderKeepingTab(); return; }
   if (e.target.id === "unitSel"){
     S.model.UNIT = e.target.value;
     S.model.config.capacity_unit = e.target.value;

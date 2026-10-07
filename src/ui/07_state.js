@@ -8,6 +8,12 @@ const S = {
   f:{type:new Set(), phase:new Set(), out:new Set(), proj:new Set(),
      pers:new Set(), role:new Set(), dept:new Set()},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
+  /* Projects and people ADDED in this session with + row (R-56). The selection stays on
+     one of them while it is being filled in and after it is saved, whether or not the
+     filters would list it - a row that has only an identifier matches nothing, and the
+     tab used to answer that by jumping to the first project in the list, so the
+     milestones and periods typed next went to somebody else's project. */
+  newKeys:new Set(),
   /* Which section, if any, has the whole screen: {tab, name} against the panel's own
      data-panel. A NAME rather than an element or a position, because a render replaces
      every panel and the detail sections differ in number and in heading from one
@@ -19,6 +25,7 @@ const S = {
      are the alarm and an alarm that quietly reported a subset would be worse than none
      (R-53). Cleared on load, like S.colf and for the same reason. */
   gapf:{dir:"", proj:"", min:0},
+  projIssue:"",             // Resource by project narrowed to its problems (R-56)
   /* Which tabs no longer match the model. Three of the four panes are hidden at any
      moment, so renderAll() marks them all stale and draws only the one on screen;
      showTab() draws a pane the moment it is asked for. See renderAll() in 11_tabs.js
@@ -98,6 +105,28 @@ function listedPeople(){
     out.push(sid);
   }
   return out;
+}
+/* WHAT AN EXPORTED FILE IS CALLED (R-56). The date AND the local time, so two exports
+   made the same day do not share a name and a folder listed by name lists them in the
+   order they were made - the browser edition has only the operating system's own file
+   window, and a name that sorts by time is the one thing the application can put in it.
+   And the stamp an earlier export added is taken off first: re-exporting
+   Plan_2026-10-04.xlsx used to give Plan_2026-10-04_2026-10-07.xlsx, and again
+   Plan_2026-10-04_2026-10-07_2026-10-09.xlsx. */
+function fileStamp(d){
+  d = d || new Date();
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_`
+    + `${p(d.getHours())}${p(d.getMinutes())}`;
+}
+function fileBase(name, fallback){
+  let b = String(name || fallback).replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+  for (;;){
+    const next = b.replace(/_CalculatedFTE$/i, "")
+                  .replace(/_\d{4}-\d{2}-\d{2}(_\d{4})?$/, "");
+    if (next === b || !next) return b;
+    b = next;
+  }
 }
 const grid = () => { const g = []; for (let k = S.from; k <= S.to; k++) g.push(k); return g; };
 

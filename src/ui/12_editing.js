@@ -389,6 +389,17 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
                                      from:before, to:v, n:hits.length});
   }
   target[col] = v;
+  /* Renaming the identifier of the row that is selected moves the selection with it,
+     or the next render would look for an identifier that no longer exists and fall
+     back to the first row in the list (R-56). */
+  const follow = (KEY_COL[sheet] === col && before !== v
+                  && (sheet === "Project" || sheet === "Person"));
+  const moveSel = (from, to) => {
+    if (sheet === "Project" && S.selProj === from) S.selProj = to;
+    if (sheet === "Person" && S.selPers === from) S.selPers = to;
+    if (S.newKeys.has(from)){ S.newKeys.delete(from); if (to) S.newKeys.add(to); }
+  };
+  if (follow) moveSel(before, v);
 
   // Re-validate the whole model with the same rules as an import (REQ-IMP-09). An edit
   // that introduces an ERROR is rejected outright rather than left to surface later.
@@ -397,6 +408,7 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
   const oldErrors = (S.model.findings || []).filter(blocking);
   if (newErrors.length > oldErrors.length){
     target[col] = before;
+    if (follow) moveSel(v, before);
     rebuild(true);
     flashBad(tdEl, newErrors[newErrors.length - 1].msg);
     return;

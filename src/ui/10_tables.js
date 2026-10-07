@@ -29,9 +29,97 @@ function monthHead(){
   }).join("");
 }
 
+/* ---------------------------------------------- how a project's figures were made (R-56)
+
+   Resource by project drew every figure the same way, whether the assumptions produced
+   it or somebody typed it - and those are different claims. A stated figure is a
+   judgement about this study; an automatic one is what a study of its kind usually
+   takes. Reading the table without knowing which is which, a reader cannot tell a
+   project that is genuinely light from one somebody has written down as light. */
+
+/** 'manual' (the project's month is stated), 'mixed' (some of its assignments are),
+ *  or 'auto'; and how many assignments are stated. */
+function estimationOf(pid){
+  const M = S.model;
+  if (M.isManual && M.isManual("project", pid)) return {kind:"manual", n:0};
+  const n = M.assignments.filter(a => a.project_id === pid
+                                   && M.isManual && M.isManual("assignment", a.assignment_id)).length;
+  return {kind: n ? "mixed" : "auto", n};
+}
+
+function estimationPill(pid){
+  const e = estimationOf(pid);
+  const [label, tip] = e.kind === "manual"
+    ? ["Manual", "<b>Manual estimation</b><br>This project's monthly total is STATED on "
+       + "MonthlyEstimate rather than worked out from the standard. The people on it are "
+       + "scaled so they add up to the stated figure, and a month can sit above or below "
+       + "what the standard would say — that is what Standard vs staffed reports."]
+    : e.kind === "mixed"
+    ? [`Auto · ${e.n} manual`, `<b>Partly stated</b><br>The project is calculated from the `
+       + `standard, but ${e.n} of its assignment(s) carry a figure stated by hand. Those `
+       + `people's months are what was typed; everyone else divides the rest.`]
+    : ["Auto", "<b>Automatic estimation</b><br>Every figure on this row is worked out from "
+       + "the assumptions: standard FTE × period weight × the part of the month it runs, "
+       + "shared among the people on it."];
+  return `<span class="estb ${e.kind}" data-tip="${att(tip)}">${label}</span>`;
+}
+
+/** Project-months whose figure includes anything stated by hand, as "pid|k". */
+function manualMonths(){
+  const out = new Set();
+  for (const L of (S.calc.lines || []))
+    if (L.manual_assignment || L.manual_project) out.add(L.project_id + "|" + L.month);
+  return out;
+}
+
+/* ----------------------------------------------- narrowing the table to its problems (R-56)
+
+   A portfolio of sixty projects with four in trouble is a table of fifty-six rows to
+   scroll past. The control narrows the ROWS to the projects with a problem IN THE MONTHS
+   ON SCREEN; it does not touch the control beside it or the tiles, which go on counting
+   everything, for the reason R-53 gives: an alarm that followed somebody's view would be
+   an alarm that lies. */
+const PROJ_ISSUES = [
+  ["", "All projects"],
+  ["issues", "Issues only (short, over, not staffed)"],
+  ["short", "\u25BC Short of standard"],
+  ["over", "\u25B2 Over standard"],
+  ["unstaffed", "\u25E6 Not staffed"],
+  ["manual", "\u270E Stated by hand"],
+];
+
+function projIssues(pid, G, man){
+  const C = S.calc, out = new Set();
+  for (const k of G){
+    const g = gapOf(pid, k);
+    if (g) out.add(g.dir);
+    if ((C.projUnallocated.get(pid + "|" + k) || 0) > 0.004) out.add("unstaffed");
+    if (man.has(pid + "|" + k)) out.add("manual");
+  }
+  return out;
+}
+
+function projIssueControl(){
+  return `<label class="ctl projissue"><span>Show</span><select id="projIssue">`
+    + PROJ_ISSUES.map(([v, l]) => `<option value="${v}"${S.projIssue === v ? " selected" : ""}>`
+      + `${esc(l)}</option>`).join("")
+    + `</select></label>`;
+}
+
 function tableProjects(pids){
   const M = S.model, C = S.calc, G = grid();
-  const listed = pids.slice().sort(byRank);
+  const man = manualMonths();
+  const f = S.projIssue || "";
+  const listed = pids.slice().sort(byRank).filter(pid => {
+    if (!f) return true;
+    const has = projIssues(pid, G, man);
+    return f === "issues" ? has.has("short") || has.has("over") || has.has("unstaffed")
+                          : has.has(f);
+  });
+  if (f && !listed.length)
+    return `<p class="note">None of the ${pids.length} project(s) in view has
+      ${esc((PROJ_ISSUES.find(x => x[0] === f) || ["", f])[1].toLowerCase())} in these
+      months. <strong>Show: All projects</strong> brings the full table back.</p>`;
   let vmax = 0;
   for (const p of listed) for (const k of G) vmax = Math.max(vmax, C.projMonth.get(p+"|"+k) || 0);
   const body = [];
@@ -47,10 +135,17 @@ function tableProjects(pids){
          project. Both directions are marked and they are marked DIFFERENTLY - short of
          the standard and over it are different facts. */
       const g = gapOf(pid, k);
-      const mark = g ? ` gapc ${g.dir}` : "";
+      const hand = man.has(pid + "|" + k);
+      const handLine = `<span class="tr">&#9998; includes a figure stated by hand `
+        + `(manual estimation)</span><br>`;
+      const mark = (g ? ` gapc ${g.dir}` : "") + (hand ? " man" : "");
       const gtip = g ? ` data-gap="${att(pid)}" data-gk="${k}"`
         + ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${gapLine(pid, k)}`
-        + `<span class="tr">click for the month and the figures behind it</span>`)}"` : "";
+        + (hand ? handLine : "")
+        + `<span class="tr">click for the month and the figures behind it</span>`)}"`
+        : hand ? ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${handLine}`
+        + `<span class="tr">on its standard: the stated figure matches what it needs</span>`)}"`
+        : "";
       if (v <= 0.004){
         /* WHAT THE MONTH ASKS FOR WHEN NOBODY IS ON IT (R-49). A dot here used to be
            the only thing this table said about a month inside the project's own run
@@ -88,6 +183,7 @@ function tableProjects(pids){
     body.push(`<tr class="parent" data-k="p-${esc(pid)}" tabindex="0" role="button" `
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
       + `<span class="nm">${esc(M.projects[pid].project_name)}</span>${typePill(pid)}${phasePill(pid)}`
+      + estimationPill(pid)
       + `<span class="sub">${esc(pid)} &middot; starts ${ymd(M.projects[pid].start_date)}${usub}</span></th>`
       + `${tds}<td>${fmt(tot)}</td></tr>`);
     if (!open) continue;
@@ -101,9 +197,18 @@ function tableProjects(pids){
         return v > 0.004 ? `<td class="c">${fmt(v)}</td>` : '<td class="c z">&middot;</td>';
       }).join("");
       if (dt <= 0.004) continue;
+      const stated = M.isManual && (M.isManual("assignment", a.assignment_id)
+                                    || M.isManual("project", pid));
       body.push(`<tr class="child"><th class="rh">&#8627; `
         + `${esc((M.people[a.person_id]||{}).person_name || a.person_id)}`
-        + `<span class="role">${esc(a.role_name)}</span></th>${dtds}<td>${fmt(dt)}</td></tr>`);
+        + `<span class="role">${esc(a.role_name)}</span>`
+        + (stated ? `<span class="estb manual sm" data-tip="${att(
+            M.isManual("assignment", a.assignment_id)
+              ? "<b>Stated by hand</b><br>This assignment's months are typed on MonthlyEstimate."
+              : "<b>Scaled to a stated total</b><br>The project's month is stated, and this "
+                + "person's share is scaled so the people add up to it.")}">manual</span>`
+                  : "")
+        + `</th>${dtds}<td>${fmt(dt)}</td></tr>`);
     }
   }
   let gt = 0;
@@ -111,7 +216,8 @@ function tableProjects(pids){
     let s = 0; for (const p of listed) s += C.projMonth.get(p+"|"+k) || 0; gt += s;
     return `<td>${fmt(s)}</td>`;
   }).join("");
-  body.push(`<tr class="grand"><th class="rh">All ${listed.length} projects</th>${gtds}<td>${fmt(gt)}</td></tr>`);
+  body.push(`<tr class="grand"><th class="rh">${f ? `${listed.length} of ${pids.length} `
+    + `projects shown` : `All ${listed.length} projects`}</th>${gtds}<td>${fmt(gt)}</td></tr>`);
   /* ON ITS OWN LINE, NEVER ADDED TO THE ONE ABOVE. The row above is what is APPLIED,
      and it is the figure that must equal the person table's grand total (spec sheet 06).
      Unallocated demand belongs to no person, so adding it there would break the one

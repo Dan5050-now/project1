@@ -607,6 +607,42 @@ def main():
             pg.evaluate("() => document.querySelector('.pm-back [data-cancel]').click()")
             pg.wait_for_timeout(300)
 
+            # R-56: which file is the latest, without opening any of them. Three files
+            # whose NAMES sort the opposite way to their modified times, so a listing that
+            # was still by name would put the oldest first and fail.
+            # Outside the application's home: what this test writes there is checked below.
+            dated = pathlib.Path(tempfile.mkdtemp(prefix="pm-dated-"))
+            stamps = {"a_plan.xlsx": 1_760_000_000, "b_plan.xlsx": 1_770_000_000,
+                      "c_plan.xlsx": 1_780_000_000}
+            for n, t in stamps.items():
+                (dated / n).write_bytes(b"x" * 2048)
+                os.utime(dated / n, (t, t))
+            pg.evaluate("p => { window.__pm.browseFor({title: 'x', start: p}); }", str(dated))
+            pg.wait_for_timeout(900)
+            rows = pg.eval_on_selector_all(
+                ".pm-back .pm-list li:not(.pm-head)",
+                "es => es.map(e => [e.querySelector('.n').firstChild.textContent,"
+                " e.querySelector('.dt').textContent, !!e.querySelector('.pm-new')])")
+            want = sorted(stamps, key=lambda n: -stamps[n])
+            local = time.strftime("%Y-%m-%d %H:%M", time.localtime(stamps[want[0]]))
+            check([r[0] for r in rows] == want,
+                  "THE FILE BROWSER LISTS THE NEWEST FILE FIRST (R-56)",
+                  " > ".join(r[0] for r in rows))
+            check(rows and rows[0][1] == local and all(r[1] for r in rows),
+                  "with every file's modified date and time on its row",
+                  " | ".join(r[1] for r in rows))
+            check([r[2] for r in rows] == [True, False, False],
+                  "and the newest one marked as such")
+            pg.click(".pm-back [data-sort='name']")
+            pg.wait_for_timeout(700)
+            byname = pg.eval_on_selector_all(
+                ".pm-back .pm-list li:not(.pm-head) .n", "es => es.map(e => e.firstChild.textContent)")
+            check(byname == sorted(stamps), "and it can be put back in name order",
+                  " > ".join(byname))
+            shutil.rmtree(dated, ignore_errors=True)
+            pg.evaluate("() => document.querySelector('.pm-back [data-cancel]').click()")
+            pg.wait_for_timeout(300)
+
             menu2 = pg.eval_on_selector_all(
                 "#pm-title .pm-menu a[data-do]", "es => es.map(e => e.dataset.do)")
             check("moveToShared" in menu2,

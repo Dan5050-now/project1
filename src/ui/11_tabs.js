@@ -25,7 +25,8 @@ function renderOverall(){
      not a plan in balance, and one figure would say it was. */
   const gaps = gapRows(pids);
   const gshort = gaps.filter(r => r.dir === "short").length;
-  const gover = gaps.length - gshort;
+  const gover = gaps.filter(r => r.dir === "over").length;
+  const gunst = gaps.filter(r => r.dir === "unstaffed").length;
   const tiles = [
     ["Projects in view", pids.length, `of ${Object.keys(M.projects).length} in the file`, "",
      "Projects matching the current filters that draw resource somewhere in the horizon. Change the "
@@ -42,12 +43,14 @@ function renderOverall(){
      `Stretches of ${M.MINM} or more consecutive months below ${M.UNDER.toFixed(2)} FTE. Counted as RUNS, `
      + "not months — three separate amber cells would look like three problems. A month at zero breaks a "
      + "run rather than continuing it: somebody with no assignments is unassigned, not under-allocated."],
-    ["Off their standard", gaps.length, `${gshort} short &#183; ${gover} over`,
+    ["Off their standard", gaps.length, `${gshort} short &#183; ${gover} over`
+     + (gunst ? ` &#183; ${gunst} not staffed` : ""),
      gaps.length ? "gap" : "",
      "Project-months where what the project NEEDS — standard FTE × period weight × the part of the "
      + "month it runs — is not what it is being GIVEN. An automatic month always has the two equal, "
      + "because the people on it divide the month rather than each adding to it. A figure stated by "
-     + "hand replaces the standard rather than adjusting it, which is what puts them out of step. The "
+     + "hand replaces the standard rather than adjusting it, which is what puts them out of step; "
+     + "a month the periods ask for with nobody assigned is counted as NOT STAFFED. The "
      + "two directions are counted apart and never netted. V-34 reports it, and <b>Standard vs staffed</b> "
      + "— in <b>Resource by project</b>'s own head, and from this tile — lists every one and lets you change the figures behind it."],
   ].map(([l,v,s,c,h]) => `<div class="tile ${c}" data-tip="${att(`<b>${l}</b><br>${h}`)}"`
@@ -87,9 +90,13 @@ function renderOverall(){
             meets unless they go looking - is paid back by the control, which states the
             count and the direction rather than naming the screen behind it. */""}
       <div class="phead"><h2>Resource by project</h2>
-        <span class="scope k">${pids.length} project(s)</span>${gapButton(pids)}</div>
+        <span class="scope k">${pids.length} project(s)</span>${projIssueControl()}${gapButton(pids)}</div>
       <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
-        <strong>Click a project name</strong> to expand it to the people and roles on it.</p>
+        <strong>Click a project name</strong> to expand it to the people and roles on it.
+        Each project says how its figures are made — <span class="estb auto">Auto</span>
+        from the standard, <span class="estb manual">Manual</span> stated by hand — and a
+        month carrying a stated figure is marked &#9998;. <strong>Show</strong> narrows the
+        table to the projects with a problem in these months.</p>
       <div class="scrollx xl">${tableProjects(pids)}</div></div>
     <div class="panel" data-panel="stack-pers">
       <div class="phead"><h2>Monthly demand by person</h2>
@@ -108,6 +115,13 @@ function renderOverall(){
       <div class="scrollx xl">${tablePeople(sids)}</div>
       <p class="note">Under-allocation is counted as a run of ${M.MINM} or more consecutive months, not
         per month — the run is what matters, a single quiet month is not.</p></div>`;
+}
+
+/** Whether the selection is a project or person added in this session that still
+ *  exists - and so stays selected whatever the filters list (R-56). */
+function stickySel(sheet, id){
+  return !!id && S.newKeys.has(id)
+    && S.model.raw[sheet].some(r => r[KEY_COL[sheet]] === id);
 }
 
 function renderProjTab(){
@@ -146,16 +160,12 @@ function renderProjTab(){
         ${scratchProject(draft)}`;
     return;
   }
-  if (!S.selProj || !pids.includes(S.selProj)) S.selProj = pids[0];
-  const pid = S.selProj, pr = M.projects[pid];
+  if (!stickySel("Project", S.selProj) && (!S.selProj || !pids.includes(S.selProj)))
+    S.selProj = pids[0];
+  const pid = S.selProj;
   const keep = new Set(pids);
   const rows = M.raw.Project.filter(r => keep.has(r.project_id) || r.__new
-                                      || !hasKey("Project", r));
-  const util = chartProjectUtil(pid);
-  const ms = M.raw.Milestone.filter(m => m.project_id === pid)
-    .sort((a,b) => a.milestone_date - b.milestone_date);
-  const per = (M.periods[pid] || []);
-  const derived = per.some(p => p.__derived);
+                                      || !hasKey("Project", r) || r.project_id === pid);
 
   el("t-proj").innerHTML =
     `<div class="panel" data-panel="trend">
@@ -427,12 +437,13 @@ function renderPersTab(){
         ${scratchPerson(draft)}`;
     return;
   }
-  if (!S.selPers || !sids.includes(S.selPers)) S.selPers = sids[0];
+  if (!stickySel("Person", S.selPers) && (!S.selPers || !sids.includes(S.selPers)))
+    S.selPers = sids[0];
   const sid = S.selPers, pe = M.people[sid];
   const keepP = new Set(sids);
 
   const prows = M.raw.Person.filter(r => keepP.has(r.person_id) || r.__new
-                                      || !hasKey("Person", r));
+                                      || !hasKey("Person", r) || r.person_id === sid);
   el("t-pers").innerHTML =
     `<div class="panel" data-panel="trend">
       <div class="phead"><h2>Monthly load trend</h2>

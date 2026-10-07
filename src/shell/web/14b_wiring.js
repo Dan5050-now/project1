@@ -148,15 +148,26 @@ drop.addEventListener("drop", e => {
 });
 
 for (const id of Object.keys(FILTER_KEY))
-  el(id).addEventListener("change", () => {
+  el(id).addEventListener("change", e => {
+    if (e.target.classList.contains("msq")) return;     // the search box filters nothing
     msSummary(el(id)); readFilters(); fitHorizon(); renderKeepingTab(); });
+
+/* The search box in a long filter list hides the entries that do not match; it never
+   ticks or unticks anything, so what is filtered is still exactly what is ticked. */
+document.addEventListener("input", e => {
+  const q = e.target.closest && e.target.closest(".msq");
+  if (!q) return;
+  const want = q.value.trim().toLowerCase();
+  for (const l of q.parentNode.querySelectorAll("label[data-find]"))
+    l.hidden = !!want && !l.dataset.find.includes(want);
+});
 
 /* Clear one filter without hunting for the ticks that are still on. */
 document.addEventListener("click", e => {
   const c = e.target.closest("[data-msclear]");
   if (!c) return;
   const d = el(c.dataset.msclear);
-  for (const i of d.querySelectorAll("input")) i.checked = false;
+  for (const i of d.querySelectorAll("input[type=checkbox]")) i.checked = false;
   msSummary(d); readFilters(); fitHorizon(); renderKeepingTab();
 });
 /* Keep an open panel inside the window.
@@ -342,7 +353,7 @@ document.addEventListener("click", e => {
     e.stopPropagation();
     // Opening the other tab from INSIDE the gap dialog has to shut it first, or the tab
     // it just took you to is drawn behind a modal nobody asked to keep.
-    if (act.dataset.act === "gopers" || act.dataset.act === "goproj") closeGap();
+    if (act.dataset.act === "gopers" || act.dataset.act === "goproj"){ closeGap(); closeGaps(); }
     if (act.dataset.act === "blankms") blankMilestones(act.dataset.pid);
     if (act.dataset.act === "autoper") autoPeriods(act.dataset.pid);
     if (act.dataset.act === "blankper") blankPeriods(act.dataset.pid);
@@ -383,6 +394,16 @@ document.addEventListener("click", e => {
       if (S.headers[sheet] && S.headers[sheet].includes(col))
         blank[col] = typeof v === "function" ? v() : v;
     rows.splice(i + 1, 0, blank);                        // directly below, not appended
+    /* A NEW PROJECT OR PERSON IS THE SELECTION FROM THE MOMENT IT EXISTS (R-56). The
+       panels below - milestones, periods, assignments - follow the selection, and so
+       does the parent a child row is seeded with. Left on the row the + was pressed
+       from, the details typed next went to that project instead of the new one. */
+    const nk = blank[KEY_COL[sheet]];
+    if (nk && (sheet === "Project" || sheet === "Person")){
+      S.newKeys.add(nk);
+      if (sheet === "Project") S.selProj = nk;
+      else { S.selPers = nk; S.selAsg = null; }
+    }
     beginEditSession();
     S.pending.push({at:new Date(), sheet, row:blank.__row, col:"(new row)",
                     from:null, to:""});
@@ -1011,6 +1032,7 @@ const CAL = (() => {
 
 document.addEventListener("change", e => {
   if (e.target.id === "gapfProj"){ S.gapf.proj = e.target.value; openGaps(); return; }
+  if (e.target.id === "projIssue"){ S.projIssue = e.target.value; renderKeepingTab(); return; }
   if (e.target.id === "unitSel"){
     S.model.UNIT = e.target.value;
     S.model.config.capacity_unit = e.target.value;

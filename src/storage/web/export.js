@@ -30,8 +30,8 @@ function exportWorkbook(asJson){
   for (const s of REQUIRED_SHEETS) sheets[s] = rawToRows(s);
   const blob = asJson ? new Blob([buildPrapJson(sheets)], {type:"application/json"})
                       : buildXlsx(sheets);
-  const stamp = new Date().toISOString().slice(0,10);
-  const base = (S.fileName || "PRAP_SourceData.xlsx").replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+  const stamp = fileStamp();
+  const base = fileBase(S.fileName, "PRAP_SourceData");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   // Never silently overwrite the source: the stamp, and a different extension for the
@@ -79,11 +79,10 @@ function exportResults(){
     filters: named.join(" · "), fileName: S.fileName, stamp,
   });
 
-  const day = new Date().toISOString().slice(0, 10);
-  const base = (S.fileName || "PRAP").replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+  const base = fileBase(S.fileName, "PRAP");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(buildXlsx(sheets));
-  a.download = `${base}_CalculatedFTE_${day}.xlsx`;
+  a.download = `${base}_CalculatedFTE_${fileStamp()}.xlsx`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 

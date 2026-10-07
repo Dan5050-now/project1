@@ -82,7 +82,14 @@ def listing(path, suffixes=None):
                     continue
                 try:
                     if e.is_dir():
-                        dirs.append({"name": e.name, "path": e.path, "dir": True})
+                        # The folder's own modified time as well (R-56), so a folder
+                        # of dated exports can be found by when it last changed.
+                        try:
+                            mt = e.stat().st_mtime * 1000
+                        except OSError:
+                            mt = None
+                        dirs.append({"name": e.name, "path": e.path, "dir": True,
+                                     "mtime": mt})
                     elif not suffixes or e.name.lower().endswith(suffixes):
                         st = e.stat()
                         files.append({"name": e.name, "path": e.path, "dir": False,

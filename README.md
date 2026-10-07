@@ -300,8 +300,16 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.66.xlsx` — **current.** 89 requirements, 38 live
-  validation rules, source schema version 13. The latest change is **R-55**: the
+- `docs/PRAP_Development_Plan_v2.67.xlsx` — **current.** 89 requirements, 38 live
+  validation rules, source schema version 13. The latest change is **R-56**, five things
+  about finding your way: the **Project and Person filters list names** (with a search
+  box); a **project or person added with + row stays selected** through typing and Save,
+  so the details typed next go to it; **Resource by project** says whether each project's
+  figures are **Auto or Manual**, marks every month with a stated figure, can be
+  **narrowed to problem projects**, and counts **not-staffed** months on its control,
+  the tile and the Standard vs staffed list; and files are found by date — the Python
+  edition's file browser shows **modified date, newest first**, and exported names carry
+  the date and time. Before it, **R-55**: the
   **calculated-FTE export now says which projects are short**, so it can be analysed
   outside the application — by a person or by an AI. `ProjectMonth` gains `demand_fte`,
   `staffed_fte`, `gap_fte` and `gap_dir`, and a row for every month a project's periods
@@ -379,7 +387,9 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.37.xlsx` — **current specification.** Schema 13.
+- `docs/PRAP_Programming_Specification_v1.38.xlsx` — **current specification.** Schema 13.
+  Sheet 06 records the name-labelled filters, the sticky selection of a new row and the
+  Resource by project controls (R-56).
   Sheet 08's results workbook carries each project-month's demand, staffed figure and gap,
   and the project flags beside the person ones (R-55).
   Sheet 06 records what the Standard vs staffed controls may narrow and what they may not

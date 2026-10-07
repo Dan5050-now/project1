@@ -57,6 +57,19 @@ function gapRows(pids){
     if (want.size && !want.has(pid)) continue;
     out.push({pid, k, ...g});
   }
+  /* AND THE MONTHS NOBODY IS ON (R-56). A month the project's periods ask for with
+     nobody assigned is the widest gap there is - needs the whole standard, staffed at
+     nothing - and it was the one this list and the control above it left out: the table
+     drew it, in its own ◦ cells, and the alarm said nothing. Its own direction,
+     'unstaffed', because the fix is different: there is no figure to change, somebody
+     has to be assigned. */
+  for (const [qk, u] of (C.projUnallocated || new Map())){
+    if (!(u > 0.004)) continue;
+    const i = qk.lastIndexOf("|");
+    const pid = qk.slice(0, i), k = +qk.slice(i + 1);
+    if (want.size && !want.has(pid)) continue;
+    out.push({pid, k, demand: u, applied: 0, gap: -u, dir: "unstaffed"});
+  }
   out.sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap) || (a.pid < b.pid ? -1 : 1));
   return out;
 }
@@ -116,13 +129,15 @@ function gapButton(pids){
       + "always does — the people on it divide the month rather than each adding to it.")
       }">Standard vs staffed</button>`;
   const short = rows.filter(r => r.dir === "short").length;
-  const over = rows.length - short;
+  const over = rows.filter(r => r.dir === "over").length;
+  const unst = rows.filter(r => r.dir === "unstaffed").length;
   return `<button class="btn tiny gapbtn on" data-gapopen="1" data-tip="${att(
     `<b>Standard vs staffed</b><br>${rows.length} project-month(s) are not being given `
-    + "what the project's own standard says they need — a figure stated by hand replaces "
-    + "the standard rather than adjusting it. Counted apart and never netted: three short "
-    + "in March and three over in April is not a plan in balance. Open it to see every "
-    + "one and change the figures behind it.")}">`
+    + "what the project's own standard says they need. Short or over: a figure stated by "
+    + "hand replaces the standard rather than adjusting it. Not staffed: the project's "
+    + "periods ask for the month and nobody is assigned to it. Counted apart and never "
+    + "netted: three short in March and three over in April is not a plan in balance. "
+    + "Open it to see every one and change what is behind it.")}">`
     /* The words first, so the two figures are read as what they are rather than as a
        pair of numbers in a button. Each part is its own element and the spacing is the
        flex gap: .btn.tiny is an inline-flex box, which DROPS the whitespace between its
@@ -131,6 +146,7 @@ function gapButton(pids){
     + `<span class="lbl">Off standard</span>`
     + (short ? `<span class="gshort">&#9660; ${short} short</span>` : "")
     + (over ? `<span class="gover">&#9650; ${over} over</span>` : "")
+    + (unst ? `<span class="gunst">&#9702; ${unst} not staffed</span>` : "")
     + "</button>";
 }
 
@@ -160,7 +176,8 @@ function gapControls(all){
   const f = S.gapf;
   const projects = [...new Set(all.map(r => r.pid))]
     .sort((a, b) => (projectNameOf(a) || a) < (projectNameOf(b) || b) ? -1 : 1);
-  const dir = [["", "All"], ["short", "&#9660; Short"], ["over", "&#9650; Over"]]
+  const dir = [["", "All"], ["short", "&#9660; Short"], ["over", "&#9650; Over"],
+               ["unstaffed", "&#9702; Not staffed"]]
     .map(([v, l]) => `<button class="btn tiny${f.dir === v ? " on" : ""}" `
       + `data-gapdir="${att(v)}">${l}</button>`).join("");
   return `<div class="gapf">
@@ -181,6 +198,7 @@ function gapList(pids){
   const M = S.model, all = gapRows(pids), rows = gapKept(all);
   const short = rows.filter(r => r.dir === "short");
   const over = rows.filter(r => r.dir === "over");
+  const unst = rows.filter(r => r.dir === "unstaffed");
   const projects = new Set(rows.map(r => r.pid));
   /* NOTHING TO REPORT AND NOTHING LEFT AFTER FILTERING ARE DIFFERENT ANSWERS, and only
      one of them is good news. Saying "every project is on its standard" to somebody who
@@ -200,17 +218,27 @@ function gapList(pids){
 
   const body = rows.slice(0, GAP_SHOW).map(r => {
     const pr = M.projects[r.pid] || {};
-    return `<tr class="gaprow ${r.dir}" data-gap="${att(r.pid)}" data-gk="${r.k}"
+    const go = r.dir === "unstaffed"
+      ? `data-act="goproj" data-pid="${att(r.pid)}"`
+      : `data-gap="${att(r.pid)}" data-gk="${r.k}"`;
+    return `<tr class="gaprow ${r.dir}" ${go}
         tabindex="0" role="button">
       <th class="rh"><span class="nm">${esc(pr.project_name || r.pid)}</span>
         <span class="sub">${esc(r.pid)}</span></th>
       <td>${keyToLabel(r.k)}</td>
       <td class="num">${r.demand.toFixed(2)}</td>
       <td class="num">${r.applied.toFixed(2)}</td>
-      <td class="num ${r.dir}">${r.gap > 0 ? "&#9650; +" : "&#9660; "}${r.gap.toFixed(2)}</td>
-      <td>${r.dir === "short" ? "short of the standard" : "over the standard"}</td>
-      <td><button class="btn tiny" data-gap="${att(r.pid)}" data-gk="${r.k}"
-        >Check and fix</button></td></tr>`;
+      <td class="num ${r.dir}">${r.dir === "unstaffed" ? "&#9702; "
+        : r.gap > 0 ? "&#9650; +" : "&#9660; "}${r.gap.toFixed(2)}</td>
+      <td>${r.dir === "short" ? "short of the standard"
+          : r.dir === "over" ? "over the standard" : "nobody is assigned"}</td>
+      <td>${r.dir === "unstaffed"
+        /* No figure to change: the fix is an assignment, and assignments are entered on
+           the project's own tab - so the row takes you there with the project selected. */
+        ? `<button class="btn tiny" data-act="goproj" data-pid="${att(r.pid)}"
+            >Assign people</button>`
+        : `<button class="btn tiny" data-gap="${att(r.pid)}" data-gk="${r.k}"
+            >Check and fix</button>`}</td></tr>`;
   }).join("");
 
   return `<p class="cap"><span class="scope k">${gapNarrowed()
@@ -228,6 +256,8 @@ function gapList(pids){
     <div class="gtot">
       <span class="gpill short">&#9660; ${short.length} month(s) short of the standard</span>
       <span class="gpill over">&#9650; ${over.length} month(s) over it</span>
+      ${unst.length ? `<span class="gpill unstaffed">&#9702; ${unst.length} month(s) with
+        nobody assigned</span>` : ""}
       <span class="tr">counted apart, never netted — three short in March and three over
         in April is not a plan in balance</span></div>
     <div class="scrollx lg"><table class="grid-t gapt">
