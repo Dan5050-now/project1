@@ -169,13 +169,17 @@ with sync_playwright() as pw:
     rows = pg.evaluate(ROWS, per)
     check(head.index("standard_fte") == head.index("weight") + 1,
           "standard_fte sits immediately after weight", " | ".join(head))
-    by = {r[1]: r for r in rows}
-    check(by["Start-up"][6] == "4.00 → 4.00 a month",
+    # By NAME, not position: a column added to the table (period_highlight, R-59) moved
+    # these two one place right and the old literal indices read the wrong cells. The
+    # rows drop the leading row-handle cell, so a row index is the heading index - 1.
+    SF, WT = head.index("standard_fte") - 1, head.index("weight") - 1
+    by = {r[head.index("period_name") - 1]: r for r in rows}
+    check(by["Start-up"][SF] == "4.00 → 4.00 a month",
           "the standard, and what this project's weight makes of it",
-          f"Start-up weight {by['Start-up'][5]} → {by['Start-up'][6]}")
-    check(by["Conduct (interim)"][6] == "6.00 → 9.00 a month",
+          f"Start-up weight {by['Start-up'][WT]} → {by['Start-up'][SF]}")
+    check(by["Conduct (interim)"][SF] == "6.00 → 9.00 a month",
           "a weight other than 1.00 shows the product, not just the standard",
-          f"6.00 × {by['Conduct (interim)'][5]} → {by['Conduct (interim)'][6]}")
+          f"6.00 × {by['Conduct (interim)'][WT]} → {by['Conduct (interim)'][SF]}")
 
     print("\n2. it names the figure the CALCULATION used, not a second lookup")
     same = pg.evaluate("""() => {
@@ -191,10 +195,10 @@ with sync_playwright() as pw:
           "and 6.00 × 1.50 really is that project-month: 9.00")
 
     print("\n3. a missing standard says so and names V-19")
-    check(by["Conduct (final)"][6] == "none — V-19",
+    check(by["Conduct (final)"][SF] == "none — V-19",
           "not the 1.00 the calculation falls back to — that is the degradation V-19 "
           "reports, and printing it as a standard would hide it",
-          by["Conduct (final)"][6])
+          by["Conduct (final)"][SF])
 
     print("\n4. it is a LOOKUP: not editable, and not a column of the sheet")
     check(pg.evaluate("""(t) => {
