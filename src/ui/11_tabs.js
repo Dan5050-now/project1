@@ -74,7 +74,8 @@ function renderOverall(){
       <div class="phead"><h2>Project timeline</h2>
         <span class="scope k">${pids.length} project(s)</span></div>
       <p class="cap">One row per project, with its start, end and length under the name. Bands are
-        coloured by period and shaded darker as the period weight rises. The two DB locks are red —
+        drawn gray unless a colour is chosen for it in the project's <strong>Periods</strong> table
+        (Highlight), and shaded darker as the period weight rises. The two DB locks are red —
         they are what the period derivation hangs on. <strong>Hover any band or marker</strong> for detail.</p>
       <div class="scrollx xl">${chartGantt(pids.slice().sort(byRank))}</div></div>
     <div class="panel" data-panel="stack-proj">
@@ -231,7 +232,7 @@ function periodGenButton(pr, pid){
  *  showing the 1.00 the calculation falls back to - that fallback is a degradation, and
  *  printing it as though it were a standard would hide the very thing V-19 reports. */
 const PERIOD_COLS = ["project_id","period_name","period_seq","period_start","period_end",
-                     "weight","standard_fte","note_1"];
+                     "period_highlight","weight","standard_fte","note_1"];
 
 function periodStandardCol(proj){
   return {standard_fte: r => {
@@ -264,7 +265,8 @@ function projDetail(pid){
       <div class="phead"><h2>Project timeline — ${esc(pr.project_name)}</h2>
         <span class="scope k">${per.length} period(s) &#183; ${ms.length} milestone(s)</span></div>
       <p class="cap">The same run-chart as the Overall tab, for this project alone: one band per
-        period, coloured by period and shaded darker as the period weight rises, with every
+        period, gray unless you choose its colour in <strong>Highlight</strong> in the Periods
+        table below, and shaded darker as the period weight rises, with every
         milestone marked. The two DB locks are red — they are what the period derivation hangs on.
         <strong>Hover any band or marker</strong> for its dates, weight and average load.</p>
       <div class="scrollx fit">${chartGantt([pid], {single:true,

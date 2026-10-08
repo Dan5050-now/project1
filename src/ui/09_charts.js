@@ -142,9 +142,9 @@ function chartGantt(pids, opts){
   for (const p of rows) for (const s of (M.periods[p] || [])) wmax = Math.max(wmax, num(s.weight) || 0);
   wmax = wmax || 1;
 
-  const hlUsed = new Set();
+  const hlUsed = new Set(), perUsed = new Set();
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
-    + `aria-label="Project timeline: one row per project, bands coloured by period">`];
+    + `aria-label="Project timeline: one row per project, one band per period">`];
   for (let y = new Date(lo).getUTCFullYear(); y <= new Date(hi).getUTCFullYear(); y++){
     const xx = x(Date.UTC(y, 0, 1));
     if (xx >= padL){
@@ -171,17 +171,24 @@ function chartGantt(pids, opts){
       let tot = 0, n = 0;
       for (const [yy, mm] of ms){ tot += C.projMonth.get(p + "|" + monthKey(yy, mm)) || 0; n++; }
       const fte = n ? tot / n : 0;
+      const look = periodBandStyle(s, wmax);
+      if (look.hl) perUsed.add(look.hl);
       const tip = `<b>${esc(pr.project_name)}</b><br>${esc(s.period_name)}<br>`
         + `${ymd(s.period_start)} to ${ymd(s.period_end)}<br>period weight ${(num(s.weight)||0).toFixed(2)}`
-        + `<br><b>${fte.toFixed(2)} FTE per month</b> on average across this period`;
-      o.push(`<rect class="band" x="${x0.toFixed(1)}" y="${y+13}" width="${w.toFixed(1)}" `
-        + `height="${rowh-20}" fill="${bandFill(s.period_name, num(s.weight)||0, wmax)}" rx="2" `
+        + `<br><b>${fte.toFixed(2)} FTE per month</b> on average across this period`
+        + (look.hl ? `<br><span class="tr">highlighted ${esc(M.perHlLabels[look.hl] || look.hl)}</span>`
+                   : `<br><span class="tr">no highlight — drawn gray</span>`);
+      // The label is dark on gray and on yellow, white on the four strong colours: the
+      // band's own colour decides which reads, so it is decided here and not in CSS.
+      const dk = !look.hl || look.hl === "yellow" ? " dk" : "";
+      o.push(`<rect class="band${look.hl ? " hl hl-" + look.hl : ""}" x="${x0.toFixed(1)}" `
+        + `y="${y+13}" width="${w.toFixed(1)}" height="${rowh-20}" style="${look.style}" rx="2" `
         + `data-tip="${att(tip)}"${sKey(s.period_name, p)}></rect>`);
       if (opts.single && w > 64)
-        o.push(`<text class="bandsub" x="${(x0+w/2).toFixed(1)}" y="${(y+rowh-14).toFixed(1)}" `
+        o.push(`<text class="bandsub${dk}" x="${(x0+w/2).toFixed(1)}" y="${(y+rowh-14).toFixed(1)}" `
           + `text-anchor="middle">${fte.toFixed(2)} FTE/mo</text>`);
       if (w > s.period_name.length * 5.7 + 12)
-        o.push(`<text class="bandlab" x="${(x0+w/2).toFixed(1)}" y="${(y+rowh/2+5).toFixed(1)}" `
+        o.push(`<text class="bandlab${dk}" x="${(x0+w/2).toFixed(1)}" y="${(y+rowh/2+5).toFixed(1)}" `
           + `text-anchor="middle">${esc(s.period_name)}</text>`);
     }
     for (const [nm, dates] of Object.entries(M.milestones[p] || {}))
@@ -208,8 +215,16 @@ function chartGantt(pids, opts){
   const seen = new Set();
   const leg = ['<ul class="legend">'];
   for (const p of rows) for (const s of (M.periods[p] || [])) seen.add(s.period_name);
+  /* The periods are still listed by name - each entry picks that period out across the
+     chart - but they share one swatch now, because they share one colour until somebody
+     chooses another (R-59). The chosen colours follow, each in the words the file uses. */
+  leg.push(`<li><span class="sw" style="background:${PERIOD_GRAY}"></span>period &#8212; gray `
+    + `unless a colour is chosen for it:</li>`);
   for (const n of [...CLINICAL_PERIODS, ...OTHER_PERIODS]) if (seen.has(n))
-    leg.push(`<li${sLeg(n)}><span class="sw" style="background:${PERIOD_HUE[n]}"></span>${esc(n)}</li>`);
+    leg.push(`<li class="pername"${sLeg(n)}>${esc(n)}</li>`);
+  for (const t of HIGHLIGHT_WORDS) if (perUsed.has(t))
+    leg.push(`<li><span class="sw" style="background:${HIGHLIGHT_FILL[t]}"></span>`
+      + `${esc(M.perHlLabels[t] || t)} <span class="tr">period</span></li>`);
   leg.push('<li><span class="sw tri"></span>milestone</li>');
   leg.push('<li><span class="sw tri key"></span>DB lock &#8212; sets a period boundary</li>');
   /* Only the colours actually on this chart, each labelled with what the FILE calls it.

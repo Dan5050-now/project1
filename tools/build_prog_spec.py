@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.38"
+DOC_VERSION = "1.39"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.69.xlsx"
+PLAN = "PRAP_Development_Plan_v2.70.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -123,7 +123,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Governing document", f"{PLAN} - APPROVED BASELINE, Dan 2026-08-02"),
-    ("Schema version specified", "13"),
+    ("Schema version specified", "14"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -146,7 +146,7 @@ r = lines(ws, r, [
     "Two things make this specification unusual, and both are deliberate:",
     "",
     "  - The data schema is not described in prose. It already exists as a working file,",
-    "    templates/PRAP_SourceData_Template_v1.17.xlsx, and sheet 03 documents the parse contract against it.",
+    "    templates/PRAP_SourceData_Template_v1.18.xlsx, and sheet 03 documents the parse contract against it.",
     "  - The calculation and validation logic already has a reference implementation in",
     "    tools/verify_source_workbook.py, which runs against the dummy data. Sheet 05 gives the pseudocode;",
     "    that script is the executable check that the pseudocode is right.",
@@ -193,6 +193,18 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.39", "2026-10-08", "Claude Code", "Dan",
+         "R-59, REQ-PRJ-15. SOURCE SCHEMA STEPS 13 TO 14: ProjectPeriod gains "
+         "period_highlight after period_end, OPTIONAL and part of no key, read through "
+         "hlToken() as milestone_highlight is; its values come from Lists.period_highlight. "
+         "Sheet 06's timeline colour rule changes: a band is drawn in its period's chosen "
+         "colour (fill-opacity 0.78 to 1.00 by weight), or GRAY (#c4c4c9, lightness by "
+         "weight) when none is chosen - superseding the hue per period name. Band labels "
+         "are dark on gray and yellow, white on the other four. The legend keeps the period "
+         "names, each still picking its period out, under one gray swatch, then each colour "
+         "in use in the file's words (M.perHlLabels). Sheet 07 gains V-38, the period twin "
+         "of V-37: warning, never a refusal. No figure moves. Template v1.18, examples v1.20 "
+         "and v1.12.", "Draft"],
         ["1.38", "2026-10-07", "Claude Code", "Dan",
          "R-56. Sheet 06: the Project and Person filters are labelled by name (identifier "
          "only where a name is blank or shared) and searchable past eight entries, the "
@@ -736,8 +748,8 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 r = section(ws, r, "Source documents")
 src = [
     [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes APPROVED BASELINE 2026-08-02. 70 requirements, 24 validation rules, 11 decisions, source schema version 5.", "Governs this document"],
-    ["templates/PRAP_SourceData_Template_v1.17.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
-    ["templates/PRAP_SourceData_Dummy_v1.19.xlsx", "16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12 'Others', 20 people, 277 assignments over 74 months.", "The acceptance data for sheet 05"],
+    ["templates/PRAP_SourceData_Template_v1.18.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
+    ["templates/PRAP_SourceData_Dummy_v1.20.xlsx", "16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12 'Others', 20 people, 277 assignments over 74 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
     ["docs/STEP2_OPEN_POINTS.md", "Points raised while building the template.", "Carried into sheet 10"],
 ]
@@ -765,7 +777,7 @@ r = table(ws, r, ["Deferred", "Why"], defer, [56, 76], wrap_cols=(1, 2))
 
 # ---- 03 Data schema -------------------------------------------------------
 ws, r = sheet(wb, "03_Data_Schema", "Data schema - the parse contract",
-              "Documents templates/PRAP_SourceData_Template_v1.17.xlsx. Sheet and column names are matched "
+              "Documents templates/PRAP_SourceData_Template_v1.18.xlsx. Sheet and column names are matched "
               "exactly and case-sensitively.")
 
 r = section(ws, r, "Reading the workbook")
@@ -914,7 +926,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "13", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "14", "Compared with the version this application expects (sheet 08)."],
     ["absorb_unstaffed_role_factor", "Integer", "1", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (sheet 05). 0 = an unstaffed role costs nothing, the arithmetic of every version before this one."],
     ["split_shared_role_fte", "Integer", "1", "1 = the role factor is divided between the people sharing a role in a month (sheet 05). 0 = each carries the whole factor, the arithmetic of every version before this one. A switch, not a threshold - so the Config reader must distinguish a value of 0 from an absent value, which is the defect this setting exposed."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
@@ -1411,7 +1423,7 @@ ex = [
 ]
 r = table(ws, r, ["Element", "Value", "Note"], ex, [22, 62, 44], wrap_cols=(2, 3))
 r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workbook.py against "
-                "PRAP_SourceData_Dummy_v1.19.xlsx must give no errors and no warnings, across 62 projects, "
+                "PRAP_SourceData_Dummy_v1.20.xlsx must give no errors and no warnings, across 62 projects, "
                 "20 people, 277 assignments and 308 periods spanning 74 months. Every period set must be "
                 "contiguous, all 50 trials must carry 'Conduct (final)', 30 must also carry "
                 "'Conduct (interim)', and 12 must carry the final inspection period. No project may carry "

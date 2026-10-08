@@ -298,6 +298,7 @@ const LIST_FOR = {
   RBQM_setup:"setup_party", DM_conduct:"setup_party",
   EDC_system:"EDC_system", DataReviewSystem:"DataReviewSystem", RBQM_system:"RBQM_system",
   milestone_name:"milestone_name", milestone_highlight:"milestone_highlight",
+  period_highlight:"period_highlight",
 };
 /** A column the user TYPES INTO that is not stored on the row it appears in.
  *
@@ -689,7 +690,7 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
          DOM, so a chip that lived in the cell's own content would be part of the value:
          one stray keystroke and the mark becomes text nobody meant to type. A pseudo
          element cannot be edited, selected or copied by accident. */
-      const hl = c === "milestone_highlight" ? hlToken(v) : "";
+      const hl = c === "milestone_highlight" || c === "period_highlight" ? hlToken(v) : "";
       return `<td class="cell${marked}${pin}" contenteditable="true" data-sheet="${att(sheet)}" `
         + `data-row="${r.__row}" data-col="${att(c)}"${hl ? ` data-hl="${att(hl)}"` : ""} `
         + `data-tip="${att(tip)}">${esc(disp)}</td>`;

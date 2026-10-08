@@ -41,7 +41,7 @@ from openpyxl import Workbook, load_workbook
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 VERSION = "1.0"
-SOURCE = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.11.xlsx"
+SOURCE = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.12.xlsx"
 OUT = ROOT / "templates" / f"PRAP_SourceData_Stress_1000_v{VERSION}.xlsx"
 
 _spec = importlib.util.spec_from_file_location("bsw", ROOT / "tools" / "build_source_workbook.py")
@@ -108,7 +108,8 @@ def main(keep=False, n_projects=N_PROJECTS, n_people=N_PEOPLE, per_project=None)
         cur = start
         for seq, (nm, months) in enumerate(spans, start=1):
             end = eom(cur + rd(months=months - 1))
-            per.append([pid, nm, seq, cur, end, round(rnd.uniform(0.80, 1.25), 2), None])
+            per.append([pid, nm, seq, cur, end, None,      # period_highlight, schema 14
+                        round(rnd.uniform(0.80, 1.25), 2), None])
             cur = end + rd(days=1)
         pend = per[-1][4]
         proj.append([pid, f"{pid} {t.split()[0]} study", t,

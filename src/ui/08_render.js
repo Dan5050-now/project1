@@ -97,13 +97,21 @@ function persColourOf(sid){
 const HIGHLIGHT_FILL = {red:"var(--hl-red)", yellow:"var(--hl-yellow)", blue:"var(--hl-blue)",
                         green:"var(--hl-green)", orange:"var(--hl-orange)"};
 
-const PERIOD_HUE = {
-  "Before-Start-up":"#adaca6", "Start-up":"#d9472f",
-  "Conduct (interim)":"#3fc795", "Close-out (interim)":"#f2b53d",
-  "Conduct (final)":"#159068",  "Close-out (final)":"#d97e0a",
-  "After Close-out (final)":"#6f6f68",
-  "Planning":"#adaca6", "Develop":"#3fc795", "Close":"#d97e0a",
-};
-const bandFill = (n, w, wmax) => mix(PERIOD_HUE[n] || "#adaca6",
-                                     1.14 - 0.24 * (wmax ? Math.min(w, wmax) / wmax : 0));
+/* A PERIOD IS DRAWN GRAY UNLESS SOMEBODY CHOSE ITS COLOUR (R-59, schema 14). The bands
+   used to take a hue per period name (O-10); asked from the field, the colour now belongs
+   to the user: ProjectPeriod.period_highlight picks one of the five, and an unmarked
+   period is a quiet gray so the marked ones are what the eye finds. Weight still shades
+   both - lighter for a light period, darker for a heavy one - so nothing the old
+   colouring said about weight is lost; the period's NAME is on the band and in its
+   pop-up. */
+const PERIOD_GRAY = "#c4c4c9";
+const weightStep = (w, wmax) => (wmax ? Math.min(w, wmax) / wmax : 0);
+const bandFill = (n, w, wmax) => mix(PERIOD_GRAY, 1.06 - 0.20 * weightStep(w, wmax));
+/** The fill of one period band, as a style string: its chosen colour, or the gray. */
+function periodBandStyle(seg, wmax){
+  const w = num(seg.weight) || 0, hl = hlToken(seg.period_highlight);
+  return hl
+    ? {hl, style:`fill:${HIGHLIGHT_FILL[hl]};fill-opacity:${(0.78 + 0.22 * weightStep(w, wmax)).toFixed(2)}`}
+    : {hl:"", style:`fill:${bandFill(seg.period_name, w, wmax)}`};
+}
 

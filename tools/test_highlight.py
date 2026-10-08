@@ -31,7 +31,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.11.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.12.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 fails = []
@@ -134,6 +134,88 @@ def main():
         check(clean["hl"] == 0 and clean["v37"] == 0 and clean["ms"] > 0,
               "an empty column is exactly what it was before schema 13: no mark, no "
               "finding, every milestone still drawn", str(clean))
+
+        # ---- 7. periods (schema 14, R-59) -------------------------------------
+        # A fresh load: the milestone checks above edited the model in place.
+        print("\nperiods - drawn gray unless a colour is chosen")
+        pg.set_input_files("input[type=file]", str(DUMMY))
+        pg.wait_for_timeout(2500)
+        pg.click('button[role=tab][data-tab="t-overall"]')
+        pg.wait_for_timeout(700)
+        bands = pg.evaluate("""() => {
+            const all = [...document.querySelectorAll(
+              '#t-overall .panel[data-panel="timeline"] rect.band')];
+            const fill = e => getComputedStyle(e).fill;
+            const hl = all.filter(e => e.classList.contains('hl'));
+            const plain = all.filter(e => !e.classList.contains('hl'));
+            const isGray = c => { const m = c.match(/\\d+/g).map(Number);
+                                  return Math.max(...m) - Math.min(...m) <= 8; };
+            return {hl: hl.length, plain: plain.length,
+                    plainGray: plain.every(e => isGray(fill(e))),
+                    hlFill: hl.length ? fill(hl[0]) : null,
+                    hlGray: hl.length ? isGray(fill(hl[0])) : null,
+                    want: S.model.raw.ProjectPeriod.filter(r => hlToken(r.period_highlight)
+                      && activeProjects().includes(r.project_id)).length}; }""")
+        check(bands["plain"] > 0 and bands["plainGray"],
+              "A PERIOD WITH NO HIGHLIGHT IS DRAWN GRAY - every one of them",
+              f"{bands['plain']} band(s)")
+        check(bands["hl"] == bands["want"] and bands["hl"] > 0 and bands["hlGray"] is False,
+              "A PERIOD WITH A HIGHLIGHT IS DRAWN IN ITS COLOUR, and it is not gray",
+              f"{bands['hl']} of {bands['want']} marked period(s), {bands['hlFill']}")
+        leg = pg.evaluate("""() => [...document.querySelectorAll('#t-overall .legend li')]
+            .map(l => l.textContent.trim())""")
+        want = list(pg.evaluate("Object.values(S.model.perHlLabels)"))
+        check(want and all(any(w in t and "period" in t for t in leg) for w in want),
+              "the legend names the period colour as the FILE names it", "; ".join(want))
+
+        ppid = pg.evaluate("""S.model.raw.ProjectPeriod.find(r =>
+            hlToken(r.period_highlight)).project_id""")
+        pg.click("text=Source data (project)")
+        pg.wait_for_timeout(1200)
+        pg.evaluate("p => { S.selProj = p; renderAll(); showTab('t-proj'); }", ppid)
+        pg.wait_for_timeout(1200)
+        own = pg.evaluate("document.querySelectorAll('#t-proj rect.band.hl').length")
+        check(own > 0, "THE PROJECT'S OWN TIMELINE DRAWS IT TOO", f"{own} on {ppid}")
+        cell = pg.evaluate("""() => {
+            const td = document.querySelector(
+              "#t-proj td.cell[data-col='period_highlight'][data-hl]");
+            return td ? {hl: td.dataset.hl, text: td.textContent} : null; }""")
+        check(cell and cell["hl"] and "Highlight" in cell["text"],
+              "the Periods table has the Highlight column, with the colour in the cell",
+              str(cell))
+        offered = pg.evaluate("""() => (S.model.lists.period_highlight || []).length""")
+        check(offered == 5, "and the five colours to choose from, from the Lists sheet",
+              f"{offered} value(s)")
+
+        # Choosing a colour through the cell, as a user would, recolours the band.
+        row = pg.evaluate("""p => S.model.raw.ProjectPeriod.find(r => r.project_id === p
+            && !hlToken(r.period_highlight)).__row""", ppid)
+        td = pg.locator(f"#t-proj td.cell[data-col='period_highlight'][data-row='{row}']")
+        td.click()
+        pg.wait_for_timeout(300)
+        pg.keyboard.press("Control+A")
+        pg.keyboard.type("Highlight (Red)")
+        pg.keyboard.press("Escape")
+        pg.keyboard.press("Enter")
+        pg.wait_for_timeout(1000)
+        red = pg.evaluate("document.querySelectorAll('#t-proj rect.band.hl-red').length")
+        check(red == 1, "TYPING A COLOUR INTO THE CELL RECOLOURS THAT PERIOD at once",
+              f"{red} red band(s)")
+        figs = pg.evaluate("""() => { const o = {}; for (const [k, v] of S.calc.projMonth)
+            o[k] = v; return o; }""")
+        pg.evaluate("""p => { for (const r of S.model.raw.ProjectPeriod) r.period_highlight = null;
+            rebuild(true); renderKeepingTab(); }""", ppid)
+        pg.wait_for_timeout(600)
+        after = pg.evaluate("""() => { const o = {}; for (const [k, v] of S.calc.projMonth)
+            o[k] = v; return o; }""")
+        check(figs == after, "a highlight moves no figure", f"{len(figs)} project-months")
+        bad = pg.evaluate("""() => {
+            const r = S.model.raw.ProjectPeriod.find(x => x.period_name);
+            r.period_highlight = 'Highlite (Purpel)';
+            rebuild(true); renderKeepingTab();
+            return S.model.findings.filter(f => f.rule === 'V-38').length; }""")
+        check(bad == 1, "A VALUE NAMING NO COLOUR IS REPORTED (V-38), and the period stays gray",
+              f"{bad} finding(s)")
 
         check(not errors, "no script error anywhere in the run", "; ".join(errors[:3]))
         b.close()

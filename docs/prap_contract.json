@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.58",
+  "version": "1.59",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -22,14 +22,14 @@
    "both_end_the_same": "A plan started blank exports to the same .xlsx and the same .prap.json as any other, so nothing downstream needs to know which way it began."
   }
  },
- "schema_version": 13,
+ "schema_version": 14,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.69.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.38.xlsx",
-  "ui_component_list": "docs/PRAP_UI_Component_List_v2.5.xlsx",
-  "source_data_template": "templates/PRAP_SourceData_Template_v1.17.xlsx",
-  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.19.xlsx",
-  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.11.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.70.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.39.xlsx",
+  "ui_component_list": "docs/PRAP_UI_Component_List_v2.6.xlsx",
+  "source_data_template": "templates/PRAP_SourceData_Template_v1.18.xlsx",
+  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.20.xlsx",
+  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.12.xlsx",
   "agent_guide": "docs/PRAP_AI_Agent_Guide.md"
  },
  "sheets": {
@@ -316,6 +316,13 @@
      "type": "date",
      "editable": true,
      "note": "Inclusive. Periods must not overlap or leave a gap."
+    },
+    {
+     "name": "period_highlight",
+     "type": "text",
+     "editable": true,
+     "note": "OPTIONAL. The colour this period is drawn in on the Project timeline. Pick from the list; leave empty and it is drawn gray.",
+     "value_list": "period_highlight"
     },
     {
      "name": "weight",
@@ -883,6 +890,13 @@
    "Highlight (Green)",
    "Highlight (Orange)"
   ],
+  "period_highlight": [
+   "Highlight (Red)",
+   "Highlight (Yellow)",
+   "Highlight (Blue)",
+   "Highlight (Green)",
+   "Highlight (Orange)"
+  ],
   "period_name_clinical": [
    "Before-Start-up",
    "Start-up",
@@ -912,7 +926,7 @@
  },
  "config": {
   "schema_version": {
-   "default": 13,
+   "default": 14,
    "meaning": "Structure version of this workbook. The application warns on a mismatch."
   },
   "fte_hours_per_month": {
@@ -1318,6 +1332,14 @@
   "V-37": {
    "statement": "Milestone.milestone_highlight carries a value that names no colour the application can draw.",
    "effect": "Warning - the milestone is drawn unmarked, which is what it would have been with the column empty, and the finding says so with the values the file's own Lists sheet offers. Never a refusal: a mark changes no figure, and a plan whose highlight column is misspelt is still a correct plan. It is reported rather than ignored because the failure is INVISIBLE otherwise - an unmarked milestone looks exactly like one nobody got round to marking, so a typo in the list value would quietly undo the thing the user asked for. What the application reads is the colour word inside the value ('red', 'yellow', 'blue', 'green', 'orange'), which is what lets a team write what their colour means beside it; the rule fires only when no such word is there at all.",
+   "severity_reported_by_app": [
+    "warning"
+   ],
+   "enforced_by_application": true
+  },
+  "V-38": {
+   "statement": "ProjectPeriod.period_highlight carries a value that names no colour the application can draw.",
+   "effect": "Warning - the period is drawn gray, which is what it would have been with the column empty, and the finding says so with the values the file's own Lists sheet offers. The period twin of V-37, for the same reason: a gray period looks exactly like one nobody chose a colour for, so a typo would quietly undo what the user asked for. Never a refusal - a colour changes no figure.",
    "severity_reported_by_app": [
     "warning"
    ],

@@ -136,7 +136,7 @@ function buildModel(sheets){
   for (const s of REQUIRED_SHEETS) raw[s] = toObjects(s, sheets[s], F);
 
   const M = {
-    projects:{}, milestones:{}, msHighlight:{}, hlLabels:{}, periods:{}, people:{}, assignments:[],
+    projects:{}, milestones:{}, msHighlight:{}, hlLabels:{}, perHlLabels:{}, periods:{}, people:{}, assignments:[],
     ppw:{}, pws:{}, rf:{}, rfRoles:{}, rfAbsorb:{}, lists:{}, config:{}, raw, findings:F,
   };
   for (const r of raw.Lists) if (r.list_name) (M.lists[r.list_name] ||= []).push(r.value);
@@ -291,6 +291,12 @@ function buildModel(sheets){
   for (const r of raw.ProjectPeriod){
     if (r.__new && !r.period_name) continue;
     (M.periods[r.project_id] ||= []).push(r);
+    /* Schema 14: what the file CALLS each period colour, for the legend - the same
+       courtesy the milestone legend pays (hlLabels). Kept apart from it, because a team
+       may mean one thing by blue on a milestone and another on a period. The colour
+       itself is read off the row when the band is drawn; nothing else needs it. */
+    const tok = hlToken(r.period_highlight);
+    if (tok) M.perHlLabels[tok] ||= String(r.period_highlight).trim();
   }
   for (const [pid, proj] of Object.entries(M.projects)){
     if (!M.periods[pid] && CLINICAL_TYPES.has(proj.project_type)){
@@ -405,6 +411,20 @@ function validate(M, F){
     add("warning","V-37","Milestone",m.__row,
       `Project ${m.project_id}: milestone_highlight '${v}' names no colour this application `
       + `can draw, so '${m.milestone_name}' is left unmarked. `
+      + (offered ? `Valid: ${offered}.` : `Expected one of: ${HIGHLIGHT_WORDS.join(", ")}.`));
+  }
+
+  /* V-38: the same for a period (schema 14). An unreadable value leaves the period drawn
+     gray, which is what an unmarked period is - so it would look like nobody had chosen,
+     when somebody had. */
+  for (const r of (M.raw.ProjectPeriod || [])){
+    const v = r.period_highlight;
+    if (v === null || v === undefined || String(v).trim() === "") continue;
+    if (hlToken(v)) continue;
+    const offered = (M.lists.period_highlight || []).join(", ");
+    add("warning","V-38","ProjectPeriod",r.__row,
+      `Project ${r.project_id}: period_highlight '${v}' names no colour this application `
+      + `can draw, so '${r.period_name}' is drawn gray. `
       + (offered ? `Valid: ${offered}.` : `Expected one of: ${HIGHLIGHT_WORDS.join(", ")}.`));
   }
 

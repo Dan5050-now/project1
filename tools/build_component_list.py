@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.5.xlsx
+Output: docs/PRAP_UI_Component_List_v2.6.xlsx
 """
 
 from pathlib import Path
@@ -40,8 +40,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.5"
-DATE = "2026-10-01"
+VERSION = "2.6"
+DATE = "2026-10-08"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
@@ -308,7 +308,7 @@ C = [
      "Clicking a person name reveals a row per project and role, in the same type-then-date order.",
      "REQ-DSH-01", K, "", "Unchanged."),
     ("O-10", "Overall", "[CHANGED] Project timeline (Gantt)",
-     "First panel on the tab. Duration under each name, bands coloured by period, milestone markers.",
+     "First panel on the tab. Duration under each name, bands gray unless the period is given a colour (R-59), milestone markers.",
      "REQ-DSH-02, REQ-PRJ-05, REQ-DSH-10", "Change",
      "1. Add project duration (start date, end date, total month) under individual project name. "
      "2. Change color more intuitive. e.g. before start-up (Grey), Start-up (Red), Conduct (Green), "
@@ -863,6 +863,10 @@ rows = [
     ["Design decision D-06", "SUPERSEDED", "O-10",
      "Timeline colour moves from weight to period name; weight becomes a lightness step within the hue.",
      "-", "Sheet 02 of this document"],
+    ["O-10 colour rule", "SUPERSEDED", "R-59",
+     "A period is drawn in the colour chosen for it in the Periods table's Highlight column, and gray "
+     "when none is chosen; weight still shades it. The per-period-name hues are retired.",
+     "Should", "Plan v2.70, change R-59"],
 ]
 r = table(ws, 4, ["Item", "Change", "Raised by", "What it says now", "Priority", "Carried in"],
           rows, [22, 14, 16, 88, 10, 26], wrap_cols=(4,))

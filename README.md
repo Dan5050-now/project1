@@ -306,8 +306,14 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.69.xlsx` — **current.** 89 requirements, 38 live
-  validation rules, source schema version 13. The latest change is **R-58**: "the change
+- `docs/PRAP_Development_Plan_v2.70.xlsx` — **current.** 90 requirements, 39 live
+  validation rules, source schema version 14. The latest change is **R-59**: the
+  **Periods table has a Highlight column** like the Milestones one. A project's period
+  can be given one of five colours and the Project timeline draws it in that colour on
+  both tabs; **a period with no colour is drawn gray**, still shaded by its weight. This
+  replaces the old one-hue-per-period-name colouring. `ProjectPeriod.period_highlight`
+  steps the source schema to 14 (template v1.18, examples v1.20 and v1.12); a value naming
+  no colour is `V-38`. No figure moves. Before it, **R-58**: "the change
   log could not be written to the audit folder … Failed to fetch" was **the Python
   application having stopped behind its window** — its watchdog gave up after fifteen
   minutes without a heartbeat, which a sleeping browser tab or laptop reaches. The audit
@@ -402,7 +408,7 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.38.xlsx` — **current specification.** Schema 13.
+- `docs/PRAP_Programming_Specification_v1.39.xlsx` — **current specification.** Schema 14.
   Sheet 06 records the name-labelled filters, the sticky selection of a new row and the
   Resource by project controls (R-56).
   Sheet 08's results workbook carries each project-month's demand, staffed figure and gap,
@@ -418,7 +424,9 @@ document through the manifest rather than by sorting filenames.
   and states the quantity it had been missing: the Overall tab's cost follows
   `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same
   rendering problem.
-- `docs/PRAP_UI_Component_List_v2.5.xlsx` — **current component list.** 70 components;
+- `docs/PRAP_UI_Component_List_v2.6.xlsx` — **current component list.** O-10's colour rule
+  is superseded at R-59: a period is drawn in the colour chosen for it, gray otherwise.
+- `docs/PRAP_UI_Component_List_v2.5.xlsx` — superseded component list. 70 components;
   `X-15` is new — a row's identity stays put while its table scrolls sideways (R-53) —
   `X-14` takes a section full screen (R-51), and `O-12` moved onto Resource by project
   (R-52) and gained its filter (R-53). Closes `X-04`, the one item v2.0 left open: row virtualisation is not built and, at the

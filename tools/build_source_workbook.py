@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 13
-TEMPLATE_VERSION = "1.17"
-DUMMY_VERSION = "1.19"
-DUMMY_SMALL_VERSION = "1.11"
+SCHEMA_VERSION = 14
+TEMPLATE_VERSION = "1.18"
+DUMMY_VERSION = "1.20"
+DUMMY_SMALL_VERSION = "1.12"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -89,6 +89,10 @@ LISTS = [
     # add what their colour MEANS - "Highlight (Red) - slipped" - and keep the colour.
     ("milestone_highlight", ["Highlight (Red)", "Highlight (Yellow)", "Highlight (Blue)",
                              "Highlight (Green)", "Highlight (Orange)"]),
+    # Schema 14. The same five, as a list of its own: a team may give the colours a
+    # different meaning on periods from the one they give them on milestones.
+    ("period_highlight", ["Highlight (Red)", "Highlight (Yellow)", "Highlight (Blue)",
+                          "Highlight (Green)", "Highlight (Orange)"]),
     ("period_name_clinical", ["Before-Start-up", "Start-up", "Conduct (interim)",
                               "Close-out (interim)", "Conduct (final)",
                               "Close-out (final)", "After Close-out (final)"]),
@@ -309,6 +313,9 @@ SHEETS = {
         ("period_seq", "Orders periods along the timeline. Unique within a project.", ""),
         ("period_start", "Inclusive.", ""),
         ("period_end", "Inclusive. Periods must not overlap or leave a gap.", ""),
+        ("period_highlight", "OPTIONAL. The colour this period is drawn in on the Project "
+                             "timeline. Pick from the list; leave empty and it is drawn gray.",
+         ""),
         ("weight", "THIS PROJECT'S OWN ADJUSTMENT to the standard for its type, phase and scope (REQ-CAL-19). 1.00 means an ordinary project of its kind; 1.20 means this one takes a fifth more. It does NOT carry the magnitude - PeriodFTEStandard.standard_fte does.", ""),
         ("note_1", "Free text. e.g. why a derived date was overridden by hand.", ""),
     ],
@@ -399,6 +406,7 @@ DROPDOWNS = {
                 "status": "project_status"},
     "Milestone": {"milestone_name": "milestone_name",
                   "milestone_highlight": "milestone_highlight"},
+    "ProjectPeriod": {"period_highlight": "period_highlight"},
     "PeriodFTEStandard": {"project_type": "project_type", "clinical_phase": "clinical_phase",
                              "work_scope_type": "work_scope_type",
                              "period_name": "period_name_clinical"},
@@ -1176,6 +1184,8 @@ def add_readme(wb, kind, facts=None):
         "                         is optional: pick a colour and that milestone is marked on the",
         "                         Project timeline, on the Overall tab and on the project's own tab.",
         "   ProjectPeriod         the periods each project passes through, with their weights.",
+        "                         period_highlight is optional: pick a colour and that period is",
+        "                         drawn in it on the Project timeline; left empty it is drawn gray.",
         "   PeriodFTEStandard  default weights per project type, clinical phase, WORK SCOPE and",
         "                         period. Clinical trials only.",
         "   RoleFactor            the relative burden of each role, per project type, clinical phase,",
@@ -1366,8 +1376,17 @@ def build(kind):
                 mile_rows.append([pid, None, nm, dt,
                                   "Highlight (Orange)" if nm == "Inspection" else None, seq,
                                   "Regulatory inspection" if nm == "Inspection" else None])
-        period_rows = [list(x) + [("Entered by hand - no milestone mapping"
-                                   if P[x[0]] == "Others" else "Derived from milestones")]
+        # Schema 14: period_highlight sits after period_end. One period marked on a few
+        # projects - the final Conduct, which is what a portfolio review asks about - so
+        # the example shows what the column is for without turning the timeline into a
+        # colour chart. Every other period is drawn gray, as an unmarked one always is.
+        marked = {p[0] for i, p in enumerate(projects) if i % 5 == 0}
+        period_rows = [list(x[:5])
+                       + ["Highlight (Blue)" if x[0] in marked and x[1] == "Conduct (final)"
+                          else None]
+                       + list(x[5:])
+                       + [("Entered by hand - no milestone mapping"
+                           if P[x[0]] == "Others" else "Derived from milestones")]
                        for x in periods]
         pws_rows = [list(x) for x in pws]
         role_rows = [list(x) for x in roles]
@@ -1410,7 +1429,8 @@ def build(kind):
                         "Active", "automatic", "example row - delete before use", None, None, None, None],
             "Milestone": ["PRJ-001", None, "CTA submission", date(2026, 1, 15), "Highlight (Red)", 2,
                           "example row - delete before use"],
-            "ProjectPeriod": ["PRJ-001", "Start-up", 2, date(2025, 12, 15), date(2026, 4, 14), 1.30, "example row - delete before use"],
+            "ProjectPeriod": ["PRJ-001", "Start-up", 2, date(2025, 12, 15), date(2026, 4, 14),
+                              "Highlight (Blue)", 1.30, "example row - delete before use"],
             # No example row: these two sheets now arrive full of real defaults, and
             # a grey "delete before use" row among them would be the one thing on the
             # sheet that was not a default.

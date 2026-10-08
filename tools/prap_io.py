@@ -714,6 +714,18 @@ def validate(M):
               + (f"Valid: {offered}." if offered
                  else f"Expected one of: {', '.join(HIGHLIGHT_WORDS)}."))
 
+    # V-38: the same for a period (schema 14) - an unreadable value leaves it drawn gray.
+    for r in M.raw.get("ProjectPeriod", []):
+        v = r.get("period_highlight")
+        if v is None or str(v).strip() == "" or hl_token(v):
+            continue
+        offered = ", ".join(M.lists.get("period_highlight", []))
+        M.add("warning", "V-38", "ProjectPeriod", r.get("__row", ""),
+              f"Project {r.get('project_id')}: period_highlight '{v}' names no colour this "
+              f"application can draw, so '{r.get('period_name')}' is drawn gray. "
+              + (f"Valid: {offered}." if offered
+                 else f"Expected one of: {', '.join(HIGHLIGHT_WORDS)}."))
+
     for pid, mm in M.milestones.items():
         for nm, dates in mm.items():
             if M.lists.get("milestone_name") and nm not in M.lists["milestone_name"]:

@@ -34,7 +34,7 @@ from openpyxl import Workbook, load_workbook
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 VERSION = "1.0"
-SOURCE = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.11.xlsx"
+SOURCE = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.12.xlsx"
 OUT = ROOT / "templates" / f"PRAP_SourceData_Scenarios_v{VERSION}.xlsx"
 LARGE_VERSION = "1.0"
 LARGE_OUT = ROOT / "templates" / f"PRAP_SourceData_Scenarios_50x50_v{LARGE_VERSION}.xlsx"
@@ -70,7 +70,7 @@ def periods(pid, start, spans, weights=None):
     for seq, (name, months) in enumerate(spans, start=1):
         end = eom(cur + rd(months=months - 1))
         w = (weights or {}).get(name, 1.00)
-        out.append([pid, name, seq, cur, end, w, None])
+        out.append([pid, name, seq, cur, end, None, w, None])   # None: period_highlight, schema 14
         cur = end + rd(days=1)
     return out, out[-1][4]
 
@@ -247,7 +247,7 @@ def main(size="small"):
             m.append(("FPI", start + rd(months=7)))
         for nm, d in sorted(m, key=lambda kv: kv[1]):
             seq += 1
-            mile.append([pid, None, nm, d, seq,
+            mile.append([pid, None, nm, d, None, seq,     # None: milestone_highlight, schema 13
                          "DELIBERATE: a second FPI, which V-20 reports" if duplicate and nm == "FPI"
                          and d == start + rd(months=7) else None])
 
@@ -283,7 +283,7 @@ def main(size="small"):
     for row in mile:
         if row[0] == p11:
             row[1] = "SCN-011 under its OLD name"
-            row[5] = "DELIBERATE: a stale project_name, which V-13 reports before the "\
+            row[6] = "DELIBERATE: a stale project_name, which V-13 reports before the "\
                      "master value is used."
             break
 
@@ -423,7 +423,7 @@ def main(size="small"):
         for row in per:
             if row[0] != pid:
                 continue
-            _, pn, _, ps, pe, w, _ = row
+            _, pn, _, ps, pe, _, w, _ = row                  # period_highlight sits after pe
             for mm in months_between(ps, pe):
                 out[mm] = round(standard(ptype, phase, scope, pn) * (w or 1.0), 2)
         return out

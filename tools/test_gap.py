@@ -53,7 +53,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import prap_io                                                       # noqa: E402
 
 fails = []
-BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.17.xlsx")
+BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.18.xlsx")
 
 # The project runs for the three months beginning with THIS one, so it is inside the
 # default horizon whenever this is run - see the note in the docstring above.
