@@ -196,10 +196,14 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.16.xlsx` — **current.** Amends `NR-DEP-17`:
+- `docs/PRAP_NewApp_Development_Plan_v1.17.xlsx` — **current.** A session that can no
+  longer write the shared plan is offered to keep its version in its own folder (R-61).
+- `docs/PRAP_NewApp_Development_Plan_v1.16.xlsx` — superseded. Amends `NR-DEP-17`:
   a page that has gone quiet no longer stops the application — only the close message
   does (web plan R-58).
-- `docs/PRAP_NewApp_Specification_v1.8.xlsx` — **current specification.** Issued against
+- `docs/PRAP_NewApp_Specification_v1.9.xlsx` — **current specification.** Issued against
+  desktop plan v1.17: how "Save my version to My plans" names, checks and opens the copy.
+- `docs/PRAP_NewApp_Specification_v1.8.xlsx` — superseded specification. Issued against
   desktop plan v1.16: the shutdown rule, and what a window says and offers once the
   application behind it has stopped.
 - `docs/PRAP_NewApp_Development_Plan_v1.14.xlsx` — superseded. Amends assumption
@@ -306,8 +310,18 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.70.xlsx` — **current.** 90 requirements, 39 live
-  validation rules, source schema version 14. The latest change is **R-59**: the
+- `docs/PRAP_Development_Plan_v2.71.xlsx` — **current.** 91 requirements, 40 live
+  validation rules, source schema version 15. The latest changes are **R-60** and
+  **R-61**. **Period colours are an assumption**: a new `PeriodHighlight` sheet, edited
+  under **Period colours** on the General assumptions tab, gives each period name a
+  default colour for every project; a project's own Highlight on its Periods table wins,
+  and a period with neither is gray. The shipped defaults restore start-up red, conduct
+  green and close-out orange as data you can change, and periods derived from milestones
+  take them too. A workbook from before schema 15 still opens. And in the Python
+  edition, **a session that can no longer save into the shared plan** — its hold lapsed
+  and was taken over, or a colleague saved since — is offered **Save my version to My
+  plans**: a new file in the person's own folder, the team's plan untouched. Before them,
+  **R-59**: the
   **Periods table has a Highlight column** like the Milestones one. A project's period
   can be given one of five colours and the Project timeline draws it in that colour on
   both tabs; **a period with no colour is drawn gray**, still shaded by its weight. This
@@ -408,7 +422,7 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.39.xlsx` — **current specification.** Schema 14.
+- `docs/PRAP_Programming_Specification_v1.40.xlsx` — **current specification.** Schema 15.
   Sheet 06 records the name-labelled filters, the sticky selection of a new row and the
   Resource by project controls (R-56).
   Sheet 08's results workbook carries each project-month's demand, staffed figure and gap,
@@ -424,7 +438,9 @@ document through the manifest rather than by sorting filenames.
   and states the quantity it had been missing: the Overall tab's cost follows
   `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same
   rendering problem.
-- `docs/PRAP_UI_Component_List_v2.6.xlsx` — **current component list.** O-10's colour rule
+- `docs/PRAP_UI_Component_List_v2.7.xlsx` — **current component list.** Adds `A-05`, Period
+  colours on the General assumptions tab (R-60).
+- `docs/PRAP_UI_Component_List_v2.6.xlsx` — superseded component list. O-10's colour rule
   is superseded at R-59: a period is drawn in the colour chosen for it, gray otherwise.
 - `docs/PRAP_UI_Component_List_v2.5.xlsx` — superseded component list. 70 components;
   `X-15` is new — a row's identity stays put while its table scrolls sideways (R-53) —

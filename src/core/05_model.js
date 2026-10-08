@@ -118,12 +118,15 @@ function buildModel(sheets){
        make every plan written before schema 9 unopenable to gain nothing.
        Every other sheet is still required: they are the plan itself, and a file missing
        one of them is a file the application cannot describe. */
-    if (s === "MonthlyEstimate"){
+    if (LATER_SHEETS[s]){
       sheets[s] = [SHEET_HEADERS[s].slice()];
       F.push({sev:"information", rule:"V-09", sheet:s, row:"",
-        msg:`This workbook has no MonthlyEstimate sheet, so it carries no manual monthly `
-          + `figures — which is what a plan written before schema 9 looks like. Exporting `
-          + `it again adds the sheet.`});
+        msg:`This workbook has no ${s} sheet, so it carries `
+          + (s === "MonthlyEstimate" ? `no manual monthly figures`
+                                     : `no default period colours (every period is gray `
+                                       + `unless a project chose one)`)
+          + ` — which is what a plan written before schema ${LATER_SHEETS[s]} looks like. `
+          + `Exporting it again adds the sheet.`});
       continue;
     }
     F.push({sev:"fatal", rule:"V-00", sheet:s, row:"",
@@ -136,7 +139,7 @@ function buildModel(sheets){
   for (const s of REQUIRED_SHEETS) raw[s] = toObjects(s, sheets[s], F);
 
   const M = {
-    projects:{}, milestones:{}, msHighlight:{}, hlLabels:{}, perHlLabels:{}, periods:{}, people:{}, assignments:[],
+    projects:{}, milestones:{}, msHighlight:{}, hlLabels:{}, perHlLabels:{}, periodHl:{}, periods:{}, people:{}, assignments:[],
     ppw:{}, pws:{}, rf:{}, rfRoles:{}, rfAbsorb:{}, lists:{}, config:{}, raw, findings:F,
   };
   for (const r of raw.Lists) if (r.list_name) (M.lists[r.list_name] ||= []).push(r.value);
@@ -287,6 +290,17 @@ function buildModel(sheets){
                    r.absorbed_by]] ||= []).push(r.role_name);
   }
 
+  /* ---- the default colour of each period, for every project (schema 15, R-60) ---
+     First row for a name wins; a second is V-39 rather than a silent overwrite. The
+     labels go into the same perHlLabels the project-level colours use, so the legend
+     names a colour in the file's own words whichever level chose it. */
+  for (const r of (raw.PeriodHighlight || [])){
+    if (!r.period_name || r.period_name in M.periodHl) continue;
+    const tok = hlToken(r.period_highlight);
+    M.periodHl[r.period_name] = tok;
+    if (tok) M.perHlLabels[tok] ||= String(r.period_highlight).trim();
+  }
+
   // ---- periods: use what is in the file; derive where a trial has none -------
   for (const r of raw.ProjectPeriod){
     if (r.__new && !r.period_name) continue;
@@ -426,6 +440,36 @@ function validate(M, F){
       `Project ${r.project_id}: period_highlight '${v}' names no colour this application `
       + `can draw, so '${r.period_name}' is drawn gray. `
       + (offered ? `Valid: ${offered}.` : `Expected one of: ${HIGHLIGHT_WORDS.join(", ")}.`));
+  }
+
+  /* V-39: a default period colour that cannot be applied (schema 15) - a value naming no
+     colour, a period name given twice, or a name neither period set knows. Each leaves
+     that period gray or on its first row's colour, which looks exactly like a choice
+     nobody made, so it is said. Warning, never a refusal: a colour moves no figure. */
+  {
+    const known = new Set([...(M.lists.period_name_clinical || []),
+                           ...(M.lists.period_name_others || [])]);
+    const seen = new Set();
+    for (const r of (M.raw.PeriodHighlight || [])){
+      if (!r.period_name) continue;
+      const v = r.period_highlight;
+      if (seen.has(r.period_name))
+        add("warning","V-39","PeriodHighlight",r.__row,
+          `'${r.period_name}' has more than one default colour; the first row is used and `
+          + `this one is ignored.`);
+      seen.add(r.period_name);
+      if (known.size && !known.has(r.period_name))
+        add("warning","V-39","PeriodHighlight",r.__row,
+          `'${r.period_name}' is not a period name in either period list, so its colour `
+          + `is never drawn.`);
+      if (v !== null && v !== undefined && String(v).trim() !== "" && !hlToken(v)){
+        const offered = (M.lists.period_highlight || []).join(", ");
+        add("warning","V-39","PeriodHighlight",r.__row,
+          `period_highlight '${v}' for '${r.period_name}' names no colour this application `
+          + `can draw, so that period is drawn gray. `
+          + (offered ? `Valid: ${offered}.` : `Expected one of: ${HIGHLIGHT_WORDS.join(", ")}.`));
+      }
+    }
   }
 
   // V-11 / V-20 / V-21 on milestones

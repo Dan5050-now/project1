@@ -176,8 +176,11 @@ function chartGantt(pids, opts){
       const tip = `<b>${esc(pr.project_name)}</b><br>${esc(s.period_name)}<br>`
         + `${ymd(s.period_start)} to ${ymd(s.period_end)}<br>period weight ${(num(s.weight)||0).toFixed(2)}`
         + `<br><b>${fte.toFixed(2)} FTE per month</b> on average across this period`
-        + (look.hl ? `<br><span class="tr">highlighted ${esc(M.perHlLabels[look.hl] || look.hl)}</span>`
-                   : `<br><span class="tr">no highlight — drawn gray</span>`);
+        + (look.hl ? `<br><span class="tr">${esc(M.perHlLabels[look.hl] || look.hl)} — `
+                     + (look.from === "project" ? "chosen for this project"
+                                                : "the default for every " + esc(s.period_name)
+                                                  + " (General assumptions)") + `</span>`
+                   : `<br><span class="tr">no colour chosen — drawn gray</span>`);
       // The label is dark on gray and on yellow, white on the four strong colours: the
       // band's own colour decides which reads, so it is decided here and not in CSS.
       const dk = !look.hl || look.hl === "yellow" ? " dk" : "";
@@ -219,7 +222,7 @@ function chartGantt(pids, opts){
      chart - but they share one swatch now, because they share one colour until somebody
      chooses another (R-59). The chosen colours follow, each in the words the file uses. */
   leg.push(`<li><span class="sw" style="background:${PERIOD_GRAY}"></span>period &#8212; gray `
-    + `unless a colour is chosen for it:</li>`);
+    + `where no colour is set:</li>`);
   for (const n of [...CLINICAL_PERIODS, ...OTHER_PERIODS]) if (seen.has(n))
     leg.push(`<li class="pername"${sLeg(n)}>${esc(n)}</li>`);
   for (const t of HIGHLIGHT_WORDS) if (perUsed.has(t))

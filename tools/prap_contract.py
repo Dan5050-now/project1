@@ -35,9 +35,9 @@ CONTRACT_VERSION = "1.0"
 
 # The current issue of each controlled document. check_consistency.py verifies the
 # files exist and that the versions agree with the application's provenance strip.
-PLAN = "PRAP_Development_Plan_v2.70.xlsx"
-SPEC = "PRAP_Programming_Specification_v1.39.xlsx"
-UIL = "PRAP_UI_Component_List_v2.6.xlsx"   # v1.0 until R-47: never moved when v2.0 was issued
+PLAN = "PRAP_Development_Plan_v2.71.xlsx"
+SPEC = "PRAP_Programming_Specification_v1.40.xlsx"
+UIL = "PRAP_UI_Component_List_v2.7.xlsx"   # v1.0 until R-47: never moved when v2.0 was issued
 TEMPLATE = f"PRAP_SourceData_Template_v{B.TEMPLATE_VERSION}.xlsx"
 DUMMY = f"PRAP_SourceData_Dummy_v{B.DUMMY_VERSION}.xlsx"
 DUMMY_SMALL = f"PRAP_SourceData_Dummy_10x10_v{B.DUMMY_SMALL_VERSION}.xlsx"
@@ -155,6 +155,10 @@ SHEET_ROLE = {
                            "period_name", "role_name"],
                    "fallback": "work_scope_type empty means every scope",
                    "parent": None},
+    "PeriodHighlight": {"role": "reference", "key": ["period_name"],
+                        "fallback": "no row, or an empty colour, means the period is drawn gray "
+                                    "unless the project chose a colour on ProjectPeriod",
+                        "parent": None},
     "Person": {"role": "master", "key": ["person_id"], "parent": None},
     "Assignment": {"role": "child", "key": ["assignment_id"], "parent": "Person"},
     "PersonPeriodWeight": {"role": "child", "key": ["assignment_id", "period_start"],

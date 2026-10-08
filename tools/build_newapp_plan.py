@@ -20,7 +20,7 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.16"
+DOC_VERSION = "1.17"
 DOC_STATUS = ("Baseline v1.0 + changes C-N01 and C-N02. Gates N1-N3 closed; Step N4 in progress and "
               "Step N4a - the Python shell - BUILT AND TESTED, awaiting your run on the company laptop. "
               "Two company controls are measured rather than feared: an executable may run but may not "
@@ -228,6 +228,16 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
+    [f"{MARK_NEW}1.17", "2026-10-08", "Claude Code", "-",
+     "KEEP YOUR VERSION (web plan R-61), under NR-STO-14 and NR-STO-16. A session whose hold "
+     "lapsed and was taken over, or whose plan a colleague saved since it was opened, has its "
+     "Save refused, and the only advice was Save as or Reload - the second discards the work "
+     "on screen. The window now offers 'Save my version to My plans': a new file in the "
+     "person's own workspaces folder, named with their name and the time and checked so it "
+     "never lands on an existing file, after which the window works on it. The team's plan is "
+     "never touched. Offered by a bar on either refusal and on the File menu at any time. "
+     "test_python_app.py covers both refusals; the guard was proved by taking it out.",
+     "Issued for review"],
     [f"{MARK_NEW}1.16", "2026-10-08", "Claude Code", "-",
      "NR-DEP-17 AMENDED - A PAGE THAT HAS GONE QUIET NO LONGER STOPS THE APPLICATION "
      "(web plan R-58). Reported from the field as the audit trail not working: a save "

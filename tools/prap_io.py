@@ -65,8 +65,12 @@ NUM_COLS = {
     "Assignment": {"person_weight"},
     "PersonPeriodWeight": {"weight_override"},
     "MonthlyEstimate": {"fte"},
+    "PeriodHighlight": set(),
     "Lists": set(), "Config": set(),
 }
+# Sheets a later schema added; a file written before one has none of what it holds,
+# which is a complete plan. Mirrors LATER_SHEETS in src/core/03_parse.js.
+LATER_SHEETS = {"MonthlyEstimate": 9, "PeriodHighlight": 15}
 class _ClinicalTypes:
     """Which project types are clinical trials.
 
@@ -245,7 +249,7 @@ def read_xlsx(path):
             if was:
                 actual[s] = was
     missing = [s for s in SHEET_ORDER
-               if s not in actual and s != "MonthlyEstimate"]
+               if s not in actual and s not in LATER_SHEETS]
     if missing:
         raise Problem(f"{Path(path).name}: sheet(s) not found: {', '.join(missing)}. "
                       f"Compare the file against templates/PRAP_SourceData_Template_"
@@ -282,7 +286,7 @@ def read_json(path):
     # MonthlyEstimate arrived at schema 9, and a file written before it carries no manual
     # figures - a complete plan, not a broken one. The same tolerance read_xlsx extends,
     # for the same reason. Every other sheet has always been there and is still required.
-    missing = [s for s in SHEET_ORDER if s not in src and s != "MonthlyEstimate"]
+    missing = [s for s in SHEET_ORDER if s not in src and s not in LATER_SHEETS]
     if missing:
         raise Problem(f"{Path(path).name}: sheets missing: {', '.join(missing)}. All "
                       f"{len(SHEET_ORDER)} must be present, even if empty.")
@@ -713,6 +717,32 @@ def validate(M):
               f"application can draw, so '{m.get('milestone_name')}' is left unmarked. "
               + (f"Valid: {offered}." if offered
                  else f"Expected one of: {', '.join(HIGHLIGHT_WORDS)}."))
+
+    # V-39: a default period colour that cannot be applied (schema 15) - no colour word,
+    # a name given twice, or a name neither period list knows. Mirrors core/05_model.js.
+    known = set(M.lists.get("period_name_clinical", [])) | set(M.lists.get("period_name_others", []))
+    seen = set()
+    for r in M.raw.get("PeriodHighlight", []) or []:
+        pn = r.get("period_name")
+        if not pn:
+            continue
+        if pn in seen:
+            M.add("warning", "V-39", "PeriodHighlight", r.get("__row", ""),
+                  f"'{pn}' has more than one default colour; the first row is used and "
+                  f"this one is ignored.")
+        seen.add(pn)
+        if known and pn not in known:
+            M.add("warning", "V-39", "PeriodHighlight", r.get("__row", ""),
+                  f"'{pn}' is not a period name in either period list, so its colour "
+                  f"is never drawn.")
+        v = r.get("period_highlight")
+        if v is not None and str(v).strip() != "" and not hl_token(v):
+            offered = ", ".join(M.lists.get("period_highlight", []))
+            M.add("warning", "V-39", "PeriodHighlight", r.get("__row", ""),
+                  f"period_highlight '{v}' for '{pn}' names no colour this application "
+                  f"can draw, so that period is drawn gray. "
+                  + (f"Valid: {offered}." if offered
+                     else f"Expected one of: {', '.join(HIGHLIGHT_WORDS)}."))
 
     # V-38: the same for a period (schema 14) - an unreadable value leaves it drawn gray.
     for r in M.raw.get("ProjectPeriod", []):

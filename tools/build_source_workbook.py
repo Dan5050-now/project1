@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 14
-TEMPLATE_VERSION = "1.18"
-DUMMY_VERSION = "1.20"
-DUMMY_SMALL_VERSION = "1.12"
+SCHEMA_VERSION = 15
+TEMPLATE_VERSION = "1.19"
+DUMMY_VERSION = "1.21"
+DUMMY_SMALL_VERSION = "1.13"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -337,6 +337,17 @@ SHEETS = {
         ("absorbed_by", "If NOBODY holds this role on a project, which role picks the work up. Blank = the work is simply not counted. See the README.", ""),
         ("role_note", "Basis for the factor.", ""),
     ],
+    # Schema 15 (R-60): the colour each PERIOD is drawn in by default, for every project.
+    # A default assumption like the two sheets above - set once, for the whole plan - and
+    # a project may still choose otherwise for one of its own periods
+    # (ProjectPeriod.period_highlight), which wins where it is set.
+    "PeriodHighlight": [
+        ("period_name", "A period name, from either period set. One row per name.", "key"),
+        ("period_highlight", "The colour every project's period of this name is drawn in. "
+                             "Pick from the list; leave empty and it is drawn gray unless a "
+                             "project chooses a colour for its own period.", ""),
+        ("note_1", "Free text. e.g. what the colour is meant to say.", ""),
+    ],
     "Person": [
         ("person_id", "Unique key, e.g. PSN-001.", "key"),
         ("person_name", "Display name.", ""),
@@ -407,6 +418,7 @@ DROPDOWNS = {
     "Milestone": {"milestone_name": "milestone_name",
                   "milestone_highlight": "milestone_highlight"},
     "ProjectPeriod": {"period_highlight": "period_highlight"},
+    "PeriodHighlight": {"period_highlight": "period_highlight"},
     "PeriodFTEStandard": {"project_type": "project_type", "clinical_phase": "clinical_phase",
                              "work_scope_type": "work_scope_type",
                              "period_name": "period_name_clinical"},
@@ -1146,6 +1158,33 @@ def write_sheet(wb, name, rows, example=None, list_ranges=None):
     return ws
 
 
+# Schema 15 (R-60). The DEFAULT colour of each period, shipped as a starting assumption.
+# It restores the reading the component-list review asked for at O-10 - start-up red,
+# conduct green, close-out orange - but as a choice the plan holds and anybody may
+# change, rather than a palette fixed in the code. The periods either side of the work
+# (before start-up, after close-out, planning) are left empty, so they are gray: the
+# quiet ends of a timeline are not what anybody scans it for.
+DEFAULT_PERIOD_HIGHLIGHT = {
+    "Before-Start-up": None,
+    "Start-up": "Highlight (Red)",
+    "Conduct (interim)": "Highlight (Green)",
+    "Close-out (interim)": "Highlight (Orange)",
+    "Conduct (final)": "Highlight (Green)",
+    "Close-out (final)": "Highlight (Orange)",
+    "After Close-out (final)": None,
+    "Planning": None,
+    "Develop": "Highlight (Green)",
+    "Close": "Highlight (Orange)",
+}
+
+
+def default_period_highlights():
+    names = (dict(LISTS)["period_name_clinical"] + dict(LISTS)["period_name_others"])
+    return [[n, DEFAULT_PERIOD_HIGHLIGHT.get(n),
+             "Default - change it to suit your team" if DEFAULT_PERIOD_HIGHLIGHT.get(n)
+             else "Default - no colour, drawn gray"] for n in names]
+
+
 def add_readme(wb, kind, facts=None):
     ws = wb.create_sheet("00_README", 0)
     ws.sheet_view.showGridLines = False
@@ -1190,6 +1229,8 @@ def add_readme(wb, kind, facts=None):
         "                         period. Clinical trials only.",
         "   RoleFactor            the relative burden of each role, per project type, clinical phase,",
         "                         WORK SCOPE and period. Leave clinical_phase empty on the 'Others' rows.",
+        "   PeriodHighlight       the colour each period is drawn in, for every project. Empty =",
+        "                         gray. A project's own Highlight on ProjectPeriod wins over it.",
         "   Person                one row per person.",
         "   Assignment            one row per person + project + role.",
         "   PersonPeriodWeight    optional windows where a person's weight differs.",
@@ -1409,6 +1450,7 @@ def build(kind):
             if r[0] == manual_asg:
                 r[8] = "manual"
         examples = {k: None for k in SHEETS}
+        phl_rows = default_period_highlights()
         facts = describe(PROFILES[kind], projects, ms, periods, people, A, ppw, inspections)
     else:
         facts = None
@@ -1420,6 +1462,7 @@ def build(kind):
         # asking for several hundred numbers first.
         pws_rows = [list(x) for x in default_period_weights()]
         role_rows = [list(x) for x in default_role_factors()]
+        phl_rows = default_period_highlights()
         # one example row per sheet (REQ-IMP-03)
         examples = {
             "Project": ["PRJ-001", "ONV-101 First-in-human", "NewDrug CT", "Onvelaris", "Phase 1",
@@ -1436,6 +1479,7 @@ def build(kind):
             # sheet that was not a default.
             "PeriodFTEStandard": None,
             "RoleFactor": None,
+            "PeriodHighlight": None,
             "Person": ["PSN-001", "Kim S.", "Data Management", "Lead data manager", 1.00,
                        None, None, "example row - delete before use", None, None, None, None],
             "Assignment": ["ASG-001", "PSN-001", None, "PRJ-001", "Lead data manager",
@@ -1454,6 +1498,7 @@ def build(kind):
     write_sheet(wb, "ProjectPeriod", period_rows, examples["ProjectPeriod"], list_ranges)
     write_sheet(wb, "PeriodFTEStandard", pws_rows, examples["PeriodFTEStandard"], list_ranges)
     write_sheet(wb, "RoleFactor", role_rows, examples["RoleFactor"], list_ranges)
+    write_sheet(wb, "PeriodHighlight", phl_rows, examples["PeriodHighlight"], list_ranges)
     write_sheet(wb, "Person", person_rows, examples["Person"], list_ranges)
     write_sheet(wb, "Assignment", asg_rows, examples["Assignment"], list_ranges)
     write_sheet(wb, "PersonPeriodWeight", ppw_rows, examples["PersonPeriodWeight"], list_ranges)

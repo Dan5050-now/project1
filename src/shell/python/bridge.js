@@ -135,6 +135,7 @@
       + `PM_APP is running again, so the record stays in one place.`);
   }
   el("pm-gone")?.querySelector("[data-rescue-plan]")?.addEventListener("click", rescuePlan);
+  el("pm-keep")?.querySelector("[data-keep]")?.addEventListener("click", () => saveMine());
   el("pm-gone")?.querySelector("[data-rescue-log]")?.addEventListener("click", rescueLog);
   alive();
   setInterval(alive, ALIVE_MS);
@@ -231,7 +232,10 @@
     showHold("read", "Superseded — reload to edit");
     showBanner("bad", `Somebody else saved this plan${at ? " at " + at : ""}. The figures `
       + `on screen are from when you opened it, so saving now would replace their work. `
-      + `Use File → Reload plan to catch up.`);
+      + `Use File → Reload plan to catch up - or keep your own version first.`);
+    keepBar(true, `Somebody else saved this plan${at ? " at " + at : ""}, so your work can `
+      + `no longer be saved into it. Keep it in your own folder - nothing is lost, and the `
+      + `team's plan is not touched.`);
   }
 
   /** Has the file moved on since we read it? Reports it, and says so to the caller. */
@@ -407,7 +411,10 @@
         holds = false;
         showHold("read", "Read-only");
         showBanner("bad", "Your hold on this plan was taken over while you were "
-          + "working. Nothing has been saved. Use File → Save as to keep your changes.");
+          + "working. Nothing has been saved. Keep your version with the button above.");
+        keepBar(true, "Your hold on this plan lapsed and was taken over while you were "
+          + "away, so your work can no longer be saved into it. Keep it in your own folder - "
+          + "nothing is lost, and the team's plan is not touched.");
       }
     } catch { /* the application is stopping */ }
   }, 30000);
@@ -528,6 +535,67 @@
     return sheets;
   }
 
+  /* ---- keeping your work when you can no longer save to the plan (R-61) ----
+     Two things take the shared plan away from a person mid-task, and neither is their
+     fault: their hold lapses after half an hour of quiet and a colleague takes it
+     (NR-STO-14), or a colleague saves the plan after they opened it (NR-STO-16). Save
+     is then refused - rightly, it would overwrite the colleague - and the advice was
+     "Save as" or "Reload", the second of which throws their work away. So the window
+     offers the safe thing in one press: write what is on screen to a NEW file in the
+     person's own folder, named so it cannot collide with anything, and carry on in it.
+     The team's plan is not touched; the two can be compared later with Import. */
+  function keepBar(show, why) {
+    const bar = el("pm-keep");
+    if (!bar) return;
+    bar.hidden = !show;
+    if (show && why) bar.querySelector("[data-text]").textContent = why;
+    fitChrome && fitChrome();
+  }
+
+  async function saveMine() {
+    if (!S.model) return showBanner("bad", "There is no plan on screen to save.");
+    if (S.pending.length) {
+      // Committed first, by the ordinary path, so the change log records them; if that
+      // asks a question, the person answers it and presses again.
+      if (typeof window.saveEdits === "function") window.saveEdits();
+      if (S.pending.length)
+        return showBanner("warn", "Answer the question about your changes first, then press "
+          + "'Save my version to My plans' again.");
+    }
+    const folder = where.workspaces || where.dataDir;
+    const sep = folder.includes("\\") ? "\\" : "/";
+    const base = fileBase(ref ? ref.split(/[\\/]/).pop().replace(/\.prap$/i, "")
+                              : S.fileName, "Plan");
+    const who = (me && me.name ? me.name : "mine").replace(/[^\w.-]+/g, "_");
+    // Keeping a kept copy again must not stack the name: Plan_Kim_..._Kim_...
+    const tail = "_" + who;
+    let stem = base;
+    while (stem.endsWith(tail) && stem.length > tail.length) stem = stem.slice(0, -tail.length);
+    let name = `${stem}_${who}_${fileStamp()}.prap`, path = folder.replace(/[\\/]+$/, "") + sep + name;
+    try {
+      // Never on top of something: save-as writes wherever it is pointed.
+      for (let i = 2; (await call("ws/stat", { ref: path })).exists && i < 50; i++) {
+        name = `${stem}_${who}_${fileStamp()}_${i}.prap`;
+        path = folder.replace(/[\\/]+$/, "") + sep + name;
+      }
+      const out = await call("ws/saveAs", { sheets: sheetsNow(), ref: path });
+      if (!out) return;
+      const was = ref;
+      ref = out.ref;
+      await noteBase(out.savedAt);
+      stale = false; holds = false; blockedBy = null;
+      showHold(null);
+      showFile();
+      keepBar(false);
+      showBanner("", `Your version is saved in My plans as ${name}, and this window now `
+        + `works on it.` + (was ? ` The team's plan (${was.split(/[\\/]/).pop()}) was not `
+        + `touched - compare the two later with File → Import source data.` : ""));
+      return out;
+    } catch (e) {
+      showBanner("bad", e.message);
+    }
+  }
+
   async function savePlan(as) {
     if (S.pending.length) {
       showBanner("bad", `${S.pending.length} change(s) are not yet committed. Press `
@@ -560,6 +628,11 @@
       showBanner("", `Saved to ${out.ref}.`);
     } catch (e) {
       showBanner("bad", e.message);
+      // The two refusals that mean "this plan is no longer yours to write" (R-61): say
+      // what can be done instead, beside the message, rather than leave Reload as the
+      // only way on - which discards what is on screen.
+      if (e.kind === "claim_lost" || e.kind === "superseded")
+        keepBar(true, e.message + " Keep your version in your own folder - nothing is lost.");
     }
   }
 
@@ -955,6 +1028,7 @@
       case "recent": return showRecent();
       case "save": return savePlan(false);
       case "saveAs": return savePlan(true);
+      case "saveMine": return saveMine();
       case "import": return importSource();
       case "export": return exportWorkbook(false);       // the browser download
       case "exportJson": return exportWorkbook(true);

@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.6.xlsx
+Output: docs/PRAP_UI_Component_List_v2.7.xlsx
 """
 
 from pathlib import Path
@@ -40,7 +40,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.6"
+VERSION = "2.7"
 DATE = "2026-10-08"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
@@ -203,7 +203,7 @@ C = [
      "KST beside it. Correct me if not."),
     ("G-03", "Global", "Load workbook", "File picker / drag-and-drop. Warns first if edits are unsaved.",
      "REQ-IMP-01, REQ-IMP-08", K, "", "Unchanged."),
-    ("G-04", "Global", "Export", "Writes all ELEVEN sheets back in template layout, edits included. " + FIX
+    ("G-04", "Global", "Export", "Writes all TWELVE sheets back in template layout, edits included. " + FIX
      + "v1.0 said ten; MonthlyEstimate arrived at R-30 (schema 9) and is written too.",
      "REQ-IMP-04, REQ-IMP-07", K, "", "Unchanged."),
     ("G-05", "Global", "Findings banner", "Summary of the last import; opens the full report.",
@@ -481,6 +481,10 @@ C = [
      "REQ-DSH-11, REQ-CAL-08", "", "",
      "Added for G-07 and O-04. The thresholds that colour the tables now sit next to a note saying "
      "what they mean."),
+    ("A-05", "Assumptions tab", "[NEW v2.7] Period colours",
+     "PeriodHighlight: the default colour of each period name, for every project's timeline. "
+     "Editable; empty means gray. A project's own Highlight on its Periods table wins.",
+     "REQ-PRJ-16", A, "", "R-60."),
     ("A-04", "Assumptions tab", "[CHANGED] Value lists",
      "Lists: what each list-typed column will accept, and how many values each list holds. Read-only.",
      "REQ-DSH-11", "Change (round 3)",

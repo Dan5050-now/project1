@@ -10,6 +10,7 @@
       <hr>
       <a data-do="save">Save<i>Ctrl+S</i></a>
       <a data-do="saveAs">Save as…</a>
+      <a data-do="saveMine">Save my version to My plans<i>a new file, the plan untouched</i></a>
       <a data-do="moveToShared">Move plan to the team folder…<i>so colleagues can open it</i></a>
       <hr>
       <a data-do="import">Import source data…</a>
@@ -75,6 +76,12 @@
     import the downloaded workbook.</span>
   <button type="button" class="btn primary" data-rescue-plan>Download the plan (.xlsx)</button>
   <button type="button" class="btn" data-rescue-log>Download unwritten change log</button>
+</div>
+<!-- R-61: the shared plan can no longer be written by this window - the hold lapsed and
+     was taken over, or a colleague saved since it was opened. The safe way on. -->
+<div id="pm-keep" data-topchrome hidden role="alert">
+  <span data-text></span>
+  <button type="button" class="btn primary" data-keep>Save my version to My plans</button>
 </div>
 <div id="pm-share" data-topchrome hidden>
   <span data-text></span>

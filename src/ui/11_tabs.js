@@ -74,8 +74,9 @@ function renderOverall(){
       <div class="phead"><h2>Project timeline</h2>
         <span class="scope k">${pids.length} project(s)</span></div>
       <p class="cap">One row per project, with its start, end and length under the name. Bands are
-        drawn gray unless a colour is chosen for it in the project's <strong>Periods</strong> table
-        (Highlight), and shaded darker as the period weight rises. The two DB locks are red —
+        coloured by <strong>Period colours</strong> on the General assumptions tab, or by the
+        project's own choice in its Periods table (Highlight), which wins; gray where neither
+        sets one. Shaded darker as the period weight rises. The two DB locks are red —
         they are what the period derivation hangs on. <strong>Hover any band or marker</strong> for detail.</p>
       <div class="scrollx xl">${chartGantt(pids.slice().sort(byRank))}</div></div>
     <div class="panel" data-panel="stack-proj">
@@ -265,8 +266,10 @@ function projDetail(pid){
       <div class="phead"><h2>Project timeline — ${esc(pr.project_name)}</h2>
         <span class="scope k">${per.length} period(s) &#183; ${ms.length} milestone(s)</span></div>
       <p class="cap">The same run-chart as the Overall tab, for this project alone: one band per
-        period, gray unless you choose its colour in <strong>Highlight</strong> in the Periods
-        table below, and shaded darker as the period weight rises, with every
+        period, in the default colour from <strong>Period colours</strong> (General
+        assumptions) unless you choose another in <strong>Highlight</strong> in the Periods
+        table below, gray where neither sets one, and shaded darker as the period weight
+        rises, with every
         milestone marked. The two DB locks are red — they are what the period derivation hangs on.
         <strong>Hover any band or marker</strong> for its dates, weight and average load.</p>
       <div class="scrollx fit">${chartGantt([pid], {single:true,
@@ -699,6 +702,18 @@ function renderGenTab(){
         and the period weight. Keyed on type, phase, period and role — read a row across to see how a
         role's burden moves over the life of a project. ${rfRows.length} rows in all.</p>
       ${rf}</div>
+    <div class="panel" data-panel="gen-phl">
+      <div class="phead"><h2>Period colours</h2>
+        <span class="scope">PeriodHighlight</span>
+        <span class="scope k">${M.raw.PeriodHighlight.length} period(s)</span></div>
+      <p class="cap">The colour every project's period of this name is drawn in on the
+        <strong>Project timeline</strong>. Leave it empty and that period is drawn
+        <strong>gray</strong>. A project can still choose a different colour for one of its
+        own periods in the <strong>Highlight</strong> column of its Periods table
+        (Source data (project)), and that choice wins over this one. A colour changes no
+        figure.</p>
+      ${dataTable("PeriodHighlight", M.raw.PeriodHighlight,
+                  ["period_name","period_highlight","note_1"])}</div>
     <div class="two">
       <div class="panel" data-panel="gen-cfg">
         <div class="phead"><h2>Configuration</h2>

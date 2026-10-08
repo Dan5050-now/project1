@@ -31,6 +31,7 @@ const SHEET_COLS = {
   ProjectPeriod: {date:["period_start","period_end"], num:["period_seq","weight"]},
   PeriodFTEStandard: {date:[], num:["standard_fte"]},
   RoleFactor: {date:[], num:["role_factor"]},
+  PeriodHighlight: {date:[], num:[]},
   Person: {date:["employment_start","employment_end"], num:["capacity_fte"]},
   Assignment: {date:["assign_start_date","assign_end_date"], num:["person_weight"]},
   PersonPeriodWeight: {date:["period_start","period_end"], num:["weight_override"]},
@@ -39,6 +40,12 @@ const SHEET_COLS = {
   Config: {date:[], num:[]},
 };
 const REQUIRED_SHEETS = Object.keys(SHEET_COLS);
+/* Sheets a LATER schema added, and the schema that added them. A workbook written
+   before one simply has none of what it holds - no manual figures, no default period
+   colours - which is a complete plan, not a broken one; so its absence is reported as
+   information and the sheet is supplied empty. Every other sheet has always been there,
+   and one missing is a file that has lost something. */
+const LATER_SHEETS = {MonthlyEstimate:9, PeriodHighlight:15};
 /* The schema's own column order, independent of any one file. A workbook carries its
    headers, so the application takes them from what it loaded; the JSON interchange file
    carries row OBJECTS and has no column order at all, so it needs this. It is also the
@@ -57,6 +64,7 @@ const SHEET_HEADERS = {
     "standard_fte","note_1"],
   RoleFactor:["project_type","clinical_phase","work_scope_type","period_name","role_name",
     "role_factor","absorbed_by","role_note"],
+  PeriodHighlight:["period_name","period_highlight","note_1"],
   Person:["person_id","person_name","department","primary_role","capacity_fte",
     "employment_start","employment_end","note_1","note_2","note_3","note_4","note_5"],
   Assignment:["assignment_id","person_id","person_name","project_id","role_name",
@@ -242,7 +250,7 @@ const COLUMN_HELP = {
   difference:"The stated figure minus the automatic one. This is the size of the departure the manual estimate is making, month by month.",
   period:"THE WHOLE DERIVATION OF THIS MONTH, TERM BY TERM: which period of the project's own plan it falls in, the standard monthly FTE that period selects, this project's own weight, and how much of the month the project ran — which multiplied are the project's month. On a person's table a second line follows with their CLAIM on that month: role factor ÷ sharers × person weight × month coverage, ending in the percentage of the month it won. Those terms make a claim and not a figure — every claim on a project-month is measured against the others, so the shares add to one (REQ-CAL-19), which is why the two halves are closed off separately instead of written as one product. A fallback says it is one and names its rule: no standard row is V-19, no role factor row is V-23, no period at all is V-12. Read off the same calculation the figure came from, so no term shown here can be a different one from the term the arithmetic used.",
   sharers:"How many people hold THIS ROLE on this project in this month. The role factor is what the ROLE costs the project, not what each holder costs, so it is divided by this: put a second data manager on a trial and each of them claims half of what one claimed, and the project's month does not move (REQ-CAL-14). A share that halves from one month to the next with nothing else changed is usually this.",
-  period_highlight:"OPTIONAL. The colour this period is drawn in on the Project timeline — on the Overall tab and on this project's own tab. Pick one of the values the Lists sheet offers; leave it empty and the period is drawn GRAY, shaded darker as its weight rises. As with milestones, the colour word inside the value is what is read, so 'Highlight (Blue) - sponsor review' keeps the colour and says why.",
+  period_highlight:"OPTIONAL. The colour a period is drawn in on the Project timeline — on the Overall tab and on the project's own tab. On the GENERAL ASSUMPTIONS tab (Period colours) it is the DEFAULT for every project's period of that name. On a project's PERIODS table it is that project's own choice, and it wins over the default. Neither set: the period is drawn GRAY, shaded darker as its weight rises. Pick one of the values the Lists sheet offers; the colour word inside the value is what is read, so 'Highlight (Blue) - sponsor review' keeps the colour and says why.",
   milestone_highlight:"OPTIONAL. Marks this milestone on the Project timeline in a colour — on the Overall tab and on this project's own tab, wherever the timeline is drawn. Pick one of the values the Lists sheet offers; leave it empty and the milestone draws as it always did. The colour word inside the value is what is read, so a team that writes what their colours MEAN — 'Highlight (Red) - slipped' — keeps the colour and gains the reason.",
   project_id:"Unique identifier for the project. Editing it cascades to every row that references it.",
   project_name:"Display name. Shown wherever the project appears.",

@@ -107,11 +107,22 @@ const HIGHLIGHT_FILL = {red:"var(--hl-red)", yellow:"var(--hl-yellow)", blue:"va
 const PERIOD_GRAY = "#c4c4c9";
 const weightStep = (w, wmax) => (wmax ? Math.min(w, wmax) / wmax : 0);
 const bandFill = (n, w, wmax) => mix(PERIOD_GRAY, 1.06 - 0.20 * weightStep(w, wmax));
-/** The fill of one period band, as a style string: its chosen colour, or the gray. */
+/** Which colour a period is drawn in, and why (R-60). The project's own choice wins;
+ *  then the default for that period name on the General assumptions tab; then gray.
+ *  The more specific statement beats the general one, as a project's period weight
+ *  adjusts the standard rather than the other way round. `from` is said in the pop-up,
+ *  so a reader can tell "this project chose blue" from "every Conduct is green". */
+function periodColour(seg){
+  const own = hlToken(seg.period_highlight);
+  if (own) return {hl:own, from:"project"};
+  const def = (S.model.periodHl || {})[seg.period_name] || "";
+  return def ? {hl:def, from:"default"} : {hl:"", from:""};
+}
+/** The fill of one period band, as a style string: its colour, or the gray. */
 function periodBandStyle(seg, wmax){
-  const w = num(seg.weight) || 0, hl = hlToken(seg.period_highlight);
+  const w = num(seg.weight) || 0, {hl, from} = periodColour(seg);
   return hl
-    ? {hl, style:`fill:${HIGHLIGHT_FILL[hl]};fill-opacity:${(0.78 + 0.22 * weightStep(w, wmax)).toFixed(2)}`}
-    : {hl:"", style:`fill:${bandFill(seg.period_name, w, wmax)}`};
+    ? {hl, from, style:`fill:${HIGHLIGHT_FILL[hl]};fill-opacity:${(0.78 + 0.22 * weightStep(w, wmax)).toFixed(2)}`}
+    : {hl:"", from:"", style:`fill:${bandFill(seg.period_name, w, wmax)}`};
 }
 

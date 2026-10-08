@@ -6,8 +6,8 @@ This document is written for a language model or an agent, not for a person. It 
 
 |  |  |
 |---|---|
-| Application | `app/PRAP.html` v1.59 |
-| Source schema version | 14 |
+| Application | `app/PRAP.html` v1.60 |
+| Source schema version | 15 |
 | Contract version | 1.0 |
 | Guide version | 1.0 |
 | Generated | 2026-10-08 |
@@ -64,12 +64,12 @@ The repository keeps every issue of every document, so pick from `docs/PRAP_Mani
 
 | What | Path |
 |---|---|
-| Development plan | `docs/PRAP_Development_Plan_v2.70.xlsx` |
-| Programming specification | `docs/PRAP_Programming_Specification_v1.39.xlsx` |
-| UI component list | `docs/PRAP_UI_Component_List_v2.6.xlsx` |
-| Source data template | `templates/PRAP_SourceData_Template_v1.18.xlsx` |
-| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.20.xlsx` |
-| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.12.xlsx` |
+| Development plan | `docs/PRAP_Development_Plan_v2.71.xlsx` |
+| Programming specification | `docs/PRAP_Programming_Specification_v1.40.xlsx` |
+| UI component list | `docs/PRAP_UI_Component_List_v2.7.xlsx` |
+| Source data template | `templates/PRAP_SourceData_Template_v1.19.xlsx` |
+| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.21.xlsx` |
+| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.13.xlsx` |
 | This guide | `docs/PRAP_AI_Agent_Guide.md` |
 
 ## 2. The eight words you need
@@ -96,6 +96,7 @@ Ten sheets, all required, in this order. A missing sheet is fatal (V-00).
 | `ProjectPeriod` | child | `Project` | `project_id`, `period_name` | 8 |
 | `PeriodFTEStandard` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name` | 6 |
 | `RoleFactor` | reference | — | `project_type`, `clinical_phase`, `work_scope_type`, `period_name`, `role_name` | 8 |
+| `PeriodHighlight` | reference | — | `period_name` | 3 |
 | `Person` | master | — | `person_id` | 12 |
 | `Assignment` | child | `Person` | `assignment_id` | 12 |
 | `PersonPeriodWeight` | child | `Assignment` | `assignment_id`, `period_start` | 5 |
@@ -193,6 +194,14 @@ Lists, Config                      vocabulary and settings
 | `role_factor` | decimal | YOU SUPPLY. Relative burden of this role in this period. |
 | `absorbed_by` | text | If NOBODY holds this role on a project, which role picks the work up. Blank = the work is simply not counted. See the README. |
 | `role_note` | text | Basis for the factor. |
+
+#### `PeriodHighlight`
+
+| Column | Type | Meaning |
+|---|---|---|
+| `period_name` | identifier | A period name, from either period set. One row per name. |
+| `period_highlight` | text · list `period_highlight` | The colour every project's period of this name is drawn in. Pick from the list; leave empty and it is drawn gray unless a project chooses a colour for its own period. |
+| `note_1` | text | Free text. e.g. what the colour is meant to say. |
 
 #### `Person`
 
@@ -380,7 +389,7 @@ THE MONTH, DIVIDED BY THOSE CLAIMS
 
 Three things in that example are worth keeping hold of. **The two `Other staff` divide one role factor** — 0.42 between them, not 0.42 each — so the month does not grow because a second person was added. **The people sum to the project-month exactly**: the demand is rounded to whole cents once and those cents are handed out by largest remainder, which is why `PSN-006` is given 0.15 rather than the 0.14 a plain rounding of 0.1443 would produce. And **had you multiplied the four per-assignment factors** for `PSN-001` you would have reported 0.43 FTE where the application says 1.05.
 
-Reproduce it with `python tools/prap_io.py calculate templates/PRAP_SourceData_Dummy_10x10_v1.12.xlsx`.
+Reproduce it with `python tools/prap_io.py calculate templates/PRAP_SourceData_Dummy_10x10_v1.13.xlsx`.
 
 ### 5.3 Periods
 
@@ -411,7 +420,7 @@ over_allocation_fte and under_allocation_fte are ABSOLUTE FTE figures. They are 
 
 | Parameter | Default | Controls |
 |---|---|---|
-| `schema_version` | 14 | Structure version of this workbook. The application warns on a mismatch. |
+| `schema_version` | 15 | Structure version of this workbook. The application warns on a mismatch. |
 | `fte_hours_per_month` | 160 | Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month. |
 | `over_allocation_fte` | 1.5 | A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01). |
 | `under_allocation_fte` | 0.6 | A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01). |
@@ -484,6 +493,7 @@ Severities: **fatal** nothing loads · **error** the figures would be wrong · *
 | **V-36** | information | A project that has periods and NOBODY ASSIGNED TO IT AT ALL. Raised from the CALCULATION, one finding per project, carrying what the project needs: the total FTE-months, the span, the peak and the month it falls in. |
 | **V-37** | warning | Milestone.milestone_highlight carries a value that names no colour the application can draw. |
 | **V-38** | warning | ProjectPeriod.period_highlight carries a value that names no colour the application can draw. |
+| **V-39** | warning | A PeriodHighlight row cannot be applied: its value names no colour, its period name is given twice, or no period list knows the name. |
 
 **Aim for zero errors and zero warnings you cannot explain.** A file that loads with errors still shows numbers, and those numbers are wrong in ways the user will not see.
 
@@ -641,4 +651,4 @@ A plain-text form of the source workbook, so a program or an AI agent that canno
 
 ---
 
-Generated by `tools/build_ai_reference.py` on 2026-10-08 from `app/PRAP.html` v1.59, `PRAP_Development_Plan_v2.70.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.
+Generated by `tools/build_ai_reference.py` on 2026-10-08 from `app/PRAP.html` v1.60, `PRAP_Development_Plan_v2.71.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.

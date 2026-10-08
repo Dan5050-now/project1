@@ -48,7 +48,7 @@ except ImportError:                     # playwright is a TEST dependency, not t
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PKG = ROOT / "dist" / "PM_APP_py"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.20.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.21.xlsx"
 # WHERE CHROMIUM IS, or None to let playwright find its own. A hardcoded path is how
 # this file used to mean "runs on my machine": it named a Linux build, so on the
 # Windows PC that actually prepares the release it could not have worked even with
@@ -750,6 +750,64 @@ def main():
                   "the colleague's file is untouched")
             check(pg.evaluate("() => window.__pm.state().stale") is True,
                   "and the window says so, so nobody quotes the figures on screen")
+
+            # R-61: and the work on screen is not stranded. One press keeps it in the
+            # person's own folder as a NEW file; the colleague's plan is not touched.
+            check(pg.is_visible("#pm-keep"),
+                  "THE WINDOW OFFERS TO KEEP YOUR VERSION, rather than only to reload over it")
+            mine_dir = pg.evaluate("() => window.__pm.call('paths').then(w => w.workspaces)")
+            before = set(os.listdir(mine_dir))
+            pg.click("#pm-keep [data-keep]")
+            pg.wait_for_timeout(1800)
+            new = sorted(set(os.listdir(mine_dir)) - before)
+            st = pg.evaluate("() => window.__pm.state()")
+            # A .prap is the application's own workspace file: the sheets as they were
+            # on screen. Ours carries every project; the colleague's save kept one.
+            kept = (json.loads((pathlib.Path(mine_dir) / new[0]).read_text(encoding="utf-8"))
+                    if new else {"sheets": {}})
+            had = len(json.loads(doc_before)["sheets"]["Project"])
+            check(len(new) == 1 and new[0].endswith(".prap") and "Test_Person" in new[0]
+                  and len(kept["sheets"].get("Project", [])) == had > 1,
+                  "ONE PRESS SAVES YOUR WORK AS A NEW FILE IN MY PLANS - your name and the "
+                  "time in its name, every row you had on screen", ", ".join(new))
+            check(pathlib.Path(plan).read_text(encoding="utf-8") == colleagues,
+                  "and the colleague's plan is still exactly theirs")
+            check(new and st["ref"].endswith(new[0]) and st["stale"] is False
+                  and not pg.is_visible("#pm-keep"),
+                  "and the window carries on in your copy, which you can save again",
+                  st["ref"])
+            pg.evaluate("() => window.__pm.savePlan(false)")
+            pg.wait_for_timeout(1200)
+            check("Saved to" in pg.inner_text("#banner"),
+                  "a plain Save now works, into your own copy",
+                  pg.inner_text("#banner").strip()[:80])
+
+            # The case asked about: a session that went quiet, whose hold lapsed and was
+            # taken by a colleague. Its Save is refused - and the same way out is offered.
+            mine = st["ref"]
+            pg.evaluate("(p) => window.__pm.call('claim/take', {ref: p})", mine)
+            stamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()) + ".000Z"
+            pathlib.Path(mine + ".lock").write_text(json.dumps(
+                {"name": "A Colleague", "department": "Elsewhere",
+                 "machine": "OTHER-PC", "since": stamp, "heartbeat": stamp}),
+                encoding="utf-8")
+            theirs = pathlib.Path(mine).read_text(encoding="utf-8")
+            pg.evaluate("() => window.__pm.savePlan(false)")
+            pg.wait_for_timeout(1200)
+            check(pathlib.Path(mine).read_text(encoding="utf-8") == theirs
+                  and pg.is_visible("#pm-keep"),
+                  "A SESSION WHOSE HOLD LAPSED AND WAS TAKEN OVER IS REFUSED - AND OFFERED "
+                  "TO KEEP ITS VERSION", pg.inner_text("#pm-keep").strip()[:90])
+            before = set(os.listdir(mine_dir))
+            pg.click("#pm-keep [data-keep]")
+            pg.wait_for_timeout(1800)
+            again = sorted(set(os.listdir(mine_dir)) - before - {os.path.basename(mine) + ".lock"})
+            check(len(again) == 1 and again[0].endswith(".prap")
+                  and again[0].count("Test_Person") == 1
+                  and pathlib.Path(mine).read_text(encoding="utf-8") == theirs,
+                  "and keeps it as another new file, leaving the taken-over plan alone",
+                  ", ".join(again))
+            os.remove(mine + ".lock")
 
             # ---- export ------------------------------------------------------
             print("\ngetting data back out")

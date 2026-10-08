@@ -37,12 +37,12 @@ from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "core" / "02_xlsx_write.js"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.18.xlsx"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.19.xlsx"
 BEGIN = "/* SEED-BEGIN"
 END = "/* SEED-END */"
 
 
-SEEDED = ("Lists", "Config", "PeriodFTEStandard", "RoleFactor")
+SEEDED = ("Lists", "Config", "PeriodFTEStandard", "RoleFactor", "PeriodHighlight")
 
 
 def seed_rows(path=TEMPLATE):
@@ -90,6 +90,7 @@ def js_block(rows, template_name):
         f"const SEED_CONFIG = {arr(rows['Config'])};\n"
         f"const SEED_PWS = {arr(rows['PeriodFTEStandard'])};\n"
         f"const SEED_RF = {arr(rows['RoleFactor'])};\n"
+        f"const SEED_PHL = {arr(rows['PeriodHighlight'])};\n"
         f"{END}"
     )
 
@@ -116,7 +117,8 @@ def embedded(src=None):
     src = src or (ROOT / "app" / "PRAP.html").read_text(encoding="utf-8")
     out = {}
     for const, sheet in (("SEED_LISTS", "Lists"), ("SEED_CONFIG", "Config"),
-                         ("SEED_PWS", "PeriodFTEStandard"), ("SEED_RF", "RoleFactor")):
+                         ("SEED_PWS", "PeriodFTEStandard"), ("SEED_RF", "RoleFactor"),
+                         ("SEED_PHL", "PeriodHighlight")):
         m = re.search(rf"const {const} = (\[.*?\n\]);", src, re.S)
         if not m:
             return None

@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.70"
-DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.59, source schema 14 - Gate 4 "
+DOC_VERSION = "2.71"
+DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.60, source schema 15 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, and milestone and period highlighting.")
 DOC_DATE = "2026-07-31"
@@ -397,6 +397,34 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.71", "2026-10-08", "Claude Code", "Pending",
+     "R-60, REQ-PRJ-16: PERIOD COLOURS ARE AN ASSUMPTION, AND A PROJECT MAY STILL CHOOSE ITS "
+     "OWN. Asked for straight after R-59: every project's periods take their colour from the "
+     "General assumptions tab, and where no colour is assumed for a period, a project may "
+     "choose one. A new sheet, PeriodHighlight (period_name, period_highlight, note_1), "
+     "holds one row per period name; source schema steps 14 to 15. The colour of a band is "
+     "the project's own choice (ProjectPeriod.period_highlight), else the default for its "
+     "period name, else gray - the more specific statement winning, as a project's period "
+     "weight adjusts the standard rather than the other way round. The pop-up says which "
+     "level chose it. The template and both examples ship defaults that restore what the "
+     "O-10 review asked for - start-up red, conduct green, close-out orange, develop green, "
+     "close orange - as a choice the plan holds rather than a palette in the code; the "
+     "quiet ends (before start-up, after close-out, planning) are left gray. Periods DERIVED "
+     "from milestones, which have no row to hold a project colour, now take the defaults. "
+     "A plan started blank is seeded with the same rows. A workbook from before schema 15 "
+     "opens with no defaults (V-09 information), exactly as one without MonthlyEstimate "
+     "does; the interchange reader tolerates the sheet's absence the same way. V-39 is new: "
+     "a default naming no colour, a period name given twice, or a name neither period list "
+     "knows. No figure moves; template v1.19, examples v1.21 and v1.13. "
+     "R-61: KEEP YOUR VERSION WHEN THE SHARED PLAN IS NO LONGER YOURS TO WRITE (Python "
+     "edition). A session whose hold lapsed and was taken over (NR-STO-14), or whose plan a "
+     "colleague saved since it was opened (NR-STO-16), has its Save refused - rightly - and "
+     "was told to Save as or Reload, the second of which discards the work on screen. Now a "
+     "bar offers one press, 'Save my version to My plans', which writes what is on screen as "
+     "a NEW file in the person's own folder - their name and the time in its name, never on "
+     "top of an existing file - and carries on in it; the team's plan is not touched. Also "
+     "on the File menu at any time. Python edition 1.33.",
+     "Issued for review"],
     [f"{MARK_NEW}2.70", "2026-10-08", "Claude Code", "Pending",
      "R-59, REQ-PRJ-15: A PERIOD IS DRAWN IN THE COLOUR SOMEBODY CHOSE, AND GRAY "
      "OTHERWISE. Asked for from the field: the Periods table gains a Highlight column like "
@@ -2433,6 +2461,7 @@ reqs = [
     ["REQ-PRJ-08", "Project data", "Total period is derived from start and end dates rather than typed by hand, so it cannot contradict the timeline.", "Should", "Derived", "2"],
     [f"{MARK_CHG}REQ-PRJ-12", "Project data", "The set of periods a project carries depends on its type: either clinical trial type uses Before-Start-up / Start-up / Conduct (interim) / Close-out (interim) / Conduct (final) / Close-out (final) / After Close-out (final); 'Others' uses Planning / Develop / Close. No name occurs twice in one project.", "Must", "Q-18, Q-23, R-02, R-11", "2"],
     [f"{MARK_NEW}REQ-PRJ-13", "Project data", "A milestone name may occur more than once in one project. 'Inspection' in particular may record several events; the others are expected once.", "Must", "R-01", "2"],
+    [f"{MARK_NEW}REQ-PRJ-16", "Project data", "The colour each PERIOD is drawn in is a standing assumption: one default per period name, held on the PeriodHighlight sheet and edited on the General assumptions tab, applies to every project. A project's own choice for one of its periods (REQ-PRJ-15) wins over the default; a period with neither is gray. The defaults reach periods derived from milestones too. A colour changes no figure; a default that cannot be applied is reported (V-39).", "Should", "R-60", "4"],
     [f"{MARK_NEW}REQ-PRJ-15", "Project data", "A project's period may be given a COLOUR, and the Project timeline draws the period in it - on the Overall tab and on the project's own tab. The colour is chosen from the Lists sheet's period_highlight list in the Periods table's Highlight column; a period with no colour is drawn gray, shaded by its weight. A colour changes no figure and never refuses a save; a value naming no colour is reported (V-38).", "Should", "R-59", "4"],
     [f"{MARK_NEW}REQ-PRJ-14", "Project data", "A milestone may be MARKED IN A COLOUR, and the mark finds that milestone wherever the Project timeline is drawn - on the Overall tab and on the project's own tab. The colour is chosen from the Lists sheet, so the set belongs to the people using the plan rather than to the code; an empty value means no mark, which is what every milestone was before schema 13. A mark changes no figure and never refuses a save.", "Should", "R-50", "4"],
     [f"{MARK_CHG}REQ-PRJ-09", "Project data", "A clinical trial of either type records its clinical phase (phase 1 / 2 / 3 / 4). The phase determines the project's period weights, so it drives the simulation rather than merely describing the project.", "Must", "Q-26", "2"],
@@ -2617,6 +2646,15 @@ pp = [
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
           pp, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
 
+r = section(ws, r, "Sheet: PeriodHighlight  [schema 15, R-60]")
+phl = [
+    [f"{MARK_NEW}period_name", "List", "Yes", "A period name from either period set. One row per name; a second is V-39 and ignored.", "REQ-PRJ-16"],
+    [f"{MARK_NEW}period_highlight", "List", "No", "The default colour of every project's period of this name, from Lists.period_highlight; the COLOUR WORD is read. Empty = gray. A project's own ProjectPeriod.period_highlight wins.", "REQ-PRJ-16"],
+    [f"{MARK_NEW}note_1", "Text", "No", "Free text, e.g. what the colour is meant to say.", "REQ-PRJ-07"],
+]
+r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
+          phl, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
+
 r = note(ws, r, "Period sets are type-specific (Q-18). The derivation itself is on sheet 05.")
 sets = [
     [f"{MARK_CHG}NewDrug CT / Biosimilar CT", "Before-Start-up, Start-up, Conduct (interim), Close-out (interim), Conduct (final), Close-out (final), After Close-out (final)", "Seven names, in timeline order. Both trial types share one period set and one derivation; they differ in their WEIGHTS, not their shape. A trial with no interim DB lock simply omits 'Conduct (interim)' and 'Close-out (interim)'."],
@@ -2739,7 +2777,7 @@ r = note(ws, r, "Read only where the owning Project or Assignment carries estima
 
 r = section(ws, r, "Sheet: Config")
 cfg = [
-    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16), 8 at v2.31 (R-17), 9 at v2.38 (R-30), 10 at v2.39 (R-31), 11 at v2.41 (R-33, the standards sheet renamed), 12 at v2.54 (R-46, MonthlyEstimate.edited_at retired - the first column this schema has REMOVED rather than added or renamed), 13 at v2.61 (R-50, Milestone.milestone_highlight), 14 at v2.70 (R-59, ProjectPeriod.period_highlight).", "14", "REQ-VC-02"],
+    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16), 8 at v2.31 (R-17), 9 at v2.38 (R-30), 10 at v2.39 (R-31), 11 at v2.41 (R-33, the standards sheet renamed), 12 at v2.54 (R-46, MonthlyEstimate.edited_at retired - the first column this schema has REMOVED rather than added or renamed), 13 at v2.61 (R-50, Milestone.milestone_highlight), 14 at v2.70 (R-59, ProjectPeriod.period_highlight), 15 at v2.71 (R-60, the PeriodHighlight sheet).", "15", "REQ-VC-02"],
     [f"{MARK_NEW}absorb_unstaffed_role_factor", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (REQ-CAL-16). 0 = an unstaffed role simply costs nothing, which is how every version before v2.31 behaved. A setting for the same reason the last one is: it moves every figure on a project that is not fully staffed.", "1", "REQ-CAL-16"],
     [f"{MARK_NEW}split_shared_role_fte", "1 = where several people hold the same role on one project in a month, the role factor is divided between them (REQ-CAL-14). 0 = each carries the whole factor, which is how every version before v2.28 behaved. A setting rather than a constant because it changes every figure a shared role ever produced, and somebody comparing this month's report with last year's has to be able to see where the difference came from.", "1", "REQ-CAL-14"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],
@@ -2771,6 +2809,7 @@ rules = [
     [f"{MARK_CHG}V-28", "RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all.", "Retired - and deliberately not reinstated at a lower severity. What the rule SAID was true; what it did not account for was WHEN it said it. An error refuses the edit that raised it (REQ-IMP-09), and unlike V-23 this one did not need the project to have any periods - so it fired on a project still being built, which is exactly when assignments are being typed in. A user could not record who was on a project until the standing assumptions carried a factor for their role, which is backwards: the plan is the document being written, the assumptions are maintained separately. The gap is not denied - V-03 still refuses a role invalid for the project type, and V-23 still reports a role with no factor for a period the project spans, which is the same finding at the point where it can be acted on. The id is not reused."],
     [f"{MARK_NEW}V-29", "A role that carries a factor, that nobody holds on the project, and that nothing covers for.", "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct."],
     [f"{MARK_NEW}V-31", "A project or assignment set to MANUAL has months it covers that carry no MonthlyEstimate figure. Named, with the months listed.", "Error - those months are counted as 0.00, and a figure silently dropping to zero is the one outcome this feature must never produce quietly. Not a refusal: it is raised from the CALCULATION, like V-23, because it is something that happened to a number rather than a fact about a sheet, and a finding that exists only after the arithmetic cannot refuse the edit that led to it. Switching to manual copies every month across, so a month with no figure is one that has since been removed or a month the thing has grown into - the application offers to fill them from the calculation."],
+    [f"{MARK_NEW}V-39", "A PeriodHighlight row cannot be applied: its value names no colour, its period name is given twice, or no period list knows the name.", "Warning - the period is drawn gray, or on its first row's colour, which looks exactly like a choice nobody made, so it is said. Never a refusal: a colour changes no figure."],
     [f"{MARK_NEW}V-38", "ProjectPeriod.period_highlight carries a value that names no colour the application can draw.", "Warning - the period is drawn gray, which is what it would have been with the column empty, and the finding says so with the values the file's own Lists sheet offers. The period twin of V-37, for the same reason: a gray period looks exactly like one nobody chose a colour for, so a typo would quietly undo what the user asked for. Never a refusal - a colour changes no figure."],
     [f"{MARK_NEW}V-37", "Milestone.milestone_highlight carries a value that names no colour the application can draw.", "Warning - the milestone is drawn unmarked, which is what it would have been with the column empty, and the finding says so with the values the file's own Lists sheet offers. Never a refusal: a mark changes no figure, and a plan whose highlight column is misspelt is still a correct plan. It is reported rather than ignored because the failure is INVISIBLE otherwise - an unmarked milestone looks exactly like one nobody got round to marking, so a typo in the list value would quietly undo the thing the user asked for. What the application reads is the colour word inside the value ('red', 'yellow', 'blue', 'green', 'orange'), which is what lets a team write what their colour means beside it; the rule fires only when no such word is there at all."],
     [f"{MARK_NEW}V-36", "A project that has periods and NOBODY ASSIGNED TO IT AT ALL. Raised from the CALCULATION, one finding per project, carrying what the project needs: the total FTE-months, the span, the peak and the month it falls in.", "Information - and classed INCOMPLETE, so it never refuses an edit and never questions a save. A project with nobody on it yet is not a fault: it is the state every project is in for the minute after it is created, exactly as a person with no assignment is (v2.52). WHAT IT FIXES IS A ROW OF BLANKS, NOT AN ERROR. The project IS listed - it has a row in Resource by project, it is drawn on the timeline, and it counts in the projects tile - but every one of its months is EMPTY, it puts nothing on the three demand charts, it takes no legend entry and it reaches no line of Standard vs staffed. That is worse than being absent: a row of blanks reads as a project that costs nothing rather than one nobody has been put on yet, which is the same failure V-34 exists for. Type, phase, scope and periods are all the standard needs to say what it costs. REQ-CAL-19 is explicit that the project-month IS its standard and the people on it DIVIDE it; a divisor of nobody does not make the demand nought. AND NOTHING ELSE REPORTED IT: V-34 compares demand against applied, which is this gap at its widest, but V-34 is built from projGap, which is built from projMonth, which is built from the LINES - so no assignment means no line, no entry and no finding, and the one project short by the whole of its standard was the only shortfall the shortfall rule could not see. IT CARRIES THE FIGURE, which is why it is raised from the calculation rather than from the validation, and why every term is the one an assignment with blank dates would get (REQ-CAL-15): the number it states is to the hundredth the number the project shows the moment somebody is assigned, which tools/test_unstaffed.py asserts in both directions. SKIPPED where there is nothing to say or nothing to do: a project with no periods has no demand to state and V-12 or V-16 already says so, and a Completed project is history rather than a gap to fill - its finding would never answer itself, which is what the INCOMPLETE class promises."],
@@ -3117,7 +3156,7 @@ wbs = [
     ["4", "4.5", "Calculation engine, verified against the reference implementation.", "app/PRAP.html + test evidence", "Complete - EXACT MATCH on all 1,225 person-months of the dummy dataset"],
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
-    ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.18.xlsx", "Complete"],
+    ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.19.xlsx", "Complete"],
     ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-25 applied (app v1.24); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
@@ -3349,6 +3388,8 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-60", "Data model", "Colour every project's periods from an assumption on the General assumptions tab; where none is assumed for a period, let the project choose.", "Applied. New sheet PeriodHighlight, one default colour per period name; source schema steps 14 to 15. The project's own Highlight wins, then the default, then gray; derived periods take the default too. Shipped defaults restore the O-10 reading as data. V-39 added; REQ-PRJ-16 added; no figure moves.", "Applied"],
+    ["R-61", "Storage", "Let a user whose session timed out save the working plan into their personal folder.", "Applied (Python edition). When the shared plan can no longer be written - the hold lapsed and was taken over, or a colleague saved since it was opened - a bar offers 'Save my version to My plans': a new, uniquely named file in the person's own folder, after which the window works on it. Also on the File menu. The team's plan is never touched.", "Applied"],
     ["R-59", "Data model", "Add a Highlight column to Periods like the Milestones one: choose the colour of each project's period, gray when none is chosen.", "Applied. ProjectPeriod gains period_highlight after period_end; source schema steps 13 to 14. Its own list of the same five colours; the colour word inside the value is what is read. Unmarked periods are gray, shaded by weight, superseding the per-period-name hues of O-10. A value naming no colour is V-38. REQ-PRJ-15 added; no figure moves.", "Applied"],
     ["R-58", "Audit", "Saving shows 'the change log could not be written to the audit folder ... Failed to fetch' - is the audit trail working?", "It works; the Python application behind the window had stopped. Its watchdog gave up after fifteen minutes without a heartbeat, which a sleeping browser tab or laptop reaches. Now only the page closing stops it, and a window whose application has stopped says so and offers downloads of the plan and the unarchived change log.", "Applied"],
     ["R-57", "UI", "The import file window does not show the sub-folders of a level-1 folder.", "Fixed in the Python edition. A double-click opened the folder on its first click and then the row under the pointer in the redrawn list on its second, so the folder asked for was skipped. The second click of a sequence is now ignored on a freshly drawn list, and a double-click chooses only the row it began on.", "Applied"],

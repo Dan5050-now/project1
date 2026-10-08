@@ -31,7 +31,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.12.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.13.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 fails = []
@@ -41,6 +41,15 @@ def check(ok, label, detail=""):
     print(f"  {'ok  ' if ok else 'FAIL'} {label}{'   ' + detail if detail else ''}")
     if not ok:
         fails.append(label)
+
+
+def load(pg, path):
+    """Load a workbook, saying yes if the page asks before replacing unsaved edits."""
+    pg.set_input_files("input[type=file]", str(path))
+    pg.wait_for_timeout(600)
+    if pg.evaluate("() => !!(document.getElementById('replace') || {}).open"):
+        pg.click("#rpYes")
+    pg.wait_for_timeout(2400)
 
 
 def main():
@@ -138,8 +147,12 @@ def main():
         # ---- 7. periods (schema 14, R-59) -------------------------------------
         # A fresh load: the milestone checks above edited the model in place.
         print("\nperiods - drawn gray unless a colour is chosen")
-        pg.set_input_files("input[type=file]", str(DUMMY))
-        pg.wait_for_timeout(2500)
+        load(pg, DUMMY)
+        # This section is about the PROJECT'S own column (R-59), so the default colours
+        # (R-60, section 8) are taken away first: with them on, an unmarked period is
+        # not gray, and every count below would be measuring the defaults instead.
+        pg.evaluate("() => { S.model.raw.PeriodHighlight = []; rebuild(true); renderKeepingTab(); }")
+        pg.wait_for_timeout(600)
         pg.click('button[role=tab][data-tab="t-overall"]')
         pg.wait_for_timeout(700)
         bands = pg.evaluate("""() => {
@@ -216,6 +229,113 @@ def main():
             return S.model.findings.filter(f => f.rule === 'V-38').length; }""")
         check(bad == 1, "A VALUE NAMING NO COLOUR IS REPORTED (V-38), and the period stays gray",
               f"{bad} finding(s)")
+
+        # ---- 8. default colours from General assumptions (schema 15, R-60) ------
+        print("\nperiod colours as an assumption - and a project's own choice wins")
+        load(pg, DUMMY)
+        pg.click('button[role=tab][data-tab="t-overall"]')
+        pg.wait_for_timeout(700)
+        TL = "#t-overall .panel[data-panel=\"timeline\"] rect.band"
+        # What every band SHOULD be, worked out from the rows rather than from the code
+        # that draws them: the project's own colour, else the default, else gray.
+        # Keyed by project and period name (the band carries both as data-s2 / data-s),
+        # because the chart orders its rows by type and date and the model does not.
+        expect = """() => {
+            const def = {};
+            for (const r of S.model.raw.PeriodHighlight)
+              if (r.period_name && !(r.period_name in def)) def[r.period_name] = hlToken(r.period_highlight);
+            const out = {};
+            for (const p of activeProjects()) for (const s of (S.model.periods[p] || [])){
+              if (!s.period_start || !s.period_end) continue;
+              out[p + '|' + s.period_name] = hlToken(s.period_highlight) || def[s.period_name] || "";
+            }
+            return out; }"""
+        drawn = """(sel) => Object.fromEntries([...document.querySelectorAll(sel)].map(e =>
+            [e.dataset.s2 + '|' + e.dataset.s,
+             ([...e.classList].find(c => c.startsWith('hl-')) || '').slice(3)]))"""
+        want, got = pg.evaluate(expect), pg.evaluate(drawn, TL)
+        check(want and got == want and len(set(want.values())) > 2,
+              "EVERY BAND TAKES ITS PROJECT'S COLOUR, ELSE THE DEFAULT FOR ITS PERIOD NAME, "
+              "ELSE GRAY", f"{len(got)} band(s): " + ", ".join(sorted(set(got.values()) - {''})))
+        own = pg.evaluate("""() => { const r = S.model.raw.ProjectPeriod.find(x =>
+            hlToken(x.period_highlight) && S.model.periodHl[x.period_name]
+            && hlToken(x.period_highlight) !== S.model.periodHl[x.period_name]);
+            return r ? [r.project_id, r.period_name, hlToken(r.period_highlight),
+                        S.model.periodHl[r.period_name]] : null; }""")
+        check(own and got.get(own[0] + "|" + own[1]) == own[2],
+              "a project's own colour beats the default for its period",
+              f"{own[0]} {own[1]}: {own[2]} over the default {own[3]}" if own else "none in fixture")
+
+        # Edited on the General assumptions tab, through the cell, as a user would.
+        pg.click("text=General assumptions")
+        pg.wait_for_timeout(900)
+        row = pg.evaluate("""() => S.model.raw.PeriodHighlight.find(r =>
+            r.period_name === 'Start-up').__row""")
+        td = pg.locator(f"#t-gen td.cell[data-sheet='PeriodHighlight'][data-col='period_highlight']"
+                        f"[data-row='{row}']")
+        td.click()
+        pg.wait_for_timeout(300)
+        pg.keyboard.press("Control+A")
+        pg.keyboard.type("Highlight (Yellow)")
+        pg.keyboard.press("Escape")
+        pg.keyboard.press("Enter")
+        pg.wait_for_timeout(1000)
+        pg.click('button[role=tab][data-tab="t-overall"]')
+        pg.wait_for_timeout(900)
+        got = pg.evaluate(drawn, TL)
+        su = {k: v for k, v in got.items() if k.endswith("|Start-up")}
+        own_su = pg.evaluate("""() => S.model.raw.ProjectPeriod.filter(r =>
+            r.period_name === 'Start-up' && hlToken(r.period_highlight)).length""")
+        check(pg.evaluate(expect) == got and su
+              and sum(v == "yellow" for v in su.values()) == len(su) - own_su,
+              "CHANGING A DEFAULT ON GENERAL ASSUMPTIONS RECOLOURS THAT PERIOD ON EVERY PROJECT "
+              "that has not chosen its own",
+              f"{sum(v == 'yellow' for v in su.values())} of {len(su)} Start-up band(s) now yellow")
+
+        # A trial whose periods are DERIVED has no rows to hold a colour - the default
+        # still reaches it, which is the case the project-level column could not cover.
+        der = pg.evaluate("""() => {
+            const p = activeProjects().find(x => CLINICAL_TYPES.has(S.model.projects[x].project_type));
+            S.model.raw.ProjectPeriod = S.model.raw.ProjectPeriod.filter(r => r.project_id !== p);
+            rebuild(true); renderKeepingTab();
+            const segs = S.model.periods[p] || [];
+            return {p, derived: segs.length > 0 && segs.every(s => s.__derived)}; }""")
+        pg.wait_for_timeout(700)
+        want, got = pg.evaluate(expect), pg.evaluate(drawn, TL)
+        check(der["derived"] and got == want,
+              "periods DERIVED from milestones take the default colours too",
+              f"{der['p']} now derived")
+
+        bad = pg.evaluate("""() => {
+            S.model.raw.PeriodHighlight.push({__row: 9001, period_name: 'Start-up',
+                                              period_highlight: 'Highlight (Blue)', note_1: null},
+                                             {__row: 9002, period_name: 'Lunch',
+                                              period_highlight: 'Highlight (Red)', note_1: null},
+                                             {__row: 9003, period_name: 'Close',
+                                              period_highlight: 'Purpel', note_1: null});
+            rebuild(true); renderKeepingTab();
+            return S.model.findings.filter(f => f.rule === 'V-39').map(f => f.msg); }""")
+        kinds = [any("more than one" in m and "Start-up" in m for m in bad),
+                 any("not a period name" in m and "Lunch" in m for m in bad),
+                 any("names no colour" in m and "Purpel" in m for m in bad)]
+        check(all(kinds),
+              "V-39 REPORTS A DEFAULT THAT CANNOT BE APPLIED - a name given twice, a name "
+              "neither period list knows, a value naming no colour", f"{len(bad)} finding(s)")
+
+        # An older workbook - schema 14, no PeriodHighlight sheet - still opens.
+        older = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.12.xlsx"
+        if older.exists():
+            load(pg, older)
+            st = pg.evaluate("""() => ({rows: S.model.raw.PeriodHighlight.length,
+                fatal: S.model.findings.filter(f => f.sev === 'fatal').length,
+                v09: S.model.findings.some(f => f.rule === 'V-09' && f.sheet === 'PeriodHighlight')})""")
+            check(st["rows"] == 0 and st["fatal"] == 0 and st["v09"],
+                  "A WORKBOOK FROM BEFORE SCHEMA 15 STILL OPENS - no defaults, said once as "
+                  "information, nothing refused", str(st))
+        blank = pg.evaluate("""() => { const s = blankSheets();
+            return s.PeriodHighlight.slice(1).filter(r => r[1]).length; }""")
+        check(blank >= 4, "a plan started blank arrives with the same default colours",
+              f"{blank} coloured default(s)")
 
         check(not errors, "no script error anywhere in the run", "; ".join(errors[:3]))
         b.close()

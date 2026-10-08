@@ -22,7 +22,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.8"
+DOC_VERSION = "1.9"
 # THE STATUS LINE HAD STOPPED MOVING. It still read "THIS ISSUE, v1.3 ... AWAITS APPROVAL"
 # while the issue on the cover was v1.6, so the cover named one version and the status
 # another - and a reader who trusted it would conclude the Python shell was being built on
@@ -41,7 +41,7 @@ DOC_STATUS = ("THIS ISSUE, v1.6, is APPROVED - the requester confirmed v1.3 to v
 # current version's date: the cover field is not "date of this issue", and changing it
 # here would silently re-date those four history rows as well.
 DOC_DATE = "2026-08-13"
-PLAN = "PRAP_NewApp_Development_Plan_v1.16.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.17.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Specification_v{DOC_VERSION}.xlsx"
@@ -184,7 +184,15 @@ r = lines(ws, r, [
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
-          [["1.8", "2026-10-08", "Claude Code", "Awaiting approval",
+          [["1.9", "2026-10-08", "Claude Code", "Awaiting approval",
+            "Against desktop plan v1.17: saveMine() in bridge.js writes sheetsNow() through "
+            "ws/saveAs to <workspaces>/<base>_<name>_<YYYY-MM-DD_HHMM>.prap, stepping a suffix "
+            "while ws/stat says the name exists, then makes it the open plan (ref, baseSaved, "
+            "stale cleared). #pm-keep offers it on claim_lost and superseded refusals and when "
+            "the takeover poll finds the hold gone; File menu 'Save my version to My plans' "
+            "offers it always. Uncommitted edits are committed first through saveEdits(), so "
+            "the change log records them."],
+           ["1.8", "2026-10-08", "Claude Code", "Awaiting approval",
             "NR-DEP-17 amended, against desktop plan v1.16: watch_clients() stops the "
             "application on the close message alone; a silent heartbeat is recorded and "
             "never taken as closure (it used to give up after fifteen minutes, which a "

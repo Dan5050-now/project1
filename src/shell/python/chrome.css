@@ -59,6 +59,14 @@
   padding:9px 14px;font-size:12.5px;background:var(--overbg);
   color:var(--crit);border-bottom:1px solid var(--grid)}
 #pm-gone[hidden]{display:none}
+/* R-61: your work can no longer go into the shared plan; keep it in your own folder. */
+#pm-keep{position:sticky;top:calc(var(--pm-title-h,34px) + var(--pm-strip-h,0px));
+  z-index:64;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:9px 14px;font-size:12.5px;background:var(--underbg);
+  color:var(--underink);border-bottom:1px solid var(--grid)}
+#pm-keep[hidden]{display:none}
+#pm-keep span{flex:1;min-width:240px}
+#pm-keep .btn{font-size:12px;padding:3px 10px}
 #pm-gone span{flex:1;min-width:240px}
 #pm-gone .btn{font-size:12px;padding:3px 10px}
 #pm-share span{flex:1;min-width:240px}

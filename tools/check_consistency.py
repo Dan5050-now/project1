@@ -19,11 +19,11 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.70.xlsx"
-SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.39.xlsx"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.18.xlsx"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.20.xlsx"
-DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.12.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.71.xlsx"
+SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.40.xlsx"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.19.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.21.xlsx"
+DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.13.xlsx"
 
 problems, notes = [], []
 
@@ -414,8 +414,8 @@ if MANIFEST.exists():
 # ---- 4h. the desktop plan vs the desktop specification --------------------
 # The second product line gets the same guarantee as the first: a requirement cannot be
 # dropped between the plan and the specification without this saying so.
-NAPP_PLAN = ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.16.xlsx"
-NAPP_SPEC = ROOT / "docs" / "PRAP_NewApp_Specification_v1.8.xlsx"
+NAPP_PLAN = ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.17.xlsx"
+NAPP_SPEC = ROOT / "docs" / "PRAP_NewApp_Specification_v1.9.xlsx"
 if NAPP_PLAN.exists() and NAPP_SPEC.exists():
     np_ = load_workbook(NAPP_PLAN, data_only=True)["03_Requirements"]
     ns_ = load_workbook(NAPP_SPEC, data_only=True)["11_Traceability"]
@@ -515,7 +515,7 @@ if spec_traced - plan_reqs:
 # undocumented components and five entries that had become actively WRONG. The lesson
 # is not "remember to update it"; it is that an artefact nobody checks is an artefact
 # that rots. So it is checked.
-COMPONENTS = ROOT / "docs" / "PRAP_UI_Component_List_v2.6.xlsx"
+COMPONENTS = ROOT / "docs" / "PRAP_UI_Component_List_v2.7.xlsx"
 if not COMPONENTS.exists():
     problems.append(f"{COMPONENTS.name} is missing")
 else:
@@ -600,8 +600,8 @@ else:
 VERSIONED = [
     (PLAN, "01_Version_History"),
     (SPEC, "01_Version_History"),
-    (ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.16.xlsx", "01_Version_History"),
-    (ROOT / "docs" / "PRAP_NewApp_Specification_v1.8.xlsx", "01_Version_History"),
+    (ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.17.xlsx", "01_Version_History"),
+    (ROOT / "docs" / "PRAP_NewApp_Specification_v1.9.xlsx", "01_Version_History"),
 ]
 for path, sheet_name in VERSIONED:
     if not path.exists():
@@ -673,8 +673,8 @@ SOURCE_FILE = re.compile(r"PRAP_SourceData_(Template|Dummy_10x10|Dummy)_v[\d.]+\
 CURRENT = {"Template": TEMPLATE.name, "Dummy": DUMMY.name, "Dummy_10x10": DUMMY_SMALL.name}
 HISTORY_SHEET = "01_Version_History"
 NAMING = [PLAN, SPEC,
-          ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.16.xlsx",
-          ROOT / "docs" / "PRAP_NewApp_Specification_v1.8.xlsx"]
+          ROOT / "docs" / "PRAP_NewApp_Development_Plan_v1.17.xlsx",
+          ROOT / "docs" / "PRAP_NewApp_Specification_v1.9.xlsx"]
 named = 0
 for path in NAMING:
     if not path.exists():
