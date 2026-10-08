@@ -639,8 +639,51 @@ def main():
                 ".pm-back .pm-list li:not(.pm-head) .n", "es => es.map(e => e.firstChild.textContent)")
             check(byname == sorted(stamps), "and it can be put back in name order",
                   " > ".join(byname))
-            shutil.rmtree(dated, ignore_errors=True)
             pg.evaluate("() => document.querySelector('.pm-back [data-cancel]').click()")
+            pg.wait_for_timeout(300)
+            shutil.rmtree(dated, ignore_errors=True)
+
+            # R-57: a double-click on a folder opens THAT folder. The first click opens it
+            # and redraws the list; the second used to land on whatever row was now under
+            # the pointer and open that too, so the folder asked for was skipped.
+            tree = pathlib.Path(tempfile.mkdtemp(prefix="pm-tree-"))
+            for sub in ("L1a/L2a/L3a", "L1a/L2b", "L1b"):
+                (tree / sub).mkdir(parents=True)
+            (tree / "L1a" / "top.xlsx").write_bytes(b"x")
+            pg.evaluate("""p => { window.__got = undefined;
+                window.__pm.browseFor({title: 'x', suffixes: ['.xlsx'], start: p})
+                  .then(v => { window.__got = v; }); }""", str(tree))
+            pg.wait_for_timeout(900)
+            row = ".pm-back .pm-list li:not(.pm-head)"
+            bb = pg.locator(row, has_text="L1a").first.bounding_box()
+            x, y = bb["x"] + 60, bb["y"] + bb["height"] / 2
+            pg.mouse.click(x, y)
+            pg.wait_for_timeout(150)                      # a person's double-click, not a robot's
+            pg.mouse.click(x, y, click_count=2)
+            pg.wait_for_timeout(900)
+            here = pg.inner_text(".pm-back .pm-list li.pm-head .n")
+            listed = pg.eval_on_selector_all(
+                f"{row} .n", "es => es.map(e => e.firstChild.textContent)")
+            check(here.endswith("L1a") and {"L2a", "L2b", "top.xlsx"} <= set(listed),
+                  "DOUBLE-CLICKING A FOLDER OPENS THAT FOLDER, and its sub-folders are listed "
+                  "(R-57)", f"{here} -> {listed}")
+            pg.wait_for_timeout(600)
+            pg.locator(row, has_text="L2a").first.click()
+            pg.wait_for_timeout(900)
+            check(pg.inner_text(".pm-back .pm-list li.pm-head .n").endswith("L2a")
+                  and "L3a" in pg.eval_on_selector_all(
+                      f"{row} .n", "es => es.map(e => e.firstChild.textContent)"),
+                  "and a single click goes on down, level after level")
+            pg.wait_for_timeout(600)
+            pg.locator(".pm-crumb button", has_text="up").click()
+            pg.wait_for_timeout(1200)
+            pg.locator(row, has_text="top.xlsx").first.dblclick()
+            pg.wait_for_timeout(500)
+            check(str(pg.evaluate("window.__got")).endswith("top.xlsx"),
+                  "and double-clicking a file still chooses it", str(pg.evaluate("window.__got")))
+            if pg.locator(".pm-back").count():
+                pg.evaluate("() => document.querySelector('.pm-back [data-cancel]').click()")
+            shutil.rmtree(tree, ignore_errors=True)
             pg.wait_for_timeout(300)
 
             menu2 = pg.eval_on_selector_all(

@@ -300,8 +300,11 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.67.xlsx` — **current.** 89 requirements, 38 live
-  validation rules, source schema version 13. The latest change is **R-56**, five things
+- `docs/PRAP_Development_Plan_v2.68.xlsx` — **current.** 89 requirements, 38 live
+  validation rules, source schema version 13. The latest change is **R-57**, a defect in
+  the Python edition's file browser: **double-clicking a folder skipped it** — the first
+  click opened it and the second landed on a row of the redrawn list and opened that too,
+  so a level-1 folder's own sub-folders never appeared. Before it, **R-56**, five things
   about finding your way: the **Project and Person filters list names** (with a search
   box); a **project or person added with + row stays selected** through typing and Save,
   so the details typed next go to it; **Resource by project** says whether each project's

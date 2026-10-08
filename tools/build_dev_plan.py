@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.67"
+DOC_VERSION = "2.68"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.52, source schema 13 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, and milestone highlighting.")
@@ -397,6 +397,23 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.68", "2026-10-08", "Claude Code", "Pending",
+     "R-57. A DEFECT IN THE PYTHON EDITION'S FILE BROWSER, reported as 'sub-folders under "
+     "a level-1 folder do not appear'. They did appear - for a single click. A folder "
+     "opens on its first click and the list is redrawn, so the SECOND click of a "
+     "double-click, which is how everybody opens a folder in Windows, landed on whatever "
+     "row was now under the pointer and opened that as well: double-clicking a level-1 "
+     "folder put you inside one of its sub-folders, usually an empty one, and the folder "
+     "asked for was never shown. Worse with R-56's newest-first order, which puts a "
+     "recently touched sub-folder at the top, exactly where the pointer is. The listing "
+     "itself was right throughout - fs/list returned every sub-folder. Now the rest of a "
+     "click sequence that began on another row is ignored, by the browser's click count "
+     "and by time in case a redraw resets it, and a double-click chooses only the row its "
+     "own first click was on, so a file is never chosen by a click meant for the folder "
+     "above it. tools/test_python_app.py double-clicks at a person's pace rather than a "
+     "robot's - the fast double-click a test driver sends never showed it - and the guard "
+     "was proved by taking it out. Python edition 1.30; the web edition is unchanged.",
+     "Issued for review"],
     [f"{MARK_NEW}2.67", "2026-10-07", "Claude Code", "Pending",
      "R-56. FIVE THINGS ASKED FOR FROM THE FIELD, all about finding your way. "
      "(a) THE PROJECT AND PERSON FILTERS LIST NAMES. Nobody looks for PRJ-037; they look "
@@ -3288,6 +3305,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-57", "UI", "The import file window does not show the sub-folders of a level-1 folder.", "Fixed in the Python edition. A double-click opened the folder on its first click and then the row under the pointer in the redrawn list on its second, so the folder asked for was skipped. The second click of a sequence is now ignored on a freshly drawn list, and a double-click chooses only the row it began on.", "Applied"],
     ["R-56", "UI", "Filters by name; a new project or person stays selected after Save; Resource by project to show auto vs manual, to filter to problem projects, and to count not-staffed months; file dates when importing and exporting.", "Applied. Project and Person filters list names with a search box. A row added with + row is the selection through typing, Save and a change of identifier. Resource by project gains an estimation pill per project, a mark on stated months and a Show control (issues, short, over, not staffed, stated by hand); not-staffed months are counted on the control, the tile and the Standard vs staffed list. The Python file browser shows modified dates, newest first; exported names carry date and time.", "Applied"],
     ["R-55", "Output", "Make the calculated-FTE export usable for analysis outside the application, including by an AI: which projects are short or over, and by how much.", "Applied. ProjectMonth gains demand_fte, staffed_fte, gap_fte and gap_dir, and a row for every month nobody is on (V-36), which used to be dropped. Flags gains project runs - short, over, unallocated - and Summary the matching totals. The gap is the project's own whatever filter is on. PersonMonth gains the months a person is employed and on nothing, as spare capacity. REQ-OUT-06 amended. Alongside: tools/prap_analyze.py (scorecard and what-if comparison) and docs/PRAP_AI_Analysis_Guide.md.", "Applied"],
     ["R-54", "UI", "Two raised from the screen: three cell marks were printing their own CSS escape, and the Order column on Milestones is not wanted.", "Both applied. The marks were written with a doubled backslash, so \\25B2, \\25BC and \\26A0 were drawn as text instead of the arrows and the warning sign; three guards added, one static and two on the rendered character. milestone_seq is no longer drawn - it orders nothing, and its pop-up said otherwise. period_seq is kept: both engines sort by it and V-18 reports a duplicate as an error.", "Applied"],

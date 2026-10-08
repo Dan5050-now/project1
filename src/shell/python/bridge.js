@@ -678,6 +678,11 @@
       document.body.appendChild(back);
       const q = s => back.querySelector(s);
       let here = null, picked = null, last = null;
+      // When the list was last redrawn, and the row the current click sequence began on.
+      // SETTLE is about the system double-click interval, so a second click that arrives
+      // inside it on a freshly drawn list is taken as part of the gesture before it.
+      let drawnAt = 0, armed = null;
+      const SETTLE = 450;
       /* NEWEST FIRST, WITH THE DATE ON EVERY FILE (R-56). The listing used to be by name
          with only a size, and a folder of exports named PRAP_2026-09-30, PRAP_2026-10-02
          … gave no way to tell which one somebody last saved - the date in a name is the
@@ -740,6 +745,8 @@
           q("[data-crumb]").appendChild(b);
         }
         last = r;
+        drawnAt = Date.now();
+        armed = null;
         const list = q("[data-list]");
         list.innerHTML = "";
         const head = document.createElement("li");
@@ -777,14 +784,26 @@
             tag.title = "The most recently modified file in this folder";
             li.querySelector(".n").append(" ", tag);
           }
-          li.onclick = () => {
+          /* A DOUBLE-CLICK IS ONE GESTURE, NOT TWO CLICKS ON TWO ROWS (R-57). A folder
+             opens on the first click, which redraws the list - so the second click of a
+             double-click, the way everybody opens a folder in Windows, landed on whatever
+             row was now under the pointer and opened THAT as well. Double-clicking a
+             level-1 folder put you in one of its sub-folders, usually an empty one, and
+             the folder you asked for was never shown: reported as "sub-folders under a
+             level-1 folder do not appear". So the rest of a click sequence that began
+             on another row is ignored - by the click count the browser keeps, and by
+             time in case a redraw resets it - and a double-click only chooses the row
+             that its own first click was on. */
+          li.onclick = ev => {
+            if (ev.detail > 1 || Date.now() - drawnAt < SETTLE) return;
+            armed = li;
             if (e.dir) return go(e.path);
             for (const other of list.querySelectorAll("li")) other.classList.remove("sel");
             li.classList.add("sel");
             picked = e.path;
             q("[data-path]").value = "";
           };
-          li.ondblclick = () => { if (!e.dir) done(e.path); };
+          li.ondblclick = () => { if (!e.dir && armed === li) done(e.path); };
           list.appendChild(li);
         }
         q("[data-note]").textContent = r.error
