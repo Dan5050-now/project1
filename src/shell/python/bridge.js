@@ -26,11 +26,26 @@
 
   /* ---- the one route to the machine ------------------------------------- */
   async function call(op, body) {
-    const res = await fetch("/api/" + op, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-PM-Key": KEY },
-      body: JSON.stringify(body || {}),
-    });
+    let res;
+    try {
+      res = await fetch("/api/" + op, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-PM-Key": KEY },
+        body: JSON.stringify(body || {}),
+      });
+    } catch (e) {
+      /* NO ANSWER AT ALL is not an error from an operation: it is the application
+         behind this window having stopped - its console was closed, or the machine
+         took it down. The browser's own words for it are "Failed to fetch", which told
+         the person who reported it nothing (R-58). Said once, plainly, with the way to
+         keep what is on screen; every caller still gets an error to stop on. */
+      appGone();
+      const err = new Error("PM_APP is not running any more, so this could not be "
+        + "done. See the red bar at the top: download a copy of your work before "
+        + "closing this window.");
+      err.kind = "offline";
+      throw err;
+    }
     if (!res.ok) throw new Error(`${op} failed (${res.status})`);
     const j = await res.json();
     if (j.error) { const e = new Error(j.message); e.kind = j.kind; throw e; }
@@ -72,6 +87,55 @@
   const ALIVE_MS = 20000;
 
   const alive = () => call("app/alive", { id: PAGE_ID }).catch(() => {});
+
+  /* ---- when the application behind the window has stopped (R-58) ----------
+     Nothing in this window can reach the disk any more - not Save, not the change
+     log, not Export to a folder. What it CAN still do is the browser's own download,
+     which never went through the application: so the bar offers exactly that, for
+     the plan as it stands on screen and for the change-log entries that never reached
+     the audit folder. A bar rather than the banner, because the banner is rewritten by
+     the next thing anybody does and this stays true until the window is closed. */
+  let gone = false;
+  function appGone() {
+    if (gone) return;
+    gone = true;
+    const bar = el("pm-gone");
+    if (!bar) return;
+    bar.hidden = false;
+    fitChrome && fitChrome();
+  }
+  function rescuePlan() {
+    if (!S.model) return showBanner("bad", "There is no plan on screen to download.");
+    if (S.pending.length) {
+      showBanner("bad", `${S.pending.length} change(s) are not committed yet. Press Save `
+        + `changes first - that works without the application - then download.`);
+      return;
+    }
+    exportWorkbook(false);
+  }
+  function rescueLog() {
+    const changes = S.audit.slice(S.archived || 0);
+    const findings = S.events.slice(S.eventsArchived || 0);
+    if (!changes.length && !findings.length)
+      return showBanner("", "Every change-log entry had already reached the audit "
+        + "folder - there is nothing left to download.");
+    const stamp = fileStamp();
+    const save = (name, text) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(["\ufeff" + text], { type: "text/csv" }));
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    };
+    if (changes.length) save(`PRAP_changes_unarchived_${stamp}.csv`, auditCsv(changes));
+    if (findings.length) save(`PRAP_findings_unarchived_${stamp}.csv`, eventsCsv(findings));
+    showBanner("", `Downloaded ${changes.length} change and ${findings.length} finding `
+      + `entr${changes.length + findings.length === 1 ? "y" : "ies"} that never reached `
+      + `the audit folder. Put the file(s) in the audit folder beside the others when `
+      + `PM_APP is running again, so the record stays in one place.`);
+  }
+  el("pm-gone")?.querySelector("[data-rescue-plan]")?.addEventListener("click", rescuePlan);
+  el("pm-gone")?.querySelector("[data-rescue-log]")?.addEventListener("click", rescueLog);
   alive();
   setInterval(alive, ALIVE_MS);
   // And on the way back from being hidden, so a tab that was frozen for an hour says
@@ -1034,9 +1098,13 @@ Account        ${where.account}</pre>
       // Said once, on the status strip, rather than in a dialog over the save the user
       // just completed - the save WORKED, and this is about the record of it.
       console.error("audit archive failed", e);
-      showBanner("warn", "Saved — but the change log could not be written to the audit "
-        + "folder. The entries are kept and the next save will write them too. "
-        + (e && e.message ? e.message : ""));
+      showBanner("warn", e && e.kind === "offline"
+        ? "Saved in this window — but PM_APP has stopped, so the change log could not "
+          + "be written to the audit folder and the plan cannot be saved to disk. Use the "
+          + "red bar at the top to download both before closing this window."
+        : "Saved — but the change log could not be written to the audit folder. The "
+          + "entries are kept and the next save will write them too. "
+          + (e && e.message ? e.message : ""));
     } finally {
       archiving = false;
     }

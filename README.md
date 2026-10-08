@@ -196,7 +196,13 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.14.xlsx` — **current.** Amends assumption
+- `docs/PRAP_NewApp_Development_Plan_v1.16.xlsx` — **current.** Amends `NR-DEP-17`:
+  a page that has gone quiet no longer stops the application — only the close message
+  does (web plan R-58).
+- `docs/PRAP_NewApp_Specification_v1.8.xlsx` — **current specification.** Issued against
+  desktop plan v1.16: the shutdown rule, and what a window says and offers once the
+  application behind it has stopped.
+- `docs/PRAP_NewApp_Development_Plan_v1.14.xlsx` — superseded. Amends assumption
   `A-N01` to cite the web plan's `REQ-NFR-03` **by reference instead of restating it**:
   the row used to read "up to about 100 projects and 1,000 people", which became a false
   claim about another document the moment that requirement was amended at `R-47`. The
@@ -204,7 +210,7 @@ document through the manifest rather than by sorting filenames.
   `core/`. Also **back-fills v1.13**, which was issued with no version-history row at all
   (`REQ-VC-04`), from the change that made it. `tools/check_consistency.py` now requires
   every controlled document to carry a history row for the version on its own cover.
-- `docs/PRAP_NewApp_Specification_v1.6.xlsx` — **current specification.** Re-pinned to
+- `docs/PRAP_NewApp_Specification_v1.6.xlsx` — superseded specification. Re-pinned to
   desktop plan v1.14 (sheet 11's traceability matrix is *read* from the plan, so it must
   name the current baseline), and **back-fills v1.5**, which had the same missing
   history row. No `NR-id` changes and no behaviour changes.
@@ -300,8 +306,14 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.68.xlsx` — **current.** 89 requirements, 38 live
-  validation rules, source schema version 13. The latest change is **R-57**, a defect in
+- `docs/PRAP_Development_Plan_v2.69.xlsx` — **current.** 89 requirements, 38 live
+  validation rules, source schema version 13. The latest change is **R-58**: "the change
+  log could not be written to the audit folder … Failed to fetch" was **the Python
+  application having stopped behind its window** — its watchdog gave up after fifteen
+  minutes without a heartbeat, which a sleeping browser tab or laptop reaches. The audit
+  archive itself works. Only the page closing stops the application now, and a window
+  whose application has stopped says so and offers downloads of the plan and the
+  unarchived change log. Before it, **R-57**, a defect in
   the Python edition's file browser: **double-clicking a folder skipped it** — the first
   click opened it and the second landed on a row of the redrawn list and opened that too,
   so a level-1 folder's own sub-folders never appeared. Before it, **R-56**, five things

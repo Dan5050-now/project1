@@ -33,7 +33,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "PM_APP_py"
-VERSION = "1.30"
+VERSION = "1.31"
 
 _spec = importlib.util.spec_from_file_location("build_app", ROOT / "tools" / "build_app.py")
 build_app = importlib.util.module_from_spec(_spec)
@@ -442,11 +442,15 @@ WHAT IS NEW IN 1.17
   * NOR DOES CLOSING ONE OF TWO WINDOWS. If you have the application open in
     two tabs, closing one leaves the other working.
 
-  * NOR DOES LEAVING IT IN A BACKGROUND TAB. Browsers slow down and even
-    freeze the timers of a tab nobody is looking at, so the fallback that
-    catches a browser being killed outright waits a full fifteen minutes
-    before giving up. It will never shut down under you because you were
-    reading your e-mail.
+  * NOR DOES LEAVING IT IN A BACKGROUND TAB, OR PUTTING THE PC TO SLEEP.
+    Browsers put background tabs to sleep, and a sleeping tab cannot say it
+    is still there - so only the page saying it is CLOSING stops the
+    application. If the browser is killed outright, close this window
+    yourself.
+
+  * IF IT HAS STOPPED ANYWAY - this window was closed - the page shows a red
+    bar. Use its two buttons to download the plan and any change-log entries
+    that were not written yet, then start PM_APP again and import the plan.
 
   * IF YOU WANT THE OLD BEHAVIOUR, start it with --keep-running:
 

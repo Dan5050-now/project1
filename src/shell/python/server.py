@@ -190,26 +190,31 @@ class App:
         with self._lock:
             self.clients.pop(str(cid), None)
 
-    def watch_clients(self, grace=4.0, stale=900.0, tick=0.5):
-        """Stop when the last page has gone, and not before.
+    def watch_clients(self, grace=4.0, tick=0.5):
+        """Stop when the last page has SAID it is closing, and not before.
 
-        TWO SIGNALS, BECAUSE NEITHER IS ENOUGH ON ITS OWN.
+        ONLY THE CLOSE MESSAGE STOPS IT (R-58). The page sends it from pagehide, so
+        clicking the browser's X stops this in about `grace` seconds. It is not trusted
+        immediately, because pagehide fires on a RELOAD too, and a reload that killed
+        the application would make F5 a way of losing your work. `grace` is the window
+        a reloading page has to say hello again.
 
-        THE CLOSE MESSAGE is the one that matters and the one that is quick: the page
-        sends it from pagehide, so clicking the browser's X stops this in about
-        `grace` seconds. It is not trusted immediately, because pagehide fires on a
-        RELOAD too, and a reload that killed the application would make F5 a way of
-        losing your work. `grace` is the window a reloading page has to say hello
-        again; it only has to survive one page load.
+        A PAGE THAT HAS GONE QUIET IS NOT A PAGE THAT HAS GONE. There used to be a
+        second signal: a page that had not sent its heartbeat for fifteen minutes was
+        taken to be dead, and the application stopped. It was wrong exactly when it
+        mattered. Edge puts a background tab to sleep after a while by default, Chrome
+        freezes them, and a laptop lid stops everything - and on Windows the clock this
+        compares against keeps running through sleep. So somebody who came back from a
+        meeting found a window that looked alive, edited, pressed Save, and was told
+        "Failed to fetch": the application behind it had shut itself down, the change
+        log could not be archived, and the plan could not be saved anywhere. Reported
+        from the field as the audit trail not working.
 
-        THE HEARTBEAT is the backstop, for the times no close message arrives - the
-        browser was killed, the machine slept, the process was taken down. It is
-        deliberately SLOW to give up: `stale` is fifteen minutes. A browser throttles
-        timers in a tab nobody is looking at, hard, and can freeze one altogether for
-        minutes at a time - so a short timeout here would quietly shut the application
-        down on somebody who had left it open in a background tab, which is worse than
-        the console outliving the window by a quarter of an hour on the rare occasion
-        the browser dies without a word.
+        The cost of trusting only the close message is that a browser killed outright
+        - no pagehide at all - leaves the console window open until somebody closes it.
+        That is a window to close, against work that cannot be saved; the trade is not
+        close. The heartbeat is still sent and still recorded, and a page is still
+        removed the moment it says goodbye.
 
         NOTHING HAPPENS BEFORE THE FIRST PAGE CONNECTS. A slow browser, a machine that
         opens the URL by hand, `--no-browser` for the tests: none of those should be a
@@ -220,9 +225,6 @@ class App:
         while not self.stop.wait(tick):
             now = time.monotonic()
             with self._lock:
-                for cid, seen in list(self.clients.items()):
-                    if now - seen > stale:
-                        self.clients.pop(cid, None)
                 live = len(self.clients)
                 started = self.ever_seen
             if not started or live:

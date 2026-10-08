@@ -67,6 +67,15 @@
 <!-- A plan in a person's own folder is a plan the sharing rules cannot protect
      (NR-STO-10). This says so at the moment it matters, and offers the one action
      that fixes it, rather than leaving it to a note in a folder nobody opens. -->
+<!-- R-58: the application behind this window has stopped. Nothing here can reach the
+     disk any more except the browser's own download, so that is what it offers. -->
+<div id="pm-gone" data-topchrome hidden role="alert">
+  <span><strong>PM_APP has stopped</strong> — this window can no longer save, archive the
+    change log or open files. Download what is on screen, then start PM_APP again and
+    import the downloaded workbook.</span>
+  <button type="button" class="btn primary" data-rescue-plan>Download the plan (.xlsx)</button>
+  <button type="button" class="btn" data-rescue-log>Download unwritten change log</button>
+</div>
 <div id="pm-share" data-topchrome hidden>
   <span data-text></span>
   <button type="button" class="btn primary" data-move>Move it to the team folder</button>

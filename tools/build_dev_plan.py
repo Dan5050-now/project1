@@ -17,7 +17,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.68"
+DOC_VERSION = "2.69"
 DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.52, source schema 13 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, and milestone highlighting.")
@@ -397,6 +397,21 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.69", "2026-10-08", "Claude Code", "Pending",
+     "R-58. 'THE AUDIT TRAIL IS NOT WORKING' - IT WAS, AND THE APPLICATION BEHIND IT HAD "
+     "STOPPED. In the Python edition a save said 'Saved - but the change log could not be "
+     "written to the audit folder ... Failed to fetch'. Checked end to end: a saved change "
+     "is appended to data/audit/PRAP_changes_<month>_<account>.csv with when, who, the "
+     "record, the column and both values, and findings to the matching file. 'Failed to "
+     "fetch' meant no answer at all: the application had shut itself down, because its "
+     "backstop stopped it after fifteen minutes without the page's heartbeat - which is "
+     "what a browser does to a tab it puts to sleep, and what a sleeping laptop does. The "
+     "window looked alive and could save nothing. Fixed on both sides: only the page "
+     "saying it is closing stops the application now (desktop plan v1.16, NR-DEP-17); and "
+     "if it has stopped anyway, the window says so in words and keeps a red bar up with "
+     "the browser's own download of the plan and of the change-log entries that never "
+     "reached the audit folder. Python edition 1.31; the web edition is unchanged.",
+     "Issued for review"],
     [f"{MARK_NEW}2.68", "2026-10-08", "Claude Code", "Pending",
      "R-57. A DEFECT IN THE PYTHON EDITION'S FILE BROWSER, reported as 'sub-folders under "
      "a level-1 folder do not appear'. They did appear - for a single click. A folder "
@@ -3305,6 +3320,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-58", "Audit", "Saving shows 'the change log could not be written to the audit folder ... Failed to fetch' - is the audit trail working?", "It works; the Python application behind the window had stopped. Its watchdog gave up after fifteen minutes without a heartbeat, which a sleeping browser tab or laptop reaches. Now only the page closing stops it, and a window whose application has stopped says so and offers downloads of the plan and the unarchived change log.", "Applied"],
     ["R-57", "UI", "The import file window does not show the sub-folders of a level-1 folder.", "Fixed in the Python edition. A double-click opened the folder on its first click and then the row under the pointer in the redrawn list on its second, so the folder asked for was skipped. The second click of a sequence is now ignored on a freshly drawn list, and a double-click chooses only the row it began on.", "Applied"],
     ["R-56", "UI", "Filters by name; a new project or person stays selected after Save; Resource by project to show auto vs manual, to filter to problem projects, and to count not-staffed months; file dates when importing and exporting.", "Applied. Project and Person filters list names with a search box. A row added with + row is the selection through typing, Save and a change of identifier. Resource by project gains an estimation pill per project, a mark on stated months and a Show control (issues, short, over, not staffed, stated by hand); not-staffed months are counted on the control, the tile and the Standard vs staffed list. The Python file browser shows modified dates, newest first; exported names carry date and time.", "Applied"],
     ["R-55", "Output", "Make the calculated-FTE export usable for analysis outside the application, including by an AI: which projects are short or over, and by how much.", "Applied. ProjectMonth gains demand_fte, staffed_fte, gap_fte and gap_dir, and a row for every month nobody is on (V-36), which used to be dropped. Flags gains project runs - short, over, unallocated - and Summary the matching totals. The gap is the project's own whatever filter is on. PersonMonth gains the months a person is employed and on nothing, as spare capacity. REQ-OUT-06 amended. Alongside: tools/prap_analyze.py (scorecard and what-if comparison) and docs/PRAP_AI_Analysis_Guide.md.", "Applied"],

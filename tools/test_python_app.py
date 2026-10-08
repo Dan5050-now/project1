@@ -36,6 +36,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -823,6 +824,81 @@ def main():
             check(not bad,
                   "every row of it is its demand times its share, to the hundredth",
                   f"{len(det) - 1:,} rows checked")
+
+            # ---- the change log reaches the audit folder (R-58) ----------------------
+            print("\nthe change log, archived at every save")
+            pg.click('button[role=tab][data-tab="t-pers"]')
+            pg.wait_for_timeout(800)
+
+            def edit_and_save(text):
+                c = pg.locator("td[data-sheet='Person'][data-col='note_1']").first
+                c.click()
+                pg.wait_for_timeout(300)
+                pg.keyboard.press("Control+A")
+                pg.keyboard.type(text)
+                pg.keyboard.press("Enter")
+                pg.wait_for_timeout(700)
+                pg.click("#saveBtn")
+                pg.wait_for_timeout(1500)
+                return pg.inner_text("#banner")
+
+            edit_and_save("audited R-58")
+            where = pg.evaluate("window.__pm.call('audit/where')")
+            log = ""
+            for f in where["files"]:
+                if f.startswith("PRAP_changes_"):
+                    log += pathlib.Path(where["dir"], f).read_text(encoding="utf-8-sig")
+            check("audited R-58" in log and "Test Person" in log,
+                  "A SAVED CHANGE IS IN THE AUDIT FOLDER - when, who, what it was and what "
+                  "it became", next((ln for ln in log.splitlines() if "audited R-58" in ln),
+                                    f"not found in {where['files']}"))
+
+            # A page that has gone quiet - a background tab the browser has put to sleep,
+            # a laptop lid - is still open. The application used to stop after fifteen
+            # minutes without a heartbeat, and the next save then failed with "Failed to
+            # fetch": no change log, and no way to save the plan.
+            sys.path.insert(0, str(app_dir))
+            from pmapp.shell import server as SV                          # noqa: E402
+            quiet = SV.App(app_dir=tempfile.mkdtemp(), data_dir=tempfile.mkdtemp())
+            quiet.client_here("page")
+            quiet.clients["page"] = time.monotonic() - 24 * 3600   # silent for a day
+            th = threading.Thread(target=quiet.watch_clients, kwargs={"tick": 0.05},
+                                  daemon=True)
+            th.start()
+            th.join(6)          # longer than the 4 s grace a closing page is given
+            stopped_quiet = quiet.stop.is_set()
+            quiet.client_gone("page")
+            th.join(6)
+            check(not stopped_quiet and quiet.stop.is_set(),
+                  "A PAGE THAT HAS GONE QUIET DOES NOT STOP THE APPLICATION - only one that "
+                  "says it is closing does (R-58)",
+                  f"stopped while quiet: {stopped_quiet}; stopped after goodbye: "
+                  f"{quiet.stop.is_set()}")
+
+            # And if it has stopped anyway - the console closed - the window says so in
+            # words, and still hands over what is on screen through the browser's own
+            # download, which never needed the application.
+            proc.terminate()
+            proc.wait(timeout=10)
+            banner = edit_and_save("after the application stopped")
+            check("PM_APP has stopped" in banner and "Failed to fetch" not in banner,
+                  "WITH THE APPLICATION STOPPED, A SAVE SAYS SO IN WORDS, not 'Failed to "
+                  "fetch'", banner.strip()[:110])
+            check(pg.is_visible("#pm-gone"), "and a bar stays up offering the way out")
+            with pg.expect_download() as dl:
+                pg.click("#pm-gone [data-rescue-plan]")
+            check(dl.value.suggested_filename.endswith(".xlsx"),
+                  "the plan on screen can still be downloaded", dl.value.suggested_filename)
+            with pg.expect_download() as dl:
+                pg.click("#pm-gone [data-rescue-log]")
+            kept = home / "rescued_changes.csv"
+            dl.value.save_as(kept)
+            text = kept.read_text(encoding="utf-8-sig")
+            kept.unlink()
+            check("after the application stopped" in text
+                  and text.startswith("timestamp_utc,who,action"),
+                  "and so can the change-log entries that never reached the audit folder",
+                  dl.value.suggested_filename)
 
             check(not errors, "no script error anywhere in the run",
                   "; ".join(errors[:3]))

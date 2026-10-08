@@ -22,7 +22,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.7"
+DOC_VERSION = "1.8"
 # THE STATUS LINE HAD STOPPED MOVING. It still read "THIS ISSUE, v1.3 ... AWAITS APPROVAL"
 # while the issue on the cover was v1.6, so the cover named one version and the status
 # another - and a reader who trusted it would conclude the Python shell was being built on
@@ -41,7 +41,7 @@ DOC_STATUS = ("THIS ISSUE, v1.6, is APPROVED - the requester confirmed v1.3 to v
 # current version's date: the cover field is not "date of this issue", and changing it
 # here would silently re-date those four history rows as well.
 DOC_DATE = "2026-08-13"
-PLAN = "PRAP_NewApp_Development_Plan_v1.15.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.16.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Specification_v{DOC_VERSION}.xlsx"
@@ -184,7 +184,16 @@ r = lines(ws, r, [
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
-          [["1.7", "2026-09-17", "Claude Code", "Awaiting approval",
+          [["1.8", "2026-10-08", "Claude Code", "Awaiting approval",
+            "NR-DEP-17 amended, against desktop plan v1.16: watch_clients() stops the "
+            "application on the close message alone; a silent heartbeat is recorded and "
+            "never taken as closure (it used to give up after fifteen minutes, which a "
+            "sleeping browser tab or a sleeping laptop reached, leaving a window that could "
+            "not save). A request that gets no answer at all is reported as the "
+            "application having stopped, and #pm-gone offers the browser download of the "
+            "plan and of the unarchived change log (S.audit beyond S.archived, S.events "
+            "beyond S.eventsArchived) as CSV with the archive's columns."],
+           ["1.7", "2026-09-17", "Claude Code", "Awaiting approval",
             "C-N03: 파일 선택 창이 하나로 통일되었다. 같은 애플리케이션인데 PM_APP.cmd로 실행하면 페이지 안에 그려진 폴더 목록이, PM_APP.py로 실행하면 Windows 기본 대화상자가 떴다 - 함께 배포되는 런타임에는 tkinter가 없고 정식 설치본에는 있기 때문이다. 현장에서 보고된 그대로이며, 같은 프로그램이 실행 방법에 따라 다른 창을 여는 것은 사용법 안내도 화면 캡처도 둘로 만든다. 네이티브 대화상자를 철회하고 페이지 안의 폴더 목록 하나만 남겼다. 그쪽이 어느 PC에서나 동작하고(표준 라이브러리만 쓴다), 패키지 배포판이 이미 쓰던 것이며, 브라우저의 파일 인터페이스를 거치지 않는다는 R-N21의 요건도 그대로 지킨다. 열기·다른 이름으로 저장·내보내기·폴더 선택 네 가지 모두 이미 폴더 목록으로 할 수 있었으므로 기능은 하나도 줄지 않았다. 함께 정리된 것: 메뉴의 '폴더에서 가져오기'는 '소스 데이터 가져오기'와 완전히 같은 동작이 되어 삭제했고, Tk가 주 스레드를 점유해야 해서 존재하던 대화상자 펌프가 사라지면서 launch.py의 주 스레드는 정지 신호만 기다린다."],
            ["1.6", "2026-09-13", "Claude Code", "APPROVED 2026-09-14",
             "RE-PINNED TO DESKTOP PLAN v1.14, and v1.5 is back-filled below. No NR-id is "
@@ -217,7 +226,7 @@ r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
             "somebody is still typing their name at sign-in. The no-message backstop waits "
             "fifteen minutes on purpose - a browser freezes the timers of a tab nobody is "
             "looking at, so anything brisk would shut down on a user who had merely "
-            "switched tabs. --keep-running opts out. Python package v1.17, desktop plan "
+            "switched tabs (withdrawn at v1.8: silence no longer stops it at all). --keep-running opts out. Python package v1.17, desktop plan "
             "v1.13, tools/test_shutdown.py new."],
            ["1.4", "2026-08-22", "Claude Code", "APPROVED 2026-09-14",
             "THE DIFFERENCE REPORT IS BUILT - task N4.5, NR-IMP-02, the last unbuilt piece of "

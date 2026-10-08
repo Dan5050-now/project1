@@ -120,7 +120,7 @@ function fileStamp(d){
     + `${p(d.getHours())}${p(d.getMinutes())}`;
 }
 function fileBase(name, fallback){
-  let b = String(name || fallback).replace(/\.prap\.json$|\.json$|\.xlsx$/i, "");
+  let b = String(name || fallback).replace(/\.prap\.json$|\.json$|\.xlsx$|\.prap$/i, "");
   for (;;){
     const next = b.replace(/_CalculatedFTE$/i, "")
                   .replace(/_\d{4}-\d{2}-\d{2}(_\d{4})?$/, "");
