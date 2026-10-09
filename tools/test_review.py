@@ -176,6 +176,9 @@ with sync_playwright() as pw:
     check(len(reviews(pg)) == before and pg.evaluate("S.pending.length") == pend
           and pg.evaluate("el('gapdlg').open"),
           "A CLOSING DECISION WITHOUT A REASON IS REFUSED - nothing recorded, the form stays")
+    check(pg.is_visible("#revMsg") and "needs a reason" in pg.inner_text("#revMsg"),
+          "AND SAYS SO INSIDE THE DIALOG - the page banner is behind it, where a refusal "
+          "would look like a button that did nothing")
 
     run = pg.evaluate(f"issueRun('PRJ-001', {JAN}, 'over')")
     gaps = pg.evaluate(f"""() => Object.fromEntries({run}.map(k => [k,

@@ -1098,10 +1098,13 @@ td.c.gapc.over::after{content:"\25B2";color:var(--crit)}
    the plan - but quiet: gray outline and mark instead of amber or red, the figure faded,
    so the open issues are what the eye finds. Never removed, never uncoloured to look like
    an ordinary month: the outline still says there was something to decide. */
-td.c.gapc.rev{box-shadow:inset 0 0 0 2px var(--base);opacity:.72}
+td.c.gapc.rev{box-shadow:inset 0 0 0 2px var(--base);background:var(--fill)!important;
+ color:var(--ink3)!important;font-weight:400}
 td.c.gapc.rev::after{color:var(--ink3)}
+td.c.gapc.short.rev::after{content:"\25BC\2009\2713"}
+td.c.gapc.over.rev::after{content:"\25B2\2009\2713"}
 td.c.unal[data-gap]{cursor:pointer}
-td.c.unal.rev{opacity:.55}
+td.c.unal.rev{background:var(--fill)!important;color:var(--ink3)!important;opacity:.8}
 tr.gaprow.rev > *{color:var(--ink3)}
 tr.gaprow.rev > th.rh{box-shadow:inset 3px 0 0 var(--base)}
 table.gapt tr.gaprow.rev td.num.short,table.gapt tr.gaprow.rev td.num.over,
@@ -1130,6 +1133,9 @@ table.gapt td.revcell{text-align:left}
  background:var(--surface);color:var(--ink);resize:vertical}
 .revform .chk{flex-basis:100%;font-size:var(--t-sm);color:var(--ink2);display:flex;gap:6px;
  align-items:center}
+.revmsg{flex-basis:100%;margin:0;padding:6px 10px;border-radius:var(--r-xs);
+ background:var(--overbg);color:var(--crit);font-size:var(--t-sm);font-weight:600}
+.revform textarea.bad{border-color:var(--crit);box-shadow:0 0 0 2px var(--overbg)}
 .revbtns{flex-basis:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .gpill.unstaffed{background:var(--fill);color:var(--ink2)}
 table.gapt td.num.unstaffed{color:var(--ink2);font-weight:600;background:var(--fill)}

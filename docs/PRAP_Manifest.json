@@ -63,8 +63,8 @@
    "what": "application",
    "path": "app/PRAP.html",
    "exists": true,
-   "bytes": 746102,
-   "sha256": "bb93d473915c8eac37969fe608f257f3269402b33e2db8f3cfa4903aa8530607"
+   "bytes": 746972,
+   "sha256": "aefbd0dec5d8bdee81ce0a210f81b43f2bcaaef29e99211d1b2f504efcb3958f"
   },
   {
    "what": "machine_readable_contract",
@@ -84,8 +84,8 @@
    "what": "agent_guide_workbook",
    "path": "docs/PRAP_AI_Agent_Guide_v1.0.xlsx",
    "exists": true,
-   "bytes": 38525,
-   "sha256": "0eef64c9de2099936ad386f0c2abcd6ad8062e473abfc3eb7b87bc3fadc97001"
+   "bytes": 38522,
+   "sha256": "bfa1de37d0ea40e61942d42258d6fa3852ea11f1851ddf30b89fe5dd4cef0e57"
   }
  ]
 }

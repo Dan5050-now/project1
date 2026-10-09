@@ -687,6 +687,7 @@ function reviewPanel(pid, k, dir){
       ${run.length > 1 ? `<label class="chk"><input type="checkbox" id="revRun"${rv ? "" : " checked"}>
         Apply to the whole run: the ${run.length} consecutive months
         ${keyToLabel(run[0])} to ${keyToLabel(run[run.length - 1])} that are ${words}</label>` : ""}
+      <p class="revmsg" id="revMsg" role="alert" hidden></p>
       <div class="revbtns">
         <button class="btn primary" data-revsave="1">Save review</button>
         ${rv ? `<button class="btn" data-revclear="1">Remove review</button>` : ""}
@@ -712,8 +713,16 @@ function saveReview(){
   const why = el("revWhy").value.trim();
   if (!status) return clearReview();
   if (REVIEW_CLOSED.has(status.toLowerCase()) && !why){
-    flashBad(el("revWhy"), "Say why - the reason is what makes a closed issue checkable "
-      + "by anybody who opens it later.");
+    /* Said IN the box, not on the page banner: the banner is behind this dialog, and a
+       refusal nobody can see reads as a button that does nothing. */
+    const m = el("revMsg");
+    if (m){
+      m.textContent = `'${status}' closes the issue, so it needs a reason - the reason is `
+        + `what makes a closed issue checkable by anybody who opens it later.`;
+      m.hidden = false;
+    }
+    el("revWhy").classList.add("bad");
+    el("revWhy").focus();
     return;
   }
   const by = el("revBy") ? el("revBy").value.trim() : "";
