@@ -372,6 +372,10 @@ function adopt(sheets, name, opts){
     const retired = RETIRED_COLS[s] || {};
     S.headers[s] = ((named[s] || [])[0] || []).map(h => txt(h))
       .filter(h => h && !retired[h]);
+    /* A sheet the file does not have at all - one a later schema added (LATER_SHEETS) -
+       takes the schema's own columns. Left empty, a row added to it had nowhere to go and
+       the export wrote the sheet with no heading row, so the next import read nothing. */
+    if (!S.headers[s].length) S.headers[s] = SHEET_HEADERS[s].slice();
   }
   // What is in force NOW, captured before the model is replaced. Every import path -
   // the web file picker, the Python shell's open, a version restore, the difference

@@ -6,11 +6,11 @@ This document is written for a language model or an agent, not for a person. It 
 
 |  |  |
 |---|---|
-| Application | `app/PRAP.html` v1.60 |
-| Source schema version | 15 |
+| Application | `app/PRAP.html` v1.61 |
+| Source schema version | 16 |
 | Contract version | 1.0 |
 | Guide version | 1.0 |
-| Generated | 2026-10-08 |
+| Generated | 2026-10-09 |
 
 ---
 
@@ -64,12 +64,12 @@ The repository keeps every issue of every document, so pick from `docs/PRAP_Mani
 
 | What | Path |
 |---|---|
-| Development plan | `docs/PRAP_Development_Plan_v2.71.xlsx` |
-| Programming specification | `docs/PRAP_Programming_Specification_v1.40.xlsx` |
-| UI component list | `docs/PRAP_UI_Component_List_v2.7.xlsx` |
-| Source data template | `templates/PRAP_SourceData_Template_v1.19.xlsx` |
-| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.21.xlsx` |
-| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.13.xlsx` |
+| Development plan | `docs/PRAP_Development_Plan_v2.72.xlsx` |
+| Programming specification | `docs/PRAP_Programming_Specification_v1.41.xlsx` |
+| UI component list | `docs/PRAP_UI_Component_List_v2.8.xlsx` |
+| Source data template | `templates/PRAP_SourceData_Template_v1.20.xlsx` |
+| Worked example (62 projects, 20 people) | `templates/PRAP_SourceData_Dummy_v1.22.xlsx` |
+| Worked example (10 projects, 10 people) | `templates/PRAP_SourceData_Dummy_10x10_v1.14.xlsx` |
 | This guide | `docs/PRAP_AI_Agent_Guide.md` |
 
 ## 2. The eight words you need
@@ -101,6 +101,7 @@ Ten sheets, all required, in this order. A missing sheet is fatal (V-00).
 | `Assignment` | child | `Person` | `assignment_id` | 12 |
 | `PersonPeriodWeight` | child | `Assignment` | `assignment_id`, `period_start` | 5 |
 | `MonthlyEstimate` | child | `Project\|Assignment` | `scope`, `ref_id`, `month` | 5 |
+| `IssueReview` | child | `Project` | `project_id`, `month`, `issue` | 8 |
 | `Lists` | vocabulary | — | `list_name`, `value` | 3 |
 | `Config` | settings | — | `parameter` | 3 |
 
@@ -257,6 +258,19 @@ Lists, Config                      vocabulary and settings
 | `fte` | text | The monthly FTE, STATED rather than calculated. |
 | `note_1` | text | Why this figure was stated. |
 
+#### `IssueReview`
+
+| Column | Type | Meaning |
+|---|---|---|
+| `project_id` | identifier | The project the issue is on. |
+| `month` | identifier | The month, as YYYY-MM. |
+| `issue` | identifier · list `issue_kind` | short / over / unstaffed - which way the month is off its standard. |
+| `status` | text · list `issue_review_status` | Confirmed - no issue / Accepted (both close it: shown muted) / To be fixed (stays open, with this note). |
+| `gap_fte` | text | The gap when it was reviewed (staffed - needed). If the gap moves, the review is shown as needing a fresh look. |
+| `rationale` | text | Why - the reason a reader will see whenever they open the issue. |
+| `reviewed_by` | text | Who decided. |
+| `reviewed_at` | text | When, as YYYY-MM-DD HH:MM. |
+
 #### `Lists`
 
 | Column | Type | Meaning |
@@ -320,6 +334,8 @@ These live on the `Lists` sheet of the workbook you are given — read them from
 | `project_status` | `Planned`, `Active`, `On hold`, `Completed` |
 | `milestone_name` | `Protocol (v1)`, `CTA submission`, `FPI`, `First SIV`, `LPI`, `interim DB lock cut-off`, `interim DB lock`, `final DB lock cut-off`, `final DB lock`, `Inspection` |
 | `milestone_highlight` | `Highlight (Red)`, `Highlight (Yellow)`, `Highlight (Blue)`, `Highlight (Green)`, `Highlight (Orange)` |
+| `issue_review_status` | `Confirmed - no issue`, `Accepted`, `To be fixed` |
+| `issue_kind` | `short`, `over`, `unstaffed` |
 | `period_highlight` | `Highlight (Red)`, `Highlight (Yellow)`, `Highlight (Blue)`, `Highlight (Green)`, `Highlight (Orange)` |
 | `period_name_clinical` | `Before-Start-up`, `Start-up`, `Conduct (interim)`, `Close-out (interim)`, `Conduct (final)`, `Close-out (final)`, `After Close-out (final)` |
 | `period_name_others` | `Planning`, `Develop`, `Close` |
@@ -389,7 +405,7 @@ THE MONTH, DIVIDED BY THOSE CLAIMS
 
 Three things in that example are worth keeping hold of. **The two `Other staff` divide one role factor** — 0.42 between them, not 0.42 each — so the month does not grow because a second person was added. **The people sum to the project-month exactly**: the demand is rounded to whole cents once and those cents are handed out by largest remainder, which is why `PSN-006` is given 0.15 rather than the 0.14 a plain rounding of 0.1443 would produce. And **had you multiplied the four per-assignment factors** for `PSN-001` you would have reported 0.43 FTE where the application says 1.05.
 
-Reproduce it with `python tools/prap_io.py calculate templates/PRAP_SourceData_Dummy_10x10_v1.13.xlsx`.
+Reproduce it with `python tools/prap_io.py calculate templates/PRAP_SourceData_Dummy_10x10_v1.14.xlsx`.
 
 ### 5.3 Periods
 
@@ -420,7 +436,7 @@ over_allocation_fte and under_allocation_fte are ABSOLUTE FTE figures. They are 
 
 | Parameter | Default | Controls |
 |---|---|---|
-| `schema_version` | 15 | Structure version of this workbook. The application warns on a mismatch. |
+| `schema_version` | 16 | Structure version of this workbook. The application warns on a mismatch. |
 | `fte_hours_per_month` | 160 | Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month. |
 | `over_allocation_fte` | 1.5 | A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01). |
 | `under_allocation_fte` | 0.6 | A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01). |
@@ -494,6 +510,7 @@ Severities: **fatal** nothing loads · **error** the figures would be wrong · *
 | **V-37** | warning | Milestone.milestone_highlight carries a value that names no colour the application can draw. |
 | **V-38** | warning | ProjectPeriod.period_highlight carries a value that names no colour the application can draw. |
 | **V-39** | warning | A PeriodHighlight row cannot be applied: its value names no colour, its period name is given twice, or no period list knows the name. |
+| **V-40** | information | An IssueReview row no longer describes its month: the issue it reviewed has gone, or the month's gap is not the gap that was reviewed. |
 
 **Aim for zero errors and zero warnings you cannot explain.** A file that loads with errors still shows numbers, and those numbers are wrong in ways the user will not see.
 
@@ -651,4 +668,4 @@ A plain-text form of the source workbook, so a program or an AI agent that canno
 
 ---
 
-Generated by `tools/build_ai_reference.py` on 2026-10-08 from `app/PRAP.html` v1.60, `PRAP_Development_Plan_v2.71.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.
+Generated by `tools/build_ai_reference.py` on 2026-10-09 from `app/PRAP.html` v1.61, `PRAP_Development_Plan_v2.72.xlsx` and `tools/build_source_workbook.py`. Do not edit by hand — rebuild it.

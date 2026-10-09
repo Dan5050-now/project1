@@ -32,7 +32,7 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
-FIX = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.13.xlsx"
+FIX = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.14.xlsx"
 TMP = pathlib.Path(tempfile.mkdtemp(prefix="prap_r56_"))
 
 sys.path.insert(0, str(ROOT / "tools"))
@@ -183,11 +183,19 @@ with sync_playwright() as pw:
     rows = pg.eval_on_selector_all("#gapsdlg tr.gaprow", "es => es.map(e => e.className)")
     check(len(rows) == min(n_un, 40) and all("unstaffed" in c for c in rows),
           "and the list has them, under their own direction", f"{len(rows)} row(s)")
+    # Since R-62 the month opens first - it is where the month is reviewed - and the
+    # project, where people are assigned, is one button on from there.
     pg.locator("#gapsdlg tr.gaprow").first.click()
+    pg.wait_for_timeout(1000)
+    check(pg.evaluate("el('gapdlg').open")
+          and pg.locator("#gapdlg .revbox").count() == 1,
+          "a not-staffed month opens the month, with its manager review",
+          pg.inner_text("#gapTitle"))
+    pg.click('#gapdlg [data-act="goproj"]')
     pg.wait_for_timeout(1200)
     check(pg.evaluate("S.tab") == "t-proj" and pg.evaluate("S.selProj") == GONE
-          and not pg.evaluate("el('gapsdlg').open"),
-          "a not-staffed month takes you to the project, where people are assigned",
+          and not pg.evaluate("el('gapsdlg').open") and not pg.evaluate("el('gapdlg').open"),
+          "and from there to the project, where people are assigned",
           f"tab {pg.evaluate('S.tab')}, selected {pg.evaluate('S.selProj')}")
 
     # ---- 5. a new row stays selected ---------------------------------------------------

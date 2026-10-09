@@ -48,8 +48,8 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
-SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.13.xlsx"
-BIG = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.21.xlsx"
+SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.14.xlsx"
+BIG = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.22.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 PANEL = ".panel[data-panel='%s']"

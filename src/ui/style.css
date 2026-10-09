@@ -1094,6 +1094,43 @@ td.c.gapc.over::after{content:"\25B2";color:var(--crit)}
 /* Not staffed, in the list and on the control (R-56): the month nobody is on. Neutral
    ink and a hollow mark, the same \25E6 the table's own cells use for it. */
 .gunst{color:var(--ink2);font-weight:650}
+/* R-62: an issue a manager reviewed and CLOSED. Kept on screen - the decision is part of
+   the plan - but quiet: gray outline and mark instead of amber or red, the figure faded,
+   so the open issues are what the eye finds. Never removed, never uncoloured to look like
+   an ordinary month: the outline still says there was something to decide. */
+td.c.gapc.rev{box-shadow:inset 0 0 0 2px var(--base);opacity:.72}
+td.c.gapc.rev::after{color:var(--ink3)}
+td.c.unal[data-gap]{cursor:pointer}
+td.c.unal.rev{opacity:.55}
+tr.gaprow.rev > *{color:var(--ink3)}
+tr.gaprow.rev > th.rh{box-shadow:inset 3px 0 0 var(--base)}
+table.gapt tr.gaprow.rev td.num.short,table.gapt tr.gaprow.rev td.num.over,
+table.gapt tr.gaprow.rev td.num.unstaffed{background:var(--fill);color:var(--ink3)}
+.grev{color:var(--ink3);font-weight:600}
+.gpill.reviewed{background:var(--fill);color:var(--ink3)}
+.revtag{display:inline-block;font-size:var(--t-xs);font-weight:600;border-radius:999px;
+ padding:2px 8px;white-space:nowrap}
+.revtag.done{background:var(--fill);color:var(--ink2)}
+.revtag.fix{background:var(--underbg);color:var(--underink)}
+.revtag.stale{background:var(--overbg);color:var(--crit)}
+table.gapt td.revcell{text-align:left}
+.revcell .sub{display:block;font-size:var(--t-xs);color:var(--ink3);max-width:280px;
+ white-space:normal;margin-top:2px}
+.revbox{border:1px solid var(--base);border-radius:var(--r-md);padding:12px 14px;
+ margin:12px 0;background:var(--surface)}
+.revbox.closed{border-color:var(--base);background:var(--fill)}
+.revbox.stale{border-color:var(--crit)}
+.revbox h3{margin:0 0 6px;font-size:var(--t-lg)}
+.revbox .revnow{margin:0 0 10px;font-size:var(--t-md);line-height:1.5}
+.revbox .restale{color:var(--crit)}
+.revform{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+.revform .ctl.wide{flex:1 1 320px}
+.revform textarea{width:100%;box-sizing:border-box;font:inherit;font-size:var(--t-md);
+ padding:6px 8px;border:1px solid var(--base);border-radius:var(--r-xs);
+ background:var(--surface);color:var(--ink);resize:vertical}
+.revform .chk{flex-basis:100%;font-size:var(--t-sm);color:var(--ink2);display:flex;gap:6px;
+ align-items:center}
+.revbtns{flex-basis:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .gpill.unstaffed{background:var(--fill);color:var(--ink2)}
 table.gapt td.num.unstaffed{color:var(--ink2);font-weight:600;background:var(--fill)}
 tr.gaprow.unstaffed > th.rh{box-shadow:inset 3px 0 0 var(--ink3)}

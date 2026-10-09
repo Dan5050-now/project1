@@ -299,6 +299,16 @@ el("fReset").onclick = () => {
 document.addEventListener("click", e => {
   const tab = e.target.closest("nav button");
   if (tab){ showTab(tab.dataset.tab); window.scrollTo({top:0}); return; }
+  /* An issue month opens its own dialog (R-62) - and it is asked BEFORE the row it sits
+     in. A project row's click expands it, and when that came first a click on a marked
+     month only ever folded the project open or shut: the month, and the review it
+     carries, could not be reached from the cell at all. */
+  const gp = e.target.closest("[data-gap]");
+  if (gp){
+    e.stopPropagation();
+    openGap(gp.dataset.gap, +gp.dataset.gk, gp.dataset.gapis || "");
+    return;
+  }
   const parent = e.target.closest("tr.parent");
   if (parent){
     const k = parent.dataset.k;
@@ -329,9 +339,19 @@ document.addEventListener("click", e => {
      row handler below, since these controls sit above the rows rather than inside one. */
   const gd = e.target.closest("[data-gapdir]");
   if (gd){ e.stopPropagation(); S.gapf.dir = gd.dataset.gapdir; openGaps(); return; }
+  const gv = e.target.closest("[data-gaprev]");
+  if (gv){ e.stopPropagation(); S.gapf.rev = gv.dataset.gaprev; openGaps(); return; }
+  /* The manager's review, from inside the month dialog (R-62). */
+  const rs = e.target.closest("[data-revsave], [data-revclear]");
+  if (rs){
+    e.stopPropagation();
+    if (rs.hasAttribute("data-revclear")) clearReview();
+    else saveReview();
+    return;
+  }
   if (e.target.closest("[data-gapclear]")){
     e.stopPropagation();
-    S.gapf = {dir:"", proj:"", min:0};
+    S.gapf = {dir:"", proj:"", min:0, rev:""};
     openGaps();
     return;
   }
@@ -340,12 +360,6 @@ document.addEventListener("click", e => {
     e.stopPropagation();
     if (gj.hasAttribute("data-gapjump")) showTab("t-overall");
     openGaps();
-    return;
-  }
-  const gp = e.target.closest("[data-gap]");
-  if (gp){
-    e.stopPropagation();
-    openGap(gp.dataset.gap, +gp.dataset.gk);
     return;
   }
   const act = e.target.closest("[data-act]");
@@ -1004,9 +1018,13 @@ const CAL = (() => {
        element ever sees it. The "Off their standard" tile is a div carrying both a tip
        and role="button", and it had been silently unclickable for exactly that reason:
        everything that was supposed to happen when it was pressed never ran, and nothing
-       anywhere said so. A thing that declares itself a button is a button. */
+       anywhere said so. A thing that declares itself a button is a button.
+       R-62: so is an issue month in Resource by project. Its pop-up still shows on
+       hover, but a click opens the month and its manager review - pinning the pop-up
+       instead would leave the review out of reach from the very cell it is about. */
     const isControl = e.target.closest(
-      "button, a, select, input, summary, [contenteditable='true'], [role='button']");
+      "button, a, select, input, summary, [contenteditable='true'], [role='button'], "
+      + "[data-gap]");
     if (el_ && !isControl){
       e.stopPropagation();
       pinned = (pinned === el_) ? null : el_;

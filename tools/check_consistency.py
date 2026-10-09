@@ -19,11 +19,11 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.71.xlsx"
-SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.40.xlsx"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.19.xlsx"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.21.xlsx"
-DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.13.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.72.xlsx"
+SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.41.xlsx"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.20.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.22.xlsx"
+DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.14.xlsx"
 
 problems, notes = [], []
 
@@ -515,7 +515,7 @@ if spec_traced - plan_reqs:
 # undocumented components and five entries that had become actively WRONG. The lesson
 # is not "remember to update it"; it is that an artefact nobody checks is an artefact
 # that rots. So it is checked.
-COMPONENTS = ROOT / "docs" / "PRAP_UI_Component_List_v2.7.xlsx"
+COMPONENTS = ROOT / "docs" / "PRAP_UI_Component_List_v2.8.xlsx"
 if not COMPONENTS.exists():
     problems.append(f"{COMPONENTS.name} is missing")
 else:

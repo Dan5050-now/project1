@@ -24,7 +24,7 @@ const S = {
      Resource by project's head go on counting every month off its standard, because they
      are the alarm and an alarm that quietly reported a subset would be worse than none
      (R-53). Cleared on load, like S.colf and for the same reason. */
-  gapf:{dir:"", proj:"", min:0},
+  gapf:{dir:"", proj:"", min:0, rev:""},
   projIssue:"",             // Resource by project narrowed to its problems (R-56)
   /* Which tabs no longer match the model. Three of the four panes are hidden at any
      moment, so renderAll() marks them all stale and draws only the one on screen;

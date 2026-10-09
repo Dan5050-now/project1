@@ -43,8 +43,8 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
-TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.19.xlsx"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.13.xlsx"
+TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.20.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.14.xlsx"
 TMP = pathlib.Path(tempfile.mkdtemp(prefix="prap_cap_"))
 
 sys.path.insert(0, str(ROOT / "tools"))

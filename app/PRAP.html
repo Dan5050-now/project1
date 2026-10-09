@@ -1111,6 +1111,43 @@ td.c.gapc.over::after{content:"\25B2";color:var(--crit)}
 /* Not staffed, in the list and on the control (R-56): the month nobody is on. Neutral
    ink and a hollow mark, the same \25E6 the table's own cells use for it. */
 .gunst{color:var(--ink2);font-weight:650}
+/* R-62: an issue a manager reviewed and CLOSED. Kept on screen - the decision is part of
+   the plan - but quiet: gray outline and mark instead of amber or red, the figure faded,
+   so the open issues are what the eye finds. Never removed, never uncoloured to look like
+   an ordinary month: the outline still says there was something to decide. */
+td.c.gapc.rev{box-shadow:inset 0 0 0 2px var(--base);opacity:.72}
+td.c.gapc.rev::after{color:var(--ink3)}
+td.c.unal[data-gap]{cursor:pointer}
+td.c.unal.rev{opacity:.55}
+tr.gaprow.rev > *{color:var(--ink3)}
+tr.gaprow.rev > th.rh{box-shadow:inset 3px 0 0 var(--base)}
+table.gapt tr.gaprow.rev td.num.short,table.gapt tr.gaprow.rev td.num.over,
+table.gapt tr.gaprow.rev td.num.unstaffed{background:var(--fill);color:var(--ink3)}
+.grev{color:var(--ink3);font-weight:600}
+.gpill.reviewed{background:var(--fill);color:var(--ink3)}
+.revtag{display:inline-block;font-size:var(--t-xs);font-weight:600;border-radius:999px;
+ padding:2px 8px;white-space:nowrap}
+.revtag.done{background:var(--fill);color:var(--ink2)}
+.revtag.fix{background:var(--underbg);color:var(--underink)}
+.revtag.stale{background:var(--overbg);color:var(--crit)}
+table.gapt td.revcell{text-align:left}
+.revcell .sub{display:block;font-size:var(--t-xs);color:var(--ink3);max-width:280px;
+ white-space:normal;margin-top:2px}
+.revbox{border:1px solid var(--base);border-radius:var(--r-md);padding:12px 14px;
+ margin:12px 0;background:var(--surface)}
+.revbox.closed{border-color:var(--base);background:var(--fill)}
+.revbox.stale{border-color:var(--crit)}
+.revbox h3{margin:0 0 6px;font-size:var(--t-lg)}
+.revbox .revnow{margin:0 0 10px;font-size:var(--t-md);line-height:1.5}
+.revbox .restale{color:var(--crit)}
+.revform{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+.revform .ctl.wide{flex:1 1 320px}
+.revform textarea{width:100%;box-sizing:border-box;font:inherit;font-size:var(--t-md);
+ padding:6px 8px;border:1px solid var(--base);border-radius:var(--r-xs);
+ background:var(--surface);color:var(--ink);resize:vertical}
+.revform .chk{flex-basis:100%;font-size:var(--t-sm);color:var(--ink2);display:flex;gap:6px;
+ align-items:center}
+.revbtns{flex-basis:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .gpill.unstaffed{background:var(--fill);color:var(--ink2)}
 table.gapt td.num.unstaffed{color:var(--ink2);font-weight:600;background:var(--fill)}
 tr.gaprow.unstaffed > th.rh{box-shadow:inset 3px 0 0 var(--ink3)}
@@ -1379,8 +1416,8 @@ td.cell.gapnew:focus:empty::before{content:""}
 
 <script>
 "use strict";
-const APP_VERSION = "1.60";
-const SCHEMA_EXPECTED = 15;
+const APP_VERSION = "1.61";
+const SCHEMA_EXPECTED = 16;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
    specification and outputs are version-controlled together and cross-referenced).
@@ -1388,16 +1425,16 @@ const SCHEMA_EXPECTED = 15;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.71.xlsx",          ver:"2.71",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.72.xlsx",          ver:"2.72",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.40.xlsx", ver:"1.40",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.41.xlsx", ver:"1.41",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
-  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.7.xlsx",          ver:"2.7",
+  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.8.xlsx",          ver:"2.8",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
           + "R-13 to R-46, which added 22 components and made five of the old entries wrong; "
           + "v2.1 closes X-04 — row virtualisation is not built and, at the volume REQ-NFR-03 now "
           + "names, not required"},
-  {what:"Source data template",   file:"PRAP_SourceData_Template_v1.19.xlsx",       ver:"1.19",
+  {what:"Source data template",   file:"PRAP_SourceData_Template_v1.20.xlsx",       ver:"1.20",
    status:`Schema version ${SCHEMA_EXPECTED} — the layout this application reads`},
   {what:"AI agent reference",     file:"PRAP_AI_Agent_Guide_v1.0.xlsx",             ver:"1.0",
    status:"Instructions for another program or AI agent; docs/prap_contract.json is its machine-readable half"},
@@ -1707,7 +1744,7 @@ const JSON_FORMAT_VERSION = 1;
    and nothing else. The projects, people and assignments are what the user is here
    to enter.                                                                        */
 
-/* SEED-BEGIN — generated by tools/build_app_seed.py from PRAP_SourceData_Template_v1.19.xlsx.
+/* SEED-BEGIN — generated by tools/build_app_seed.py from PRAP_SourceData_Template_v1.20.xlsx.
    The reference content of a blank start: the value lists and the settings, and
    the reference content of a blank start: the value lists, the settings, and the
    DEFAULT ASSUMPTIONS. Do not edit by hand — rebuild it, or check_consistency
@@ -1756,6 +1793,12 @@ const SEED_LISTS = [
   ["milestone_highlight","Highlight (Blue)",null],
   ["milestone_highlight","Highlight (Green)",null],
   ["milestone_highlight","Highlight (Orange)",null],
+  ["issue_review_status","Confirmed - no issue",null],
+  ["issue_review_status","Accepted",null],
+  ["issue_review_status","To be fixed",null],
+  ["issue_kind","short",null],
+  ["issue_kind","over",null],
+  ["issue_kind","unstaffed",null],
   ["period_highlight","Highlight (Red)",null],
   ["period_highlight","Highlight (Yellow)",null],
   ["period_highlight","Highlight (Blue)",null],
@@ -1781,7 +1824,7 @@ const SEED_LISTS = [
   ["role_others","Other staff",null],
 ];
 const SEED_CONFIG = [
-  ["schema_version",15,"Structure version of this workbook. The application warns on a mismatch."],
+  ["schema_version",16,"Structure version of this workbook. The application warns on a mismatch."],
   ["fte_hours_per_month",160,"Hours equal to 1.00 FTE: 8 h/day x 5 days/week x 20 days/month."],
   ["over_allocation_fte",1.5,"A person-month total above this is flagged as over-allocated. Absolute, not scaled by capacity (S2-01)."],
   ["under_allocation_fte",0.6,"A person-month total below this counts toward an under-allocated run. Absolute, not scaled by capacity (S2-01)."],
@@ -2501,6 +2544,7 @@ const SHEET_COLS = {
   Assignment: {date:["assign_start_date","assign_end_date"], num:["person_weight"]},
   PersonPeriodWeight: {date:["period_start","period_end"], num:["weight_override"]},
   MonthlyEstimate: {date:[], num:["fte"]},
+  IssueReview: {date:[], num:["gap_fte"]},
   Lists: {date:[], num:[]},
   Config: {date:[], num:[]},
 };
@@ -2510,7 +2554,7 @@ const REQUIRED_SHEETS = Object.keys(SHEET_COLS);
    colours - which is a complete plan, not a broken one; so its absence is reported as
    information and the sheet is supplied empty. Every other sheet has always been there,
    and one missing is a file that has lost something. */
-const LATER_SHEETS = {MonthlyEstimate:9, PeriodHighlight:15};
+const LATER_SHEETS = {MonthlyEstimate:9, PeriodHighlight:15, IssueReview:16};
 /* The schema's own column order, independent of any one file. A workbook carries its
    headers, so the application takes them from what it loaded; the JSON interchange file
    carries row OBJECTS and has no column order at all, so it needs this. It is also the
@@ -2537,6 +2581,8 @@ const SHEET_HEADERS = {
     "note_1","note_2","note_3"],
   PersonPeriodWeight:["assignment_id","period_start","period_end","weight_override","reason"],
   MonthlyEstimate:["scope","ref_id","month","fte","note_1"],
+  IssueReview:["project_id","month","issue","status","gap_fte","rationale","reviewed_by",
+    "reviewed_at"],
   Lists:["list_name","value","note_1"],
   Config:["parameter","value","note"],
 };
@@ -2673,7 +2719,9 @@ const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignmen
                  // A manual figure hangs off whatever it is FOR, and that is named by
                  // ref_id - a project_id on a project row, an assignment_id on an
                  // assignment row. Which of the two is said by `scope`.
-                 MonthlyEstimate:"ref_id"};
+                 MonthlyEstimate:"ref_id",
+                 // A review is OF a month of a project, so it hangs off the project (R-62).
+                 IssueReview:"project_id"};
 // Which sheet OWNS each identifier. KEY_COL names the key column of every sheet, but
 // on a child sheet that column is a FOREIGN key - Milestone.project_id points at a
 // project, it does not define one. Deleting a milestone must not go looking for rows
@@ -2715,6 +2763,10 @@ const COLUMN_HELP = {
   difference:"The stated figure minus the automatic one. This is the size of the departure the manual estimate is making, month by month.",
   period:"THE WHOLE DERIVATION OF THIS MONTH, TERM BY TERM: which period of the project's own plan it falls in, the standard monthly FTE that period selects, this project's own weight, and how much of the month the project ran — which multiplied are the project's month. On a person's table a second line follows with their CLAIM on that month: role factor ÷ sharers × person weight × month coverage, ending in the percentage of the month it won. Those terms make a claim and not a figure — every claim on a project-month is measured against the others, so the shares add to one (REQ-CAL-19), which is why the two halves are closed off separately instead of written as one product. A fallback says it is one and names its rule: no standard row is V-19, no role factor row is V-23, no period at all is V-12. Read off the same calculation the figure came from, so no term shown here can be a different one from the term the arithmetic used.",
   sharers:"How many people hold THIS ROLE on this project in this month. The role factor is what the ROLE costs the project, not what each holder costs, so it is divided by this: put a second data manager on a trial and each of them claims half of what one claimed, and the project's month does not move (REQ-CAL-14). A share that halves from one month to the next with nothing else changed is usually this.",
+  gap_fte:"The gap (staffed minus needed) WHEN IT WAS REVIEWED. If the month's gap is different now, the review is shown as needing a fresh look - a decision about one set of figures does not cover another.",
+  rationale:"Why the issue was confirmed, accepted or left to fix - what anybody opening it later will read.",
+  reviewed_by:"Who made the decision.", reviewed_at:"When, as YYYY-MM-DD HH:MM.",
+  issue:"Which way the month is off its standard: short, over, or unstaffed (nobody on it).",
   period_highlight:"OPTIONAL. The colour a period is drawn in on the Project timeline — on the Overall tab and on the project's own tab. On the GENERAL ASSUMPTIONS tab (Period colours) it is the DEFAULT for every project's period of that name. On a project's PERIODS table it is that project's own choice, and it wins over the default. Neither set: the period is drawn GRAY, shaded darker as its weight rises. Pick one of the values the Lists sheet offers; the colour word inside the value is what is read, so 'Highlight (Blue) - sponsor review' keeps the colour and says why.",
   milestone_highlight:"OPTIONAL. Marks this milestone on the Project timeline in a colour — on the Overall tab and on this project's own tab, wherever the timeline is drawn. Pick one of the values the Lists sheet offers; leave it empty and the milestone draws as it always did. The colour word inside the value is what is read, so a team that writes what their colours MEAN — 'Highlight (Red) - slipped' — keeps the colour and gains the reason.",
   project_id:"Unique identifier for the project. Editing it cascades to every row that references it.",
@@ -2819,6 +2871,9 @@ const COLUMN_LABEL = {
   scope:"Figure is for", ref_id:"Belongs to", month:"Month", fte:"Stated FTE",
   automatic_fte:"Calculated FTE", difference:"Difference",
   period:"How this month is worked out", sharers:"Sharing this role",
+  // IssueReview (R-62); project_id, month and status are labelled above
+  issue:"Issue", gap_fte:"Gap when reviewed", rationale:"Reason",
+  reviewed_by:"Confirmed by", reviewed_at:"Reviewed at",
   // Config and Lists
   parameter:"Setting", value:"Value", list_name:"List", note:"Note",
   note_1:"Note 1", note_2:"Note 2", note_3:"Note 3", note_4:"Note 4", note_5:"Note 5",
@@ -3213,7 +3268,7 @@ function buildModel(sheets){
   for (const s of REQUIRED_SHEETS) raw[s] = toObjects(s, sheets[s], F);
 
   const M = {
-    projects:{}, milestones:{}, msHighlight:{}, hlLabels:{}, perHlLabels:{}, periodHl:{}, periods:{}, people:{}, assignments:[],
+    projects:{}, milestones:{}, msHighlight:{}, hlLabels:{}, perHlLabels:{}, periodHl:{}, reviews:{}, periods:{}, people:{}, assignments:[],
     ppw:{}, pws:{}, rf:{}, rfRoles:{}, rfAbsorb:{}, lists:{}, config:{}, raw, findings:F,
   };
   for (const r of raw.Lists) if (r.list_name) (M.lists[r.list_name] ||= []).push(r.value);
@@ -3373,6 +3428,15 @@ function buildModel(sheets){
     const tok = hlToken(r.period_highlight);
     M.periodHl[r.period_name] = tok;
     if (tok) M.perHlLabels[tok] ||= String(r.period_highlight).trim();
+  }
+
+  /* ---- a manager's reviews of months off their standard (schema 16, R-62) ----
+     Keyed project|month|issue; the first row wins. Kept as the RAW row, because the
+     dialog edits that row in place and the screen reads its rationale and author. */
+  for (const r of (raw.IssueReview || [])){
+    if (!r.project_id || !r.month || !r.issue) continue;
+    const key = `${r.project_id}|${String(r.month).slice(0, 7)}|${String(r.issue).trim().toLowerCase()}`;
+    if (!(key in M.reviews)) M.reviews[key] = r;
   }
 
   // ---- periods: use what is in the file; derive where a trial has none -------
@@ -4284,6 +4348,7 @@ function calculate(M){
   reportManual(M, lines);
   reportDemandGap(M, projGap);
   reportUnstaffed(M, unstaffed);
+  reportReviews(M, projGap, projUnallocated);
   /* periodAt is handed out for the SAME reason projPeriod is built from the lines: so a
      screen naming the period a month falls in cannot name a different one from the
      period the figure used. projPeriod answers it for every month that produced a
@@ -4538,6 +4603,40 @@ function reportManual(M, lines){
  *
  *  One finding per PROJECT, like V-34: the months are named inside it, and twenty-four
  *  findings for one un-started study would bury every other rule in the report. */
+/** V-40 (R-62): a manager's review that no longer describes the month it is about.
+ *  Either the issue has gone - the month is on its standard, or now staffed - or its gap
+ *  is not the gap that was reviewed. Information, never a warning: the review is kept as
+ *  history, and the screen shows a changed one as needing a fresh look rather than closed.
+ *  Worked out here, beside V-34 and V-36, because it compares against the same figures. */
+function reviewState(M, pid, mm, issue, projGap, projUnallocated){
+  const k = (+mm.slice(0, 4)) * 12 + (+mm.slice(5, 7)) - 1, qk = pid + "|" + k;
+  if (issue === "unstaffed"){
+    const u = projUnallocated.get(qk);
+    return u > 0.004 ? {gap: -u} : null;
+  }
+  const g = projGap.get(qk);
+  return g && g.dir === issue ? {gap: g.gap} : null;
+}
+function reportReviews(M, projGap, projUnallocated){
+  if (!M || !Array.isArray(M.findings)) return;
+  for (let i = M.findings.length - 1; i >= 0; i--)
+    if (M.findings[i].rule === "V-40") M.findings.splice(i, 1);
+  for (const r of Object.values(M.reviews || {})){
+    const mm = String(r.month).slice(0, 7), issue = String(r.issue).trim().toLowerCase();
+    const now = reviewState(M, r.project_id, mm, issue, projGap, projUnallocated);
+    if (!now)
+      M.findings.push({sev:"information", rule:"V-40", sheet:"IssueReview", row:r.__row,
+        msg:`Project ${r.project_id}, ${mm}: reviewed as '${r.status}' when it was ${issue}, `
+          + `and it is no longer ${issue}. The review is kept as history.`});
+    else if (r.gap_fte !== null && r.gap_fte !== undefined && r.gap_fte !== ""
+             && toCents(now.gap) !== toCents(num(r.gap_fte)))
+      M.findings.push({sev:"information", rule:"V-40", sheet:"IssueReview", row:r.__row,
+        msg:`Project ${r.project_id}, ${mm}: reviewed as '${r.status}' at a gap of `
+          + `${fromCents(toCents(num(r.gap_fte))).toFixed(2)}; it is now `
+          + `${fromCents(toCents(now.gap)).toFixed(2)}, so the review needs a fresh look.`});
+  }
+}
+
 function reportUnstaffed(M, rows){
   if (!M || !Array.isArray(M.findings)) return;
   for (let i = M.findings.length - 1; i >= 0; i--)
@@ -4838,6 +4937,7 @@ const DIFF_KEY = {
   PeriodFTEStandard: ["project_type", "clinical_phase", "work_scope_type", "period_name"],
   RoleFactor:           ["project_type", "clinical_phase", "work_scope_type", "period_name",
                          "role_name"],
+  IssueReview:          ["project_id", "month", "issue"],
   PeriodHighlight:      ["period_name"],
   Person:               ["person_id"],
   Assignment:           ["assignment_id"],
@@ -5635,7 +5735,7 @@ const S = {
      Resource by project's head go on counting every month off its standard, because they
      are the alarm and an alarm that quietly reported a subset would be worse than none
      (R-53). Cleared on load, like S.colf and for the same reason. */
-  gapf:{dir:"", proj:"", min:0},
+  gapf:{dir:"", proj:"", min:0, rev:""},
   projIssue:"",             // Resource by project narrowed to its problems (R-56)
   /* Which tabs no longer match the model. Three of the four panes are hidden at any
      moment, so renderAll() marks them all stale and draws only the one on screen;
@@ -6677,19 +6777,23 @@ function manualMonths(){
    an alarm that lies. */
 const PROJ_ISSUES = [
   ["", "All projects"],
-  ["issues", "Issues only (short, over, not staffed)"],
+  ["issues", "Open issues only (short, over, not staffed)"],
   ["short", "\u25BC Short of standard"],
   ["over", "\u25B2 Over standard"],
   ["unstaffed", "\u25E6 Not staffed"],
   ["manual", "\u270E Stated by hand"],
+  ["reviewed", "\u2713 Reviewed and closed"],
 ];
 
 function projIssues(pid, G, man){
   const C = S.calc, out = new Set();
+  /* An issue a manager closed (R-62) is no longer short / over / not staffed for the
+     purposes of "show me the problems" - it is 'reviewed', which is its own option. */
   for (const k of G){
     const g = gapOf(pid, k);
-    if (g) out.add(g.dir);
-    if ((C.projUnallocated.get(pid + "|" + k) || 0) > 0.004) out.add("unstaffed");
+    if (g) out.add(reviewOf(pid, k, g.dir, g.gap)?.closed ? "reviewed" : g.dir);
+    const u = C.projUnallocated.get(pid + "|" + k) || 0;
+    if (u > 0.004) out.add(reviewOf(pid, k, "unstaffed", -u)?.closed ? "reviewed" : "unstaffed");
     if (man.has(pid + "|" + k)) out.add("manual");
   }
   return out;
@@ -6731,14 +6835,18 @@ function tableProjects(pids){
          project. Both directions are marked and they are marked DIFFERENTLY - short of
          the standard and over it are different facts. */
       const g = gapOf(pid, k);
+      // R-62: a month a manager closed is drawn MUTED - still marked, still clickable,
+      // with the decision and its reason in the pop-up - so the open ones stand out.
+      const rv = g ? reviewOf(pid, k, g.dir, g.gap) : null;
       const hand = man.has(pid + "|" + k);
       const handLine = `<span class="tr">&#9998; includes a figure stated by hand `
         + `(manual estimation)</span><br>`;
-      const mark = (g ? ` gapc ${g.dir}` : "") + (hand ? " man" : "");
-      const gtip = g ? ` data-gap="${att(pid)}" data-gk="${k}"`
+      const mark = (g ? ` gapc ${g.dir}` : "") + (rv && rv.closed ? " rev" : "")
+        + (hand ? " man" : "");
+      const gtip = g ? ` data-gap="${att(pid)}" data-gk="${k}" data-gapis="${g.dir}"`
         + ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${gapLine(pid, k)}`
-        + (hand ? handLine : "")
-        + `<span class="tr">click for the month and the figures behind it</span>`)}"`
+        + reviewLine(rv) + (hand ? handLine : "")
+        + `<span class="tr">click to review it, or for the figures behind it</span>`)}"`
         : hand ? ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${handLine}`
         + `<span class="tr">on its standard: the stated figure matches what it needs</span>`)}"`
         : "";
@@ -6755,14 +6863,17 @@ function tableProjects(pids){
            unallocated is totalled on its own line instead. Short and over are never
            netted (V-34) and neither is this. */
         const u = C.projUnallocated.get(pid + "|" + k) || 0;
+        const urv = u > 0.004 ? reviewOf(pid, k, "unstaffed", -u) : null;
         if (u > 0.004)
-          return `<td class="c unal" data-tip="${att(`<b>${keyToLabel(k)}</b><br>`
+          return `<td class="c unal${urv && urv.closed ? " rev" : ""}" data-gap="${att(pid)}" `
+            + `data-gk="${k}" data-gapis="unstaffed" data-tip="${att(`<b>${keyToLabel(k)}</b><br>`
             + `<b>${u.toFixed(2)} FTE</b> is what this project's own standard asks for `
             + `in this month, and NOBODY IS ASSIGNED to it.<br>`
             + `It is not counted in any total on this table: the totals are what is `
             + `being applied, and this is not applied to anybody yet.`
-            + `<span class="tr">assign somebody and the figure moves into the row`
-            + `</span>`)}">&#9702; ${fmt(u)}</td>`;
+            + reviewLine(urv)
+            + `<span class="tr">assign somebody and the figure moves into the row - `
+            + `or click to review it</span>`)}">&#9702; ${fmt(u)}</td>`;
         return `<td class="c z${mark}"${gtip}>&middot;</td>`;
       }
       const i = seqStep(v, vmax);
@@ -7367,7 +7478,10 @@ function renderOverall(){
      tile cannot claim a number the panel does not show. Counted as PROJECT-MONTHS in
      each direction and never netted: three short in March and three over in April is
      not a plan in balance, and one figure would say it was. */
-  const gaps = gapRows(pids);
+  const allGaps = gapRows(pids);
+  // R-62: the tile is the alarm, so it counts what is still OPEN; closed ones are named.
+  const gaps = allGaps.filter(r => !(r.rev && r.rev.closed));
+  const greviewed = allGaps.length - gaps.length;
   const gshort = gaps.filter(r => r.dir === "short").length;
   const gover = gaps.filter(r => r.dir === "over").length;
   const gunst = gaps.filter(r => r.dir === "unstaffed").length;
@@ -7388,7 +7502,8 @@ function renderOverall(){
      + "not months — three separate amber cells would look like three problems. A month at zero breaks a "
      + "run rather than continuing it: somebody with no assignments is unassigned, not under-allocated."],
     ["Off their standard", gaps.length, `${gshort} short &#183; ${gover} over`
-     + (gunst ? ` &#183; ${gunst} not staffed` : ""),
+     + (gunst ? ` &#183; ${gunst} not staffed` : "")
+     + (greviewed ? ` &#183; &#10003; ${greviewed} reviewed` : ""),
      gaps.length ? "gap" : "",
      "Project-months where what the project NEEDS — standard FTE × period weight × the part of the "
      + "month it runs — is not what it is being GIVEN. An automatic month always has the two equal, "
@@ -9933,6 +10048,44 @@ function setWho(name){
    are different facts, and summing them would let three short in March cancel three over
    in April and report a plan as fine. */
 
+/* ---------------------------------------------------------------- manager review (R-62)
+
+   A month off its standard is a FINDING, and a finding a manager has looked at is not
+   the same as one nobody has: "PRJ-007 is over by 0.9 in March - sponsor-funded extra
+   cleaning" is a decision, and drawing it in the same alarm red as an unexamined one makes
+   the real alarms harder to find. So each issue can carry a REVIEW (IssueReview sheet):
+   'Confirmed - no issue' or 'Accepted' CLOSE it - it stays on screen, muted, with its
+   reason - and 'To be fixed' keeps it open with a note of what is planned.
+
+   A REVIEW COVERS THE FIGURES IT WAS MADE ON. gap_fte records the gap as reviewed; if
+   the month's gap moves, the review no longer describes it and the issue is shown open
+   again, marked 're-check', rather than staying closed on a decision about different
+   numbers (V-40). */
+const REVIEW_CLOSED = new Set(["confirmed - no issue", "accepted"]);
+const REVIEW_STATUSES = ["Confirmed - no issue", "Accepted", "To be fixed"];
+
+/** The review of one issue, and what it means now - or null if nobody has reviewed it. */
+function reviewOf(pid, k, dir, gap){
+  const r = ((S.model && S.model.reviews) || {})[`${pid}|${isoMonth(k)}|${dir}`];
+  if (!r) return null;
+  const status = String(r.status || "").trim();
+  const was = num(r.gap_fte);
+  const changed = was !== null && was !== undefined && gap !== undefined
+    && Math.round(was * 100) !== Math.round(gap * 100);
+  const closes = REVIEW_CLOSED.has(status.toLowerCase());
+  return {row:r, status, closed: closes && !changed, changed, fix: /fix/i.test(status),
+          rationale: r.rationale || "", by: r.reviewed_by || "", at: r.reviewed_at || ""};
+}
+
+/** One line for a pop-up: who decided what, and why. */
+function reviewLine(rv){
+  if (!rv) return "";
+  return `<span class="tr">&#10003; ${esc(rv.status || "reviewed")}`
+    + (rv.by ? ` by ${esc(rv.by)}` : "") + (rv.at ? `, ${esc(String(rv.at).slice(0, 16))}` : "")
+    + (rv.changed ? ` &#183; <b>re-check: the gap has changed since</b>` : "")
+    + (rv.rationale ? `<br>&#8220;${esc(rv.rationale)}&#8221;` : "") + `</span><br>`;
+}
+
 /** Every project-month whose demand and applied figure differ, largest first.
  *  `pids` scopes it to the projects in view, so the panel and the tiles above it cannot
  *  disagree about how many there are. */
@@ -9958,6 +10111,7 @@ function gapRows(pids){
     if (want.size && !want.has(pid)) continue;
     out.push({pid, k, demand: u, applied: 0, gap: -u, dir: "unstaffed"});
   }
+  for (const r of out) r.rev = reviewOf(r.pid, r.k, r.dir, r.gap);
   out.sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap) || (a.pid < b.pid ? -1 : 1));
   return out;
 }
@@ -10009,23 +10163,34 @@ const GAP_SHOW = 40;      // rows drawn; the rest are counted, not listed
  *  "this was checked" where missing says nothing at all.
  */
 function gapButton(pids){
-  const rows = gapRows(pids);
+  const all = gapRows(pids);
+  const rows = all.filter(r => !(r.rev && r.rev.closed));
+  const done = all.length - rows.length;
+  /* The counts are the OPEN issues (R-62): a month a manager has confirmed or accepted is
+     a decision, not an alarm, and counting it as one would make the alarm say less the
+     more carefully the plan is reviewed. The reviewed ones are counted beside them, in
+     the muted ink they are drawn in, so nothing disappears. */
+  const tail = done ? `<span class="grev">&#10003; ${done} reviewed</span>` : "";
   if (!rows.length)
     return `<button class="btn tiny gapbtn" data-gapopen="1" data-tip="${att(
       "<b>Standard vs staffed</b><br>What each project needs against what it is being "
-      + "given. Nothing in view is off its standard, which is what an automatic month "
-      + "always does — the people on it divide the month rather than each adding to it.")
-      }">Standard vs staffed</button>`;
+      + "given. " + (done ? `Every month off its standard in view has been reviewed and `
+                            + `closed by a manager - open the list to read why.`
+                          : "Nothing in view is off its standard, which is what an "
+                            + "automatic month always does — the people on it divide "
+                            + "the month rather than each adding to it."))
+      }">${done ? `<span class="lbl">Off standard</span>${tail}` : "Standard vs staffed"}</button>`;
   const short = rows.filter(r => r.dir === "short").length;
   const over = rows.filter(r => r.dir === "over").length;
   const unst = rows.filter(r => r.dir === "unstaffed").length;
   return `<button class="btn tiny gapbtn on" data-gapopen="1" data-tip="${att(
     `<b>Standard vs staffed</b><br>${rows.length} project-month(s) are not being given `
-    + "what the project's own standard says they need. Short or over: a figure stated by "
-    + "hand replaces the standard rather than adjusting it. Not staffed: the project's "
-    + "periods ask for the month and nobody is assigned to it. Counted apart and never "
-    + "netted: three short in March and three over in April is not a plan in balance. "
-    + "Open it to see every one and change what is behind it.")}">`
+    + "what the project's own standard says they need, and nobody has closed them. Short or "
+    + "over: a figure stated by hand replaces the standard rather than adjusting it. Not "
+    + "staffed: the project's periods ask for the month and nobody is assigned to it. "
+    + (done ? `${done} more have been reviewed and closed by a manager. ` : "")
+    + "Counted apart and never netted. Open it to see every one, review it, or change "
+    + "what is behind it.")}">`
     /* The words first, so the two figures are read as what they are rather than as a
        pair of numbers in a button. Each part is its own element and the spacing is the
        flex gap: .btn.tiny is an inline-flex box, which DROPS the whitespace between its
@@ -10035,7 +10200,7 @@ function gapButton(pids){
     + (short ? `<span class="gshort">&#9660; ${short} short</span>` : "")
     + (over ? `<span class="gover">&#9650; ${over} over</span>` : "")
     + (unst ? `<span class="gunst">&#9702; ${unst} not staffed</span>` : "")
-    + "</button>";
+    + tail + "</button>";
 }
 
 /** What the list is narrowed to, applied to the rows the model offers (R-53).
@@ -10051,10 +10216,12 @@ function gapKept(rows){
   const min = Math.abs(num(f.min) ?? 0);
   return rows.filter(r => (!f.dir || r.dir === f.dir)
                        && (!f.proj || r.pid === f.proj)
+                       && (!f.rev || (f.rev === "closed") === !!(r.rev && r.rev.closed))
                        && Math.abs(r.gap) + 1e-9 >= min);
 }
 
-const gapNarrowed = () => !!(S.gapf.dir || S.gapf.proj || (num(S.gapf.min) ?? 0) > 0);
+const gapNarrowed = () => !!(S.gapf.dir || S.gapf.proj || S.gapf.rev
+                             || (num(S.gapf.min) ?? 0) > 0);
 
 /** The controls. Three, and each answers a question somebody actually arrives with:
  *  which direction am I chasing, which project is this about, and what is big enough to
@@ -10068,8 +10235,12 @@ function gapControls(all){
                ["unstaffed", "&#9702; Not staffed"]]
     .map(([v, l]) => `<button class="btn tiny${f.dir === v ? " on" : ""}" `
       + `data-gapdir="${att(v)}">${l}</button>`).join("");
+  const rev = [["", "Any review"], ["open", "Open"], ["closed", "&#10003; Reviewed"]]
+    .map(([v, l]) => `<button class="btn tiny${(f.rev || "") === v ? " on" : ""}" `
+      + `data-gaprev="${att(v)}">${l}</button>`).join("");
   return `<div class="gapf">
     <span class="vtog">${dir}</span>
+    <span class="vtog">${rev}</span>
     <label class="ctl"><span>Project</span>
       <select id="gapfProj"><option value="">All (${projects.length})</option>
         ${projects.map(p => `<option value="${att(p)}"${f.proj === p ? " selected" : ""}>`
@@ -10084,9 +10255,11 @@ function gapControls(all){
 /** The body of that dialog. The panel this replaces carried the same thing. */
 function gapList(pids){
   const M = S.model, all = gapRows(pids), rows = gapKept(all);
-  const short = rows.filter(r => r.dir === "short");
-  const over = rows.filter(r => r.dir === "over");
-  const unst = rows.filter(r => r.dir === "unstaffed");
+  const open = rows.filter(r => !(r.rev && r.rev.closed));
+  const short = open.filter(r => r.dir === "short");
+  const over = open.filter(r => r.dir === "over");
+  const unst = open.filter(r => r.dir === "unstaffed");
+  const closedN = rows.length - open.length;
   const projects = new Set(rows.map(r => r.pid));
   /* NOTHING TO REPORT AND NOTHING LEFT AFTER FILTERING ARE DIFFERENT ANSWERS, and only
      one of them is good news. Saying "every project is on its standard" to somebody who
@@ -10104,13 +10277,20 @@ function gapList(pids){
       project or on one assignment, replaces the standard rather than adjusting it, and
       this is where the difference is listed when there is one.</p>`;
 
-  const body = rows.slice(0, GAP_SHOW).map(r => {
+  /* Open first, then reviewed, each largest first: what still needs a decision is what
+     somebody opened this list to find (R-62). */
+  const ordered = rows.slice().sort((x, y) =>
+    (!!(x.rev && x.rev.closed) - !!(y.rev && y.rev.closed))
+    || Math.abs(y.gap) - Math.abs(x.gap));
+  const body = ordered.slice(0, GAP_SHOW).map(r => {
     const pr = M.projects[r.pid] || {};
-    const go = r.dir === "unstaffed"
-      ? `data-act="goproj" data-pid="${att(r.pid)}"`
-      : `data-gap="${att(r.pid)}" data-gk="${r.k}"`;
-    return `<tr class="gaprow ${r.dir}" ${go}
-        tabindex="0" role="button">
+    const rv = r.rev;
+    const revCell = !rv ? `<span class="muted">not reviewed</span>`
+      : `<span class="revtag${rv.closed ? " done" : rv.changed ? " stale" : " fix"}">`
+        + `${rv.changed ? "re-check &#183; " : rv.closed ? "&#10003; " : ""}${esc(rv.status)}</span>`
+        + (rv.rationale ? `<span class="sub">${esc(rv.rationale)}</span>` : "");
+    return `<tr class="gaprow ${r.dir}${rv && rv.closed ? " rev" : ""}" data-gap="${att(r.pid)}"
+        data-gk="${r.k}" data-gapis="${att(r.dir)}" tabindex="0" role="button">
       <th class="rh"><span class="nm">${esc(pr.project_name || r.pid)}</span>
         <span class="sub">${esc(r.pid)}</span></th>
       <td>${keyToLabel(r.k)}</td>
@@ -10120,13 +10300,9 @@ function gapList(pids){
         : r.gap > 0 ? "&#9650; +" : "&#9660; "}${r.gap.toFixed(2)}</td>
       <td>${r.dir === "short" ? "short of the standard"
           : r.dir === "over" ? "over the standard" : "nobody is assigned"}</td>
-      <td>${r.dir === "unstaffed"
-        /* No figure to change: the fix is an assignment, and assignments are entered on
-           the project's own tab - so the row takes you there with the project selected. */
-        ? `<button class="btn tiny" data-act="goproj" data-pid="${att(r.pid)}"
-            >Assign people</button>`
-        : `<button class="btn tiny" data-gap="${att(r.pid)}" data-gk="${r.k}"
-            >Check and fix</button>`}</td></tr>`;
+      <td class="revcell">${revCell}</td>
+      <td><button class="btn tiny" data-gap="${att(r.pid)}" data-gk="${r.k}"
+        data-gapis="${att(r.dir)}">${rv ? "Open" : "Review"}</button></td></tr>`;
   }).join("");
 
   return `<p class="cap"><span class="scope k">${gapNarrowed()
@@ -10146,11 +10322,12 @@ function gapList(pids){
       <span class="gpill over">&#9650; ${over.length} month(s) over it</span>
       ${unst.length ? `<span class="gpill unstaffed">&#9702; ${unst.length} month(s) with
         nobody assigned</span>` : ""}
+      ${closedN ? `<span class="gpill reviewed">&#10003; ${closedN} reviewed and closed</span>` : ""}
       <span class="tr">counted apart, never netted — three short in March and three over
         in April is not a plan in balance</span></div>
     <div class="scrollx lg"><table class="grid-t gapt">
       <thead><tr><th class="rh">Project</th><th>Month</th><th>Needs</th>
-        <th>Staffed</th><th>Gap</th><th>Direction</th><th></th></tr></thead>
+        <th>Staffed</th><th>Gap</th><th>Direction</th><th>Manager review</th><th></th></tr></thead>
       <tbody>${body}</tbody></table></div>
     ${rows.length > GAP_SHOW
       ? `<p class="note">Showing the ${GAP_SHOW} largest of ${rows.length}${
@@ -10189,9 +10366,14 @@ function gapsRefresh(){ if (el("gapsdlg").open) openGaps(); }
 
 let GAP_AT = null;         // {pid, k} while the dialog is open, so an edit can redraw it
 
-/** Open the month, with the figures that caused the gap editable in place. */
-function openGap(pid, k){
-  GAP_AT = {pid, k};
+/** Open the month, with the figures that caused the gap editable in place - and, since
+ *  R-62, the manager's review of it. `dir` says WHICH issue when a caller knows; a cell
+ *  in the table does not have to, because a month is short, over or unstaffed, never two
+ *  of them at once. */
+function openGap(pid, k, dir){
+  const g = gapOf(pid, k);
+  const u = (S.calc.projUnallocated && S.calc.projUnallocated.get(pid + "|" + k)) || 0;
+  GAP_AT = {pid, k, dir: dir || (g ? g.dir : u > 0.004 ? "unstaffed" : "")};
   drawGap();
   const dlg = el("gapdlg");
   if (!dlg.open) dlg.showModal();
@@ -10212,10 +10394,28 @@ function gapRefresh(){
 }
 
 function drawGap(){
-  const M = S.model, {pid, k} = GAP_AT;
+  const M = S.model, {pid, k, dir} = GAP_AT;
   const pr = M.projects[pid] || {};
   const g = gapOf(pid, k);
   const mm = isoMonth(k);
+  /* A month NOBODY IS ON (R-62 makes it openable): there is no figure to change, only an
+     assignment to make - or a decision to record. */
+  if (dir === "unstaffed"){
+    const now = issueNow(pid, k, dir);
+    el("gapTitle").innerHTML = `${esc(pr.project_name || pid)} `
+      + `<span class="tr">${esc(pid)} &#183; ${keyToLabel(k)}</span>`;
+    el("gapBody").innerHTML = `
+      <div class="gapsum unstaffed">
+        <div><span class="tl">Needs</span><span class="tv">${now ? now.demand.toFixed(2) : "0.00"}</span></div>
+        <div><span class="tl">Staffed</span><span class="tv">0.00</span></div>
+        <div><span class="tl">Gap</span><span class="tv">${now ? "&#9702; " + now.gap.toFixed(2) : "0.00"}</span></div>
+        <div class="gapwhat">${now ? "The project's own periods ask for this month and nobody "
+          + "is assigned to it." : "Somebody is assigned to this month now."}</div></div>
+      ${reviewPanel(pid, k, dir)}
+      <p class="cap">The fix, where there is one, is an assignment: open the project and add
+        somebody on its <strong>Source data (person)</strong> tab.</p>`;
+    return;
+  }
   const lines = ((S.calc && S.calc.lines) || [])
     .filter(L => L.project_id === pid && L.month === k)
     .sort((a, b) => (a.role_name || "").localeCompare(b.role_name || ""));
@@ -10307,6 +10507,7 @@ function drawGap(){
             : "This project is deliberately staffed heavier than its kind usually is in "
               + "this period.")
         : "This month now matches its standard."}</div></div>
+    ${g ? reviewPanel(pid, k, g.dir) : ""}
     <p class="cap">What it needs is
       <strong>${periodCell("project", monthFacts("project", pid), pr, mm)}</strong>.
       What it is given is the ${lines.length} figure(s) below added up — the month is
@@ -10421,6 +10622,153 @@ function writeMonth(aid, mm, v, seeded){
   renderKeepingTab();
   showBanner("", `${assignmentLabel(aid)} — ${monthLabel(mm)} is now stated at `
     + `${v.toFixed(2)}. This is provisional; press Save to keep it.`);
+}
+
+/* ------------------------------------------------------- the review, in the dialog (R-62) */
+
+/** The issue the dialog is on, as figures: what it needs, what it is given, the gap. */
+function issueNow(pid, k, dir){
+  if (dir === "unstaffed"){
+    const u = (S.calc.projUnallocated && S.calc.projUnallocated.get(pid + "|" + k)) || 0;
+    return u > 0.004 ? {demand:u, applied:0, gap:-u} : null;
+  }
+  const g = gapOf(pid, k);
+  return g && g.dir === dir ? g : null;
+}
+
+/** The months either side of `k` that carry the same issue on the same project - one
+ *  run, so a decision about "the four months PRJ-007 is over in 2027" is one decision. */
+function issueRun(pid, k, dir){
+  const ks = new Set(gapRows([pid]).filter(r => r.dir === dir).map(r => r.k));
+  if (!ks.has(k)) return [k];
+  let lo = k, hi = k;
+  while (ks.has(lo - 1)) lo--;
+  while (ks.has(hi + 1)) hi++;
+  const out = [];
+  for (let m = lo; m <= hi; m++) out.push(m);
+  return out;
+}
+
+/** The name this browser already knows, without asking for it: the review form says who
+ *  confirmed the issue, and that is usually - not always - the person at the keyboard. */
+function knownWho(){
+  if (S.who && S.who !== "(not stated)") return S.who;
+  let v = "";
+  try { v = localStorage.getItem(WHO_KEY) || ""; } catch (e){ /* private mode */ }
+  return v === "(not stated)" ? "" : v;
+}
+
+function reviewPanel(pid, k, dir){
+  const now = issueNow(pid, k, dir);
+  if (!now) return "";
+  const rv = reviewOf(pid, k, dir, now.gap);
+  const run = issueRun(pid, k, dir);
+  const words = {short:"short of its standard", over:"over its standard",
+                 unstaffed:"with nobody assigned"}[dir] || dir;
+  const opts = [["", "Not reviewed"], ...REVIEW_STATUSES.map(x => [x, x])]
+    .map(([v, l]) => `<option value="${att(v)}"${rv && rv.status === v ? " selected" : ""}>`
+      + `${esc(l)}</option>`).join("");
+  /* The whole run is offered ticked for a first review - a run is usually one decision -
+     and unticked once there is one, so changing or removing it touches this month unless
+     asked: its neighbours may carry decisions of their own. */
+  return `<div class="revbox ${rv ? (rv.closed ? "closed" : rv.changed ? "stale" : "open") : "none"}">
+    <h3>Manager review</h3>
+    <p class="revnow">${rv
+      ? `<b>${rv.closed ? "&#10003; " : ""}${esc(rv.status)}</b>`
+        + (rv.by ? ` by ${esc(rv.by)}` : "") + (rv.at ? `, ${esc(String(rv.at))}` : "")
+        + (rv.rationale ? `<br>&#8220;${esc(rv.rationale)}&#8221;` : "")
+        + (rv.changed ? `<br><b class="restale">Re-check:</b> this was reviewed at a gap of `
+            + `${(num(rv.row.gap_fte) || 0).toFixed(2)}; it is ${now.gap.toFixed(2)} now, so `
+            + `the review no longer closes it.` : "")
+      : `Not reviewed yet. This month is ${words} by <b>${Math.abs(now.gap).toFixed(2)}</b> FTE.`}</p>
+    <div class="revform">
+      <label class="ctl"><span>Decision</span><select id="revStatus">${opts}</select></label>
+      <label class="ctl"><span>Manager</span><input id="revBy" type="text"
+        placeholder="who confirmed it" value="${att(rv && rv.by ? rv.by : knownWho())}"></label>
+      <label class="ctl wide"><span>Reason (shown to anybody who opens this issue)</span>
+        <textarea id="revWhy" rows="2">${esc(rv ? rv.rationale : "")}</textarea></label>
+      ${run.length > 1 ? `<label class="chk"><input type="checkbox" id="revRun"${rv ? "" : " checked"}>
+        Apply to the whole run: the ${run.length} consecutive months
+        ${keyToLabel(run[0])} to ${keyToLabel(run[run.length - 1])} that are ${words}</label>` : ""}
+      <div class="revbtns">
+        <button class="btn primary" data-revsave="1">Save review</button>
+        ${rv ? `<button class="btn" data-revclear="1">Remove review</button>` : ""}
+        <span class="tr">or change the data instead:</span>
+        <button class="btn" data-act="goproj" data-pid="${att(pid)}">Open the project</button>
+      </div>
+    </div>
+    <p class="note"><b>Confirmed - no issue</b> and <b>Accepted</b> close the issue: it stays
+      on every screen, muted, and its reason is shown whenever it is opened.
+      <b>To be fixed</b> keeps it open, with your note. A review covers the figures it was
+      made on - if the gap changes, it asks for a fresh look. Recorded like any other edit:
+      press <b>Save</b> to keep it.</p>
+  </div>`;
+}
+
+/** Write the review for the month in the dialog - or its whole run - as IssueReview rows,
+ *  through the same pending list every other edit goes through, so Save, Leave without
+ *  change and the change log treat it exactly as they treat a typed cell. */
+function saveReview(){
+  if (!GAP_AT) return;
+  const {pid, k, dir} = GAP_AT;
+  const status = el("revStatus").value;
+  const why = el("revWhy").value.trim();
+  if (!status) return clearReview();
+  if (REVIEW_CLOSED.has(status.toLowerCase()) && !why){
+    flashBad(el("revWhy"), "Say why - the reason is what makes a closed issue checkable "
+      + "by anybody who opens it later.");
+    return;
+  }
+  const by = el("revBy") ? el("revBy").value.trim() : "";
+  const months = el("revRun") && el("revRun").checked ? issueRun(pid, k, dir) : [k];
+  beginEditSession();
+  const p2 = n => String(n).padStart(2, "0"), d = new Date();
+  const at = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} `
+    + `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  let n = 0;
+  for (const m of months){
+    const now = issueNow(pid, m, dir);
+    if (!now) continue;
+    const mm = isoMonth(m);
+    const want = {status, rationale: why || null, gap_fte: Math.round(now.gap * 100) / 100,
+                  reviewed_by: by || knownWho() || null, reviewed_at: at};
+    let r = S.model.raw.IssueReview.find(x => x.project_id === pid
+      && String(x.month).slice(0, 7) === mm && String(x.issue).trim().toLowerCase() === dir);
+    if (!r){
+      r = newRow("IssueReview", {project_id: pid, month: mm, issue: dir});
+      delete r.__new;                 // complete, not a draft waiting for the rest of it
+      S.pending.push({at: new Date(), sheet: "IssueReview", row: r.__row, col: "(new row)",
+                      from: null, to: `${pid} ${mm} ${dir}`});
+    }
+    for (const [c, v] of Object.entries(want)){
+      if (r[c] === v) continue;
+      S.pending.push({at: new Date(), sheet: "IssueReview", row: r.__row, col: c,
+                      from: r[c] ?? null, to: v});
+      r[c] = v;
+    }
+    n++;
+  }
+  rebuild(true);
+  renderKeepingTab();
+  showBanner("", `Review recorded on ${n} month(s) of ${pid}: ${status}. Press Save to keep it.`);
+}
+
+function clearReview(){
+  if (!GAP_AT) return;
+  const {pid, k, dir} = GAP_AT;
+  // The same reach as Save: a run reviewed as one decision is withdrawn as one.
+  const months = el("revRun") && el("revRun").checked ? issueRun(pid, k, dir) : [k];
+  let n = 0;
+  for (const m of months){
+    const mm = isoMonth(m);
+    const r = S.model.raw.IssueReview.find(x => x.project_id === pid
+      && String(x.month).slice(0, 7) === mm && String(x.issue).trim().toLowerCase() === dir);
+    if (!r) continue;
+    deleteRow("IssueReview", r.__row);
+    n++;
+  }
+  if (n) showBanner("", `Review removed from ${n} month(s) of ${pid}; the issue is open `
+    + `again. Press Save to keep it.`);
 }
 /* ============================================================ 14. wiring */
 
@@ -10796,6 +11144,10 @@ function adopt(sheets, name, opts){
     const retired = RETIRED_COLS[s] || {};
     S.headers[s] = ((named[s] || [])[0] || []).map(h => txt(h))
       .filter(h => h && !retired[h]);
+    /* A sheet the file does not have at all - one a later schema added (LATER_SHEETS) -
+       takes the schema's own columns. Left empty, a row added to it had nowhere to go and
+       the export wrote the sheet with no heading row, so the next import read nothing. */
+    if (!S.headers[s].length) S.headers[s] = SHEET_HEADERS[s].slice();
   }
   // What is in force NOW, captured before the model is replaced. Every import path -
   // the web file picker, the Python shell's open, a version restore, the difference
@@ -11180,6 +11532,16 @@ el("fReset").onclick = () => {
 document.addEventListener("click", e => {
   const tab = e.target.closest("nav button");
   if (tab){ showTab(tab.dataset.tab); window.scrollTo({top:0}); return; }
+  /* An issue month opens its own dialog (R-62) - and it is asked BEFORE the row it sits
+     in. A project row's click expands it, and when that came first a click on a marked
+     month only ever folded the project open or shut: the month, and the review it
+     carries, could not be reached from the cell at all. */
+  const gp = e.target.closest("[data-gap]");
+  if (gp){
+    e.stopPropagation();
+    openGap(gp.dataset.gap, +gp.dataset.gk, gp.dataset.gapis || "");
+    return;
+  }
   const parent = e.target.closest("tr.parent");
   if (parent){
     const k = parent.dataset.k;
@@ -11210,9 +11572,19 @@ document.addEventListener("click", e => {
      row handler below, since these controls sit above the rows rather than inside one. */
   const gd = e.target.closest("[data-gapdir]");
   if (gd){ e.stopPropagation(); S.gapf.dir = gd.dataset.gapdir; openGaps(); return; }
+  const gv = e.target.closest("[data-gaprev]");
+  if (gv){ e.stopPropagation(); S.gapf.rev = gv.dataset.gaprev; openGaps(); return; }
+  /* The manager's review, from inside the month dialog (R-62). */
+  const rs = e.target.closest("[data-revsave], [data-revclear]");
+  if (rs){
+    e.stopPropagation();
+    if (rs.hasAttribute("data-revclear")) clearReview();
+    else saveReview();
+    return;
+  }
   if (e.target.closest("[data-gapclear]")){
     e.stopPropagation();
-    S.gapf = {dir:"", proj:"", min:0};
+    S.gapf = {dir:"", proj:"", min:0, rev:""};
     openGaps();
     return;
   }
@@ -11221,12 +11593,6 @@ document.addEventListener("click", e => {
     e.stopPropagation();
     if (gj.hasAttribute("data-gapjump")) showTab("t-overall");
     openGaps();
-    return;
-  }
-  const gp = e.target.closest("[data-gap]");
-  if (gp){
-    e.stopPropagation();
-    openGap(gp.dataset.gap, +gp.dataset.gk);
     return;
   }
   const act = e.target.closest("[data-act]");
@@ -11885,9 +12251,13 @@ const CAL = (() => {
        element ever sees it. The "Off their standard" tile is a div carrying both a tip
        and role="button", and it had been silently unclickable for exactly that reason:
        everything that was supposed to happen when it was pressed never ran, and nothing
-       anywhere said so. A thing that declares itself a button is a button. */
+       anywhere said so. A thing that declares itself a button is a button.
+       R-62: so is an issue month in Resource by project. Its pop-up still shows on
+       hover, but a click opens the month and its manager review - pinning the pop-up
+       instead would leave the review out of reach from the very cell it is about. */
     const isControl = e.target.closest(
-      "button, a, select, input, summary, [contenteditable='true'], [role='button']");
+      "button, a, select, input, summary, [contenteditable='true'], [role='button'], "
+      + "[data-gap]");
     if (el_ && !isControl){
       e.stopPropagation();
       pinned = (pinned === el_) ? null : el_;

@@ -23,7 +23,10 @@ function renderOverall(){
      tile cannot claim a number the panel does not show. Counted as PROJECT-MONTHS in
      each direction and never netted: three short in March and three over in April is
      not a plan in balance, and one figure would say it was. */
-  const gaps = gapRows(pids);
+  const allGaps = gapRows(pids);
+  // R-62: the tile is the alarm, so it counts what is still OPEN; closed ones are named.
+  const gaps = allGaps.filter(r => !(r.rev && r.rev.closed));
+  const greviewed = allGaps.length - gaps.length;
   const gshort = gaps.filter(r => r.dir === "short").length;
   const gover = gaps.filter(r => r.dir === "over").length;
   const gunst = gaps.filter(r => r.dir === "unstaffed").length;
@@ -44,7 +47,8 @@ function renderOverall(){
      + "not months — three separate amber cells would look like three problems. A month at zero breaks a "
      + "run rather than continuing it: somebody with no assignments is unassigned, not under-allocated."],
     ["Off their standard", gaps.length, `${gshort} short &#183; ${gover} over`
-     + (gunst ? ` &#183; ${gunst} not staffed` : ""),
+     + (gunst ? ` &#183; ${gunst} not staffed` : "")
+     + (greviewed ? ` &#183; &#10003; ${greviewed} reviewed` : ""),
      gaps.length ? "gap" : "",
      "Project-months where what the project NEEDS — standard FTE × period weight × the part of the "
      + "month it runs — is not what it is being GIVEN. An automatic month always has the two equal, "

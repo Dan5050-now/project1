@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.7.xlsx
+Output: docs/PRAP_UI_Component_List_v2.8.xlsx
 """
 
 from pathlib import Path
@@ -40,8 +40,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.7"
-DATE = "2026-10-08"
+VERSION = "2.8"
+DATE = "2026-10-09"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
@@ -203,7 +203,7 @@ C = [
      "KST beside it. Correct me if not."),
     ("G-03", "Global", "Load workbook", "File picker / drag-and-drop. Warns first if edits are unsaved.",
      "REQ-IMP-01, REQ-IMP-08", K, "", "Unchanged."),
-    ("G-04", "Global", "Export", "Writes all TWELVE sheets back in template layout, edits included. " + FIX
+    ("G-04", "Global", "Export", "Writes all THIRTEEN sheets back in template layout, edits included. " + FIX
      + "v1.0 said ten; MonthlyEstimate arrived at R-30 (schema 9) and is written too.",
      "REQ-IMP-04, REQ-IMP-07", K, "", "Unchanged."),
     ("G-05", "Global", "Findings banner", "Summary of the last import; opens the full report.",
@@ -535,6 +535,15 @@ C = [
      "still on automatic - for whom the application first asks, because switching seeds every "
      "other month and a lone row would be a figure nothing reads.",
      "REQ-DSH-15, REQ-CAL-18", A, "", "R-42, extended by R-43."),
+    ("O-14", "Overall", "[NEW v2.8] Manager review (in the month dialog)",
+     "Opened by clicking any short, over or not-staffed month in Resource by project, or its "
+     "row in the list. A decision - Confirmed - no issue, Accepted, To be fixed - with the "
+     "manager who confirmed it, the reason, and 'Apply to the whole run'; or Open the project "
+     "to change the data instead. The first two CLOSE the issue and need a reason: the month "
+     "stays marked but MUTED, the counts leave it out and count it apart, and clicking it "
+     "shows who decided what, when and why - changeable or removable at any time. A review "
+     "whose gap has since moved opens again, marked re-check (V-40).",
+     "REQ-DSH-20, V-40", A, "", "R-62."),
     ("P-07", "Project tab", "[NEW v2.0] Monthly estimation (project level)",
      "The months of a project whose FTE is STATED rather than calculated, with the automatic "
      "figure and the difference beside each one, and a derivation column carrying the whole "

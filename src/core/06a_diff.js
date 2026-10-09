@@ -85,6 +85,7 @@ const DIFF_KEY = {
   PeriodFTEStandard: ["project_type", "clinical_phase", "work_scope_type", "period_name"],
   RoleFactor:           ["project_type", "clinical_phase", "work_scope_type", "period_name",
                          "role_name"],
+  IssueReview:          ["project_id", "month", "issue"],
   PeriodHighlight:      ["period_name"],
   Person:               ["person_id"],
   Assignment:           ["assignment_id"],

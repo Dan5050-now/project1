@@ -66,11 +66,12 @@ NUM_COLS = {
     "PersonPeriodWeight": {"weight_override"},
     "MonthlyEstimate": {"fte"},
     "PeriodHighlight": set(),
+    "IssueReview": {"gap_fte"},
     "Lists": set(), "Config": set(),
 }
 # Sheets a later schema added; a file written before one has none of what it holds,
 # which is a complete plan. Mirrors LATER_SHEETS in src/core/03_parse.js.
-LATER_SHEETS = {"MonthlyEstimate": 9, "PeriodHighlight": 15}
+LATER_SHEETS = {"MonthlyEstimate": 9, "PeriodHighlight": 15, "IssueReview": 16}
 class _ClinicalTypes:
     """Which project types are clinical trials.
 
@@ -1199,10 +1200,50 @@ def calculate(M):
     report_gaps(M, gaps)
     report_demand_gap(M, proj_gap)
     report_unstaffed(M, unstaffed)
+    report_reviews(M, proj_gap, proj_unallocated)
     return {"proj_month": proj_month, "pers_month": pers_month, "pers_proj": pers_proj,
             "cell": cell, "gaps": gaps, "lines": lines, "proj_gap": proj_gap,
             "proj_unallocated": proj_unallocated,
             "lo": lo or 0, "hi": hi or 0}
+
+
+def report_reviews(M, proj_gap, proj_unallocated):
+    """V-40 (R-62): a manager's review that no longer describes its month - the issue has
+    gone, or its gap is not the gap that was reviewed. Mirrors reportReviews() in
+    core/06_calculate.js, message for message."""
+    M.findings = [f for f in M.findings if f.get("rule") != "V-40"]
+    seen = set()
+    for r in M.raw.get("IssueReview", []) or []:
+        pid, mm = r.get("project_id"), str(r.get("month") or "")[:7]
+        issue = str(r.get("issue") or "").strip().lower()
+        if not pid or not mm or not issue or (pid, mm, issue) in seen:
+            continue
+        seen.add((pid, mm, issue))
+        k = int(mm[:4]) * 12 + int(mm[5:7]) - 1
+        now = None
+        if issue == "unstaffed":
+            u = proj_unallocated.get((pid, k))
+            if u and u > 0.004:
+                now = -u
+        else:
+            g = proj_gap.get((pid, k))
+            if g and g["dir"] == issue:
+                now = g["gap"]
+        status = r.get("status")
+        if now is None:
+            M.findings.append({"sev": "information", "rule": "V-40", "sheet": "IssueReview",
+                               "row": r.get("__row", ""),
+                               "msg": f"Project {pid}, {mm}: reviewed as '{status}' when it "
+                                      f"was {issue}, and it is no longer {issue}. The review "
+                                      f"is kept as history."})
+        elif r.get("gap_fte") not in (None, "") and \
+                to_cents(now) != to_cents(_as_num(r.get("gap_fte")) or 0):
+            M.findings.append({"sev": "information", "rule": "V-40", "sheet": "IssueReview",
+                               "row": r.get("__row", ""),
+                               "msg": f"Project {pid}, {mm}: reviewed as '{status}' at a gap "
+                                      f"of {to_cents(_as_num(r.get('gap_fte')) or 0) / CENTS:.2f}; "
+                                      f"it is now {to_cents(now) / CENTS:.2f}, so the review "
+                                      f"needs a fresh look."})
 
 
 def report_unstaffed(M, rows):

@@ -139,7 +139,7 @@ function buildModel(sheets){
   for (const s of REQUIRED_SHEETS) raw[s] = toObjects(s, sheets[s], F);
 
   const M = {
-    projects:{}, milestones:{}, msHighlight:{}, hlLabels:{}, perHlLabels:{}, periodHl:{}, periods:{}, people:{}, assignments:[],
+    projects:{}, milestones:{}, msHighlight:{}, hlLabels:{}, perHlLabels:{}, periodHl:{}, reviews:{}, periods:{}, people:{}, assignments:[],
     ppw:{}, pws:{}, rf:{}, rfRoles:{}, rfAbsorb:{}, lists:{}, config:{}, raw, findings:F,
   };
   for (const r of raw.Lists) if (r.list_name) (M.lists[r.list_name] ||= []).push(r.value);
@@ -299,6 +299,15 @@ function buildModel(sheets){
     const tok = hlToken(r.period_highlight);
     M.periodHl[r.period_name] = tok;
     if (tok) M.perHlLabels[tok] ||= String(r.period_highlight).trim();
+  }
+
+  /* ---- a manager's reviews of months off their standard (schema 16, R-62) ----
+     Keyed project|month|issue; the first row wins. Kept as the RAW row, because the
+     dialog edits that row in place and the screen reads its rationale and author. */
+  for (const r of (raw.IssueReview || [])){
+    if (!r.project_id || !r.month || !r.issue) continue;
+    const key = `${r.project_id}|${String(r.month).slice(0, 7)}|${String(r.issue).trim().toLowerCase()}`;
+    if (!(key in M.reviews)) M.reviews[key] = r;
   }
 
   // ---- periods: use what is in the file; derive where a trial has none -------

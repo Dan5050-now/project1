@@ -81,19 +81,23 @@ function manualMonths(){
    an alarm that lies. */
 const PROJ_ISSUES = [
   ["", "All projects"],
-  ["issues", "Issues only (short, over, not staffed)"],
+  ["issues", "Open issues only (short, over, not staffed)"],
   ["short", "\u25BC Short of standard"],
   ["over", "\u25B2 Over standard"],
   ["unstaffed", "\u25E6 Not staffed"],
   ["manual", "\u270E Stated by hand"],
+  ["reviewed", "\u2713 Reviewed and closed"],
 ];
 
 function projIssues(pid, G, man){
   const C = S.calc, out = new Set();
+  /* An issue a manager closed (R-62) is no longer short / over / not staffed for the
+     purposes of "show me the problems" - it is 'reviewed', which is its own option. */
   for (const k of G){
     const g = gapOf(pid, k);
-    if (g) out.add(g.dir);
-    if ((C.projUnallocated.get(pid + "|" + k) || 0) > 0.004) out.add("unstaffed");
+    if (g) out.add(reviewOf(pid, k, g.dir, g.gap)?.closed ? "reviewed" : g.dir);
+    const u = C.projUnallocated.get(pid + "|" + k) || 0;
+    if (u > 0.004) out.add(reviewOf(pid, k, "unstaffed", -u)?.closed ? "reviewed" : "unstaffed");
     if (man.has(pid + "|" + k)) out.add("manual");
   }
   return out;
@@ -135,14 +139,18 @@ function tableProjects(pids){
          project. Both directions are marked and they are marked DIFFERENTLY - short of
          the standard and over it are different facts. */
       const g = gapOf(pid, k);
+      // R-62: a month a manager closed is drawn MUTED - still marked, still clickable,
+      // with the decision and its reason in the pop-up - so the open ones stand out.
+      const rv = g ? reviewOf(pid, k, g.dir, g.gap) : null;
       const hand = man.has(pid + "|" + k);
       const handLine = `<span class="tr">&#9998; includes a figure stated by hand `
         + `(manual estimation)</span><br>`;
-      const mark = (g ? ` gapc ${g.dir}` : "") + (hand ? " man" : "");
-      const gtip = g ? ` data-gap="${att(pid)}" data-gk="${k}"`
+      const mark = (g ? ` gapc ${g.dir}` : "") + (rv && rv.closed ? " rev" : "")
+        + (hand ? " man" : "");
+      const gtip = g ? ` data-gap="${att(pid)}" data-gk="${k}" data-gapis="${g.dir}"`
         + ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${gapLine(pid, k)}`
-        + (hand ? handLine : "")
-        + `<span class="tr">click for the month and the figures behind it</span>`)}"`
+        + reviewLine(rv) + (hand ? handLine : "")
+        + `<span class="tr">click to review it, or for the figures behind it</span>`)}"`
         : hand ? ` data-tip="${att(`<b>${keyToLabel(k)}</b><br>${handLine}`
         + `<span class="tr">on its standard: the stated figure matches what it needs</span>`)}"`
         : "";
@@ -159,14 +167,17 @@ function tableProjects(pids){
            unallocated is totalled on its own line instead. Short and over are never
            netted (V-34) and neither is this. */
         const u = C.projUnallocated.get(pid + "|" + k) || 0;
+        const urv = u > 0.004 ? reviewOf(pid, k, "unstaffed", -u) : null;
         if (u > 0.004)
-          return `<td class="c unal" data-tip="${att(`<b>${keyToLabel(k)}</b><br>`
+          return `<td class="c unal${urv && urv.closed ? " rev" : ""}" data-gap="${att(pid)}" `
+            + `data-gk="${k}" data-gapis="unstaffed" data-tip="${att(`<b>${keyToLabel(k)}</b><br>`
             + `<b>${u.toFixed(2)} FTE</b> is what this project's own standard asks for `
             + `in this month, and NOBODY IS ASSIGNED to it.<br>`
             + `It is not counted in any total on this table: the totals are what is `
             + `being applied, and this is not applied to anybody yet.`
-            + `<span class="tr">assign somebody and the figure moves into the row`
-            + `</span>`)}">&#9702; ${fmt(u)}</td>`;
+            + reviewLine(urv)
+            + `<span class="tr">assign somebody and the figure moves into the row - `
+            + `or click to review it</span>`)}">&#9702; ${fmt(u)}</td>`;
         return `<td class="c z${mark}"${gtip}>&middot;</td>`;
       }
       const i = seqStep(v, vmax);

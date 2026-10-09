@@ -310,8 +310,16 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.71.xlsx` — **current.** 91 requirements, 40 live
-  validation rules, source schema version 15. The latest changes are **R-60** and
+- `docs/PRAP_Development_Plan_v2.72.xlsx` — **current.** 92 requirements, 41 live
+  validation rules, source schema version 16. The latest change is **R-62**: **an issue a
+  manager has reviewed is shown as reviewed**. Click any short, over or not-staffed month
+  in Resource by project and the month opens with a **Manager review** box — Confirmed -
+  no issue, Accepted or To be fixed, who confirmed it and why, optionally over the whole
+  run of months — kept on a new `IssueReview` sheet. The first two close the issue: it
+  stays marked but is drawn **muted**, the counts leave it out and count it apart, and
+  clicking it shows the decision and its reason at any time, to change or remove. If the
+  month's gap moves after the review, the month opens again marked *re-check* (`V-40`).
+  A workbook from before schema 16 still opens. Before it, **R-60** and
   **R-61**. **Period colours are an assumption**: a new `PeriodHighlight` sheet, edited
   under **Period colours** on the General assumptions tab, gives each period name a
   default colour for every project; a project's own Highlight on its Periods table wins,
@@ -422,7 +430,9 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.40.xlsx` — **current specification.** Schema 15.
+- `docs/PRAP_Programming_Specification_v1.41.xlsx` — **current specification.** Schema 16.
+  Sheet 03 carries the `IssueReview` sheet and sheet 07 gains `V-40` (R-62): when a review
+  closes a month, how the click reaches it, and the run a review covers.
   Sheet 06 records the name-labelled filters, the sticky selection of a new row and the
   Resource by project controls (R-56).
   Sheet 08's results workbook carries each project-month's demand, staffed figure and gap,
@@ -438,7 +448,9 @@ document through the manifest rather than by sorting filenames.
   and states the quantity it had been missing: the Overall tab's cost follows
   `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same
   rendering problem.
-- `docs/PRAP_UI_Component_List_v2.7.xlsx` — **current component list.** Adds `A-05`, Period
+- `docs/PRAP_UI_Component_List_v2.8.xlsx` — **current component list.** Adds `O-14`, the
+  Manager review in the month dialog (R-62).
+- `docs/PRAP_UI_Component_List_v2.7.xlsx` — superseded component list. Adds `A-05`, Period
   colours on the General assumptions tab (R-60).
 - `docs/PRAP_UI_Component_List_v2.6.xlsx` — superseded component list. O-10's colour rule
   is superseded at R-59: a period is drawn in the colour chosen for it, gray otherwise.

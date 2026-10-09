@@ -35,9 +35,9 @@ CONTRACT_VERSION = "1.0"
 
 # The current issue of each controlled document. check_consistency.py verifies the
 # files exist and that the versions agree with the application's provenance strip.
-PLAN = "PRAP_Development_Plan_v2.71.xlsx"
-SPEC = "PRAP_Programming_Specification_v1.40.xlsx"
-UIL = "PRAP_UI_Component_List_v2.7.xlsx"   # v1.0 until R-47: never moved when v2.0 was issued
+PLAN = "PRAP_Development_Plan_v2.72.xlsx"
+SPEC = "PRAP_Programming_Specification_v1.41.xlsx"
+UIL = "PRAP_UI_Component_List_v2.8.xlsx"   # v1.0 until R-47: never moved when v2.0 was issued
 TEMPLATE = f"PRAP_SourceData_Template_v{B.TEMPLATE_VERSION}.xlsx"
 DUMMY = f"PRAP_SourceData_Dummy_v{B.DUMMY_VERSION}.xlsx"
 DUMMY_SMALL = f"PRAP_SourceData_Dummy_10x10_v{B.DUMMY_SMALL_VERSION}.xlsx"
@@ -159,6 +159,12 @@ SHEET_ROLE = {
                         "fallback": "no row, or an empty colour, means the period is drawn gray "
                                     "unless the project chose a colour on ProjectPeriod",
                         "parent": None},
+    # Schema 16 (R-62). A review changes no figure; it says whether a month that is off
+    # its standard has been looked at. It closes the month only while gap_fte is still
+    # the month's gap, to the cent (V-40).
+    "IssueReview": {"role": "child", "key": ["project_id", "month", "issue"],
+                    "fallback": "no row means the issue has not been reviewed",
+                    "parent": "Project"},
     "Person": {"role": "master", "key": ["person_id"], "parent": None},
     "Assignment": {"role": "child", "key": ["assignment_id"], "parent": "Person"},
     "PersonPeriodWeight": {"role": "child", "key": ["assignment_id", "period_start"],

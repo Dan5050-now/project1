@@ -426,6 +426,7 @@ function calculate(M){
   reportManual(M, lines);
   reportDemandGap(M, projGap);
   reportUnstaffed(M, unstaffed);
+  reportReviews(M, projGap, projUnallocated);
   /* periodAt is handed out for the SAME reason projPeriod is built from the lines: so a
      screen naming the period a month falls in cannot name a different one from the
      period the figure used. projPeriod answers it for every month that produced a
@@ -680,6 +681,40 @@ function reportManual(M, lines){
  *
  *  One finding per PROJECT, like V-34: the months are named inside it, and twenty-four
  *  findings for one un-started study would bury every other rule in the report. */
+/** V-40 (R-62): a manager's review that no longer describes the month it is about.
+ *  Either the issue has gone - the month is on its standard, or now staffed - or its gap
+ *  is not the gap that was reviewed. Information, never a warning: the review is kept as
+ *  history, and the screen shows a changed one as needing a fresh look rather than closed.
+ *  Worked out here, beside V-34 and V-36, because it compares against the same figures. */
+function reviewState(M, pid, mm, issue, projGap, projUnallocated){
+  const k = (+mm.slice(0, 4)) * 12 + (+mm.slice(5, 7)) - 1, qk = pid + "|" + k;
+  if (issue === "unstaffed"){
+    const u = projUnallocated.get(qk);
+    return u > 0.004 ? {gap: -u} : null;
+  }
+  const g = projGap.get(qk);
+  return g && g.dir === issue ? {gap: g.gap} : null;
+}
+function reportReviews(M, projGap, projUnallocated){
+  if (!M || !Array.isArray(M.findings)) return;
+  for (let i = M.findings.length - 1; i >= 0; i--)
+    if (M.findings[i].rule === "V-40") M.findings.splice(i, 1);
+  for (const r of Object.values(M.reviews || {})){
+    const mm = String(r.month).slice(0, 7), issue = String(r.issue).trim().toLowerCase();
+    const now = reviewState(M, r.project_id, mm, issue, projGap, projUnallocated);
+    if (!now)
+      M.findings.push({sev:"information", rule:"V-40", sheet:"IssueReview", row:r.__row,
+        msg:`Project ${r.project_id}, ${mm}: reviewed as '${r.status}' when it was ${issue}, `
+          + `and it is no longer ${issue}. The review is kept as history.`});
+    else if (r.gap_fte !== null && r.gap_fte !== undefined && r.gap_fte !== ""
+             && toCents(now.gap) !== toCents(num(r.gap_fte)))
+      M.findings.push({sev:"information", rule:"V-40", sheet:"IssueReview", row:r.__row,
+        msg:`Project ${r.project_id}, ${mm}: reviewed as '${r.status}' at a gap of `
+          + `${fromCents(toCents(num(r.gap_fte))).toFixed(2)}; it is now `
+          + `${fromCents(toCents(now.gap)).toFixed(2)}, so the review needs a fresh look.`});
+  }
+}
+
 function reportUnstaffed(M, rows){
   if (!M || !Array.isArray(M.findings)) return;
   for (let i = M.findings.length - 1; i >= 0; i--)

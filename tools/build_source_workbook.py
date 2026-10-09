@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 15
-TEMPLATE_VERSION = "1.19"
-DUMMY_VERSION = "1.21"
-DUMMY_SMALL_VERSION = "1.13"
+SCHEMA_VERSION = 16
+TEMPLATE_VERSION = "1.20"
+DUMMY_VERSION = "1.22"
+DUMMY_SMALL_VERSION = "1.14"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -91,6 +91,10 @@ LISTS = [
                              "Highlight (Green)", "Highlight (Orange)"]),
     # Schema 14. The same five, as a list of its own: a team may give the colours a
     # different meaning on periods from the one they give them on milestones.
+    # Schema 16 (R-62): what a manager decided about a month off its standard. The first
+    # two close the issue - it is kept, shown muted; the third keeps it open with a note.
+    ("issue_review_status", ["Confirmed - no issue", "Accepted", "To be fixed"]),
+    ("issue_kind", ["short", "over", "unstaffed"]),
     ("period_highlight", ["Highlight (Red)", "Highlight (Yellow)", "Highlight (Blue)",
                           "Highlight (Green)", "Highlight (Orange)"]),
     ("period_name_clinical", ["Before-Start-up", "Start-up", "Conduct (interim)",
@@ -386,6 +390,22 @@ SHEETS = {
         ("fte", "The monthly FTE, STATED rather than calculated.", ""),
         ("note_1", "Why this figure was stated.", ""),
     ],
+    # Schema 16 (R-62): a manager's review of a project-month off its standard. Keyed by
+    # project, month and which way it is off. gap_fte records the gap AS REVIEWED, so a
+    # gap that later changes is shown as needing a fresh look rather than staying closed
+    # on the strength of a decision about different figures.
+    "IssueReview": [
+        ("project_id", "The project the issue is on.", "key"),
+        ("month", "The month, as YYYY-MM.", "key"),
+        ("issue", "short / over / unstaffed - which way the month is off its standard.", "key"),
+        ("status", "Confirmed - no issue / Accepted (both close it: shown muted) / To be "
+                   "fixed (stays open, with this note).", ""),
+        ("gap_fte", "The gap when it was reviewed (staffed - needed). If the gap moves, the "
+                    "review is shown as needing a fresh look.", ""),
+        ("rationale", "Why - the reason a reader will see whenever they open the issue.", ""),
+        ("reviewed_by", "Who decided.", ""),
+        ("reviewed_at", "When, as YYYY-MM-DD HH:MM.", ""),
+    ],
     "Lists": [
         ("list_name", "Which list this value belongs to.", "key"),
         ("value", "A permitted value. Add a row inside the block to extend a list.", ""),
@@ -419,6 +439,7 @@ DROPDOWNS = {
                   "milestone_highlight": "milestone_highlight"},
     "ProjectPeriod": {"period_highlight": "period_highlight"},
     "PeriodHighlight": {"period_highlight": "period_highlight"},
+    "IssueReview": {"status": "issue_review_status", "issue": "issue_kind"},
     "PeriodFTEStandard": {"project_type": "project_type", "clinical_phase": "clinical_phase",
                              "work_scope_type": "work_scope_type",
                              "period_name": "period_name_clinical"},
@@ -1234,6 +1255,9 @@ def add_readme(wb, kind, facts=None):
         "   Person                one row per person.",
         "   Assignment            one row per person + project + role.",
         "   PersonPeriodWeight    optional windows where a person's weight differs.",
+        "   IssueReview           a manager's decision about a month that is short, over or not",
+        "                         staffed: Confirmed - no issue, Accepted, or To be fixed, with",
+        "                         the reason. The application shows a closed issue muted.",
         "   Lists                 permitted values for every dropdown.",
         "   Config                thresholds and settings.",
         "",
@@ -1386,6 +1410,38 @@ def add_readme(wb, kind, facts=None):
     return ws
 
 
+def review_examples(wb):
+    """Two REAL reviews for the example plans (R-62), so the muted look can be seen on
+    issues that exist: the plan as written so far is calculated by the reference
+    implementation and the first project that is over its standard has its first two
+    over-months accepted, with a reason, and its first short month (if any) marked to be
+    fixed. Worked out rather than typed, so they stay true when the generator moves."""
+    import tempfile
+    import prap_io
+    tmp = Path(tempfile.mkdtemp()) / "probe.xlsx"
+    wb.save(tmp)
+    C = prap_io.calculate(prap_io.Model(prap_io.read_xlsx(tmp)))
+    iso = lambda k: f"{k // 12}-{k % 12 + 1:02d}"
+    # From a FIXED month rather than today's, so the examples rebuild identically - and
+    # late enough to land inside the horizon a reader opens the examples on.
+    since = 2026 * 12 + 9                                          # 2026-10
+    gaps = sorted(((pk, g) for pk, g in C["proj_gap"].items() if pk[1] >= since))
+    over = [(pid, k, g) for (pid, k), g in gaps if g["dir"] == "over"]
+    rows = []
+    if over:
+        pid = over[0][0]
+        for _, k, g in [x for x in over if x[0] == pid][:2]:
+            rows.append([pid, iso(k), "over", "Accepted", round(g["gap"], 2),
+                         "Sponsor-funded extra data cleaning before the interim lock.",
+                         "Kim S.", "2026-09-30 16:20"])
+        short = [(p, k, g) for (p, k), g in gaps if p == pid and g["dir"] == "short"]
+        for _, k, g in short[:1]:
+            rows.append([pid, iso(k), "short", "To be fixed", round(g["gap"], 2),
+                         "Second data manager joins in this month - add the assignment.",
+                         "Kim S.", "2026-09-30 16:22"])
+    return rows
+
+
 def build(kind):
     wb = Workbook()
     wb.remove(wb.active)
@@ -1488,6 +1544,8 @@ def build(kind):
             "PersonPeriodWeight": ["ASG-001", date(2026, 7, 1), date(2026, 9, 30), 0.20, "Part-time - parental leave"],
             "MonthlyEstimate": ["project", "PRJ-001", "2026-06", 3.50,
                                 "example row - delete before use"],
+            "IssueReview": ["PRJ-001", "2026-06", "short", "Accepted", -0.40,
+                            "example row - delete before use", "Kim S.", "2026-06-02 10:15"],
             "Lists": None,
             "Config": None,
         }
@@ -1505,6 +1563,11 @@ def build(kind):
     write_sheet(wb, "MonthlyEstimate", est_rows, examples["MonthlyEstimate"], list_ranges)
     write_sheet(wb, "Lists", list_rows, None, None)
     write_sheet(wb, "Config", [list(c) for c in CONFIG], None, None)
+    # After Lists and Config, because the example reviews are worked out by calculating
+    # the plan, which needs both; then moved back beside MonthlyEstimate, where it belongs.
+    write_sheet(wb, "IssueReview", [] if kind not in PROFILES else review_examples(wb),
+                examples.get("IssueReview"), list_ranges)
+    wb.move_sheet("IssueReview", offset=-2)
 
     # derived formulas
     ws = wb["Project"]

@@ -36,6 +36,7 @@ const SHEET_COLS = {
   Assignment: {date:["assign_start_date","assign_end_date"], num:["person_weight"]},
   PersonPeriodWeight: {date:["period_start","period_end"], num:["weight_override"]},
   MonthlyEstimate: {date:[], num:["fte"]},
+  IssueReview: {date:[], num:["gap_fte"]},
   Lists: {date:[], num:[]},
   Config: {date:[], num:[]},
 };
@@ -45,7 +46,7 @@ const REQUIRED_SHEETS = Object.keys(SHEET_COLS);
    colours - which is a complete plan, not a broken one; so its absence is reported as
    information and the sheet is supplied empty. Every other sheet has always been there,
    and one missing is a file that has lost something. */
-const LATER_SHEETS = {MonthlyEstimate:9, PeriodHighlight:15};
+const LATER_SHEETS = {MonthlyEstimate:9, PeriodHighlight:15, IssueReview:16};
 /* The schema's own column order, independent of any one file. A workbook carries its
    headers, so the application takes them from what it loaded; the JSON interchange file
    carries row OBJECTS and has no column order at all, so it needs this. It is also the
@@ -72,6 +73,8 @@ const SHEET_HEADERS = {
     "note_1","note_2","note_3"],
   PersonPeriodWeight:["assignment_id","period_start","period_end","weight_override","reason"],
   MonthlyEstimate:["scope","ref_id","month","fte","note_1"],
+  IssueReview:["project_id","month","issue","status","gap_fte","rationale","reviewed_by",
+    "reviewed_at"],
   Lists:["list_name","value","note_1"],
   Config:["parameter","value","note"],
 };
@@ -208,7 +211,9 @@ const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignmen
                  // A manual figure hangs off whatever it is FOR, and that is named by
                  // ref_id - a project_id on a project row, an assignment_id on an
                  // assignment row. Which of the two is said by `scope`.
-                 MonthlyEstimate:"ref_id"};
+                 MonthlyEstimate:"ref_id",
+                 // A review is OF a month of a project, so it hangs off the project (R-62).
+                 IssueReview:"project_id"};
 // Which sheet OWNS each identifier. KEY_COL names the key column of every sheet, but
 // on a child sheet that column is a FOREIGN key - Milestone.project_id points at a
 // project, it does not define one. Deleting a milestone must not go looking for rows
@@ -250,6 +255,10 @@ const COLUMN_HELP = {
   difference:"The stated figure minus the automatic one. This is the size of the departure the manual estimate is making, month by month.",
   period:"THE WHOLE DERIVATION OF THIS MONTH, TERM BY TERM: which period of the project's own plan it falls in, the standard monthly FTE that period selects, this project's own weight, and how much of the month the project ran — which multiplied are the project's month. On a person's table a second line follows with their CLAIM on that month: role factor ÷ sharers × person weight × month coverage, ending in the percentage of the month it won. Those terms make a claim and not a figure — every claim on a project-month is measured against the others, so the shares add to one (REQ-CAL-19), which is why the two halves are closed off separately instead of written as one product. A fallback says it is one and names its rule: no standard row is V-19, no role factor row is V-23, no period at all is V-12. Read off the same calculation the figure came from, so no term shown here can be a different one from the term the arithmetic used.",
   sharers:"How many people hold THIS ROLE on this project in this month. The role factor is what the ROLE costs the project, not what each holder costs, so it is divided by this: put a second data manager on a trial and each of them claims half of what one claimed, and the project's month does not move (REQ-CAL-14). A share that halves from one month to the next with nothing else changed is usually this.",
+  gap_fte:"The gap (staffed minus needed) WHEN IT WAS REVIEWED. If the month's gap is different now, the review is shown as needing a fresh look - a decision about one set of figures does not cover another.",
+  rationale:"Why the issue was confirmed, accepted or left to fix - what anybody opening it later will read.",
+  reviewed_by:"Who made the decision.", reviewed_at:"When, as YYYY-MM-DD HH:MM.",
+  issue:"Which way the month is off its standard: short, over, or unstaffed (nobody on it).",
   period_highlight:"OPTIONAL. The colour a period is drawn in on the Project timeline — on the Overall tab and on the project's own tab. On the GENERAL ASSUMPTIONS tab (Period colours) it is the DEFAULT for every project's period of that name. On a project's PERIODS table it is that project's own choice, and it wins over the default. Neither set: the period is drawn GRAY, shaded darker as its weight rises. Pick one of the values the Lists sheet offers; the colour word inside the value is what is read, so 'Highlight (Blue) - sponsor review' keeps the colour and says why.",
   milestone_highlight:"OPTIONAL. Marks this milestone on the Project timeline in a colour — on the Overall tab and on this project's own tab, wherever the timeline is drawn. Pick one of the values the Lists sheet offers; leave it empty and the milestone draws as it always did. The colour word inside the value is what is read, so a team that writes what their colours MEAN — 'Highlight (Red) - slipped' — keeps the colour and gains the reason.",
   project_id:"Unique identifier for the project. Editing it cascades to every row that references it.",
@@ -354,6 +363,9 @@ const COLUMN_LABEL = {
   scope:"Figure is for", ref_id:"Belongs to", month:"Month", fte:"Stated FTE",
   automatic_fte:"Calculated FTE", difference:"Difference",
   period:"How this month is worked out", sharers:"Sharing this role",
+  // IssueReview (R-62); project_id, month and status are labelled above
+  issue:"Issue", gap_fte:"Gap when reviewed", rationale:"Reason",
+  reviewed_by:"Confirmed by", reviewed_at:"Reviewed at",
   // Config and Lists
   parameter:"Setting", value:"Value", list_name:"List", note:"Note",
   note_1:"Note 1", note_2:"Note 2", note_3:"Note 3", note_4:"Note 4", note_5:"Note 5",

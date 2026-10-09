@@ -17,10 +17,11 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.71"
-DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.60, source schema 15 - Gate 4 "
+DOC_VERSION = "2.72"
+DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.61, source schema 16 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
-              "the delivered default assumptions, and milestone and period highlighting.")
+              "the delivered default assumptions, milestone and period highlighting, and the "
+              "manager's review of issues.")
 DOC_DATE = "2026-07-31"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_Development_Plan_v{DOC_VERSION}.xlsx"
 
@@ -397,6 +398,35 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.72", "2026-10-09", "Claude Code", "Pending",
+     "R-62, REQ-DSH-20: AN ISSUE A MANAGER HAS REVIEWED IS SHOWN AS REVIEWED. Asked for from "
+     "the field: a month short of its standard, over it or with nobody on it may be a "
+     "decision rather than a problem - 'over in the run-up to the interim lock, the sponsor "
+     "is paying for it' - and drawing those in the same alarm colour as the ones nobody has "
+     "examined hides the real alarms among them. A new sheet, IssueReview (project_id, month, "
+     "issue, status, gap_fte, rationale, reviewed_by, reviewed_at), holds one review per "
+     "project, month and issue; source schema steps 15 to 16. CLICKING AN ISSUE MONTH in "
+     "Resource by project, or its row in the Standard vs staffed list, opens the month with "
+     "a Manager review box: a decision ('Confirmed - no issue', 'Accepted', 'To be fixed'), "
+     "who confirmed it, the reason, and 'Apply to the whole run' for the consecutive months "
+     "carrying the same issue - or 'Open the project' to change the data instead. The first "
+     "two CLOSE the issue and need a reason; 'To be fixed' keeps it open with a note. A "
+     "closed month STAYS MARKED BUT IS DRAWN MUTED, gray, and clicking it shows the decision, "
+     "who made it, when and why, which can be changed or removed at any time. The counts on "
+     "the control, the tile and the list are OPEN issues, with the reviewed ones counted "
+     "apart ('2 reviewed'); the list filters Any review / Open / Reviewed and sorts open "
+     "issues first, and Show in Resource by project gains 'Reviewed and closed'. A REVIEW "
+     "COVERS THE FIGURES IT WAS MADE ON: gap_fte records the gap reviewed, and if the month's "
+     "gap moves, the review no longer closes it - the month is open again, marked "
+     "'re-check' - and V-40 (new, information) says so; a review of an issue that has gone "
+     "is kept as history and V-40 says that too. A review is an edit like any other: held "
+     "until Save, in the change log, exported and read back, and judged identically by the "
+     "Python reference. A workbook from before schema 16 opens with no reviews (V-09 "
+     "information). No figure moves; template v1.20, examples v1.22 and v1.14, the small one "
+     "carrying two accepted months and one to be fixed. Clicking an issue month used to fold "
+     "its project row open or shut instead - the row's own click came first - and that is "
+     "fixed. tools/test_review.py is new: 47 checks, four proved by putting the fault back.",
+     "Issued for review"],
     [f"{MARK_NEW}2.71", "2026-10-08", "Claude Code", "Pending",
      "R-60, REQ-PRJ-16: PERIOD COLOURS ARE AN ASSUMPTION, AND A PROJECT MAY STILL CHOOSE ITS "
      "OWN. Asked for straight after R-59: every project's periods take their colour from the "
@@ -424,7 +454,7 @@ rows = [
      "a NEW file in the person's own folder - their name and the time in its name, never on "
      "top of an existing file - and carries on in it; the team's plan is not touched. Also "
      "on the File menu at any time. Python edition 1.33.",
-     "Issued for review"],
+     "Superseded by v2.72"],
     [f"{MARK_NEW}2.70", "2026-10-08", "Claude Code", "Pending",
      "R-59, REQ-PRJ-15: A PERIOD IS DRAWN IN THE COLOUR SOMEBODY CHOSE, AND GRAY "
      "OTHERWISE. Asked for from the field: the Periods table gains a Highlight column like "
@@ -2478,6 +2508,7 @@ reqs = [
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-DSH-20", "Dashboard", "AN ISSUE A MANAGER HAS REVIEWED IS SHOWN AS REVIEWED, AND THE REVIEW CAN BE READ FROM THE ISSUE. Each short, over or not-staffed project-month (REQ-DSH-15, REQ-DSH-17) can carry one review on the IssueReview sheet: a decision (Confirmed - no issue, Accepted, To be fixed), who confirmed it, when, why, and the gap it was made at. It is made and changed from the month itself - clicking the issue opens it - optionally across the whole run of consecutive months with the same issue. Confirmed and Accepted CLOSE the issue and need a reason: it stays marked, drawn muted, and its decision and reason are shown whenever it is opened; the open counts leave it out and count it apart. To be fixed keeps it open. A review whose month's gap has since moved, or whose issue has gone, no longer closes anything and is reported (V-40).", "Should", "R-62", "4"],
     [f"{MARK_NEW}REQ-DSH-19", "Dashboard", "A ROW'S IDENTITY STAYS ON SCREEN WHILE ITS TABLE SCROLLS SIDEWAYS. A source-data sheet can be far wider than the panel that holds it - the Project sheet is twenty-five columns in a panel that shows less than half of them - so a reader editing a far column is working on a row with nothing on screen to say which record it is. The row's handle, its identifier and its name are FROZEN at the left edge and the rest of the table scrolls under them. They remain ordinary editable cells where they stand. Which columns is declared PER SHEET rather than per place the table is drawn, so one sheet cannot be pinned two ways, and only a leading run of columns can be frozen. The frozen cells must be OPAQUE in every state a row can be in - striped, hovered, selected, edited - because a row passing underneath would otherwise show through; and they must leave no seam at their boundaries, which costs a pixel of overlap that nothing can see. This changes no figure and no file.", "Should", "R-53", "4"],
     [f"{MARK_NEW}REQ-DSH-18", "Dashboard", "ANY SECTION CAN BE GIVEN THE WHOLE WINDOW, AND THE DATA IN IT IS STILL EDITABLE THERE. Every panel holding a bounded scroll region carries a control in its head that draws that panel against the viewport instead of against the 1400px page column: the same table, every column it had, at the height of the screen rather than the 340px REQ-DSH-13 caps an entry table at. It is the SAME SCREEN and not a view of it - nothing is moved, nothing is copied, and editing, validation, the type-ahead, the column filters and the pop-ups all work exactly as they do on the page, because none of them is told it is happening. THE EDIT BAR AND THE TABS STAY IN FRONT: a full screen that hides Save is a trap, so the sticky band is lifted above the section rather than covered by it, and the section begins underneath it. The filter bar is covered and Escape brings it back. A SHELL WITH ITS OWN WINDOW BARS - the desktop and Python editions both put a title strip and a status strip above everything the page draws - keeps those in front too, and the section begins below them; the room they take is measured from the shells' own declaration of which elements they are, so the page layer names none of them. A section is remembered BY NAME, so it stays open across the re-render every committed edit causes, and across a change of selected row that rewrites its heading. Changing tab closes it, because a hidden pane draws nothing; loading a plan closes it, because that load's own report must not appear behind it. No figure changes and nothing is written to the file.", "Should", "R-51", "4"],
     [f"{MARK_NEW}REQ-DSH-17", "Dashboard", "A PROJECT-MONTH THE PLAN ASKS FOR AND NOBODY IS ASSIGNED TO SHOWS WHAT IT ASKS FOR. Resource by project used to print a dot there, and a dot is a statement: it says this month costs nothing. For a month inside the project's own run with nobody on it that is false - what it costs is exactly what the standard for its type, phase, scope and period says, which the application has had all along (REQ-CAL-19: the project-month IS its standard, and the people on it divide it; a divisor of nobody does not make it nought). The figure is now drawn in the cell. DEMAND, NEVER RESOURCE, AND THE DIFFERENCE IS CARRIED BY THE DRAWING. No filled background - the sequential scale means this much is being done, and none of it is - an outline and a hatch instead, italic, and a hollow ring glyph in the cell so the distinction survives a monochrome print and a colour-blind reader (D-04). IT IS NEVER ADDED TO A TOTAL. Not the row total, not the column total, not the grand total: those stay the APPLIED figure, because the grand total of this table must equal the grand total of the person table and unallocated demand belongs to no person. Netting it in would also assert that somebody is doing the work, which is the opposite of what it says. It is totalled instead on a line of its own, and on the project's own row beside the applied total - counted apart and never netted, exactly as short and over are (V-34). ONLY WHERE THERE IS NOTHING. A month that already carries a figure keeps it untouched, whatever the standard says - V-34 is what reports a month being given less than it asks for, and this is for the months V-34 cannot see because they produced no line at all. So no existing figure moves: on the delivered fixture the count of such months is zero. AND THE HORIZON HAS TO REACH IT. The span offered by 'show everything' was taken from the assignment lines, so a project starting after every assignment in the file ended was not reachable at all and its figures would have been drawn in months off the screen. It is taken from these months too.", "Should", "R-49", "4"],
@@ -2655,6 +2686,20 @@ phl = [
 r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
           phl, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
 
+r = section(ws, r, "Sheet: IssueReview  [schema 16, R-62]")
+irv = [
+    [f"{MARK_NEW}project_id", "Text", "Yes", "The project the issue is on. Must exist on Project.", "REQ-DSH-20"],
+    [f"{MARK_NEW}month", "Text", "Yes", "The month, YYYY-MM.", "REQ-DSH-20"],
+    [f"{MARK_NEW}issue", "List", "Yes", "short, over or unstaffed (Lists.issue_kind). One review per project, month and issue; a second is ignored.", "REQ-DSH-20"],
+    [f"{MARK_NEW}status", "List", "Yes", "Lists.issue_review_status: 'Confirmed - no issue' and 'Accepted' CLOSE the issue (drawn muted, left out of the open counts); 'To be fixed' keeps it open.", "REQ-DSH-20"],
+    [f"{MARK_NEW}gap_fte", "Decimal", "No", "The gap as reviewed (negative short or not staffed, positive over). If the month's gap is no longer this, to the cent, the review no longer closes it (V-40).", "REQ-DSH-20"],
+    [f"{MARK_NEW}rationale", "Text", "No", "Why. Required by the application for a closing decision; shown whenever the issue is opened.", "REQ-DSH-20"],
+    [f"{MARK_NEW}reviewed_by", "Text", "No", "Who confirmed it.", "REQ-DSH-20"],
+    [f"{MARK_NEW}reviewed_at", "Text", "No", "When, local time, YYYY-MM-DD HH:MM.", "REQ-DSH-20"],
+]
+r = table(ws, r, ["Column", "Type", "Required", "Definition / rule", "REQ-ID"],
+          irv, [26, 11, 12, 88, 14], wrap_cols=(4,), mark_col=1)
+
 r = note(ws, r, "Period sets are type-specific (Q-18). The derivation itself is on sheet 05.")
 sets = [
     [f"{MARK_CHG}NewDrug CT / Biosimilar CT", "Before-Start-up, Start-up, Conduct (interim), Close-out (interim), Conduct (final), Close-out (final), After Close-out (final)", "Seven names, in timeline order. Both trial types share one period set and one derivation; they differ in their WEIGHTS, not their shape. A trial with no interim DB lock simply omits 'Conduct (interim)' and 'Close-out (interim)'."],
@@ -2777,7 +2822,7 @@ r = note(ws, r, "Read only where the owning Project or Assignment carries estima
 
 r = section(ws, r, "Sheet: Config")
 cfg = [
-    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16), 8 at v2.31 (R-17), 9 at v2.38 (R-30), 10 at v2.39 (R-31), 11 at v2.41 (R-33, the standards sheet renamed), 12 at v2.54 (R-46, MonthlyEstimate.edited_at retired - the first column this schema has REMOVED rather than added or renamed), 13 at v2.61 (R-50, Milestone.milestone_highlight), 14 at v2.70 (R-59, ProjectPeriod.period_highlight), 15 at v2.71 (R-60, the PeriodHighlight sheet).", "15", "REQ-VC-02"],
+    [f"{MARK_CHG}schema_version", "Version of this workbook structure; checked on import. Steps to 3 at v1.4, 4 at v1.7, 5 at v1.8, 6 at v2.27 (R-12), 7 at v2.30 (R-16), 8 at v2.31 (R-17), 9 at v2.38 (R-30), 10 at v2.39 (R-31), 11 at v2.41 (R-33, the standards sheet renamed), 12 at v2.54 (R-46, MonthlyEstimate.edited_at retired - the first column this schema has REMOVED rather than added or renamed), 13 at v2.61 (R-50, Milestone.milestone_highlight), 14 at v2.70 (R-59, ProjectPeriod.period_highlight), 15 at v2.71 (R-60, the PeriodHighlight sheet), 16 at v2.72 (R-62, the IssueReview sheet).", "16", "REQ-VC-02"],
     [f"{MARK_NEW}absorb_unstaffed_role_factor", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (REQ-CAL-16). 0 = an unstaffed role simply costs nothing, which is how every version before v2.31 behaved. A setting for the same reason the last one is: it moves every figure on a project that is not fully staffed.", "1", "REQ-CAL-16"],
     [f"{MARK_NEW}split_shared_role_fte", "1 = where several people hold the same role on one project in a month, the role factor is divided between them (REQ-CAL-14). 0 = each carries the whole factor, which is how every version before v2.28 behaved. A setting rather than a constant because it changes every figure a shared role ever produced, and somebody comparing this month's report with last year's has to be able to see where the difference came from.", "1", "REQ-CAL-14"],
     [f"{MARK_NEW}fte_hours_per_month", "Hours equal to 1.00 FTE.", "160", "REQ-CAL-08"],
@@ -2809,6 +2854,7 @@ rules = [
     [f"{MARK_CHG}V-28", "RETIRED at v2.32 (R-18), one version after it was added. It reported an assignment whose role had no RoleFactor row for that project's (project_type, clinical_phase, work_scope_type) at all.", "Retired - and deliberately not reinstated at a lower severity. What the rule SAID was true; what it did not account for was WHEN it said it. An error refuses the edit that raised it (REQ-IMP-09), and unlike V-23 this one did not need the project to have any periods - so it fired on a project still being built, which is exactly when assignments are being typed in. A user could not record who was on a project until the standing assumptions carried a factor for their role, which is backwards: the plan is the document being written, the assumptions are maintained separately. The gap is not denied - V-03 still refuses a role invalid for the project type, and V-23 still reports a role with no factor for a period the project spans, which is the same finding at the point where it can be acted on. The id is not reused."],
     [f"{MARK_NEW}V-29", "A role that carries a factor, that nobody holds on the project, and that nothing covers for.", "Information - the direct consequence of REQ-CAL-16 and the reason it exists. Where an unstaffed role names somebody to cover, the figure is corrected; where it names nobody, the same under-estimate is still there and nothing else would say so. Information rather than a warning, because a project legitimately without a role is ordinary: this is a note about what the figures do NOT include, not a fault to correct."],
     [f"{MARK_NEW}V-31", "A project or assignment set to MANUAL has months it covers that carry no MonthlyEstimate figure. Named, with the months listed.", "Error - those months are counted as 0.00, and a figure silently dropping to zero is the one outcome this feature must never produce quietly. Not a refusal: it is raised from the CALCULATION, like V-23, because it is something that happened to a number rather than a fact about a sheet, and a finding that exists only after the arithmetic cannot refuse the edit that led to it. Switching to manual copies every month across, so a month with no figure is one that has since been removed or a month the thing has grown into - the application offers to fill them from the calculation."],
+    [f"{MARK_NEW}V-40", "An IssueReview row no longer describes its month: the issue it reviewed has gone, or the month's gap is not the gap that was reviewed.", "Information - a gone issue's review is kept as history; a moved gap's review no longer closes the month, which is shown open and marked 're-check'. Never a refusal."],
     [f"{MARK_NEW}V-39", "A PeriodHighlight row cannot be applied: its value names no colour, its period name is given twice, or no period list knows the name.", "Warning - the period is drawn gray, or on its first row's colour, which looks exactly like a choice nobody made, so it is said. Never a refusal: a colour changes no figure."],
     [f"{MARK_NEW}V-38", "ProjectPeriod.period_highlight carries a value that names no colour the application can draw.", "Warning - the period is drawn gray, which is what it would have been with the column empty, and the finding says so with the values the file's own Lists sheet offers. The period twin of V-37, for the same reason: a gray period looks exactly like one nobody chose a colour for, so a typo would quietly undo what the user asked for. Never a refusal - a colour changes no figure."],
     [f"{MARK_NEW}V-37", "Milestone.milestone_highlight carries a value that names no colour the application can draw.", "Warning - the milestone is drawn unmarked, which is what it would have been with the column empty, and the finding says so with the values the file's own Lists sheet offers. Never a refusal: a mark changes no figure, and a plan whose highlight column is misspelt is still a correct plan. It is reported rather than ignored because the failure is INVISIBLE otherwise - an unmarked milestone looks exactly like one nobody got round to marking, so a typo in the list value would quietly undo the thing the user asked for. What the application reads is the colour word inside the value ('red', 'yellow', 'blue', 'green', 'orange'), which is what lets a team write what their colour means beside it; the rule fires only when no such word is there at all."],
@@ -3156,7 +3202,7 @@ wbs = [
     ["4", "4.5", "Calculation engine, verified against the reference implementation.", "app/PRAP.html + test evidence", "Complete - EXACT MATCH on all 1,225 person-months of the dummy dataset"],
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
-    ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.19.xlsx", "Complete"],
+    ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.20.xlsx", "Complete"],
     ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-25 applied (app v1.24); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
@@ -3388,8 +3434,9 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
-    ["R-60", "Data model", "Colour every project's periods from an assumption on the General assumptions tab; where none is assumed for a period, let the project choose.", "Applied. New sheet PeriodHighlight, one default colour per period name; source schema steps 14 to 15. The project's own Highlight wins, then the default, then gray; derived periods take the default too. Shipped defaults restore the O-10 reading as data. V-39 added; REQ-PRJ-16 added; no figure moves.", "Applied"],
+    ["R-62", "Dashboard", "Let a manager confirm a short / over / not-staffed issue - 'no issue' or 'accepted', with a rationale - from the issue itself, changeable later; show confirmed issues distinguished (muted) but still readable, with the confirmation and rationale shown whenever the issue is clicked.", "Applied. New sheet IssueReview; source schema steps 15 to 16. Clicking an issue month opens it with a Manager review box (decision, manager, reason, whole run); Confirmed and Accepted close it and need a reason, To be fixed keeps it open. Closed months are drawn muted, counted apart, and filterable. A review covers the gap it was made at; V-40 added; REQ-DSH-20 added; no figure moves.", "Applied"],
     ["R-61", "Storage", "Let a user whose session timed out save the working plan into their personal folder.", "Applied (Python edition). When the shared plan can no longer be written - the hold lapsed and was taken over, or a colleague saved since it was opened - a bar offers 'Save my version to My plans': a new, uniquely named file in the person's own folder, after which the window works on it. Also on the File menu. The team's plan is never touched.", "Applied"],
+    ["R-60", "Data model", "Colour every project's periods from an assumption on the General assumptions tab; where none is assumed for a period, let the project choose.", "Applied. New sheet PeriodHighlight, one default colour per period name; source schema steps 14 to 15. The project's own Highlight wins, then the default, then gray; derived periods take the default too. Shipped defaults restore the O-10 reading as data. V-39 added; REQ-PRJ-16 added; no figure moves.", "Applied"],
     ["R-59", "Data model", "Add a Highlight column to Periods like the Milestones one: choose the colour of each project's period, gray when none is chosen.", "Applied. ProjectPeriod gains period_highlight after period_end; source schema steps 13 to 14. Its own list of the same five colours; the colour word inside the value is what is read. Unmarked periods are gray, shaded by weight, superseding the per-period-name hues of O-10. A value naming no colour is V-38. REQ-PRJ-15 added; no figure moves.", "Applied"],
     ["R-58", "Audit", "Saving shows 'the change log could not be written to the audit folder ... Failed to fetch' - is the audit trail working?", "It works; the Python application behind the window had stopped. Its watchdog gave up after fifteen minutes without a heartbeat, which a sleeping browser tab or laptop reaches. Now only the page closing stops it, and a window whose application has stopped says so and offers downloads of the plan and the unarchived change log.", "Applied"],
     ["R-57", "UI", "The import file window does not show the sub-folders of a level-1 folder.", "Fixed in the Python edition. A double-click opened the folder on its first click and then the row under the pointer in the redrawn list on its second, so the folder asked for was skipped. The second click of a sequence is now ignored on a freshly drawn list, and a double-click chooses only the row it began on.", "Applied"],
