@@ -14,22 +14,22 @@
    "what": "development_plan",
    "path": "docs/PRAP_Development_Plan_v2.72.xlsx",
    "exists": true,
-   "bytes": 162612,
-   "sha256": "5e764aae7cbf8bdf529fdcbb74e7b0192f9d0a2a62471afba669b469bd69c30d"
+   "bytes": 162714,
+   "sha256": "216165fffe340fbe3ad68d19465e521d318ca5f49e1fce702c989711ac9817c1"
   },
   {
    "what": "programming_specification",
    "path": "docs/PRAP_Programming_Specification_v1.41.xlsx",
    "exists": true,
-   "bytes": 82904,
-   "sha256": "c3784bf55605e7a00c21e36a00921caa91735cb9c1588ad2db93cbae17ebf82a"
+   "bytes": 83092,
+   "sha256": "729559ce7528261634c55f428aa4e63879ac3e2e50c0c89691cc09677bb9e715"
   },
   {
    "what": "ui_component_list",
    "path": "docs/PRAP_UI_Component_List_v2.8.xlsx",
    "exists": true,
-   "bytes": 45332,
-   "sha256": "2dc6add846536fc2166ea99f8664d7202ab790a3341fe2be4319aa48f936ebbb"
+   "bytes": 45383,
+   "sha256": "2877c27557f18f74639b0eda385f2ed755bc4aa5948f1e88e6c1a727e49920c9"
   },
   {
    "what": "source_data_template",
@@ -63,8 +63,8 @@
    "what": "application",
    "path": "app/PRAP.html",
    "exists": true,
-   "bytes": 746972,
-   "sha256": "aefbd0dec5d8bdee81ce0a210f81b43f2bcaaef29e99211d1b2f504efcb3958f"
+   "bytes": 747422,
+   "sha256": "951e1c5ef704017f301efee4b712bdf300990311ebbdb520d74a9ba29f9da434"
   },
   {
    "what": "machine_readable_contract",
@@ -84,8 +84,8 @@
    "what": "agent_guide_workbook",
    "path": "docs/PRAP_AI_Agent_Guide_v1.0.xlsx",
    "exists": true,
-   "bytes": 38522,
-   "sha256": "bfa1de37d0ea40e61942d42258d6fa3852ea11f1851ddf30b89fe5dd4cef0e57"
+   "bytes": 38523,
+   "sha256": "578c975edf4ee5aa44669b6000b1c1ea75f87f805347ae468f866ff8a812fac3"
   }
  ]
 }

@@ -425,7 +425,7 @@ rows = [
      "information). No figure moves; template v1.20, examples v1.22 and v1.14, the small one "
      "carrying two accepted months and one to be fixed. Clicking an issue month used to fold "
      "its project row open or shut instead - the row's own click came first - and that is "
-     "fixed. tools/test_review.py is new: 47 checks, four proved by putting the fault back.",
+     "fixed. THE STANDARD VS STAFFED LIST IS IN ORDER OF PROJECT ID, THEN MONTH, both ascending (asked for straight after), and lists every month: it was largest gap first and capped at 40, which in project order would have cut whole projects off the end. tools/test_review.py is new: 49 checks, five proved by putting the fault back.",
      "Issued for review"],
     [f"{MARK_NEW}2.71", "2026-10-08", "Claude Code", "Pending",
      "R-60, REQ-PRJ-16: PERIOD COLOURS ARE AN ASSUMPTION, AND A PROJECT MAY STILL CHOOSE ITS "

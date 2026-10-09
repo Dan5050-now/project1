@@ -528,7 +528,7 @@ C = [
      "put behind a click in the first place. Drawn even when there is nothing to report.",
      "REQ-DSH-15, V-34", A, "", "R-42; moved and the control given the count at R-52; "
      "narrowed by direction, project and smallest gap at R-53 — which narrows the LIST and "
-     "never the count, since the count is the alarm."),
+     "never the count, since the count is the alarm. Ordered by project ID, then month, ascending, every month listed (R-62 follow-up; was largest first, capped at 40)."),
     ("O-13", "Overall", "[NEW v2.0] Month detail dialog (from the list)",
      "Opens the month itself: the project figure, every assigned person's stated figure, and "
      "the calculated one beside it. EVERY STATED CELL IS EDITABLE HERE, including for somebody "

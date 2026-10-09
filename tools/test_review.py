@@ -263,7 +263,7 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(500)
     rows = pg.eval_on_selector_all("#gapsdlg tr.gaprow", "es => es.map(e => e.className)")
     closed_n = counts(pg)["closed"]
-    check(rows and len(rows) == min(closed_n, 40) and all(" rev" in r for r in rows),
+    check(rows and len(rows) == min(closed_n, pg.evaluate("GAP_SHOW")) and all(" rev" in r for r in rows),
           "REVIEWED shows the closed months, and only them", f"{len(rows)} of {closed_n}")
     check("Sponsor-funded" in pg.inner_text("#gapsBody"), "with their reasons in the list")
     pg.click('#gapsdlg [data-gaprev="open"]')
@@ -272,6 +272,16 @@ with sync_playwright() as pw:
     check(rows and not any(" rev" in r for r in rows), "OPEN leaves them out")
     pg.click("[data-gapclear]")
     pg.wait_for_timeout(300)
+    got = pg.eval_on_selector_all("#gapsdlg tr.gaprow",
+                                  "es => es.map(e => [e.dataset.gap, +e.dataset.gk])")
+    def natural(pid):
+        import re
+        return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", pid)]
+    total = sum(counts(pg).values())
+    check(got == sorted(got, key=lambda r: (natural(r[0]), r[1])) and len(got) == total
+          and len({p for p, _ in got}) > 1,
+          "THE LIST RUNS BY PROJECT ID, THEN MONTH, ASCENDING - and every month is in it",
+          f"{len(got)} of {total}: {got[0]} ... {got[-1]}")
     pg.click("#gapsClose")
     pg.wait_for_timeout(300)
     pg.select_option("#projIssue", "reviewed")

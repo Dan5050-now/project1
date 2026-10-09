@@ -319,6 +319,7 @@ document through the manifest rather than by sorting filenames.
   stays marked but is drawn **muted**, the counts leave it out and count it apart, and
   clicking it shows the decision and its reason at any time, to change or remove. If the
   month's gap moves after the review, the month opens again marked *re-check* (`V-40`).
+  The Standard vs staffed list runs by project ID, then month, and lists every month.
   A workbook from before schema 16 still opens. Before it, **R-60** and
   **R-61**. **Period colours are an assumption**: a new `PeriodHighlight` sheet, edited
   under **Period colours** on the General assumptions tab, gives each period name a

@@ -10292,7 +10292,7 @@ function gapTag(pid, k){
 
 /* ------------------------------------------------- the control, and the list behind it */
 
-const GAP_SHOW = 40;      // rows drawn; the rest are counted, not listed
+const GAP_SHOW = 500;     // rows drawn - a safety cap; a real plan lists far fewer
 
 /** The control in Resource by project's head.
  *
@@ -10421,11 +10421,15 @@ function gapList(pids){
       project or on one assignment, replaces the standard rather than adjusting it, and
       this is where the difference is listed when there is one.</p>`;
 
-  /* Open first, then reviewed, each largest first: what still needs a decision is what
-     somebody opened this list to find (R-62). */
+  /* By project ID, then month, both ascending (asked for after R-62): the list is read
+     project by project, a run of months together, the way Resource by project lays them
+     out. IDs compare as numbers where they hold them, so PRJ-2 comes before PRJ-10.
+     Reviewed months stay in their place, drawn muted; the Open / Reviewed filter is what
+     separates them. It used to be largest first, capped at 40 - which, sorted this way,
+     would have cut whole projects off the end, so every month is drawn now. */
   const ordered = rows.slice().sort((x, y) =>
-    (!!(x.rev && x.rev.closed) - !!(y.rev && y.rev.closed))
-    || Math.abs(y.gap) - Math.abs(x.gap));
+    String(x.pid).localeCompare(String(y.pid), undefined, {numeric: true})
+    || x.k - y.k || String(x.dir).localeCompare(String(y.dir)));
   const body = ordered.slice(0, GAP_SHOW).map(r => {
     const pr = M.projects[r.pid] || {};
     const rv = r.rev;
@@ -10474,7 +10478,7 @@ function gapList(pids){
         <th>Staffed</th><th>Gap</th><th>Direction</th><th>Manager review</th><th></th></tr></thead>
       <tbody>${body}</tbody></table></div>
     ${rows.length > GAP_SHOW
-      ? `<p class="note">Showing the ${GAP_SHOW} largest of ${rows.length}${
+      ? `<p class="note">Showing the first ${GAP_SHOW} of ${rows.length}, by project and month${
           gapNarrowed() ? ` that match the filter (${all.length} in all)` : ""}. The rest
          are in the findings report, which lists every one of them by project.</p>` : ""}
     <p class="note">V-34 reports this as a <strong>warning</strong>: it reaches the
