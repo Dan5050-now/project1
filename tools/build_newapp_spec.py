@@ -22,7 +22,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.9"
+DOC_VERSION = "1.10"
 # THE STATUS LINE HAD STOPPED MOVING. It still read "THIS ISSUE, v1.3 ... AWAITS APPROVAL"
 # while the issue on the cover was v1.6, so the cover named one version and the status
 # another - and a reader who trusted it would conclude the Python shell was being built on
@@ -41,7 +41,7 @@ DOC_STATUS = ("THIS ISSUE, v1.6, is APPROVED - the requester confirmed v1.3 to v
 # current version's date: the cover field is not "date of this issue", and changing it
 # here would silently re-date those four history rows as well.
 DOC_DATE = "2026-08-13"
-PLAN = "PRAP_NewApp_Development_Plan_v1.17.xlsx"
+PLAN = "PRAP_NewApp_Development_Plan_v1.18.xlsx"
 WEB_SPEC = "PRAP_Programming_Specification_v1.0.xlsx"
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_NewApp_Specification_v{DOC_VERSION}.xlsx"
@@ -184,7 +184,20 @@ r = lines(ws, r, [
 # ---- 01 Version history ---------------------------------------------------
 ws, r = sheet(wb, "01_Version_History", "Version history")
 r = table(ws, r, ["Version", "Date", "Author", "Reviewer", "Summary"],
-          [["1.9", "2026-10-08", "Claude Code", "Awaiting approval",
+          [["1.10", "2026-10-10", "Claude Code", "Awaiting approval",
+            "Against desktop plan v1.18 (web plan R-63). NR-STO-20: server.py is_private(ref) - "
+            "inside <data>/workspaces at any depth - and claim/take answers {ok, private} for "
+            "such a plan without writing a marker or starting the heartbeat; ws/open returns "
+            "`private`; the page keeps privatePlan, skips the claim on edit and shows the "
+            "'own' pill. NR-STO-21: checkHold() (every 30 s, on visibilitychange, and on a "
+            "claim_lost save) raises timedOut(), an alertdialog naming the holder from "
+            "claim/read, with data-keep (saveMine), data-reload and data-later; once per lapse. "
+            "NR-IMP-10: shell/python/filebrowser.js, makeFileBrowser({call, where}) -> "
+            "browseFor(opts); fs/list adds `hidden` (files of other types) and, for up to 200 "
+            ".prap files, `plan` {savedAt, savedBy, heldBy} read from the first 4 KB and the "
+            ".lock; .lock, .journal and .tmp-<pid> files are not listed. Remembered in "
+            "localStorage pm.fb.*: last folder per kind, recent folders, sort, view."],
+           ["1.9", "2026-10-08", "Claude Code", "Awaiting approval",
             "Against desktop plan v1.17: saveMine() in bridge.js writes sheetsNow() through "
             "ws/saveAs to <workspaces>/<base>_<name>_<YYYY-MM-DD_HHMM>.prap, stepping a suffix "
             "while ws/stat says the name exists, then makes it the open plan (ref, baseSaved, "
@@ -549,7 +562,7 @@ r = section(ws, r, "What differs from the Electron shell, and why")
 dv = [
     ["The menu is drawn in the page", "There is no application menu bar to use. Same items, same order, same accelerators for Save and Open.", "Visible"],
     ["The window is a browser tab", "It looks like the web application because it IS the web application. The console window that starts it is also how it is stopped, and says so.", "Visible"],
-    ["A folder listing inside the page", "THE ONE WAY TO CHOOSE A FILE. It lists names and sizes only; nothing in it can read a file. A native tkinter dialog was drawn as well, where tcl/tk happened to be present - so PM_APP.cmd and PM_APP.py showed different windows to the same person, because the bundled runtime has no tkinter and a full installation does. Reported from the field and withdrawn at C-N03: a tool handed round a team cannot have two front doors, and this is the one that works on every machine.", "Visible"],
+    ["A folder listing inside the page", "THE ONE WAY TO CHOOSE A FILE. It lists names, dates and sizes - and, for a plan, who saved it and who holds it, from the first 4 KB and the claim marker (NR-IMP-10); nothing in it can read a file's data. Since R-63 it is drawn by shell/python/filebrowser.js: places, a path of buttons, type badges, date bands, filter, list or tiles, details, keyboard. A native tkinter dialog was drawn as well, where tcl/tk happened to be present - so PM_APP.cmd and PM_APP.py showed different windows to the same person, because the bundled runtime has no tkinter and a full installation does. Reported from the field and withdrawn at C-N03: a tool handed round a team cannot have two front doors, and this is the one that works on every machine.", "Visible"],
     ["The page ASKS whether it still holds the claim", "Electron pushed 'your claim was taken over' down a second channel. Here the page asks, on the same thirty-second clock the heartbeat runs on. One question every thirty seconds costs nothing and needs no second channel to go wrong.", "Invisible"],
     ["Export by download is kept", "A download is not an upload and R-N21 does not touch it, so storage/web/export.js runs unmodified with all of its checks. 'Export to a folder…' is added for when the Downloads folder is the wrong place.", "Visible"],
     ["No window size or position to remember", "The browser owns the window. The setting is kept in the file and ignored, so a later shell can use it.", "Invisible"],
@@ -635,6 +648,8 @@ mech = [
     ["When", "At the moment a DATA VALUE ACTUALLY CHANGES - the same point the snapshot is taken. Clicking into a cell, selecting a row, changing a filter, switching tab, or typing into a field and leaving it unchanged do NOT take the claim.", "Not on open, and not on a click. A session that only looks - even one that clicks about a great deal - never takes it, so a plan is free unless somebody is really altering it. Clarified at the Gate N3 review, because 'the first edit' was open to the looser reading.", "NR-STO-10"],
     ["Kept alive", "The holder rewrites `heartbeat` every 30 seconds.", "So the application can always tell a live holder from a dead one - within half a minute, whatever the expiry is (N-23).", "NR-STO-14"],
     ["Expires", "30 minutes after the last heartbeat.", "Q-N16. Separate from the heartbeat interval, deliberately.", "NR-STO-14"],
+    ["Not taken", "For a workspace inside the person's own folder (My plans), at any depth: claim/take answers {ok:true, private:true}, writes no marker and starts no heartbeat.", "Nobody else can open it, so there is nobody to keep out - and nothing that can time out.", "NR-STO-20"],
+    ["Lapsed", "The page asks claim/holds every 30 s and when the window becomes visible; a Save can also be refused with claim_lost. Either way a pop-up names the new holder and offers: keep my version in My plans, reload (discards), decide later.", "Once per lapse. The bar and the strip keep saying it after the pop-up is closed.", "NR-STO-21"],
     ["Reclaimed", "Immediately, if name and machine are this user's own.", "Being locked out of your own plan for half an hour because your application crashed is an obstruction, not a policy (N-24).", "NR-STO-19"],
     ["Released", "On Save-and-close, on Leave without change, and on application close.", "NOT on save alone - that would hand the plan to somebody else mid-task (N-22).", "NR-STO-15"],
     ["Re-checked", "Before every save.", "If anything above went wrong, the save stops rather than overwriting somebody's work.", "NR-STO-10"],
@@ -918,6 +933,7 @@ OVERRIDE = {
     # and a reader who only has the Python build has one place to look.
     "NR-SEC-04": "05a_Python_Shell", "NR-SEC-05": "05a_Python_Shell",
     "NR-SEC-06": "05a_Python_Shell", "NR-IMP-09": "05a_Python_Shell",
+    "NR-IMP-10": "05a_Python_Shell", "NR-STO-20": "07_Sharing", "NR-STO-21": "07_Sharing",
     "NR-DEP-16": "05a_Python_Shell",
     "NR-DEP-17": "05a_Python_Shell",
 }

@@ -263,6 +263,20 @@ def operations(app):
     def full(ref):
         return PA.from_portable(ref, app.app_dir)
 
+    def is_private(ref):
+        """Is this plan inside the person's OWN folder (My plans), at any depth?
+
+        Nobody else can open a plan there, so there is nobody to keep out and nothing
+        for a claim to protect (NR-STO-10). R-63: such a plan therefore takes no claim
+        at all - no marker, no heartbeat, no half-hour expiry - so a session on it can
+        never time out. A plan anywhere else may be reachable by colleagues and keeps
+        the one-writer rule."""
+        if not ref or not app.data_dir:
+            return False
+        mine = os.path.normcase(os.path.abspath(os.path.join(app.data_dir, "workspaces")))
+        p = os.path.normcase(os.path.abspath(full(ref)))
+        return p == mine or p.startswith(mine + os.sep)
+
     def caps(_):
         return {"workspaces": True, "versions": True, "claims": True, "journal": True,
                 "shell": "python",
@@ -301,6 +315,7 @@ def operations(app):
         if app.open_ref and os.path.abspath(app.open_ref) != os.path.abspath(p):
             app.release_open_claim()
         out = WS.open_workspace(p)
+        out["private"] = is_private(p)
         app.open_ref = p
         app.settings = PA.add_recent(app.settings, p, app.app_dir,
                                      {"savedBy": out["header"].get("last_saved_by")})
@@ -321,8 +336,7 @@ def operations(app):
         if not ref or not shared:
             return {"private": False, "shared": shared, "target": None}
         ref = os.path.abspath(full(ref))
-        mine = os.path.abspath(os.path.join(app.data_dir or "", "workspaces"))
-        private = os.path.dirname(ref) == mine
+        private = is_private(ref)
         target = os.path.join(shared, os.path.basename(ref)) if private else None
         return {"private": private, "shared": shared, "target": target,
                 "taken": bool(target and os.path.exists(target))}
@@ -421,6 +435,13 @@ def operations(app):
         # Same rule from the other side: a claim on a new plan gives up the old one.
         if app.open_ref and os.path.abspath(app.open_ref) != os.path.abspath(p):
             app.release_open_claim()
+        if is_private(p):
+            # Your own folder: nobody to keep out, so no claim and no expiry (R-63).
+            app.stop_heartbeat()
+            app.open_ref = p
+            return {"ok": True, "private": True,
+                    "message": "This plan is in your own folder, so nobody else can "
+                               "open it and it takes no hold - it cannot time out."}
         r = CL.claim(p, app.identity(), app_version=app.version)
         if r.get("ok"):
             app.open_ref = p

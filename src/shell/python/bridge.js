@@ -188,18 +188,44 @@
   let baseSaved = "", stale = false;
   // Who refused us, while we wait for them to finish (NR-STO-15).
   let blockedBy = null;
+  // R-63: the plan is in the person's own folder. Nobody else can open it, so it takes
+  // no hold and cannot time out - see is_private() in server.py.
+  let privatePlan = false;
+  // The time-out pop-up is said once per lapse, not every thirty seconds after it.
+  let timeoutShown = false;
   const hushedShare = new Set();      // plans whose "not now" was meant
 
   function showFile() {
     el("pm-file").textContent = ref ? ref.split(/[\\/]/).pop() : "no plan open";
   }
 
-  function showHold(state, text) {
+  function showHold(state, text, title) {
     const p = el("pm-hold");
     if (!state) { p.hidden = true; return; }
     p.hidden = false;
     p.className = "pm-pill " + state;
     p.textContent = text;
+    p.title = title || "";
+  }
+
+  /* R-63: say so when the plan is the person's own. Without it the strip is silent
+     about the one thing that changed - this plan takes no hold - and somebody who
+     learned to watch for "You are editing this plan" would wonder where it went. */
+  function showOwn() {
+    showHold("own", "Your own plan · no time-out",
+      "This plan is in My plans, where nobody else can open it. It takes no editing "
+      + "hold, so it never times out, however long the window is left.");
+  }
+
+  /** Learn whether the plan now open is the person's own (after a save-as or a move,
+   *  which change where it is). */
+  async function notePrivacy() {
+    privatePlan = false;
+    if (!ref) return false;
+    try { privatePlan = Boolean((await call("ws/sharedState", { ref })).private); }
+    catch { privatePlan = false; }
+    if (privatePlan && !stale) showOwn();
+    return privatePlan;
   }
 
 
@@ -338,12 +364,19 @@
         + "Use File → Reload plan before editing — saving now would replace their work.");
       return false;
     }
+    // Your own folder: nobody to keep out, so no hold to take and none to lose (R-63).
+    if (privatePlan) return true;
     if (!ref || holds || !caps.claims) return true;
     let r;
     try { r = await call("claim/take", { ref }); }
     catch (e) { showBanner("bad", e.message); return false; }
+    if (r.ok && r.private) {
+      privatePlan = true; holds = false; blockedBy = null;
+      showOwn();
+      return true;
+    }
     if (r.ok) {
-      holds = true; blockedBy = null;
+      holds = true; blockedBy = null; timeoutShown = false;
       showHold("hold", "You are editing this plan");
       return true;
     }
@@ -403,21 +436,87 @@
   // Electron pushed "your claim was taken over" down a second channel. Here the
   // page asks, on the same clock the heartbeat runs on. One question every thirty
   // seconds costs nothing and needs no second channel to go wrong.
-  setInterval(async () => {
-    if (!ref || !holds) return;
-    try {
-      const r = await call("claim/holds", { ref });
-      if (!r.holds) {
-        holds = false;
-        showHold("read", "Read-only");
-        showBanner("bad", "Your hold on this plan was taken over while you were "
-          + "working. Nothing has been saved. Keep your version with the button above.");
-        keepBar(true, "Your hold on this plan lapsed and was taken over while you were "
-          + "away, so your work can no longer be saved into it. Keep it in your own folder - "
-          + "nothing is lost, and the team's plan is not touched.");
-      }
-    } catch { /* the application is stopping */ }
-  }, 30000);
+  async function checkHold() {
+    if (!ref || !holds || privatePlan) return false;
+    let r;
+    try { r = await call("claim/holds", { ref }); }
+    catch { return false; }                      // the application is stopping
+    if (r.holds) return false;
+    holds = false;
+    showHold("read", "Read-only — your session timed out");
+    showBanner("bad", "Your hold on this plan was taken over while you were "
+      + "working. Nothing has been saved. Keep your version with the button above.");
+    keepBar(true, "Your hold on this plan lapsed and was taken over while you were "
+      + "away, so your work can no longer be saved into it. Keep it in your own folder - "
+      + "nothing is lost, and the team's plan is not touched.");
+    await timedOut();
+    return true;
+  }
+  setInterval(checkHold, 30000);
+  // And the moment the window is looked at again: a laptop that slept through the
+  // half hour is exactly when the hold lapses, and the person should hear it before
+  // they type, not up to thirty seconds after.
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkHold(); });
+
+  /* ---- the session timed out: said in a pop-up (R-63) ----------------------
+     The bar and the banner say it too, and both are easy to miss on return from a
+     meeting - the banner is rewritten by the next thing anybody does. A hold lapsing
+     is the moment work can be lost, so it is said in a window that has to be answered,
+     with the three things that can be done about it, the safe one first. */
+  async function timedOut() {
+    if (timeoutShown || !ref) return;
+    timeoutShown = true;
+    let held = null;
+    try { held = await call("claim/read", { ref }); } catch { /* said without a name */ }
+    const h = held && held.holder;
+    const t = s => { const d = Date.parse(s || ""); return isNaN(d) ? ""
+      : new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); };
+    const who = h && h.name ? `${h.name}${h.department ? " (" + h.department + ")" : ""}` : "";
+    const plan = ref.split(/[\\/]/).pop();
+    const n = (typeof S !== "undefined" && S.pending) ? S.pending.length : 0;
+    const back = document.createElement("div");
+    back.className = "pm-back";
+    back.innerHTML = `<div class="pm-box pm-alert" role="alertdialog" aria-modal="true"
+        aria-labelledby="pm-to-h">
+      <h3 id="pm-to-h"><span class="pm-alert-i" aria-hidden="true">⏱</span>
+        Your editing session timed out</h3>
+      <div class="body">
+        <p>Your hold on <b data-plan></b> lapsed: this window was not heard from for over
+          half an hour - usually the computer slept or was locked - so the plan stopped
+          counting as yours${who ? ", and <b data-who></b> started editing it"
+            + (t(h.since) ? " at " + t(h.since) : "") : ""}.</p>
+        <p class="pm-alert-ok"><b>Nothing on screen is lost.</b> ${n
+          ? `Your ${n} unsaved change(s) are still here, but`
+          : "What is on screen is still here, but"} it can no longer be saved into this
+          plan without replacing ${who ? "their" : "somebody else's"} work.</p>
+        <ul class="pm-alert-list">
+          <li><b>Save my version to My plans</b> - a new file in your own folder; the
+            team's plan is not touched. Compare the two later with Import.</li>
+          <li><b>Reload the team's plan</b> - shows the plan as it is now, and
+            <b>discards</b> what is on screen.</li>
+          <li><b>Decide later</b> - the bar at the top keeps the first choice on offer.</li>
+        </ul>
+        <p class="pm-note">Plans in My plans take no hold, so they never time out.</p>
+      </div>
+      <div class="foot">
+        <button class="btn" data-reload>Reload the team's plan</button>
+        <span class="pm-grow"></span>
+        <button class="btn" data-later>Decide later</button>
+        <button class="btn primary" data-keep>Save my version to My plans</button>
+      </div></div>`;
+    back.querySelector("[data-plan]").textContent = plan;
+    if (who) back.querySelector("[data-who]").textContent = who;
+    document.body.appendChild(back);
+    const close = () => back.remove();
+    back.querySelector("[data-later]").onclick = close;
+    back.querySelector("[data-keep]").onclick = () => { close(); saveMine(); };
+    back.querySelector("[data-reload]").onclick = () => {
+      close();
+      if (S.pending.length) S.pending.length = 0;     // asked for: the screen is discarded
+      reloadPlan();
+    };
+    setTimeout(() => back.querySelector("[data-keep]").focus(), 0);
+  }
 
   /* ---- importing, WITHOUT the browser ever seeing a file ----------------- */
   // One entry in the menu, because there is one way in. It used to take a
@@ -510,9 +609,13 @@
       if (ref && ref !== p) await releaseClaim();
       const w = await call("ws/open", { ref: p });
       ref = w.ref; holds = false; stale = false; blockedBy = null;
+      privatePlan = Boolean(w.private); timeoutShown = false;
+      keepBar(false);
       adopt(w.sheets, ref.split(/[\\/]/).pop());
       showFile();
-      showHold(w.readOnly ? "read" : null, "Read-only folder");
+      if (w.readOnly) showHold("read", "Read-only folder");
+      else if (privatePlan) showOwn();
+      else showHold(null);
       const by = w.header.last_saved_by;
       if (by) showBanner("", `Last saved by ${by.name}`
         + (by.department ? ` (${by.department})` : "")
@@ -584,7 +687,8 @@
       ref = out.ref;
       await noteBase(out.savedAt);
       stale = false; holds = false; blockedBy = null;
-      showHold(null);
+      privatePlan = true;                       // My plans: no hold, no time-out (R-63)
+      showOwn();
       showFile();
       keepBar(false);
       showBanner("", `Your version is saved in My plans as ${name}, and this window now `
@@ -613,6 +717,8 @@
         out = await call("ws/saveAs", { sheets: sheetsNow(), ref: p });
         if (!out) return;
         ref = out.ref;
+        holds = false;
+        await notePrivacy();
       } else {
         // THE CHECK THAT PREVENTS THE LOSS. Between opening this plan and now,
         // somebody else may have saved theirs; writing on top would replace it with
@@ -633,6 +739,8 @@
       // only way on - which discards what is on screen.
       if (e.kind === "claim_lost" || e.kind === "superseded")
         keepBar(true, e.message + " Keep your version in your own folder - nothing is lost.");
+      // A lapsed hold found by the save itself is the same time-out, said the same way.
+      if (e.kind === "claim_lost") { holds = false; timedOut(); }
     }
   }
 
@@ -766,6 +874,7 @@
     el("pm-share").hidden = true;
     ref = out.ref;
     holds = false;
+    privatePlan = false;                       // the team's now: the one-writer rule applies
     showFile();
     showHold(null);
     showBanner("", "Moved to the team folder. Colleagues can open it now, and the "
@@ -773,196 +882,11 @@
       + (out.versions ? `  ${out.versions} kept version(s) came with it.` : ""));
   }
 
-  /* ---- the in-page folder browser ---------------------------------------- */
-  /* Used when there is no tkinter, and whenever somebody wants to type a path -
-     a share, say. It talks to fs/list, which returns names and sizes. No browser
-     file interface is involved: nothing here can read a file's contents, and the
-     page never asks it to. */
-  /** Windows compares paths without regard to case, and a trailing separator means
-   *  nothing; neither does the browser, so it is done here rather than hoped for. */
-  function sameDir(a, b) {
-    const tidy = x => String(x || "").replace(/[\\/]+$/, "").toLowerCase();
-    return Boolean(a) && tidy(a) === tidy(b);
-  }
-
-  /** Your own folder and the team's, when the installation has both. */
-  function places() {
-    const out = [];
-    if (where.workspaces)
-      out.push({ label: "My plans", path: where.workspaces,
-                 hint: "Your own folder. Nobody else can open what is in here." });
-    if (where.shared)
-      out.push({ label: "Team plans", path: where.shared,
-                 hint: "Everybody can open these, and the application keeps one "
-                     + "writer at a time. A plan the team works on belongs here." });
-    return out;
-  }
-
-  function browseFor(opts) {
-    return new Promise(resolve => {
-      const back = document.createElement("div");
-      back.className = "pm-back";
-      back.innerHTML = `<div class="pm-box">
-        <h3>${opts.title}</h3>
-        <div class="pm-crumb" data-crumb></div>
-        <div class="body"><ul class="pm-list" data-list></ul>
-          <p class="pm-note" data-note></p></div>
-        <div class="foot">
-          <input class="pm-path" data-path placeholder="…or type a full path">
-          <button class="btn" data-cancel>Cancel</button>
-          <button class="btn primary" data-ok>${opts.okLabel || "Choose"}</button>
-        </div></div>`;
-      document.body.appendChild(back);
-      const q = s => back.querySelector(s);
-      let here = null, picked = null, last = null;
-      // When the list was last redrawn, and the row the current click sequence began on.
-      // SETTLE is about the system double-click interval, so a second click that arrives
-      // inside it on a freshly drawn list is taken as part of the gesture before it.
-      let drawnAt = 0, armed = null;
-      const SETTLE = 450;
-      /* NEWEST FIRST, WITH THE DATE ON EVERY FILE (R-56). The listing used to be by name
-         with only a size, and a folder of exports named PRAP_2026-09-30, PRAP_2026-10-02
-         … gave no way to tell which one somebody last saved - the date in a name is the
-         day it was exported, not the day it was last written. The modified time comes
-         from the file system (fs/list has always carried it); the order can be switched
-         back to by-name from the header, and the choice is kept while the window is
-         open. Folders stay first either way, so the way down is always in one place. */
-      let order = "date";
-
-      const done = v => { back.remove(); document.removeEventListener("keydown", onKey);
-                          resolve(v); };
-      const onKey = e => { if (e.key === "Escape") done(null); };
-      document.addEventListener("keydown", onKey);
-      q("[data-cancel]").onclick = () => done(null);
-      back.onclick = e => { if (e.target === back) done(null); };
-      q("[data-ok]").onclick = () => {
-        const typed = q("[data-path]").value.trim();
-        if (typed) return done(typed);
-        if (opts.folders) return done(here && opts.name ? join(here, opts.name) : null);
-        done(picked);
-      };
-      const join = (d, n) => d.replace(/[\\/]+$/, "") + (d.includes("\\") ? "\\" : "/") + n;
-
-      async function go(path) {
-        let r;
-        try { r = await call("fs/list", { path, suffixes: opts.suffixes }); }
-        catch (e) { q("[data-note]").textContent = e.message; return; }
-        here = r.path; picked = null;
-        q("[data-crumb]").innerHTML = "";
-        /* THE TWO PLACES THAT DECIDE WHETHER SHARING WORKS AT ALL, one click each.
-           The team folder existed, was created at launch and carried a note saying
-           what it was for - and the page never mentioned it, so every plan was saved
-           into the person's own folder, where a claim protects nothing (NR-STO-10)
-           and the whole one-writer-at-a-time design never comes into play. A folder
-           nobody can find is a folder nobody uses. */
-        for (const place of places()) {
-          const b = document.createElement("button");
-          b.className = "place" + (sameDir(r.path, place.path) ? " on" : "");
-          b.textContent = place.label;
-          b.title = place.hint;
-          b.onclick = () => go(place.path);
-          q("[data-crumb]").appendChild(b);
-        }
-        if (places().length) {
-          const sep = document.createElement("span");
-          sep.className = "sep";
-          sep.textContent = "·";
-          q("[data-crumb]").appendChild(sep);
-        }
-        for (const root of r.roots) {
-          const b = document.createElement("button");
-          b.textContent = root.name;
-          b.onclick = () => go(root.path);
-          q("[data-crumb]").appendChild(b);
-        }
-        if (r.parent) {
-          const b = document.createElement("button");
-          b.textContent = "↑ up";
-          b.onclick = () => go(r.parent);
-          q("[data-crumb]").appendChild(b);
-        }
-        last = r;
-        drawnAt = Date.now();
-        armed = null;
-        const list = q("[data-list]");
-        list.innerHTML = "";
-        const head = document.createElement("li");
-        head.className = "pm-head";
-        head.innerHTML = `<span class="i">📂</span><span class="n"></span>`
-          + `<button class="pm-sort${order === "name" ? " on" : ""}" data-sort="name"
-              title="Sort by name">Name</button>`
-          + `<button class="pm-sort${order === "date" ? " on" : ""}" data-sort="date"
-              title="Newest first">Modified ▾</button>`
-          + `<span class="m sz">Size</span>`;
-        head.querySelector(".n").textContent = r.path;
-        head.style.cursor = "default";
-        for (const b of head.querySelectorAll("[data-sort]"))
-          b.onclick = ev => { ev.stopPropagation(); order = b.dataset.sort; go(r.path); };
-        list.appendChild(head);
-        const byDate = (a, b) => (b.mtime || 0) - (a.mtime || 0)
-                                 || a.name.localeCompare(b.name);
-        const byName = (a, b) => a.name.localeCompare(b.name, undefined,
-                                                      { numeric: true, sensitivity: "base" });
-        const folders = r.entries.filter(e => e.dir).sort(order === "date" ? byDate : byName);
-        const files = r.entries.filter(e => !e.dir).sort(order === "date" ? byDate : byName);
-        const newest = files.reduce((m, e) => (e.mtime || 0) > (m ? m.mtime || 0 : -1) ? e : m,
-                                    null);
-        for (const e of folders.concat(files)) {
-          const li = document.createElement("li");
-          li.innerHTML = `<span class="i">${e.dir ? "📁" : "📄"}</span>`
-            + `<span class="n"></span>`
-            + `<span class="m dt">${when(e.mtime)}</span>`
-            + `<span class="m sz">${e.dir ? "" : kb(e.size)}</span>`;
-          li.querySelector(".n").textContent = e.name;
-          if (e === newest && files.length > 1) {
-            const tag = document.createElement("span");
-            tag.className = "pm-new";
-            tag.textContent = "newest";
-            tag.title = "The most recently modified file in this folder";
-            li.querySelector(".n").append(" ", tag);
-          }
-          /* A DOUBLE-CLICK IS ONE GESTURE, NOT TWO CLICKS ON TWO ROWS (R-57). A folder
-             opens on the first click, which redraws the list - so the second click of a
-             double-click, the way everybody opens a folder in Windows, landed on whatever
-             row was now under the pointer and opened THAT as well. Double-clicking a
-             level-1 folder put you in one of its sub-folders, usually an empty one, and
-             the folder you asked for was never shown: reported as "sub-folders under a
-             level-1 folder do not appear". So the rest of a click sequence that began
-             on another row is ignored - by the click count the browser keeps, and by
-             time in case a redraw resets it - and a double-click only chooses the row
-             that its own first click was on. */
-          li.onclick = ev => {
-            if (ev.detail > 1 || Date.now() - drawnAt < SETTLE) return;
-            armed = li;
-            if (e.dir) return go(e.path);
-            for (const other of list.querySelectorAll("li")) other.classList.remove("sel");
-            li.classList.add("sel");
-            picked = e.path;
-            q("[data-path]").value = "";
-          };
-          li.ondblclick = () => { if (!e.dir && armed === li) done(e.path); };
-          list.appendChild(li);
-        }
-        q("[data-note]").textContent = r.error
-          || (opts.folders ? `The file will be written into this folder as `
-                             + `${opts.name || "the name you type"}.`
-                           : `${r.entries.length} item(s). Double-click a file to `
-                             + `choose it.`);
-        if (opts.folders && opts.name) q("[data-path]").value = join(r.path, opts.name);
-      }
-      const kb = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB`
-                                   : `${Math.max(1, Math.round(n / 1024))} KB`;
-      /* Local time, written out in full and the same way for every row - 2026-10-07 14:32
-         - so a column of them sorts by eye and cannot be misread across locales. */
-      const when = ms => {
-        if (!ms) return "";
-        const d = new Date(ms), p = n => String(n).padStart(2, "0");
-        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} `
-          + `${p(d.getHours())}:${p(d.getMinutes())}`;
-      };
-      go(opts.start || where.workspaces || where.dataDir);
-    });
-  }
+  /* ---- the in-page folder browser ----------------------------------------
+     shell/python/filebrowser.js (R-63). It talks to fs/list, which returns names,
+     dates, sizes and - for a plan - who saved it and who is editing it. No browser
+     file interface is involved: nothing in it can read a file's contents. */
+  const browseFor = makeFileBrowser({ call, where });
 
   /* ---- who you are -------------------------------------------------------- */
   function signIn(suggest) {
@@ -1017,6 +941,7 @@
     if (what.startsWith("tab:")) return showTab(what.slice(4));
     switch (what) {
       case "new": await releaseClaim(); ref = null; holds = false; stale = false;
+                  privatePlan = false; timeoutShown = false; keepBar(false);
                   baseSaved = ""; showFile(); showHold(null); return startBlank();
       case "reload": return reloadPlan();
       case "moveToShared": return moveToShared();
@@ -1212,6 +1137,8 @@ Account        ${where.account}</pre>
                   checkShared, moveToShared,
                   offerIfFreed,
                   superseded, importSource, adoptBytes, browseFor,
-                  takeClaimOnEdit, pageId: PAGE_ID,
-                  state: () => ({ ref, holds, stale, baseSaved, blockedBy, me, caps, where }) };
+                  takeClaimOnEdit, checkHold, timedOut, notePrivacy, saveMine,
+                  pageId: PAGE_ID,
+                  state: () => ({ ref, holds, stale, baseSaved, blockedBy, me, caps, where,
+                                  privatePlan }) };
 })();

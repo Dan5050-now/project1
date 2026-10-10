@@ -20,7 +20,7 @@ from openpyxl.styles.borders import Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "1.17"
+DOC_VERSION = "1.18"
 DOC_STATUS = ("Baseline v1.0 + changes C-N01 and C-N02. Gates N1-N3 closed; Step N4 in progress and "
               "Step N4a - the Python shell - BUILT AND TESTED, awaiting your run on the company laptop. "
               "Two company controls are measured rather than feared: an executable may run but may not "
@@ -228,6 +228,32 @@ ws, r = sheet(wb, "01_Version_History", "Version history",
               "This document's own line. It does not continue the web application plan's numbering.")
 
 hist = [
+    [f"{MARK_NEW}1.18", "2026-10-10", "Claude Code", "-",
+     "WEB PLAN R-63, TWO REQUESTS FROM THE FIELD. (1) NR-STO-20 - A PLAN OF YOUR OWN CANNOT "
+     "TIME OUT: 'the session time-out should not apply to the private file use session'. A "
+     "workspace inside the person's own folder (My plans, at any depth) takes NO claim - no "
+     "marker, no heartbeat, nothing to expire - because nobody else can open it and there "
+     "is nobody to keep out (NR-STO-10). The strip says 'Your own plan - no time-out'. "
+     "NR-STO-14 is amended to say so; everywhere else the one-writer rule is unchanged. "
+     "(2) NR-STO-21 - A TIME-OUT IS SAID IN A POP-UP: when a holding session's claim has "
+     "lapsed and been taken over, a window that must be answered names who took over and "
+     "when, says that nothing on screen is lost, and offers Save my version to My plans "
+     "(the main button), Reload the team's plan (which discards) or Decide later. It is "
+     "raised by the thirty-second check, the moment the window is looked at again, and by "
+     "a Save that finds the hold gone; said once per lapse. (3) NR-IMP-10 - THE FILE WINDOW "
+     "IS GRAPHICAL AND USEFUL: 'update the file search windows more graphical and useful'. "
+     "A sidebar of places (My plans and Team plans, recent folders, this computer, drives); "
+     "a path bar of buttons with back, forward and up; a drawn picture and coloured type "
+     "badge per file; the time and how long ago, grouped Today / Yesterday / This week / "
+     "This month / Older; a filter box; list or tiles; a details pane; the keyboard; for a "
+     "plan, who saved it last and who is editing it now, read from the first 4 KB of the "
+     "file and its claim marker; a save box that warns before replacing; files of other "
+     "types counted rather than silently missing, and the application's own side files "
+     "(.lock, .journal, .tmp-) never offered. It remembers where each kind of window was "
+     "last used. Newest first (R-56) and the double-click guard (R-57) are kept. New test "
+     "tools/test_filebrowser.py; three guards proved by putting the fault back. Python "
+     "edition 1.35.",
+     "Issued for review"],
     [f"{MARK_NEW}1.17", "2026-10-08", "Claude Code", "-",
      "KEEP YOUR VERSION (web plan R-61), under NR-STO-14 and NR-STO-16. A session whose hold "
      "lapsed and was taken over, or whose plan a colleague saved since it was opened, has its "
@@ -237,7 +263,7 @@ hist = [
      "never lands on an existing file, after which the window works on it. The team's plan is "
      "never touched. Offered by a bar on either refusal and on the File menu at any time. "
      "test_python_app.py covers both refusals; the guard was proved by taking it out.",
-     "Issued for review"],
+     "Superseded by v1.18"],
     [f"{MARK_NEW}1.16", "2026-10-08", "Claude Code", "-",
      "NR-DEP-17 AMENDED - A PAGE THAT HAS GONE QUIET NO LONGER STOPS THE APPLICATION "
      "(web plan R-58). Reported from the field as the audit trail not working: a save "
@@ -639,11 +665,13 @@ reqs = [
     [f"{MARK_CHG}NR-STO-11", "Storage", "Reading is a full working mode, not a refusal: every figure, table, graph, filter and export is available to a session that does not hold the claim. Only writing to that workspace is withheld.", "Must", "Consequence of NR-STO-10", "N4"],
     [f"{MARK_CHG}NR-STO-12", "Storage", "A session refused the claim is shown a message naming who holds it, how to reach them, since when, whether their session is still responding, and when the plan becomes free - never merely that the file is locked.", "Must", "Q-N17", "N4"],
     [f"{MARK_NEW}NR-STO-13", "Storage", "The claim is made by an operation that cannot be won by two sessions at once, even when they attempt it in the same instant and even across a network share.", "Must", "Correctness", "N4"],
-    [f"{MARK_CHG}NR-STO-14", "Storage", "A holding session refreshes its claim every 30 seconds while it lives, so the application always knows whether the holder is alive. A claim that has stopped being refreshed expires after 30 MINUTES, after which anybody may take it over.", "Must", "Q-N16", "N4"],
+    [f"{MARK_CHG}NR-STO-14", "Storage", "A holding session refreshes its claim every 30 seconds while it lives, so the application always knows whether the holder is alive. A claim that has stopped being refreshed expires after 30 MINUTES, after which anybody may take it over. A workspace in the person's OWN folder takes no claim at all, so it has nothing to expire (NR-STO-20).", "Must", "Q-N16", "N4"],
     [f"{MARK_NEW}NR-STO-19", "Storage", "A user may reclaim a stalled claim held by their OWN name on their OWN machine immediately, without waiting out the expiry. Being locked out of your own plan because your application crashed is not a rule worth enforcing.", "Must", "Consequence of the 30-minute expiry", "N4"],
     [f"{MARK_NEW}NR-STO-15", "Storage", "The claim ends when the holder saves and closes, discards their edits, or closes the application - and a session waiting to edit is offered it without having to reopen the workspace.", "Must", "Usability", "N4"],
     [f"{MARK_NEW}NR-STO-16", "Storage", "A reading session notices when the workspace has changed on disk beneath it, says so, and offers to reload. It never presents figures it knows to be superseded as though they were current.", "Must", "Consequence of many readers", "N4"],
     [f"{MARK_NEW}NR-STO-17", "Storage", "A session that cannot claim the workspace may still Save As a copy of its own, and may still export. Being unable to edit a shared plan never means being unable to work.", "Must", "Usability", "N4"],
+    [f"{MARK_NEW}NR-STO-20", "Storage", "A WORKSPACE IN THE PERSON'S OWN FOLDER CANNOT TIME OUT. Nobody else can open a workspace there, so it takes no claim - no marker, no heartbeat, no expiry - and the window says it is the person's own and never times out. Moving it to the team folder brings it under NR-STO-10 again.", "Must", "Web plan R-63", "N4"],
+    [f"{MARK_NEW}NR-STO-21", "Storage", "WHEN A HOLDING SESSION'S CLAIM HAS LAPSED AND BEEN TAKEN OVER, IT IS TOLD IN A POP-UP that must be answered - who took over and when, that nothing on screen is lost, and the ways on: keep the work as a new file in the person's own folder (offered first), reload the plan (which discards), or decide later. Raised at once when the window is looked at again, by the periodic check, and by a Save that finds the claim gone; said once per lapse.", "Must", "Web plan R-63", "N4"],
     [f"{MARK_NEW}NR-STO-18", "Storage", "Importing into a workspace is an edit and takes the claim like any other. It is the largest change the application can make, so it cannot be the one that bypasses the rule.", "Must", "Correctness", "N4"],
 
     [f"{MARK_CHG}NR-IMP-01", "Import / export", "Import reads the Excel source workbook and prap-source-data JSON exactly as the web application does, using the same reader and reporting the same findings.", "Must", "Replaces nothing - REQ-IMP-01 inherited", "N4"],
@@ -653,6 +681,7 @@ reqs = [
     [f"{MARK_NEW}NR-IMP-06", "Import / export", "A file the application cannot read because it is encrypted or protected says so, names that as the likely cause, and says what to do about it. It never reports a protected file as corrupt, and never fails silently.", "Must", "Q-N04 - see R-N18", "N4"],
     [f"{MARK_NEW}NR-IMP-07", "Import / export", "Nothing the application writes is encrypted by the application itself. Where files must be protected, that is done by whatever the company already uses, on the folder - so the application never becomes the only thing that can open the user's own data.", "Must", "Q-N04 - see R-N18", "N2"],
     [f"{MARK_NEW}NR-IMP-09", "Import / export", "Where a shell is built for a machine that blocks data entering a browser page, the page carries NO browser file interface at all: no file input, no drop handler, no File API call. The shell reads the chosen file and hands the bytes to the page. The web application's own picker is REMOVED at start-up rather than hidden, because a button that opens a dialog and then loses the file teaches its user that the application is broken.", "Must", "R-N21, C-N02", "N4"],
+    [f"{MARK_NEW}NR-IMP-10", "Import / export", "THE FILE WINDOW SHOWS WHAT IS IN A FOLDER AT A GLANCE. Places down the side (the person's own and the team's plan folders, recent folders, this computer, drives); a path whose every step is a button, with back, forward and up; a picture and type badge per file, its modified time and how long ago, grouped by when; a filter, a list or tiles view, a details pane and keyboard use; for a plan, who saved it last and who is editing it now, before it is opened; a save that warns before replacing; files of other types counted rather than silently missing. It opens where that kind of window was last used. No browser file interface is involved (NR-IMP-09).", "Should", "Web plan R-63", "N4"],
     [f"{MARK_NEW}NR-DEP-17", "Deployment", "THE WINDOW AND THE APPLICATION GO TOGETHER. Closing the last page of the desktop shell stops the application - the console window closes by itself, within a few seconds. The console IS the application and the browser page is its window, and a console left running after the window has gone owns a port, a claim on a plan nobody has open and a data folder the next run then has to argue with, while the only way to be rid of it is to know it is there. FOUR THINGS IT MUST NOT DO, each of which is a way of losing somebody's work or their patience. NOT BEFORE A PAGE HAS EVER CONNECTED: a slow browser, or an address somebody is about to paste in, is not a countdown. NOT ON A RELOAD: the close signal fires on a reload exactly as it does on a close, so it is not believed until a grace period has passed with nobody saying hello again - otherwise refreshing the page would be a way of losing the plan in it. NOT WHILE ANOTHER PAGE IS OPEN: two windows, close one, it carries on. NOT WHILE SOMEBODY IS STILL SIGNING IN: liveness is registered before the start-up sequence, because part of that sequence waits on a person typing their name, and 'open it, look at it, close it again' is exactly the case this exists for. A QUIET PAGE IS NOT A CLOSED ONE (amended at v1.16). Only the close signal stops it. A heartbeat is still sent, but silence is never taken as closure: a browser freezes the timers of a tab it has put to sleep and a laptop lid stops everything, and an application that stopped on silence left a window that looked alive and could save nothing - which is how this was found. A browser killed outright therefore leaves the console open until somebody closes it, which is the better of the two failures. And if the application does stop with a window still open, that window says so and offers the browser's own download of the plan and of any change-log entries not yet archived. AND IT CAN BE TURNED OFF, with --keep-running, for a headless run or for somebody who wants to shut one browser window and open another.", "Must", "R-N24", "N3"],
     [f"{MARK_NEW}NR-DEP-16", "Deployment", "The Python shell needs a Python 3.9 or newer interpreter and NOTHING else: standard library only, no pip install, no download, no administrator rights. What is delivered is readable source text, so it can be reviewed before it is run.", "Must", "R-N20, C-N02", "N4"],
     [f"{MARK_NEW}NR-IMP-08", "Import / export", "Export is a supported way to EDIT a plan, not only to read one. The exported file - in either format - can be changed outside the application and imported back with no loss: every row, column and value that went out comes back, and anything the application derives is recomputed rather than trusted.", "Must", "Gate N3 review - C-N01", "N4"],

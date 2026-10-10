@@ -425,7 +425,12 @@ rows = [
      "information). No figure moves; template v1.20, examples v1.22 and v1.14, the small one "
      "carrying two accepted months and one to be fixed. Clicking an issue month used to fold "
      "its project row open or shut instead - the row's own click came first - and that is "
-     "fixed. THE STANDARD VS STAFFED LIST IS IN ORDER OF PROJECT ID, THEN MONTH, both ascending (asked for straight after), and lists every month: it was largest gap first and capped at 40, which in project order would have cut whole projects off the end. tools/test_review.py is new: 49 checks, five proved by putting the fault back.",
+     "fixed. THE STANDARD VS STAFFED LIST IS IN ORDER OF PROJECT ID, THEN MONTH, both ascending (asked for straight after), and lists every month: it was largest gap first and capped at 40, which in project order would have cut whole projects off the end. tools/test_review.py is new: 49 checks, five proved by putting the fault back. "
+     "R-63 (PYTHON EDITION, desktop plan v1.18): a plan in My plans takes no editing hold and "
+     "so never times out; a team plan whose hold lapses and is taken over says so in a "
+     "pop-up that offers to keep your version; and the file window is redrawn - places, a "
+     "clickable path, type badges, how long ago and date groups, a filter, list or tiles, "
+     "details, the keyboard, and who saved or is editing a plan. Python edition 1.35.",
      "Issued for review"],
     [f"{MARK_NEW}2.71", "2026-10-08", "Claude Code", "Pending",
      "R-60, REQ-PRJ-16: PERIOD COLOURS ARE AN ASSUMPTION, AND A PROJECT MAY STILL CHOOSE ITS "
@@ -3434,6 +3439,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-63", "Python edition", "Make the file search windows more graphical and useful; do not apply the session time-out to a private plan; when a session does time out, say so in a pop-up.", "Applied (Python edition 1.35; desktop plan v1.18). A plan in My plans takes no hold, so it never times out (NR-STO-20). A lapsed hold on a team plan raises a pop-up naming who took over and offering to keep your version (NR-STO-21). The file window gains places, a clickable path with back/forward/up, type badges, how-long-ago and date groups, a filter, list or tiles, details, the keyboard, and who saved / is editing a plan (NR-IMP-10).", "Applied"],
     ["R-62", "Dashboard", "Let a manager confirm a short / over / not-staffed issue - 'no issue' or 'accepted', with a rationale - from the issue itself, changeable later; show confirmed issues distinguished (muted) but still readable, with the confirmation and rationale shown whenever the issue is clicked.", "Applied. New sheet IssueReview; source schema steps 15 to 16. Clicking an issue month opens it with a Manager review box (decision, manager, reason, whole run); Confirmed and Accepted close it and need a reason, To be fixed keeps it open. Closed months are drawn muted, counted apart, and filterable. A review covers the gap it was made at; V-40 added; REQ-DSH-20 added; no figure moves.", "Applied"],
     ["R-61", "Storage", "Let a user whose session timed out save the working plan into their personal folder.", "Applied (Python edition). When the shared plan can no longer be written - the hold lapsed and was taken over, or a colleague saved since it was opened - a bar offers 'Save my version to My plans': a new, uniquely named file in the person's own folder, after which the window works on it. Also on the File menu. The team's plan is never touched.", "Applied"],
     ["R-60", "Data model", "Colour every project's periods from an assumption on the General assumptions tab; where none is assumed for a period, let the project choose.", "Applied. New sheet PeriodHighlight, one default colour per period name; source schema steps 14 to 15. The project's own Highlight wins, then the default, then gray; derived periods take the default too. Shipped defaults restore the O-10 reading as data. V-39 added; REQ-PRJ-16 added; no figure moves.", "Applied"],

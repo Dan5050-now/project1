@@ -597,95 +597,9 @@ def main():
                   and pg.evaluate("() => document.getElementById('pm-share').hidden"),
                   "and the window follows the plan it moved")
 
-            # The other half of the fix: the place is one click away in the browser,
-            # so the right choice can be made before anything goes wrong.
-            pg.evaluate("() => { window.__pm.browseFor({title: 'x'}); }")
-            pg.wait_for_timeout(900)
-            chips = pg.eval_on_selector_all(
-                ".pm-back .pm-crumb button.place", "es => es.map(e => e.textContent)")
-            check(chips == ["My plans", "Team plans"],
-                  "the file browser offers both places by name", ", ".join(chips))
-            pg.evaluate("() => document.querySelector('.pm-back [data-cancel]').click()")
-            pg.wait_for_timeout(300)
-
-            # R-56: which file is the latest, without opening any of them. Three files
-            # whose NAMES sort the opposite way to their modified times, so a listing that
-            # was still by name would put the oldest first and fail.
-            # Outside the application's home: what this test writes there is checked below.
-            dated = pathlib.Path(tempfile.mkdtemp(prefix="pm-dated-"))
-            stamps = {"a_plan.xlsx": 1_760_000_000, "b_plan.xlsx": 1_770_000_000,
-                      "c_plan.xlsx": 1_780_000_000}
-            for n, t in stamps.items():
-                (dated / n).write_bytes(b"x" * 2048)
-                os.utime(dated / n, (t, t))
-            pg.evaluate("p => { window.__pm.browseFor({title: 'x', start: p}); }", str(dated))
-            pg.wait_for_timeout(900)
-            rows = pg.eval_on_selector_all(
-                ".pm-back .pm-list li:not(.pm-head)",
-                "es => es.map(e => [e.querySelector('.n').firstChild.textContent,"
-                " e.querySelector('.dt').textContent, !!e.querySelector('.pm-new')])")
-            want = sorted(stamps, key=lambda n: -stamps[n])
-            local = time.strftime("%Y-%m-%d %H:%M", time.localtime(stamps[want[0]]))
-            check([r[0] for r in rows] == want,
-                  "THE FILE BROWSER LISTS THE NEWEST FILE FIRST (R-56)",
-                  " > ".join(r[0] for r in rows))
-            check(rows and rows[0][1] == local and all(r[1] for r in rows),
-                  "with every file's modified date and time on its row",
-                  " | ".join(r[1] for r in rows))
-            check([r[2] for r in rows] == [True, False, False],
-                  "and the newest one marked as such")
-            pg.click(".pm-back [data-sort='name']")
-            pg.wait_for_timeout(700)
-            byname = pg.eval_on_selector_all(
-                ".pm-back .pm-list li:not(.pm-head) .n", "es => es.map(e => e.firstChild.textContent)")
-            check(byname == sorted(stamps), "and it can be put back in name order",
-                  " > ".join(byname))
-            pg.evaluate("() => document.querySelector('.pm-back [data-cancel]').click()")
-            pg.wait_for_timeout(300)
-            shutil.rmtree(dated, ignore_errors=True)
-
-            # R-57: a double-click on a folder opens THAT folder. The first click opens it
-            # and redraws the list; the second used to land on whatever row was now under
-            # the pointer and open that too, so the folder asked for was skipped.
-            tree = pathlib.Path(tempfile.mkdtemp(prefix="pm-tree-"))
-            for sub in ("L1a/L2a/L3a", "L1a/L2b", "L1b"):
-                (tree / sub).mkdir(parents=True)
-            (tree / "L1a" / "top.xlsx").write_bytes(b"x")
-            pg.evaluate("""p => { window.__got = undefined;
-                window.__pm.browseFor({title: 'x', suffixes: ['.xlsx'], start: p})
-                  .then(v => { window.__got = v; }); }""", str(tree))
-            pg.wait_for_timeout(900)
-            row = ".pm-back .pm-list li:not(.pm-head)"
-            bb = pg.locator(row, has_text="L1a").first.bounding_box()
-            x, y = bb["x"] + 60, bb["y"] + bb["height"] / 2
-            pg.mouse.click(x, y)
-            pg.wait_for_timeout(150)                      # a person's double-click, not a robot's
-            pg.mouse.click(x, y, click_count=2)
-            pg.wait_for_timeout(900)
-            here = pg.inner_text(".pm-back .pm-list li.pm-head .n")
-            listed = pg.eval_on_selector_all(
-                f"{row} .n", "es => es.map(e => e.firstChild.textContent)")
-            check(here.endswith("L1a") and {"L2a", "L2b", "top.xlsx"} <= set(listed),
-                  "DOUBLE-CLICKING A FOLDER OPENS THAT FOLDER, and its sub-folders are listed "
-                  "(R-57)", f"{here} -> {listed}")
-            pg.wait_for_timeout(600)
-            pg.locator(row, has_text="L2a").first.click()
-            pg.wait_for_timeout(900)
-            check(pg.inner_text(".pm-back .pm-list li.pm-head .n").endswith("L2a")
-                  and "L3a" in pg.eval_on_selector_all(
-                      f"{row} .n", "es => es.map(e => e.firstChild.textContent)"),
-                  "and a single click goes on down, level after level")
-            pg.wait_for_timeout(600)
-            pg.locator(".pm-crumb button", has_text="up").click()
-            pg.wait_for_timeout(1200)
-            pg.locator(row, has_text="top.xlsx").first.dblclick()
-            pg.wait_for_timeout(500)
-            check(str(pg.evaluate("window.__got")).endswith("top.xlsx"),
-                  "and double-clicking a file still chooses it", str(pg.evaluate("window.__got")))
-            if pg.locator(".pm-back").count():
-                pg.evaluate("() => document.querySelector('.pm-back [data-cancel]').click()")
-            shutil.rmtree(tree, ignore_errors=True)
-            pg.wait_for_timeout(300)
+            # The file browser - the places, newest first (R-56), a double-click that
+            # opens the folder it was on (R-57), and everything R-63 added - has its own
+            # test now: tools/test_filebrowser.py.
 
             menu2 = pg.eval_on_selector_all(
                 "#pm-title .pm-menu a[data-do]", "es => es.map(e => e.dataset.do)")
@@ -798,8 +712,13 @@ def main():
                   and pg.is_visible("#pm-keep"),
                   "A SESSION WHOSE HOLD LAPSED AND WAS TAKEN OVER IS REFUSED - AND OFFERED "
                   "TO KEEP ITS VERSION", pg.inner_text("#pm-keep").strip()[:90])
+            # R-63: a hold found lapsed by the save itself is said in a pop-up as well;
+            # its primary button is the same keep-your-version as the bar's.
+            check(pg.is_visible(".pm-alert"),
+                  "and the time-out is said in a pop-up too (R-63)")
             before = set(os.listdir(mine_dir))
-            pg.click("#pm-keep [data-keep]")
+            pg.click(".pm-alert [data-keep]" if pg.is_visible(".pm-alert")
+                     else "#pm-keep [data-keep]")
             pg.wait_for_timeout(1800)
             again = sorted(set(os.listdir(mine_dir)) - before - {os.path.basename(mine) + ".lock"})
             check(len(again) == 1 and again[0].endswith(".prap")

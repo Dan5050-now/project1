@@ -32,12 +32,25 @@ this file (R-N21).
 Specification: PRAP_NewApp_Specification_v1.3.xlsx sheet 03.
 """
 
+import json
 import os
+import re
 import string
 import sys
 
+from ..storage import claim as CL
+
 SOURCE_TYPES = (".xlsx", ".json")
 PLAN_TYPE = ".prap"
+
+# The application's own side files. They sit beside a plan - its claim, its journal, a
+# save caught half way - and are never something a person means to open, so the
+# browser does not offer them (R-63).
+SIDE_FILE = re.compile(r"\.(lock|journal)$|\.tmp-\d+$", re.I)
+# How many plans in one folder get their header read. A plan's header is its first
+# few hundred bytes, so this is cheap - but a folder of thousands is not a reason to
+# make the listing slow.
+PLAN_INFO_MAX = 200
 
 
 # ------------------------------------------------------------- the folder listing
@@ -74,7 +87,7 @@ def listing(path, suffixes=None):
         path = os.path.dirname(path) or os.path.expanduser("~")
     suffixes = tuple(s.lower() for s in (suffixes or ()))
 
-    dirs, files = [], []
+    dirs, files, hidden = [], [], 0
     try:
         with os.scandir(path) as it:
             for e in it:
@@ -90,10 +103,16 @@ def listing(path, suffixes=None):
                             mt = None
                         dirs.append({"name": e.name, "path": e.path, "dir": True,
                                      "mtime": mt})
+                    elif SIDE_FILE.search(e.name):
+                        continue
                     elif not suffixes or e.name.lower().endswith(suffixes):
                         st = e.stat()
                         files.append({"name": e.name, "path": e.path, "dir": False,
                                       "size": st.st_size, "mtime": st.st_mtime * 1000})
+                    else:
+                        # Counted, not listed: "3 other files are not shown" tells
+                        # somebody the file they want is there, just of another type.
+                        hidden += 1
                 except OSError:
                     continue
     except PermissionError:
@@ -106,8 +125,43 @@ def listing(path, suffixes=None):
 
     dirs.sort(key=lambda d: d["name"].lower())
     files.sort(key=lambda f: f["name"].lower())
+    plans = [f for f in files if f["name"].lower().endswith(PLAN_TYPE)]
+    for f in plans[:PLAN_INFO_MAX]:
+        f["plan"] = plan_info(f["path"])
     return {"path": path, "parent": _parent(path), "entries": dirs + files,
-            "roots": roots(), "error": None}
+            "hidden": hidden, "roots": roots(), "error": None}
+
+
+def plan_info(path):
+    """What a team needs to know about a plan BEFORE opening it (R-63): who saved it
+    last and when, and whether somebody is editing it now.
+
+    The header is the first thing in a plan file (storage/python/workspace.py writes
+    "workspace" before "sheets"), so only the first few kilobytes are read - never the
+    sheets - and a file that is not a plan simply says nothing."""
+    out = {}
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(4096).decode("utf-8", "replace")
+        m = re.search(r'"last_saved":\s*"([^"]+)"', head)
+        if m:
+            out["savedAt"] = m.group(1)
+        m = re.search(r'"last_saved_by":\s*\{[^{}]*?"name":\s*"((?:[^"\\]|\\.)*)"', head)
+        if m:
+            try:
+                out["savedBy"] = json.loads('"%s"' % m.group(1))
+            except ValueError:
+                out["savedBy"] = m.group(1)
+    except OSError:
+        pass
+    try:
+        held = CL.read_claim(path) if os.path.exists(CL.lock_path(path)) else None
+    except OSError:
+        held = None
+    if held:
+        out["heldBy"] = {"name": held.get("name"), "department": held.get("department"),
+                         "state": CL.status_of(held)}
+    return out
 
 
 def _parent(path):

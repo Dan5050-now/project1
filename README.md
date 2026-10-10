@@ -196,12 +196,22 @@ document through the manifest rather than by sorting filenames.
 
 ### Desktop application (second product line)
 
-- `docs/PRAP_NewApp_Development_Plan_v1.17.xlsx` — **current.** A session that can no
+- `docs/PRAP_NewApp_Development_Plan_v1.18.xlsx` — **current.** Web plan R-63: a plan in
+  **My plans** takes no editing hold, so it **never times out** (`NR-STO-20`); when a team
+  plan's hold lapses and a colleague takes over, a **pop-up** says so and offers to keep
+  your version (`NR-STO-21`); and the **file window** is redrawn — places down the side, a
+  clickable path with back/forward/up, a type badge per file, "how long ago" and date
+  groups, a filter, list or tiles, a details pane, the keyboard, and for a plan who saved
+  it and who is editing it now (`NR-IMP-10`).
+- `docs/PRAP_NewApp_Development_Plan_v1.17.xlsx` — superseded. A session that can no
   longer write the shared plan is offered to keep its version in its own folder (R-61).
 - `docs/PRAP_NewApp_Development_Plan_v1.16.xlsx` — superseded. Amends `NR-DEP-17`:
   a page that has gone quiet no longer stops the application — only the close message
   does (web plan R-58).
-- `docs/PRAP_NewApp_Specification_v1.9.xlsx` — **current specification.** Issued against
+- `docs/PRAP_NewApp_Specification_v1.10.xlsx` — **current specification.** Issued against
+  desktop plan v1.18: which plans take no claim, the time-out pop-up, and the file window
+  (`shell/python/filebrowser.js`) with what `fs/list` now returns.
+- `docs/PRAP_NewApp_Specification_v1.9.xlsx` — superseded specification. Issued against
   desktop plan v1.17: how "Save my version to My plans" names, checks and opens the copy.
 - `docs/PRAP_NewApp_Specification_v1.8.xlsx` — superseded specification. Issued against
   desktop plan v1.16: the shutdown rule, and what a window says and offers once the
