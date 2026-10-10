@@ -1,0 +1,331 @@
+/* ===================== PM_APP window chrome (Python shell) =================
+   The window, not the product. Everything below this line styles the frame
+   around the application; nothing in it decides a number.
+
+   There is no Electron menu bar here, so the menu is drawn in the page - the
+   one visible difference from the desktop build, and the reason this file is
+   longer than the Electron shell's chrome. */
+
+/* OPAQUE, and the way it is made opaque matters. It was painted with --fill alone,
+   which is a 12% grey (24% in the dark theme) - right for a tint laid on a surface, and
+   wrong for a bar the page scrolls UNDER: the rows passing behind showed straight
+   through the menu, and the menu's own words were read against a table. The same tint
+   is now laid on the page colour instead of on nothing, so at rest it looks exactly as
+   it always did - that is what it was compositing against at the top of the page - and
+   once the page moves there is nothing behind it to show. */
+#pm-title{position:sticky;top:0;z-index:70;display:flex;gap:14px;align-items:center;
+  padding:7px 14px;font-size:12.5px;color:var(--ink2);
+  background:linear-gradient(var(--fill),var(--fill)),var(--page);
+  border-bottom:1px solid var(--grid)}
+#pm-title b{font-weight:600;color:var(--ink)}
+
+/* ---- the menu ---------------------------------------------------------- */
+.pm-menu{position:relative}
+.pm-menu>button{font:inherit;font-size:12.5px;color:var(--ink2);background:none;
+  border:0;padding:3px 9px;border-radius:6px;cursor:pointer}
+.pm-menu>button:hover,.pm-menu.open>button{background:var(--surface);color:var(--ink)}
+.pm-menu>div{display:none;position:absolute;left:0;top:100%;min-width:250px;z-index:80;
+  background:var(--surface);border:1px solid var(--grid);border-radius:10px;
+  box-shadow:0 12px 34px rgba(0,0,0,.22);padding:5px;margin-top:4px}
+.pm-menu.open>div{display:block}
+.pm-menu a{display:flex;justify-content:space-between;gap:20px;padding:6px 10px;
+  font-size:12.5px;color:var(--ink);border-radius:6px;cursor:pointer;text-decoration:none}
+.pm-menu a:hover{background:var(--fill)}
+.pm-menu a[aria-disabled="true"]{color:var(--ink3);pointer-events:none}
+.pm-menu a i{font-style:normal;color:var(--ink3);font-size:11.5px}
+.pm-menu hr{border:0;border-top:1px solid var(--grid);margin:5px 2px}
+
+/* ---- the status strip -------------------------------------------------- */
+/* Stacked under the menu bar, at whatever height the menu bar actually is. It was
+   pinned at a hardcoded 34px, which is right until the title bar wraps on a narrow
+   window; --pm-title-h is measured, and the literal is only the pre-measurement
+   fallback for the first frame. */
+#pm-strip{position:sticky;top:var(--pm-title-h,34px);z-index:65;display:flex;gap:8px;
+  align-items:center;flex-wrap:wrap;padding:8px 14px;background:var(--surface);
+  border-bottom:1px solid var(--grid)}
+
+/* The one-line notice that a plan is somewhere the sharing rules cannot reach. It
+   sits below the pills and above the page, and it is only ever shown when there is
+   something to do about it - a bar that is always there is a bar nobody reads. */
+#pm-share{position:sticky;top:calc(var(--pm-title-h,34px) + var(--pm-strip-h,0px));
+  z-index:64;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:9px 14px;font-size:12.5px;background:var(--underbg);
+  color:var(--underink);border-bottom:1px solid var(--grid)}
+#pm-share[hidden]{display:none}
+/* R-58: the application has stopped. Red, because nothing in the window can be saved
+   until it is acted on, and above the sharing notice for the same reason. */
+#pm-gone{position:sticky;top:calc(var(--pm-title-h,34px) + var(--pm-strip-h,0px));
+  z-index:65;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:9px 14px;font-size:12.5px;background:var(--overbg);
+  color:var(--crit);border-bottom:1px solid var(--grid)}
+#pm-gone[hidden]{display:none}
+/* R-61: your work can no longer go into the shared plan; keep it in your own folder. */
+#pm-keep{position:sticky;top:calc(var(--pm-title-h,34px) + var(--pm-strip-h,0px));
+  z-index:64;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:9px 14px;font-size:12.5px;background:var(--underbg);
+  color:var(--underink);border-bottom:1px solid var(--grid)}
+#pm-keep[hidden]{display:none}
+#pm-keep span{flex:1;min-width:240px}
+#pm-keep .btn{font-size:12px;padding:3px 10px}
+#pm-gone span{flex:1;min-width:240px}
+#pm-gone .btn{font-size:12px;padding:3px 10px}
+#pm-share span{flex:1;min-width:240px}
+#pm-share .btn{font-size:12px;padding:3px 10px}
+
+/* ---- the page underneath ------------------------------------------------
+   THE ONE PLACE THIS SHELL HAS TO REACH INTO THE PAGE.
+
+   The web application has its own sticky band - the edit bar and the four tabs - and
+   it pins itself to top:0, which is correct in a browser where nothing is above it.
+   Here two bars ARE above it, and they carry a higher z-index, so scrolling slid the
+   tabs and the Save button underneath the menu and left them there: the page's own
+   controls hidden behind the window's.
+
+   Raising the page's z-index instead would be the wrong repair - then the tabs would
+   cover the File menu, and the menu is the thing that must stay reachable. The band
+   belongs BELOW the chrome, so that is where it is put, at the chrome's measured
+   height rather than at a guess (see fitChrome() in the shell script: the strip wraps,
+   so the height is not a constant).
+
+   scroll-padding-top is the same fact told to the browser: without it, jumping to an
+   anchor or tabbing to something off-screen scrolls it to the top of the viewport,
+   which is behind the chrome. */
+#stickybar{top:var(--pm-chrome,71px)}
+html{scroll-padding-top:calc(var(--pm-chrome,71px) + 8px)}
+.pm-pill{font-size:11.5px;padding:3px 10px;border-radius:999px;background:var(--fill);
+  color:var(--ink2);white-space:nowrap}
+.pm-pill.hold{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.pm-pill.read{background:var(--underbg);color:var(--underink)}
+/* R-63: a plan in your own folder - no hold, so nothing to time out. */
+.pm-pill.own{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
+/* R-63: the session timed out. A window that has to be answered, because a lapsed hold
+   is the moment work can be lost; the safe choice is the primary button. */
+.pm-box.pm-alert{width:min(560px,100%);border-top:4px solid var(--warn)}
+.pm-alert h3{display:flex;align-items:center;gap:10px;font-size:15.5px}
+.pm-alert-i{font-size:20px;line-height:1}
+.pm-alert .body p{margin:0 0 10px;font-size:13px;line-height:1.5}
+.pm-alert-ok{background:color-mix(in srgb,var(--good) 12%,transparent);border-radius:8px;
+  padding:8px 10px}
+.pm-alert-list{margin:0 0 4px;padding-left:18px;font-size:12.5px;line-height:1.5}
+.pm-alert-list li{margin-bottom:4px}
+.pm-pill.file{font-weight:600;color:var(--ink)}
+.pm-grow{flex:1}
+
+/* ---- the file browser and the sign-in box ------------------------------ */
+.pm-back{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.42);
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.pm-box{background:var(--surface);border:1px solid var(--grid);border-radius:14px;
+  box-shadow:0 24px 70px rgba(0,0,0,.35);width:min(760px,100%);
+  max-height:min(680px,90vh);display:flex;flex-direction:column;overflow:hidden}
+.pm-box h3{margin:0;padding:14px 18px;font-size:14.5px;border-bottom:1px solid var(--grid)}
+.pm-box .body{padding:14px 18px;overflow:auto}
+.pm-box .foot{display:flex;gap:9px;justify-content:flex-end;align-items:center;
+  padding:12px 18px;border-top:1px solid var(--grid);background:var(--fill)}
+.pm-box .foot .pm-grow{flex:1}
+/* The import difference report's summary line (importdiff.js). */
+.pm-crumb{display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+  padding:10px 18px;border-bottom:1px solid var(--grid);font-size:12px}
+.pm-crumb button{font:inherit;font-size:12px;background:var(--fill);border:1px solid var(--grid);
+  border-radius:999px;padding:3px 10px;cursor:pointer;color:var(--ink2)}
+.pm-crumb button:hover{color:var(--ink)}
+.pm-list{list-style:none;margin:0;padding:0}
+.pm-list li{display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:8px;
+  cursor:pointer;font-size:13px}
+.pm-list li:hover{background:var(--fill)}
+.pm-list li.sel{background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.pm-list li .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm-list li .m{color:var(--ink3);font-size:11.5px}
+.pm-list li .i{width:18px;text-align:center;color:var(--ink3)}
+.pm-new{font-size:10.5px;font-weight:650;color:var(--accent);border-radius:999px;
+  padding:1px 7px;background:color-mix(in srgb,var(--accent) 14%,transparent)}
+
+/* ---- the file browser (R-63) -------------------------------------------------
+   Three columns: the places down the left, the folder in the middle, and the file
+   picked on the right. The type colours are a key, not decoration: green is a
+   workbook, blue a plan, purple an interchange file - the same on every row and in
+   both themes, so a folder of mixed files reads at a glance. */
+.fb-back{padding:16px}
+.pm-box.fb{width:min(1060px,100%);max-height:none;height:min(700px,92vh)}
+.fb{--fb-xl:#1d7a35;--fb-pl:#0066cc;--fb-js:#7d3cc8;--fb-cs:#8a6d00;--fb-pd:#c42b1c;
+  --fb-ot:#6e6e73;--fb-folder:#e3a21a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fb{--fb-xl:#30d158;
+  --fb-pl:#0a84ff;--fb-js:#bf8cff;--fb-cs:#ffd60a;--fb-pd:#ff6961;--fb-ot:#98989d;
+  --fb-folder:#ffc145}}
+:root[data-theme="dark"] .fb{--fb-xl:#30d158;--fb-pl:#0a84ff;--fb-js:#bf8cff;
+  --fb-cs:#ffd60a;--fb-pd:#ff6961;--fb-ot:#98989d;--fb-folder:#ffc145}
+.fb-top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:14px 18px 8px}
+.fb-top h3{margin:0;padding:0;border:0;font-size:15px;line-height:1.3}
+.fb-types{font-size:11.5px;color:var(--ink3)}
+.fb-g{width:16px;height:16px;flex:none;display:block}
+.fb-bar{display:flex;align-items:center;gap:6px;padding:0 14px 10px;
+  border-bottom:1px solid var(--grid)}
+.fb-ic{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;
+  border-radius:8px;border:1px solid transparent;background:none;color:var(--ink2);
+  cursor:pointer;flex:none}
+.fb-ic:hover:not(:disabled){background:var(--fill);color:var(--ink)}
+.fb-ic:disabled{opacity:.35;cursor:default}
+.fb-ic.on{background:var(--fill2);color:var(--ink)}
+.fb-crumbs{flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow-x:auto;
+  scrollbar-width:none;height:32px;padding:0 6px;border:1px solid var(--grid);
+  border-radius:9px;background:var(--bg,var(--surface))}
+.fb-crumbs::-webkit-scrollbar{display:none}
+.fb-crumb{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:12.5px;
+  white-space:nowrap;background:none;border:0;border-radius:6px;padding:3px 7px;
+  color:var(--ink2);cursor:pointer}
+.fb-crumb:hover{background:var(--fill);color:var(--ink)}
+.fb-crumb.on{color:var(--ink);font-weight:600}
+.fb-crumb.place{color:var(--accent);font-weight:600}
+.fb-crumb .fb-g{width:14px;height:14px}
+.fb-sep,.fb-gap{color:var(--ink3);font-size:12px;padding:0 1px}
+.fb-find{display:flex;align-items:center;gap:6px;height:32px;padding:0 9px;
+  border:1px solid var(--grid);border-radius:9px;color:var(--ink3);width:190px;flex:none}
+.fb-find:focus-within{border-color:var(--accent)}
+.fb-find input{border:0;outline:0;background:none;font:inherit;font-size:12.5px;
+  color:var(--ink);width:100%}
+.fb-views{display:flex;gap:2px}
+.fb-main{flex:1;min-height:0;display:grid;grid-template-columns:190px 1fr 230px}
+.fb-side{border-right:1px solid var(--grid);padding:10px 8px;overflow:auto;
+  background:linear-gradient(var(--fill),var(--fill)),var(--surface)}
+.fb-side h4{margin:10px 8px 4px;font-size:10.5px;font-weight:650;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--ink3)}
+.fb-side h4:first-child{margin-top:2px}
+.fb-place{display:flex;align-items:center;gap:9px;width:100%;font:inherit;font-size:12.5px;
+  text-align:left;padding:6px 9px;border:0;border-radius:8px;background:none;color:var(--ink);
+  cursor:pointer}
+.fb-place span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fb-place .fb-g{color:var(--ink3)}
+.fb-place.place .fb-g{color:var(--accent)}
+.fb-place:hover{background:var(--fill2)}
+.fb-place.on{background:color-mix(in srgb,var(--accent) 16%,transparent);font-weight:600}
+.fb-pane{display:flex;flex-direction:column;min-width:0;min-height:0}
+.fb-files{flex:1;overflow:auto;padding:4px 10px 10px;outline:0}
+.fb-files:focus-visible{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent) 40%,transparent)}
+.fb-head,.fb-row:not(.tile){display:grid;grid-template-columns:30px minmax(0,1fr) 128px 52px 64px;
+  align-items:center;gap:10px}
+.fb-head{position:sticky;top:0;z-index:1;background:var(--surface);padding:6px 8px 5px;
+  border-bottom:1px solid var(--grid);margin-bottom:2px}
+.fb-head button{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink3);background:none;
+  border:0;padding:2px 4px;border-radius:5px;cursor:pointer;text-align:left}
+.fb-head button.on{color:var(--ink)}
+.fb-head button:hover{background:var(--fill)}
+.fb-head .c-n{grid-column:1 / span 2;padding-left:44px}
+.fb-head .c-s,.fb-row .c-s{text-align:right}
+.fb-row{padding:5px 8px;border-radius:9px;cursor:pointer;font-size:13px}
+.fb-row:hover{background:var(--fill)}
+.fb-row.sel{background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.fb-row.kb{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent) 55%,transparent)}
+.fb-row .c-n{display:flex;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0}
+.fb-row .c-n .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.fb-row.dir .c-n .n{font-weight:600}
+.fb-row .c-n .s{flex-basis:100%;font-size:11px;color:var(--ink3);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.fb-row .c-d{display:flex;flex-direction:column;line-height:1.25}
+.fb-row .dt{font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.fb-row .ago,.fb-info .ago{font-size:11px;color:var(--ink3)}
+.fb-row .c-t{font-size:11px;font-weight:600;color:var(--ink3)}
+.fb-row .c-s{font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.fb-band{font-size:10.5px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink3);padding:10px 8px 3px}
+.fb-held{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:650;
+  border-radius:999px;padding:1px 7px 1px 5px;background:var(--underbg);color:var(--underink)}
+.fb-held .fb-g{width:11px;height:11px}
+/* The pictures: a folder, and a page carrying its type. */
+.fb-fold{display:inline-flex;color:var(--fb-folder)}
+.fb-fold .fb-g{width:26px;height:26px}
+.fb-fold.big .fb-g{width:56px;height:56px}
+.fb-doc{--c:var(--fb-ot);position:relative;display:inline-block;width:24px;height:30px;
+  color:var(--c)}
+.fb-doc svg{width:100%;height:100%;display:block}
+.fb-doc .pg{fill:color-mix(in srgb,currentColor 13%,var(--surface));stroke:currentColor;
+  stroke-width:1.3}
+.fb-doc .fold{fill:color-mix(in srgb,currentColor 35%,var(--surface));stroke:currentColor;
+  stroke-width:1.1;stroke-linejoin:round}
+/* The label is the type colour with the page colour on it, so it reads in both themes. */
+.fb-doc b{position:absolute;left:-3px;right:-3px;bottom:3px;text-align:center;font-size:7.5px;
+  font-weight:800;letter-spacing:.02em;color:var(--surface);background:var(--c);
+  border-radius:3px;line-height:11px}
+.fb-doc.big{width:46px;height:58px}
+.fb-doc.big b{font-size:11px;line-height:16px;bottom:7px;left:-5px;right:-5px}
+.fb-doc.xl{--c:var(--fb-xl)}.fb-doc.pl{--c:var(--fb-pl)}.fb-doc.js{--c:var(--fb-js)}
+.fb-doc.cs{--c:var(--fb-cs)}.fb-doc.pd{--c:var(--fb-pd)}
+/* Tiles. */
+.fb-files.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));
+  align-content:start;gap:8px;padding-top:10px}
+.fb-files.tiles .fb-band{grid-column:1 / -1;padding:6px 4px 0}
+.fb-row.tile{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;
+  padding:12px 8px 10px;border:1px solid var(--grid)}
+.fb-row.tile .n{font-size:12px;line-height:1.3;max-width:100%;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.fb-row.tile .w{font-size:11px;color:var(--ink3)}
+.fb-row.tile .tg{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+.fb-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:46px 20px;
+  color:var(--ink3);text-align:center;font-size:12.5px;grid-column:1 / -1}
+.fb-empty .fb-fold{opacity:.45}
+.fb-note{margin:0;padding:7px 18px;font-size:11.5px;color:var(--ink3);
+  border-top:1px solid var(--grid)}
+/* The details of what is picked. */
+.fb-info{border-left:1px solid var(--grid);padding:16px 14px;overflow:auto}
+.fb-card{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px}
+.fb-card h5{margin:8px 0 0;font-size:13px;word-break:break-word}
+.fb-card .fb-k{margin:0;font-size:11.5px;color:var(--ink3)}
+.fb-big{display:inline-flex;color:var(--accent)}
+.fb-big .fb-g{width:52px;height:52px}
+.fb-card dl{width:100%;margin:12px 0 0;text-align:left;font-size:12px;display:grid;
+  grid-template-columns:auto 1fr;gap:6px 10px}
+.fb-card dt{color:var(--ink3)}
+.fb-card dd{margin:0;color:var(--ink);min-width:0}
+.fb-card dd.fb-p{word-break:break-all;font-size:11.5px;color:var(--ink2)}
+.fb-card .fb-hold.active,.fb-card .fb-hold.silent{color:var(--underink);font-weight:600}
+.fb-card .fb-tip{margin:12px 0 0;font-size:11.5px;color:var(--ink3)}
+.fb-foot{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:12px 18px;
+  border-top:1px solid var(--grid);background:var(--fill)}
+.fb-foot .btn:disabled{opacity:.45;cursor:default}
+.fb-name{display:flex;align-items:center;gap:8px;font-size:12.5px;flex:1 1 300px;max-width:560px}
+.fb-name span{color:var(--ink2);white-space:nowrap}
+.fb-name input,.fb-path{flex:1;min-width:0;font:inherit;font-size:12.5px;padding:7px 10px;
+  border-radius:8px;border:1px solid var(--grid);background:var(--surface);color:var(--ink)}
+.fb-path{flex:1 1 320px}
+.fb-in{font-size:12px;color:var(--ink3);white-space:nowrap}
+/* Its own row under the name, so the buttons never wrap away from the box they act on. */
+.fb-warn{order:9;flex-basis:100%;font-size:12px;font-weight:600;color:var(--underink);
+  background:var(--underbg);border-radius:8px;padding:5px 10px}
+@media (max-width:860px){.fb-main{grid-template-columns:150px 1fr}.fb-info{display:none}}
+@media (max-width:600px){.fb-main{grid-template-columns:1fr}.fb-side{display:none}
+  .fb-find{width:130px}}
+.pm-path{width:100%;font:inherit;font-size:12.5px;padding:7px 10px;border-radius:8px;
+  border:1px solid var(--grid);background:var(--bg);color:var(--ink)}
+.pm-note{font-size:12px;color:var(--ink3);margin:10px 0 0}
+
+/* D-N02: the menu replaces these. D-N09: the window follows the system.
+   NR-IMP-09: and the picker is gone entirely - see bridge.js. */
+/* The whole export MENU goes, not just its items: this shell exports through the
+   File menu, where 'to a folder' also lives. Hiding the summary alone would leave
+   an empty <details> stub in the header. */
+#loadBtn,#loadBtn2,#expMenu,#themeBtn,#picker{display:none}
+
+/* ---- the import difference report -------------------------------------- */
+.pm-diff{border:1px solid var(--grid);border-radius:10px;margin-bottom:9px;
+  background:var(--bg)}
+.pm-diff>summary{display:flex;gap:10px;align-items:center;padding:9px 12px;
+  cursor:pointer;font-size:13px;list-style:none}
+.pm-diff>summary::-webkit-details-marker{display:none}
+.pm-diff>summary::after{content:"▸";color:var(--ink3);margin-left:auto;font-size:12px}
+.pm-diff[open]>summary::after{content:"▾"}
+.pm-diff>summary:hover{background:var(--fill)}
+.pm-diff .pm-sub{color:var(--ink3);font-size:12px}
+.pm-tick{display:flex;align-items:center;padding:2px 4px;cursor:pointer}
+.pm-tick input{width:15px;height:15px;cursor:pointer}
+.pm-diff-body{padding:2px 12px 10px 40px}
+.pm-diff-list h4{margin:8px 0 4px;font-size:12px;font-weight:600;color:var(--ink2)}
+.pm-diff-list h4 i{font-style:normal;color:var(--ink3);font-weight:400}
+.pm-diff-list ul{list-style:none;margin:0;padding:0}
+.pm-diff-list li{display:flex;gap:12px;padding:3px 8px;border-radius:6px;font-size:12px;
+  border-left:3px solid transparent}
+.pm-diff-list li:nth-child(odd){background:var(--fill)}
+.pm-diff-list li .n{min-width:220px;color:var(--ink)}
+.pm-diff-list li .d{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.pm-diff-list li.more{color:var(--ink3);font-style:italic}
+.pm-diff-list.add li{border-left-color:var(--good)}
+.pm-diff-list.chg li{border-left-color:var(--accent)}
+.pm-diff-list.keep li{border-left-color:var(--grid);color:var(--ink3)}
