@@ -139,7 +139,9 @@ PYTHON_PARTS = set(build_python_app.MODULES) | {
     "shell/python/bridge.js", "shell/python/chrome.css", "shell/python/chrome.html",
     # The difference report's SCREEN. Its engine is core/06a_diff.js and is in the web
     # build too; this file is not, because the web application is feature-frozen.
-    "shell/python/importdiff.js"}
+    "shell/python/importdiff.js",
+    # The file window (R-63), injected ahead of the bridge that hands it the machine.
+    "shell/python/filebrowser.js"}
 
 reachable = set(build_app.PARTS) | BUILT_PAGES | PYTHON_PARTS
 orphans = sorted(
