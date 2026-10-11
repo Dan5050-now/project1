@@ -104,6 +104,11 @@ with sync_playwright() as pw:
     txt = pg.inner_text("#t-proj")
     check("Monthly estimation" in txt and "automatic_fte" in txt,
           "with the calculated figure beside every stated one, so the departure is readable")
+    h2 = pg.inner_text('#t-proj .panel[data-panel="est"] .phead h2')
+    name = pg.evaluate("p => S.model.projects[p].project_name", MP)
+    check(name and h2.startswith(f"Monthly estimation — {name}")
+          and pg.inner_text('#t-proj .panel[data-panel="est"] .phead h2 .tid') == MP,
+          "THE PANEL IS TITLED BY THE PROJECT'S NAME, its identifier quieter beside it", h2)
 
     auto_pid = pg.evaluate("""() => Object.keys(S.model.projects)
         .find(p => (S.model.raw.Project.find(r => r.project_id === p) || {}).estimation_type

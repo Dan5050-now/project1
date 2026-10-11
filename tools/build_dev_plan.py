@@ -413,7 +413,10 @@ rows = [
      "because the letters r-e-d appear in it; now a colour word must stand on its own and "
      "the first one named wins - Korean text beside it does not hide it. Mirrored in the "
      "Python reference. No figure moves; no schema change. Template v1.21, examples v1.23 "
-     "and v1.15. tools/test_highlight.py gains ten checks. Python edition 1.36.",
+     "and v1.15. tools/test_highlight.py gains ten checks. Python edition 1.36. "
+     "Also asked for: the Monthly estimation panel on Source data (project) is titled by "
+     "the project's NAME, with its identifier quieter beside it, instead of the identifier "
+     "alone (an assignment's panel keeps its id, with the line under it).",
      "Issued for review"],
     [f"{MARK_NEW}2.72", "2026-10-09", "Claude Code", "Pending",
      "R-62, REQ-DSH-20: AN ISSUE A MANAGER HAS REVIEWED IS SHOWN AS REVIEWED. Asked for from "

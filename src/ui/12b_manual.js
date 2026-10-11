@@ -379,7 +379,13 @@ function manualPanel(scope, id){
   const totalNow = [...now.values()].reduce((a, b) => a + b, 0);
   const totalAuto = [...auto.values()].reduce((a, b) => a + b, 0);
 
-  const head = `<div class="phead"><h2>Monthly estimation — ${esc(id)}</h2>
+  /* A project is named by its NAME (asked for from the field): "PRJ-007" is not what
+     anybody calls a trial. The identifier stays beside it, quieter, because it is what
+     the MonthlyEstimate rows below carry in ref_id. An assignment keeps its id in the
+     heading - the line under it says which project, role and window it is. */
+  const title = scope === "project" && ownProj && ownProj.project_name
+    ? `${esc(ownProj.project_name)} <span class="tid">${esc(id)}</span>` : esc(id);
+  const head = `<div class="phead"><h2>Monthly estimation — ${title}</h2>
       <span class="est ${on ? "man" : "aut"}">${on ? "MANUAL" : "AUTOMATIC"}</span>
       <button class="btn tiny ${on ? "" : "primary"}" data-act="estswitch"
         data-scope="${att(scope)}" data-id="${att(id)}"
