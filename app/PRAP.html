@@ -58,7 +58,10 @@
   --fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.20);
   --accent:#0066cc;--s1:#0066cc;--other:#aeaeb2;
   --good:#248a3d;--warn:#ff9500;--crit:#d70015;
-  --hl-red:#d70015;--hl-yellow:#e0a000;--hl-blue:#0066cc;--hl-green:#1d7a35;--hl-orange:#e06c00;
+  --hl-red:#d70015;--hl-orange:#e06c00;--hl-yellow:#e8c100;--hl-lime:#7cb518;
+  --hl-green:#1d7a35;--hl-teal:#00897b;--hl-cyan:#14b8d4;--hl-blue:#0066cc;
+  --hl-navy:#1f2f86;--hl-purple:#7b3fbf;--hl-magenta:#c2188f;--hl-pink:#f37fb2;
+  --hl-brown:#8d5524;
   --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
   --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
@@ -112,7 +115,10 @@
   --fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.36);
   --accent:#0a84ff;--s1:#0a84ff;--other:#5a5a5e;
   --good:#30d158;--warn:#ff9f0a;--crit:#ff6961;
-  --hl-red:#ff6961;--hl-yellow:#ffd60a;--hl-blue:#0a84ff;--hl-green:#30d158;--hl-orange:#ff9f0a;
+  --hl-red:#ff6961;--hl-orange:#ff9f0a;--hl-yellow:#ffe14d;--hl-lime:#b5e655;
+  --hl-green:#30d158;--hl-teal:#3fc9b4;--hl-cyan:#64d2ff;--hl-blue:#0a84ff;
+  --hl-navy:#7d8cff;--hl-purple:#bf5af2;--hl-magenta:#ff4fd8;--hl-pink:#ffadd2;
+  --hl-brown:#c8915c;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
   --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
   --hairline:rgba(235,235,245,.18);
@@ -124,7 +130,10 @@
   --fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.36);
   --accent:#0a84ff;--s1:#0a84ff;--other:#5a5a5e;
   --good:#30d158;--warn:#ff9f0a;--crit:#ff6961;
-  --hl-red:#ff6961;--hl-yellow:#ffd60a;--hl-blue:#0a84ff;--hl-green:#30d158;--hl-orange:#ff9f0a;
+  --hl-red:#ff6961;--hl-orange:#ff9f0a;--hl-yellow:#ffe14d;--hl-lime:#b5e655;
+  --hl-green:#30d158;--hl-teal:#3fc9b4;--hl-cyan:#64d2ff;--hl-blue:#0a84ff;
+  --hl-navy:#7d8cff;--hl-purple:#bf5af2;--hl-magenta:#ff4fd8;--hl-pink:#ffadd2;
+  --hl-brown:#c8915c;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
   --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
   --hairline:rgba(235,235,245,.18);
@@ -136,7 +145,10 @@
   --fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.20);
   --accent:#0066cc;--s1:#0066cc;--other:#aeaeb2;
   --good:#248a3d;--warn:#ff9500;--crit:#d70015;
-  --hl-red:#d70015;--hl-yellow:#e0a000;--hl-blue:#0066cc;--hl-green:#1d7a35;--hl-orange:#e06c00;
+  --hl-red:#d70015;--hl-orange:#e06c00;--hl-yellow:#e8c100;--hl-lime:#7cb518;
+  --hl-green:#1d7a35;--hl-teal:#00897b;--hl-cyan:#14b8d4;--hl-blue:#0066cc;
+  --hl-navy:#1f2f86;--hl-purple:#7b3fbf;--hl-magenta:#c2188f;--hl-pink:#f37fb2;
+  --hl-brown:#8d5524;
   --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
   --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
@@ -755,24 +767,52 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
    applies by itself. Each colour is a variable so both themes can carry a shade that
    reads on their own ground. */
 .ms.hl-red{fill:var(--hl-red);stroke-width:1.4}
-.ms.hl-yellow{fill:var(--hl-yellow);stroke-width:1.4}
-.ms.hl-blue{fill:var(--hl-blue);stroke-width:1.4}
-.ms.hl-green{fill:var(--hl-green);stroke-width:1.4}
 .ms.hl-orange{fill:var(--hl-orange);stroke-width:1.4}
-.legend .sw.tri.hl-red{border-top-color:var(--hl-red);border-left-width:7px;border-right-width:7px}
-.legend .sw.tri.hl-yellow{border-top-color:var(--hl-yellow);border-left-width:7px;border-right-width:7px}
-.legend .sw.tri.hl-blue{border-top-color:var(--hl-blue);border-left-width:7px;border-right-width:7px}
-.legend .sw.tri.hl-green{border-top-color:var(--hl-green);border-left-width:7px;border-right-width:7px}
-.legend .sw.tri.hl-orange{border-top-color:var(--hl-orange);border-left-width:7px;border-right-width:7px}
+.ms.hl-yellow{fill:var(--hl-yellow);stroke-width:1.4}
+.ms.hl-lime{fill:var(--hl-lime);stroke-width:1.4}
+.ms.hl-green{fill:var(--hl-green);stroke-width:1.4}
+.ms.hl-teal{fill:var(--hl-teal);stroke-width:1.4}
+.ms.hl-cyan{fill:var(--hl-cyan);stroke-width:1.4}
+.ms.hl-blue{fill:var(--hl-blue);stroke-width:1.4}
+.ms.hl-navy{fill:var(--hl-navy);stroke-width:1.4}
+.ms.hl-purple{fill:var(--hl-purple);stroke-width:1.4}
+.ms.hl-magenta{fill:var(--hl-magenta);stroke-width:1.4}
+.ms.hl-pink{fill:var(--hl-pink);stroke-width:1.4}
+.ms.hl-brown{fill:var(--hl-brown);stroke-width:1.4}
+.legend .sw.tri[class*=" hl-"]{border-left-width:7px;border-right-width:7px}
+.legend .sw.tri.hl-red{border-top-color:var(--hl-red)}
+.legend .sw.tri.hl-orange{border-top-color:var(--hl-orange)}
+.legend .sw.tri.hl-yellow{border-top-color:var(--hl-yellow)}
+.legend .sw.tri.hl-lime{border-top-color:var(--hl-lime)}
+.legend .sw.tri.hl-green{border-top-color:var(--hl-green)}
+.legend .sw.tri.hl-teal{border-top-color:var(--hl-teal)}
+.legend .sw.tri.hl-cyan{border-top-color:var(--hl-cyan)}
+.legend .sw.tri.hl-blue{border-top-color:var(--hl-blue)}
+.legend .sw.tri.hl-navy{border-top-color:var(--hl-navy)}
+.legend .sw.tri.hl-purple{border-top-color:var(--hl-purple)}
+.legend .sw.tri.hl-magenta{border-top-color:var(--hl-magenta)}
+.legend .sw.tri.hl-pink{border-top-color:var(--hl-pink)}
+.legend .sw.tri.hl-brown{border-top-color:var(--hl-brown)}
 /* The chip in a highlight cell. ::before, so it is drawn beside the value without being
    part of what the cell contains - the cell is edited in place and read back as text. */
 td.cell[data-hl]::before{content:"";display:inline-block;width:.72em;height:.72em;
   border-radius:2px;margin-right:.45em;vertical-align:-1px;border:1px solid var(--hairline)}
 td.cell[data-hl="red"]::before{background:var(--hl-red)}
-td.cell[data-hl="yellow"]::before{background:var(--hl-yellow)}
-td.cell[data-hl="blue"]::before{background:var(--hl-blue)}
-td.cell[data-hl="green"]::before{background:var(--hl-green)}
 td.cell[data-hl="orange"]::before{background:var(--hl-orange)}
+td.cell[data-hl="yellow"]::before{background:var(--hl-yellow)}
+td.cell[data-hl="lime"]::before{background:var(--hl-lime)}
+td.cell[data-hl="green"]::before{background:var(--hl-green)}
+td.cell[data-hl="teal"]::before{background:var(--hl-teal)}
+td.cell[data-hl="cyan"]::before{background:var(--hl-cyan)}
+td.cell[data-hl="blue"]::before{background:var(--hl-blue)}
+td.cell[data-hl="navy"]::before{background:var(--hl-navy)}
+td.cell[data-hl="purple"]::before{background:var(--hl-purple)}
+td.cell[data-hl="magenta"]::before{background:var(--hl-magenta)}
+td.cell[data-hl="pink"]::before{background:var(--hl-pink)}
+td.cell[data-hl="brown"]::before{background:var(--hl-brown)}
+/* R-64: the same chip in the value chooser, so a colour is picked by its colour. */
+.sugg .swc,.swc{display:inline-block;width:.8em;height:.8em;border-radius:2px;margin-right:.5em;
+  vertical-align:-1px;border:1px solid var(--hairline)}
 .halo{stroke:var(--surface);stroke-width:4;opacity:.9}
 .th-over{stroke:var(--crit);stroke-width:1.5;stroke-dasharray:5 3}
 .th-under{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:5 3}
@@ -1425,7 +1465,7 @@ td.cell.gapnew:focus:empty::before{content:""}
 
 <script>
 "use strict";
-const APP_VERSION = "1.61";
+const APP_VERSION = "1.62";
 const SCHEMA_EXPECTED = 16;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1434,16 +1474,16 @@ const SCHEMA_EXPECTED = 16;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.72.xlsx",          ver:"2.72",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.73.xlsx",          ver:"2.73",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.41.xlsx", ver:"1.41",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.42.xlsx", ver:"1.42",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
   {what:"UI component list",      file:"PRAP_UI_Component_List_v2.8.xlsx",          ver:"2.8",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
           + "R-13 to R-46, which added 22 components and made five of the old entries wrong; "
           + "v2.1 closes X-04 — row virtualisation is not built and, at the volume REQ-NFR-03 now "
           + "names, not required"},
-  {what:"Source data template",   file:"PRAP_SourceData_Template_v1.20.xlsx",       ver:"1.20",
+  {what:"Source data template",   file:"PRAP_SourceData_Template_v1.21.xlsx",       ver:"1.21",
    status:`Schema version ${SCHEMA_EXPECTED} — the layout this application reads`},
   {what:"AI agent reference",     file:"PRAP_AI_Agent_Guide_v1.0.xlsx",             ver:"1.0",
    status:"Instructions for another program or AI agent; docs/prap_contract.json is its machine-readable half"},
@@ -1753,7 +1793,7 @@ const JSON_FORMAT_VERSION = 1;
    and nothing else. The projects, people and assignments are what the user is here
    to enter.                                                                        */
 
-/* SEED-BEGIN — generated by tools/build_app_seed.py from PRAP_SourceData_Template_v1.20.xlsx.
+/* SEED-BEGIN — generated by tools/build_app_seed.py from PRAP_SourceData_Template_v1.21.xlsx.
    The reference content of a blank start: the value lists and the settings, and
    the reference content of a blank start: the value lists, the settings, and the
    DEFAULT ASSUMPTIONS. Do not edit by hand — rebuild it, or check_consistency
@@ -1798,10 +1838,18 @@ const SEED_LISTS = [
   ["milestone_name","final DB lock",null],
   ["milestone_name","Inspection",null],
   ["milestone_highlight","Highlight (Red)",null],
-  ["milestone_highlight","Highlight (Yellow)",null],
-  ["milestone_highlight","Highlight (Blue)",null],
-  ["milestone_highlight","Highlight (Green)",null],
   ["milestone_highlight","Highlight (Orange)",null],
+  ["milestone_highlight","Highlight (Yellow)",null],
+  ["milestone_highlight","Highlight (Lime)",null],
+  ["milestone_highlight","Highlight (Green)",null],
+  ["milestone_highlight","Highlight (Teal)",null],
+  ["milestone_highlight","Highlight (Cyan)",null],
+  ["milestone_highlight","Highlight (Blue)",null],
+  ["milestone_highlight","Highlight (Navy)",null],
+  ["milestone_highlight","Highlight (Purple)",null],
+  ["milestone_highlight","Highlight (Magenta)",null],
+  ["milestone_highlight","Highlight (Pink)",null],
+  ["milestone_highlight","Highlight (Brown)",null],
   ["issue_review_status","Confirmed - no issue",null],
   ["issue_review_status","Accepted",null],
   ["issue_review_status","To be fixed",null],
@@ -1809,10 +1857,18 @@ const SEED_LISTS = [
   ["issue_kind","over",null],
   ["issue_kind","unstaffed",null],
   ["period_highlight","Highlight (Red)",null],
-  ["period_highlight","Highlight (Yellow)",null],
-  ["period_highlight","Highlight (Blue)",null],
-  ["period_highlight","Highlight (Green)",null],
   ["period_highlight","Highlight (Orange)",null],
+  ["period_highlight","Highlight (Yellow)",null],
+  ["period_highlight","Highlight (Lime)",null],
+  ["period_highlight","Highlight (Green)",null],
+  ["period_highlight","Highlight (Teal)",null],
+  ["period_highlight","Highlight (Cyan)",null],
+  ["period_highlight","Highlight (Blue)",null],
+  ["period_highlight","Highlight (Navy)",null],
+  ["period_highlight","Highlight (Purple)",null],
+  ["period_highlight","Highlight (Magenta)",null],
+  ["period_highlight","Highlight (Pink)",null],
+  ["period_highlight","Highlight (Brown)",null],
   ["period_name_clinical","Before-Start-up",null],
   ["period_name_clinical","Start-up",null],
   ["period_name_clinical","Conduct (interim)",null],
@@ -2753,12 +2809,25 @@ const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignmen
 
    An unrecognised value is not silently dropped: V-37 reports it and the milestone draws
    in the ordinary colour, which is what it did before there was a column at all. */
-const HIGHLIGHT_WORDS = ["red", "yellow", "blue", "green", "orange"];
+/* THIRTEEN COLOURS since R-64, asked for from the field as "at least 12 distinctive
+   colours" - five ran out as soon as a team gave each kind of milestone its own. In
+   rainbow order, which is also the order the Lists sheet offers them. Chosen to stay
+   apart from one another in both themes: no two are a lighter and darker shade of one
+   hue except navy beside blue, which differ in lightness by half the scale.
+
+   THE COLOUR WORD IS READ AS A WORD. It used to be any occurrence of the letters, so
+   'Highlight (Green) - redo' was red. Now a colour word must stand on its own - not
+   inside a longer English word - and where a value names two, the FIRST one wins, which
+   is the one in the brackets of every value the template ships. Korean or other text
+   right beside it does not stop it being read: only Latin letters count as "inside". */
+const HIGHLIGHT_WORDS = ["red", "orange", "yellow", "lime", "green", "teal", "cyan",
+                         "blue", "navy", "purple", "magenta", "pink", "brown"];
+const HL_RE = new RegExp(`(?<![a-z])(${HIGHLIGHT_WORDS.join("|")})(?![a-z])`, "i");
 
 function hlToken(v){
   if (v === null || v === undefined) return "";
-  const t = String(v).toLowerCase();
-  return HIGHLIGHT_WORDS.find(w => t.includes(w)) || "";
+  const m = String(v).match(HL_RE);
+  return m ? m[1].toLowerCase() : "";
 }
 
 const COLUMN_HELP = {
@@ -5955,16 +6024,17 @@ function persColourOf(sid){
   return SCOL[sid] || "var(--other)";
 }
 
-/* The five highlight colours, as the stylesheet knows them (schema 13). Named here so
-   the chart, the legend and the table cell all reach for one definition, and defined as
-   CSS variables rather than hexes so each theme can pick a shade that reads on its own
-   ground - a yellow that works on white disappears on black. */
-const HIGHLIGHT_FILL = {red:"var(--hl-red)", yellow:"var(--hl-yellow)", blue:"var(--hl-blue)",
-                        green:"var(--hl-green)", orange:"var(--hl-orange)"};
+/* The highlight colours, as the stylesheet knows them (schema 13; thirteen since R-64).
+   Named here so the chart, the legend and the table cell all reach for one definition,
+   and defined as CSS variables rather than hexes so each theme can pick a shade that
+   reads on its own ground - a yellow that works on white disappears on black. */
+const HIGHLIGHT_FILL = Object.fromEntries(HIGHLIGHT_WORDS.map(w => [w, `var(--hl-${w})`]));
+/* The pale ones, on which a band's label is written dark rather than white. */
+const HIGHLIGHT_PALE = new Set(["yellow", "lime", "cyan", "pink"]);
 
 /* A PERIOD IS DRAWN GRAY UNLESS SOMEBODY CHOSE ITS COLOUR (R-59, schema 14). The bands
    used to take a hue per period name (O-10); asked from the field, the colour now belongs
-   to the user: ProjectPeriod.period_highlight picks one of the five, and an unmarked
+   to the user: ProjectPeriod.period_highlight picks one of the palette, and an unmarked
    period is a quiet gray so the marked ones are what the eye finds. Weight still shades
    both - lighter for a light period, darker for a heavy one - so nothing the old
    colouring said about weight is lost; the period's NAME is on the band and in its
@@ -6174,9 +6244,9 @@ function chartGantt(pids, opts){
                                                 : "the default for every " + esc(s.period_name)
                                                   + " (General assumptions)") + `</span>`
                    : `<br><span class="tr">no colour chosen — drawn gray</span>`);
-      // The label is dark on gray and on yellow, white on the four strong colours: the
+      // The label is dark on gray and on the pale colours, white on the strong ones: the
       // band's own colour decides which reads, so it is decided here and not in CSS.
-      const dk = !look.hl || look.hl === "yellow" ? " dk" : "";
+      const dk = !look.hl || HIGHLIGHT_PALE.has(look.hl) ? " dk" : "";
       o.push(`<rect class="band${look.hl ? " hl hl-" + look.hl : ""}" x="${x0.toFixed(1)}" `
         + `y="${y+13}" width="${w.toFixed(1)}" height="${rowh-20}" style="${look.style}" rx="2" `
         + `data-tip="${att(tip)}"${sKey(s.period_name, p)}></rect>`);
@@ -6224,7 +6294,7 @@ function chartGantt(pids, opts){
   leg.push('<li><span class="sw tri"></span>milestone</li>');
   leg.push('<li><span class="sw tri key"></span>DB lock &#8212; sets a period boundary</li>');
   /* Only the colours actually on this chart, each labelled with what the FILE calls it.
-     Listing all five when one is in use would teach a palette nobody asked about; this
+     Listing all thirteen when one is in use would teach a palette nobody asked about; this
      answers "what is that red triangle" and stops. */
   for (const t of HIGHLIGHT_WORDS) if (hlUsed.has(t))
     leg.push(`<li><span class="sw tri hl-${t}"></span>${esc(M.hlLabels[t] || t)}</li>`);
@@ -7190,6 +7260,16 @@ function suggestionsFor(sheet, col, row){
   const px = proxyFor(sheet, col);
   if (px) return px.options();
   const named = LIST_FOR[col];
+  /* A highlight column offers the file's own values AND every colour of the palette the
+     file does not already name (R-64). A workbook made before the palette grew carries
+     only the five it was made with, and its Lists sheet is not edited from here - so
+     without this, the new colours could be read but never chosen. */
+  if (col === "milestone_highlight" || col === "period_highlight"){
+    const own = (M.lists[named] || []).map(String);
+    const have = new Set(own.map(hlToken).filter(Boolean));
+    return [...own, ...HIGHLIGHT_WORDS.filter(w => !have.has(w))
+      .map(w => `Highlight (${w[0].toUpperCase()}${w.slice(1)})`)];
+  }
   if (named && M.lists[named]) return M.lists[named].map(String);
   // period_name and role_name depend on the project's TYPE, so the valid set is not one
   // list but two. Narrow it by the row's own project where that is knowable.
@@ -11844,9 +11924,14 @@ const SUGG = (() => {
     // The old code clamped idx up to 0 here; it only escaped notice because a query that
     // matched nothing used to hide the list, taking Enter out of its reach.
     idx = idx < 0 ? -1 : Math.min(idx, hits.length - 1);
+    // A colour is shown as the colour, not only named (R-64): thirteen names are easier
+    // to choose between when each one is a swatch as well.
+    const hlCol = cell && /_highlight$/.test(cell.dataset.col || "");
+    const sw = v => { const t = hlCol ? hlToken(v) : "";
+      return t ? `<span class="swc" style="background:${HIGHLIGHT_FILL[t]}"></span>` : ""; };
     box.innerHTML = hits.map((v, i) =>
       `<div class="s" role="option" data-v="${att(v)}" aria-selected="${i === idx}">`
-      + `${none ? esc(v) : markup(v, toks)}</div>`).join("")
+      + `${sw(v)}${none ? esc(v) : markup(v, toks)}</div>`).join("")
       + `<div class="hint">`
       + (none ? `nothing matches that \u2014 showing all ${items.length}`
               : `${hits.length}${hits.length === 60 ? "+" : ""} match${hits.length === 1 ? "" : "es"}`)

@@ -589,9 +589,14 @@ const SUGG = (() => {
     // The old code clamped idx up to 0 here; it only escaped notice because a query that
     // matched nothing used to hide the list, taking Enter out of its reach.
     idx = idx < 0 ? -1 : Math.min(idx, hits.length - 1);
+    // A colour is shown as the colour, not only named (R-64): thirteen names are easier
+    // to choose between when each one is a swatch as well.
+    const hlCol = cell && /_highlight$/.test(cell.dataset.col || "");
+    const sw = v => { const t = hlCol ? hlToken(v) : "";
+      return t ? `<span class="swc" style="background:${HIGHLIGHT_FILL[t]}"></span>` : ""; };
     box.innerHTML = hits.map((v, i) =>
       `<div class="s" role="option" data-v="${att(v)}" aria-selected="${i === idx}">`
-      + `${none ? esc(v) : markup(v, toks)}</div>`).join("")
+      + `${sw(v)}${none ? esc(v) : markup(v, toks)}</div>`).join("")
       + `<div class="hint">`
       + (none ? `nothing matches that \u2014 showing all ${items.length}`
               : `${hits.length}${hits.length === 60 ? "+" : ""} match${hits.length === 1 ? "" : "es"}`)

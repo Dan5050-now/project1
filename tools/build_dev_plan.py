@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.72"
-DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.61, source schema 16 - Gate 4 "
+DOC_VERSION = "2.73"
+DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.62, source schema 16 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, milestone and period highlighting, and the "
               "manager's review of issues.")
@@ -398,6 +398,23 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.73", "2026-10-11", "Claude Code", "Pending",
+     "R-64, REQ-PRJ-17: THIRTEEN HIGHLIGHT COLOURS. Asked for from the field: 'at least 12 "
+     "distinctive colours' for highlighting - five ran out as soon as a team gave each kind "
+     "of milestone or period its own. The palette is now red, orange, yellow, lime, green, "
+     "teal, cyan, blue, navy, purple, magenta, pink and brown, for milestones and periods "
+     "alike, each defined for the light and the dark theme and no two closer than a set "
+     "distance in either (yellow was moved away from orange to get there - the two of the "
+     "original five that were nearest). A band's label is dark on the four pale ones. The "
+     "template's Lists offer all thirteen; a workbook made before them, whose Lists hold "
+     "five, is offered the other eight as well, so the new colours can be chosen without "
+     "editing its Lists. The value chooser shows each colour as a swatch beside its name. "
+     "THE COLOUR WORD IS NOW READ AS A WORD: 'Highlight (Green) - redo' used to be red, "
+     "because the letters r-e-d appear in it; now a colour word must stand on its own and "
+     "the first one named wins - Korean text beside it does not hide it. Mirrored in the "
+     "Python reference. No figure moves; no schema change. Template v1.21, examples v1.23 "
+     "and v1.15. tools/test_highlight.py gains ten checks. Python edition 1.36.",
+     "Issued for review"],
     [f"{MARK_NEW}2.72", "2026-10-09", "Claude Code", "Pending",
      "R-62, REQ-DSH-20: AN ISSUE A MANAGER HAS REVIEWED IS SHOWN AS REVIEWED. Asked for from "
      "the field: a month short of its standard, over it or with nobody on it may be a "
@@ -431,7 +448,7 @@ rows = [
      "pop-up that offers to keep your version; and the file window is redrawn - places, a "
      "clickable path, type badges, how long ago and date groups, a filter, list or tiles, "
      "details, the keyboard, and who saved or is editing a plan. Python edition 1.35.",
-     "Issued for review"],
+     "Superseded by v2.73"],
     [f"{MARK_NEW}2.71", "2026-10-08", "Claude Code", "Pending",
      "R-60, REQ-PRJ-16: PERIOD COLOURS ARE AN ASSUMPTION, AND A PROJECT MAY STILL CHOOSE ITS "
      "OWN. Asked for straight after R-59: every project's periods take their colour from the "
@@ -2497,6 +2514,7 @@ reqs = [
     [f"{MARK_CHG}REQ-PRJ-12", "Project data", "The set of periods a project carries depends on its type: either clinical trial type uses Before-Start-up / Start-up / Conduct (interim) / Close-out (interim) / Conduct (final) / Close-out (final) / After Close-out (final); 'Others' uses Planning / Develop / Close. No name occurs twice in one project.", "Must", "Q-18, Q-23, R-02, R-11", "2"],
     [f"{MARK_NEW}REQ-PRJ-13", "Project data", "A milestone name may occur more than once in one project. 'Inspection' in particular may record several events; the others are expected once.", "Must", "R-01", "2"],
     [f"{MARK_NEW}REQ-PRJ-16", "Project data", "The colour each PERIOD is drawn in is a standing assumption: one default per period name, held on the PeriodHighlight sheet and edited on the General assumptions tab, applies to every project. A project's own choice for one of its periods (REQ-PRJ-15) wins over the default; a period with neither is gray. The defaults reach periods derived from milestones too. A colour changes no figure; a default that cannot be applied is reported (V-39).", "Should", "R-60", "4"],
+    [f"{MARK_NEW}REQ-PRJ-17", "Project data", "THE HIGHLIGHT PALETTE OFFERS AT LEAST TWELVE DISTINCT COLOURS - thirteen: red, orange, yellow, lime, green, teal, cyan, blue, navy, purple, magenta, pink, brown - for milestones (REQ-PRJ-14) and periods (REQ-PRJ-15, REQ-PRJ-16) alike. Each is defined for both themes and no two are close in either. Every colour can be chosen in any workbook, including one whose Lists predate the palette, and the chooser shows each as a swatch. The colour word is read as a word, the first one named winning.", "Should", "R-64", "4"],
     [f"{MARK_NEW}REQ-PRJ-15", "Project data", "A project's period may be given a COLOUR, and the Project timeline draws the period in it - on the Overall tab and on the project's own tab. The colour is chosen from the Lists sheet's period_highlight list in the Periods table's Highlight column; a period with no colour is drawn gray, shaded by its weight. A colour changes no figure and never refuses a save; a value naming no colour is reported (V-38).", "Should", "R-59", "4"],
     [f"{MARK_NEW}REQ-PRJ-14", "Project data", "A milestone may be MARKED IN A COLOUR, and the mark finds that milestone wherever the Project timeline is drawn - on the Overall tab and on the project's own tab. The colour is chosen from the Lists sheet, so the set belongs to the people using the plan rather than to the code; an empty value means no mark, which is what every milestone was before schema 13. A mark changes no figure and never refuses a save.", "Should", "R-50", "4"],
     [f"{MARK_CHG}REQ-PRJ-09", "Project data", "A clinical trial of either type records its clinical phase (phase 1 / 2 / 3 / 4). The phase determines the project's period weights, so it drives the simulation rather than merely describing the project.", "Must", "Q-26", "2"],
@@ -2660,7 +2678,7 @@ mile = [
     ["project_name", "Derived", "No", "DERIVED - looked up from Project on import and refreshed from it, so a mismatch cannot corrupt the link. Locked in the template; a value typed here is discarded and the disagreement reported as V-13.", "REQ-PRJ-05"],
     [f"{MARK_CHG}milestone_name", "List", "Yes", "Standard list (10) at v1.1: 'Protocol (v1)', 'CTA submission', 'FPI', 'First SIV', 'LPI', 'interim DB lock cut-off', 'interim DB lock', 'final DB lock cut-off', 'final DB lock', 'Inspection'. FPI returns as the fallback for First SIV; Inspection is new and MAY REPEAT within a project. Held in Lists, not fixed in code.", "REQ-PRJ-05, REQ-PRJ-13"],
     ["milestone_date", "Date", "Yes", "Planned date.", "REQ-PRJ-05"],
-    [f"{MARK_NEW}milestone_highlight", "List", "No", "OPTIONAL, schema 13. Marks this milestone on every Project timeline in a colour - the Overall tab's and the project's own. Held in Lists ('Highlight (Red)' and four more); what is read is the COLOUR WORD inside the value, so a team may add what their colour means and keep both. Empty means no mark, which is what every milestone was before schema 13. A value naming no colour is reported as V-37 and drawn unmarked.", "REQ-PRJ-14"],
+    [f"{MARK_NEW}milestone_highlight", "List", "No", "OPTIONAL, schema 13. Marks this milestone on every Project timeline in a colour - the Overall tab's and the project's own. Held in Lists ('Highlight (Red)' and twelve more since R-64, REQ-PRJ-17); what is read is the COLOUR WORD inside the value, so a team may add what their colour means and keep both. Empty means no mark, which is what every milestone was before schema 13. A value naming no colour is reported as V-37 and drawn unmarked.", "REQ-PRJ-14"],
     ["milestone_seq", "Integer", "No", "Carried in the file and kept on export; allocated on insert. It ORDERS NOTHING - both engines place a milestone on the timeline by its date - and since R-54 the application does not draw it.", "REQ-PRJ-05"],
     [f"{MARK_NEW}note_1", "Text", "No", "Free extension column.", "REQ-PRJ-07"],
 ]
@@ -2675,7 +2693,7 @@ pp = [
     [f"{MARK_CHG}period_seq", "Integer", "Yes", "Orders the periods along the timeline. Unique within a project. No longer part of the key - it carries order, not identity (R-11).", "REQ-CAL-11"],
     [f"{MARK_CHG}period_start", "Date", "Yes", "Inclusive. For Clinical Trial, computed from milestones (sheet 05) and then editable. For Others, entered directly.", "REQ-CAL-09"],
     [f"{MARK_CHG}period_end", "Date", "Yes", "Inclusive. Periods for one project must not overlap and must leave no gap (REQ-CAL-10).", "REQ-CAL-09"],
-    [f"{MARK_NEW}period_highlight", "List", "No", "OPTIONAL, schema 14. The colour this period is drawn in on every Project timeline. Held in Lists (period_highlight: 'Highlight (Red)' and four more); what is read is the COLOUR WORD inside the value. Empty means GRAY, shaded by weight. A value naming no colour is reported as V-38 and drawn gray.", "REQ-PRJ-15"],
+    [f"{MARK_NEW}period_highlight", "List", "No", "OPTIONAL, schema 14. The colour this period is drawn in on every Project timeline. Held in Lists (period_highlight: 'Highlight (Red)' and twelve more since R-64); what is read is the COLOUR WORD inside the value. Empty means GRAY, shaded by weight. A value naming no colour is reported as V-38 and drawn gray.", "REQ-PRJ-15"],
     [f"{MARK_CHG}weight", "Decimal", "Yes", "THIS PROJECT'S OWN ADJUSTMENT to the standard for its type, phase and scope (REQ-CAL-19). 1.00 means an ordinary project of its kind; 1.20 means this one takes a fifth more. SCHEMA 10 changed what it means: until then it carried the magnitude itself and the standards sheet was read by nothing, so the delivered data held the same number in both columns. Values are data (Q-17), not fixed in this plan.", "REQ-PRJ-06, R-31"],
     [f"{MARK_NEW}note_1", "Text", "No", "Free extension column, e.g. why a derived date was overridden.", "REQ-PRJ-07"],
 ]
@@ -3207,7 +3225,7 @@ wbs = [
     ["4", "4.5", "Calculation engine, verified against the reference implementation.", "app/PRAP.html + test evidence", "Complete - EXACT MATCH on all 1,225 person-months of the dummy dataset"],
     ["4", "4.6", "Overall tab: tables, graphs, filters, over/under-allocation flagging.", "app/PRAP.html", "Complete"],
     ["4", "4.7", "Source data (project), Source data (person) and General assumptions tabs.", "app/PRAP.html", "Complete"],
-    ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.20.xlsx", "Complete"],
+    ["4", "4.8", "Blank source workbook template with value lists and example rows.", "PRAP_SourceData_Template_v1.21.xlsx", "Complete"],
     ["4", "4.9", "Requester reviews output against real data; refinements folded in.", "Updated code", "In progress - rounds 1-25 applied (app v1.24); GATE 4 open"],
     ["4", "G4", "GATE 4 - application functionally complete.", "PRAP_Application_v0.9.html", "Not started"],
 
@@ -3439,6 +3457,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-64", "Data model", "Offer at least 12 distinctive highlight colours.", "Applied. Thirteen colours for milestones and periods, distinct in both themes; offered in every workbook, older ones included; a swatch per colour in the chooser; the colour word read as a word. REQ-PRJ-17 added; template v1.21; no figure moves.", "Applied"],
     ["R-63", "Python edition", "Make the file search windows more graphical and useful; do not apply the session time-out to a private plan; when a session does time out, say so in a pop-up.", "Applied (Python edition 1.35; desktop plan v1.18). A plan in My plans takes no hold, so it never times out (NR-STO-20). A lapsed hold on a team plan raises a pop-up naming who took over and offering to keep your version (NR-STO-21). The file window gains places, a clickable path with back/forward/up, type badges, how-long-ago and date groups, a filter, list or tiles, details, the keyboard, and who saved / is editing a plan (NR-IMP-10).", "Applied"],
     ["R-62", "Dashboard", "Let a manager confirm a short / over / not-staffed issue - 'no issue' or 'accepted', with a rationale - from the issue itself, changeable later; show confirmed issues distinguished (muted) but still readable, with the confirmation and rationale shown whenever the issue is clicked.", "Applied. New sheet IssueReview; source schema steps 15 to 16. Clicking an issue month opens it with a Manager review box (decision, manager, reason, whole run); Confirmed and Accepted close it and need a reason, To be fixed keeps it open. Closed months are drawn muted, counted apart, and filterable. A review covers the gap it was made at; V-40 added; REQ-DSH-20 added; no figure moves.", "Applied"],
     ["R-61", "Storage", "Let a user whose session timed out save the working plan into their personal folder.", "Applied (Python edition). When the shared plan can no longer be written - the hold lapsed and was taken over, or a colleague saved since it was opened - a bar offers 'Save my version to My plans': a new, uniquely named file in the person's own folder, after which the window works on it. Also on the File menu. The team's plan is never touched.", "Applied"],

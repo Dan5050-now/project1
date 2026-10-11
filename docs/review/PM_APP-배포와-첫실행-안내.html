@@ -128,7 +128,7 @@
 <div class="wrap">
 
 <header>
-  <p class="kicker">PM_APP 1.35 · Windows</p>
+  <p class="kicker">PM_APP 1.36 · Windows</p>
   <h1>PM_APP 배포와 첫 실행</h1>
   <p class="dek">어느 PC에 어떤 폴더를 두고, 어떤 순서로 실행하는지. <strong>사용자 PC에는 아무것도 설치하지 않습니다</strong> — 파이썬이 없는 PC도 포함해서입니다.</p>
   <dl class="facts">
@@ -138,6 +138,10 @@
     <div><dt>사용자 1인 소요</dt><dd>2~3분</dd></div>
   </dl>
 </header>
+
+<div class="note"><span class="lbl">1.36에서 달라진 것</span>
+<p><strong>강조 색이 13가지가 되었습니다.</strong> 마일스톤과 기간의 Highlight 에서 빨강(Red) · 주황(Orange) · 노랑(Yellow) · 연두(Lime) · 초록(Green) · 청록(Teal) · 하늘(Cyan) · 파랑(Blue) · 남색(Navy) · 보라(Purple) · 자홍(Magenta) · 분홍(Pink) · 갈색(Brown) 중에서 고를 수 있습니다. 밝은 화면과 어두운 화면 모두에서 서로 잘 구별되게 골랐습니다. 값을 고르는 목록에 <strong>색 견본</strong>이 함께 나옵니다. 예전 서식으로 만든 계획서(색 다섯 가지)에서도 13가지가 모두 나옵니다. 서식은 v1.21 입니다.</p>
+<p><strong>숫자는 하나도 달라지지 않습니다.</strong></p></div>
 
 <div class="note"><span class="lbl">1.35에서 달라진 것</span>
 <p><strong>파일 창이 새로워졌습니다.</strong> 가져오기·열기·저장·내보내기 때 뜨는 파일 창 왼쪽에 <strong>장소</strong>(My plans, Team plans, 최근 폴더, 이 컴퓨터, 드라이브)가 있고, 위쪽 <strong>경로</strong>의 각 단계를 눌러 바로 올라갈 수 있습니다(뒤로·앞으로·위로 단추도 있음). 파일마다 <strong>종류 표시</strong>(XLSX 초록, PLAN 파랑, JSON 보라)와 수정 시각, <strong>"24분 전"</strong> 같은 경과 시간이 나오고, 오늘·어제·이번 주·이번 달·그 이전으로 묶입니다. <strong>검색 칸</strong>으로 이름을 걸러내고, 목록/타일 보기를 바꿀 수 있으며, 파일을 고르면 오른쪽에 자세한 정보가 나옵니다. 계획 파일(.prap)은 <strong>누가 마지막에 저장했는지, 지금 누가 편집 중인지</strong> 열기 전에 보입니다. 저장할 때 같은 이름의 파일이 있으면 <strong>덮어쓴다고 미리 알려줍니다</strong>. 창은 종류별로 마지막에 쓴 폴더에서 다시 열립니다. 키보드(화살표, Enter, Backspace)도 됩니다.</p>
@@ -250,7 +254,7 @@
   <li><div>
     <b>런타임을 앱 폴더에 넣고 압축본 만들기</b>
     <pre><code>python tools\bundle_runtime.py python-3.13.15-embed-amd64.zip --zip</code></pre>
-    <p><code>dist\PM_APP_python_v1.35_with_runtime.zip</code> 이 만들어집니다. <strong>이것이 나눠 주실 파일입니다.</strong></p>
+    <p><code>dist\PM_APP_python_v1.36_with_runtime.zip</code> 이 만들어집니다. <strong>이것이 나눠 주실 파일입니다.</strong></p>
     <p><strong>파이썬 압축을 푸는 일은 여기서 끝납니다.</strong> 이 명령이 1번에서 받은 zip 을 앱 폴더 안 <code>runtime\</code> 으로 풀어 넣고, 그 상태를 통째로 다시 압축합니다. 사용자 PC에서는 파이썬을 다시 풀 일이 없습니다.</p>
     <div class="note stop"><span class="lbl">이 순서를 반드시 지키십시오</span>
     <p><code>build_python_app.py --zip</code> 으로 압축하지 마십시오. 그 명령은 <strong>먼저 다시 빌드</strong>하는데, 다시 빌드하면 앱 폴더가 비워지면서 <strong>런타임도 함께 지워집니다.</strong> 그렇게 만든 압축본에는 런타임이 없고, 아무 경고도 없습니다.</p>
@@ -285,7 +289,7 @@
 <ol class="steps">
   <li><div>
     <b>압축본을 내 PC로 복사</b>
-    <p><code>\\서버\공유\PRAP\배포\</code> 에서 <code>PM_APP_python_v1.35_with_runtime.zip</code> 을 <strong>자기 PC로 복사</strong>하십시오.</p>
+    <p><code>\\서버\공유\PRAP\배포\</code> 에서 <code>PM_APP_python_v1.36_with_runtime.zip</code> 을 <strong>자기 PC로 복사</strong>하십시오.</p>
   </div></li>
 
   <li><div>
@@ -317,7 +321,7 @@
   <li><div>
     <b>PM_APP.cmd 더블클릭</b>
     <p>검은 창이 뜨고 브라우저가 열립니다. 창에는 이렇게 나옵니다.</p>
-    <pre class="out"><code>  version      1.35
+    <pre class="out"><code>  version      1.36
   application  C:\Users\...\Documents\PM_APP
   your data    C:\Users\...\Documents\PM_APP\data\users\&lt;내계정&gt;
   chosen by    3 - writable data\ beside the application
@@ -450,7 +454,7 @@
 <p><strong>폴더를 지우면 끝입니다.</strong> 레지스트리에 남는 것도, PATH에 더해진 것도, 시작 프로그램에 등록된 것도 없습니다. 공유 폴더의 계획서는 그대로 남습니다.</p>
 
 <footer>
-  <p>이 안내서의 경로·화면 출력·폴더 구조는 모두 PM_APP 1.35 을 실제로 실행해 얻은 것입니다. 버전이 올라가면 <code>version.txt</code> 와 압축본 이름이 달라집니다.</p>
+  <p>이 안내서의 경로·화면 출력·폴더 구조는 모두 PM_APP 1.36 을 실제로 실행해 얻은 것입니다. 버전이 올라가면 <code>version.txt</code> 와 압축본 이름이 달라집니다.</p>
 </footer>
 
 </div>

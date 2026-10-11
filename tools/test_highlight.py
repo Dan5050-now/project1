@@ -31,7 +31,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.14.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.15.xlsx"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 fails = []
@@ -197,8 +197,8 @@ def main():
               "the Periods table has the Highlight column, with the colour in the cell",
               str(cell))
         offered = pg.evaluate("""() => (S.model.lists.period_highlight || []).length""")
-        check(offered == 5, "and the five colours to choose from, from the Lists sheet",
-              f"{offered} value(s)")
+        check(offered == 13, "and the thirteen colours to choose from, from the Lists sheet "
+              "(R-64)", f"{offered} value(s)")
 
         # Choosing a colour through the cell, as a user would, recolours the band.
         row = pg.evaluate("""p => S.model.raw.ProjectPeriod.find(r => r.project_id === p
@@ -336,6 +336,79 @@ def main():
             return s.PeriodHighlight.slice(1).filter(r => r[1]).length; }""")
         check(blank >= 4, "a plan started blank arrives with the same default colours",
               f"{blank} coloured default(s)")
+
+        # ---- R-64: thirteen distinctive colours -----------------------------------
+        print("\nthirteen colours, each its own (R-64)")
+        WORDS = pg.evaluate("HIGHLIGHT_WORDS")
+        check(len(WORDS) == 13 and len(set(WORDS)) == 13,
+              "THE PALETTE HAS THIRTEEN COLOURS - at least the twelve asked for", ", ".join(WORDS))
+
+        def rgb(h):
+            h = h.strip().lstrip("#")
+            return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+        for theme in ("light", "dark"):
+            cols = pg.evaluate("""t => { const r = document.documentElement;
+                r.setAttribute('data-theme', t);
+                const cs = getComputedStyle(r);
+                return HIGHLIGHT_WORDS.map(w => [w, cs.getPropertyValue('--hl-' + w).trim()]); }""",
+                theme)
+            px = [(w, rgb(c)) for w, c in cols if c.startswith("#")]
+            near = min(((sum((a - b) ** 2 for a, b in zip(x[1], y[1])) ** .5, x[0], y[0])
+                        for i, x in enumerate(px) for y in px[i + 1:]), default=(0, "", ""))
+            check(len(px) == 13 and near[0] >= 60,
+                  f"EVERY COLOUR IS DEFINED FOR THE {theme.upper()} THEME AND NO TWO ARE CLOSE",
+                  f"closest pair {near[1]}/{near[2]} at distance {near[0]:.0f}")
+        pg.evaluate("document.documentElement.removeAttribute('data-theme')")
+
+        cases = ["Highlight (Teal)", "Highlight (Green) - redo", "Highlight (Navy) 마감",
+                 "빨강Red", "Highlight (Magenta)", "Highlight (Brown) or blue", "Reddish",
+                 "Highlight (Light pink)", "Highlite (Purpel)", "CYAN", "olive"]
+        js = pg.evaluate("cs => cs.map(hlToken)", cases)
+        sys.path.insert(0, str(ROOT / "tools"))
+        import prap_io                                                    # noqa: E402
+        py = [prap_io.hl_token(c) for c in cases]
+        check(js == ["teal", "green", "navy", "red", "magenta", "brown", "", "pink", "",
+                     "cyan", ""],
+              "A COLOUR IS READ AS A WORD - 'redo' is not red, the first colour named wins, "
+              "and Korean beside it does not hide it", str(dict(zip(cases, js))))
+        check(py == js, "and the Python reference reads every one of them the same way")
+
+        # A workbook from before the palette grew still offers every colour.
+        old = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.14.xlsx"
+        load(pg, old)
+        own = pg.evaluate("(S.model.lists.period_highlight || []).length")
+        offer = pg.evaluate("suggestionsFor('ProjectPeriod', 'period_highlight', null)")
+        check(own == 5 and len(offer) == 13 and len({pg.evaluate("v => hlToken(v)", v)
+                                                    for v in offer}) == 13,
+              "AN OLDER WORKBOOK, WHOSE LISTS HOLD FIVE, IS STILL OFFERED ALL THIRTEEN",
+              f"Lists {own}, offered {len(offer)}")
+        pid = pg.evaluate("activeProjects()[0]")
+        pg.evaluate("p => { S.selProj = p; renderAll(); showTab('t-proj'); }", pid)
+        pg.wait_for_timeout(1200)
+        row = pg.evaluate("""p => S.model.raw.ProjectPeriod.find(r => r.project_id === p
+            && r.period_name).__row""", pid)
+        td = pg.locator(f"#t-proj td.cell[data-col='period_highlight'][data-row='{row}']")
+        td.click()
+        pg.wait_for_timeout(400)
+        sw = pg.evaluate("""() => [...document.querySelectorAll('.sugg .s')]
+            .filter(o => o.offsetParent).map(o => !!o.querySelector('.swc'))""")
+        check(len(sw) >= 13 and all(sw),
+              "THE CHOOSER SHOWS EACH COLOUR AS A SWATCH beside its name", f"{sum(sw)} swatch(es)")
+        pg.keyboard.press("Control+A")
+        pg.keyboard.type("Highlight (Lime)")
+        pg.keyboard.press("Escape")
+        pg.keyboard.press("Enter")
+        pg.wait_for_timeout(1000)
+        band = pg.evaluate("""() => { const b = document.querySelector('#t-proj rect.band.hl-lime');
+            if (!b) return null; const lab = [...document.querySelectorAll('#t-proj text.bandlab')]
+              .find(t => Math.abs(+t.getAttribute('x') - (+b.getAttribute('x') + b.getAttribute('width') / 2)) < 1);
+            return {fill: b.getAttribute('style'), dark: lab ? lab.classList.contains('dk') : null}; }""")
+        check(band and "--hl-lime" in band["fill"],
+              "A NEW COLOUR CHOSEN IN AN OLD WORKBOOK DRAWS AT ONCE", str(band))
+        check(band and band["dark"] in (True, None),
+              "and a pale one carries a dark label, so the period name stays readable")
+        legend = " ".join(pg.eval_on_selector_all("#t-proj .legend", "es => es.map(e => e.innerText)"))
+        check("Highlight (Lime)" in legend, "the legend names it in the file's own words")
 
         check(not errors, "no script error anywhere in the run", "; ".join(errors[:3]))
         b.close()

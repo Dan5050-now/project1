@@ -320,8 +320,13 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.72.xlsx` — **current.** 92 requirements, 41 live
-  validation rules, source schema version 16. The latest change is **R-62**: **an issue a
+- `docs/PRAP_Development_Plan_v2.73.xlsx` — **current.** 93 requirements, 41 live
+  validation rules, source schema version 16. The latest change is **R-64**: the
+  highlight palette for milestones and periods grows from five colours to **thirteen** —
+  red, orange, yellow, lime, green, teal, cyan, blue, navy, purple, magenta, pink, brown —
+  distinct in both themes, offered even in workbooks made before them, each shown as a
+  swatch in the chooser (`REQ-PRJ-17`). Before it, **R-63** (Python edition: the new file
+  window, and no time-out on a plan of your own) and **R-62**: **an issue a
   manager has reviewed is shown as reviewed**. Click any short, over or not-staffed month
   in Resource by project and the month opens with a **Manager review** box — Confirmed -
   no issue, Accepted or To be fixed, who confirmed it and why, optionally over the whole
@@ -342,7 +347,7 @@ document through the manifest rather than by sorting filenames.
   plans**: a new file in the person's own folder, the team's plan untouched. Before them,
   **R-59**: the
   **Periods table has a Highlight column** like the Milestones one. A project's period
-  can be given one of five colours and the Project timeline draws it in that colour on
+  can be given one of five colours (thirteen since R-64) and the Project timeline draws it in that colour on
   both tabs; **a period with no colour is drawn gray**, still shaded by its weight. This
   replaces the old one-hue-per-period-name colouring. `ProjectPeriod.period_highlight`
   steps the source schema to 14 (template v1.18, examples v1.20 and v1.12); a value naming
@@ -441,7 +446,9 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.41.xlsx` — **current specification.** Schema 16.
+- `docs/PRAP_Programming_Specification_v1.42.xlsx` — **current specification.** Schema 16.
+  Records the thirteen-colour palette, how a colour word is read, and what the chooser
+  offers a workbook whose Lists predate it (R-64).
   Sheet 03 carries the `IssueReview` sheet and sheet 07 gains `V-40` (R-62): when a review
   closes a month, how the click reaches it, and the run a review covers.
   Sheet 06 records the name-labelled filters, the sticky selection of a new row and the

@@ -25,6 +25,7 @@ import argparse
 import calendar
 import json
 import math
+import re
 import sys
 from collections import defaultdict
 from datetime import date, datetime, timedelta
@@ -40,14 +41,18 @@ import build_source_workbook as B                                      # noqa: E
 # timeline, so a team may write what their colour means - "Highlight (Red) - slipped" -
 # and keep the colour. Mirrors hlToken() in src/core/03_parse.js; the two have to agree,
 # because this file predicts what the application will report (V-37).
-HIGHLIGHT_WORDS = ["red", "yellow", "blue", "green", "orange"]
+# Thirteen since R-64, read as a WORD (not inside a longer Latin-letter word), first one
+# wins - exactly as HL_RE there.
+HIGHLIGHT_WORDS = ["red", "orange", "yellow", "lime", "green", "teal", "cyan",
+                   "blue", "navy", "purple", "magenta", "pink", "brown"]
+HL_RE = re.compile(r"(?<![a-z])(%s)(?![a-z])" % "|".join(HIGHLIGHT_WORDS), re.I)
 
 
 def hl_token(v):
     if v is None:
         return ""
-    t = str(v).lower()
-    return next((w for w in HIGHLIGHT_WORDS if w in t), "")
+    m = HL_RE.search(str(v))
+    return m.group(1).lower() if m else ""
 
 
 FORMAT_NAME = "prap-source-data"

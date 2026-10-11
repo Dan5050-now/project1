@@ -236,12 +236,25 @@ const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignmen
 
    An unrecognised value is not silently dropped: V-37 reports it and the milestone draws
    in the ordinary colour, which is what it did before there was a column at all. */
-const HIGHLIGHT_WORDS = ["red", "yellow", "blue", "green", "orange"];
+/* THIRTEEN COLOURS since R-64, asked for from the field as "at least 12 distinctive
+   colours" - five ran out as soon as a team gave each kind of milestone its own. In
+   rainbow order, which is also the order the Lists sheet offers them. Chosen to stay
+   apart from one another in both themes: no two are a lighter and darker shade of one
+   hue except navy beside blue, which differ in lightness by half the scale.
+
+   THE COLOUR WORD IS READ AS A WORD. It used to be any occurrence of the letters, so
+   'Highlight (Green) - redo' was red. Now a colour word must stand on its own - not
+   inside a longer English word - and where a value names two, the FIRST one wins, which
+   is the one in the brackets of every value the template ships. Korean or other text
+   right beside it does not stop it being read: only Latin letters count as "inside". */
+const HIGHLIGHT_WORDS = ["red", "orange", "yellow", "lime", "green", "teal", "cyan",
+                         "blue", "navy", "purple", "magenta", "pink", "brown"];
+const HL_RE = new RegExp(`(?<![a-z])(${HIGHLIGHT_WORDS.join("|")})(?![a-z])`, "i");
 
 function hlToken(v){
   if (v === null || v === undefined) return "";
-  const t = String(v).toLowerCase();
-  return HIGHLIGHT_WORDS.find(w => t.includes(w)) || "";
+  const m = String(v).match(HL_RE);
+  return m ? m[1].toLowerCase() : "";
 }
 
 const COLUMN_HELP = {

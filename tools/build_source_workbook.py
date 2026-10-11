@@ -40,9 +40,9 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 SCHEMA_VERSION = 16
-TEMPLATE_VERSION = "1.20"
-DUMMY_VERSION = "1.22"
-DUMMY_SMALL_VERSION = "1.14"
+TEMPLATE_VERSION = "1.21"
+DUMMY_VERSION = "1.23"
+DUMMY_SMALL_VERSION = "1.15"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -67,6 +67,10 @@ DATE_FMT = "yyyy-mm-dd"
 # --------------------------------------------------------------------------
 # Value lists (Lists sheet, long format per the approved data model)
 # --------------------------------------------------------------------------
+PALETTE = [f"Highlight ({w})" for w in ("Red", "Orange", "Yellow", "Lime", "Green", "Teal",
+                                          "Cyan", "Blue", "Navy", "Purple", "Magenta",
+                                          "Pink", "Brown")]
+
 LISTS = [
     ("project_type", ["NewDrug CT", "Biosimilar CT (Healthy)", "Biosimilar CT (Patient)",
                       "Others"]),
@@ -87,16 +91,15 @@ LISTS = [
                         "final DB lock cut-off", "final DB lock", "Inspection"]),
     # Schema 13. The word in the brackets is what the application reads, so a team may
     # add what their colour MEANS - "Highlight (Red) - slipped" - and keep the colour.
-    ("milestone_highlight", ["Highlight (Red)", "Highlight (Yellow)", "Highlight (Blue)",
-                             "Highlight (Green)", "Highlight (Orange)"]),
-    # Schema 14. The same five, as a list of its own: a team may give the colours a
+    # R-64: thirteen, in rainbow order (src/core/03_parse.js HIGHLIGHT_WORDS).
+    ("milestone_highlight", PALETTE),
+    # Schema 14. The same colours, as a list of its own: a team may give the colours a
     # different meaning on periods from the one they give them on milestones.
     # Schema 16 (R-62): what a manager decided about a month off its standard. The first
     # two close the issue - it is kept, shown muted; the third keeps it open with a note.
     ("issue_review_status", ["Confirmed - no issue", "Accepted", "To be fixed"]),
     ("issue_kind", ["short", "over", "unstaffed"]),
-    ("period_highlight", ["Highlight (Red)", "Highlight (Yellow)", "Highlight (Blue)",
-                          "Highlight (Green)", "Highlight (Orange)"]),
+    ("period_highlight", PALETTE),
     ("period_name_clinical", ["Before-Start-up", "Start-up", "Conduct (interim)",
                               "Close-out (interim)", "Conduct (final)",
                               "Close-out (final)", "After Close-out (final)"]),

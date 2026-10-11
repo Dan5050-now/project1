@@ -181,9 +181,9 @@ function chartGantt(pids, opts){
                                                 : "the default for every " + esc(s.period_name)
                                                   + " (General assumptions)") + `</span>`
                    : `<br><span class="tr">no colour chosen — drawn gray</span>`);
-      // The label is dark on gray and on yellow, white on the four strong colours: the
+      // The label is dark on gray and on the pale colours, white on the strong ones: the
       // band's own colour decides which reads, so it is decided here and not in CSS.
-      const dk = !look.hl || look.hl === "yellow" ? " dk" : "";
+      const dk = !look.hl || HIGHLIGHT_PALE.has(look.hl) ? " dk" : "";
       o.push(`<rect class="band${look.hl ? " hl hl-" + look.hl : ""}" x="${x0.toFixed(1)}" `
         + `y="${y+13}" width="${w.toFixed(1)}" height="${rowh-20}" style="${look.style}" rx="2" `
         + `data-tip="${att(tip)}"${sKey(s.period_name, p)}></rect>`);
@@ -231,7 +231,7 @@ function chartGantt(pids, opts){
   leg.push('<li><span class="sw tri"></span>milestone</li>');
   leg.push('<li><span class="sw tri key"></span>DB lock &#8212; sets a period boundary</li>');
   /* Only the colours actually on this chart, each labelled with what the FILE calls it.
-     Listing all five when one is in use would teach a palette nobody asked about; this
+     Listing all thirteen when one is in use would teach a palette nobody asked about; this
      answers "what is that red triangle" and stops. */
   for (const t of HIGHLIGHT_WORDS) if (hlUsed.has(t))
     leg.push(`<li><span class="sw tri hl-${t}"></span>${esc(M.hlLabels[t] || t)}</li>`);

@@ -485,6 +485,16 @@ function suggestionsFor(sheet, col, row){
   const px = proxyFor(sheet, col);
   if (px) return px.options();
   const named = LIST_FOR[col];
+  /* A highlight column offers the file's own values AND every colour of the palette the
+     file does not already name (R-64). A workbook made before the palette grew carries
+     only the five it was made with, and its Lists sheet is not edited from here - so
+     without this, the new colours could be read but never chosen. */
+  if (col === "milestone_highlight" || col === "period_highlight"){
+    const own = (M.lists[named] || []).map(String);
+    const have = new Set(own.map(hlToken).filter(Boolean));
+    return [...own, ...HIGHLIGHT_WORDS.filter(w => !have.has(w))
+      .map(w => `Highlight (${w[0].toUpperCase()}${w.slice(1)})`)];
+  }
   if (named && M.lists[named]) return M.lists[named].map(String);
   // period_name and role_name depend on the project's TYPE, so the valid set is not one
   // list but two. Narrow it by the row's own project where that is knowable.

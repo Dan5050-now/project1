@@ -41,7 +41,10 @@
   --fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.20);
   --accent:#0066cc;--s1:#0066cc;--other:#aeaeb2;
   --good:#248a3d;--warn:#ff9500;--crit:#d70015;
-  --hl-red:#d70015;--hl-yellow:#e0a000;--hl-blue:#0066cc;--hl-green:#1d7a35;--hl-orange:#e06c00;
+  --hl-red:#d70015;--hl-orange:#e06c00;--hl-yellow:#e8c100;--hl-lime:#7cb518;
+  --hl-green:#1d7a35;--hl-teal:#00897b;--hl-cyan:#14b8d4;--hl-blue:#0066cc;
+  --hl-navy:#1f2f86;--hl-purple:#7b3fbf;--hl-magenta:#c2188f;--hl-pink:#f37fb2;
+  --hl-brown:#8d5524;
   --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
   --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
@@ -95,7 +98,10 @@
   --fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.36);
   --accent:#0a84ff;--s1:#0a84ff;--other:#5a5a5e;
   --good:#30d158;--warn:#ff9f0a;--crit:#ff6961;
-  --hl-red:#ff6961;--hl-yellow:#ffd60a;--hl-blue:#0a84ff;--hl-green:#30d158;--hl-orange:#ff9f0a;
+  --hl-red:#ff6961;--hl-orange:#ff9f0a;--hl-yellow:#ffe14d;--hl-lime:#b5e655;
+  --hl-green:#30d158;--hl-teal:#3fc9b4;--hl-cyan:#64d2ff;--hl-blue:#0a84ff;
+  --hl-navy:#7d8cff;--hl-purple:#bf5af2;--hl-magenta:#ff4fd8;--hl-pink:#ffadd2;
+  --hl-brown:#c8915c;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
   --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
   --hairline:rgba(235,235,245,.18);
@@ -107,7 +113,10 @@
   --fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.36);
   --accent:#0a84ff;--s1:#0a84ff;--other:#5a5a5e;
   --good:#30d158;--warn:#ff9f0a;--crit:#ff6961;
-  --hl-red:#ff6961;--hl-yellow:#ffd60a;--hl-blue:#0a84ff;--hl-green:#30d158;--hl-orange:#ff9f0a;
+  --hl-red:#ff6961;--hl-orange:#ff9f0a;--hl-yellow:#ffe14d;--hl-lime:#b5e655;
+  --hl-green:#30d158;--hl-teal:#3fc9b4;--hl-cyan:#64d2ff;--hl-blue:#0a84ff;
+  --hl-navy:#7d8cff;--hl-purple:#bf5af2;--hl-magenta:#ff4fd8;--hl-pink:#ffadd2;
+  --hl-brown:#c8915c;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
   --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
   --hairline:rgba(235,235,245,.18);
@@ -119,7 +128,10 @@
   --fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.20);
   --accent:#0066cc;--s1:#0066cc;--other:#aeaeb2;
   --good:#248a3d;--warn:#ff9500;--crit:#d70015;
-  --hl-red:#d70015;--hl-yellow:#e0a000;--hl-blue:#0066cc;--hl-green:#1d7a35;--hl-orange:#e06c00;
+  --hl-red:#d70015;--hl-orange:#e06c00;--hl-yellow:#e8c100;--hl-lime:#7cb518;
+  --hl-green:#1d7a35;--hl-teal:#00897b;--hl-cyan:#14b8d4;--hl-blue:#0066cc;
+  --hl-navy:#1f2f86;--hl-purple:#7b3fbf;--hl-magenta:#c2188f;--hl-pink:#f37fb2;
+  --hl-brown:#8d5524;
   --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
   --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
@@ -738,24 +750,52 @@ td.ins,th.ins{width:1%;white-space:nowrap;text-align:center}
    applies by itself. Each colour is a variable so both themes can carry a shade that
    reads on their own ground. */
 .ms.hl-red{fill:var(--hl-red);stroke-width:1.4}
-.ms.hl-yellow{fill:var(--hl-yellow);stroke-width:1.4}
-.ms.hl-blue{fill:var(--hl-blue);stroke-width:1.4}
-.ms.hl-green{fill:var(--hl-green);stroke-width:1.4}
 .ms.hl-orange{fill:var(--hl-orange);stroke-width:1.4}
-.legend .sw.tri.hl-red{border-top-color:var(--hl-red);border-left-width:7px;border-right-width:7px}
-.legend .sw.tri.hl-yellow{border-top-color:var(--hl-yellow);border-left-width:7px;border-right-width:7px}
-.legend .sw.tri.hl-blue{border-top-color:var(--hl-blue);border-left-width:7px;border-right-width:7px}
-.legend .sw.tri.hl-green{border-top-color:var(--hl-green);border-left-width:7px;border-right-width:7px}
-.legend .sw.tri.hl-orange{border-top-color:var(--hl-orange);border-left-width:7px;border-right-width:7px}
+.ms.hl-yellow{fill:var(--hl-yellow);stroke-width:1.4}
+.ms.hl-lime{fill:var(--hl-lime);stroke-width:1.4}
+.ms.hl-green{fill:var(--hl-green);stroke-width:1.4}
+.ms.hl-teal{fill:var(--hl-teal);stroke-width:1.4}
+.ms.hl-cyan{fill:var(--hl-cyan);stroke-width:1.4}
+.ms.hl-blue{fill:var(--hl-blue);stroke-width:1.4}
+.ms.hl-navy{fill:var(--hl-navy);stroke-width:1.4}
+.ms.hl-purple{fill:var(--hl-purple);stroke-width:1.4}
+.ms.hl-magenta{fill:var(--hl-magenta);stroke-width:1.4}
+.ms.hl-pink{fill:var(--hl-pink);stroke-width:1.4}
+.ms.hl-brown{fill:var(--hl-brown);stroke-width:1.4}
+.legend .sw.tri[class*=" hl-"]{border-left-width:7px;border-right-width:7px}
+.legend .sw.tri.hl-red{border-top-color:var(--hl-red)}
+.legend .sw.tri.hl-orange{border-top-color:var(--hl-orange)}
+.legend .sw.tri.hl-yellow{border-top-color:var(--hl-yellow)}
+.legend .sw.tri.hl-lime{border-top-color:var(--hl-lime)}
+.legend .sw.tri.hl-green{border-top-color:var(--hl-green)}
+.legend .sw.tri.hl-teal{border-top-color:var(--hl-teal)}
+.legend .sw.tri.hl-cyan{border-top-color:var(--hl-cyan)}
+.legend .sw.tri.hl-blue{border-top-color:var(--hl-blue)}
+.legend .sw.tri.hl-navy{border-top-color:var(--hl-navy)}
+.legend .sw.tri.hl-purple{border-top-color:var(--hl-purple)}
+.legend .sw.tri.hl-magenta{border-top-color:var(--hl-magenta)}
+.legend .sw.tri.hl-pink{border-top-color:var(--hl-pink)}
+.legend .sw.tri.hl-brown{border-top-color:var(--hl-brown)}
 /* The chip in a highlight cell. ::before, so it is drawn beside the value without being
    part of what the cell contains - the cell is edited in place and read back as text. */
 td.cell[data-hl]::before{content:"";display:inline-block;width:.72em;height:.72em;
   border-radius:2px;margin-right:.45em;vertical-align:-1px;border:1px solid var(--hairline)}
 td.cell[data-hl="red"]::before{background:var(--hl-red)}
-td.cell[data-hl="yellow"]::before{background:var(--hl-yellow)}
-td.cell[data-hl="blue"]::before{background:var(--hl-blue)}
-td.cell[data-hl="green"]::before{background:var(--hl-green)}
 td.cell[data-hl="orange"]::before{background:var(--hl-orange)}
+td.cell[data-hl="yellow"]::before{background:var(--hl-yellow)}
+td.cell[data-hl="lime"]::before{background:var(--hl-lime)}
+td.cell[data-hl="green"]::before{background:var(--hl-green)}
+td.cell[data-hl="teal"]::before{background:var(--hl-teal)}
+td.cell[data-hl="cyan"]::before{background:var(--hl-cyan)}
+td.cell[data-hl="blue"]::before{background:var(--hl-blue)}
+td.cell[data-hl="navy"]::before{background:var(--hl-navy)}
+td.cell[data-hl="purple"]::before{background:var(--hl-purple)}
+td.cell[data-hl="magenta"]::before{background:var(--hl-magenta)}
+td.cell[data-hl="pink"]::before{background:var(--hl-pink)}
+td.cell[data-hl="brown"]::before{background:var(--hl-brown)}
+/* R-64: the same chip in the value chooser, so a colour is picked by its colour. */
+.sugg .swc,.swc{display:inline-block;width:.8em;height:.8em;border-radius:2px;margin-right:.5em;
+  vertical-align:-1px;border:1px solid var(--hairline)}
 .halo{stroke:var(--surface);stroke-width:4;opacity:.9}
 .th-over{stroke:var(--crit);stroke-width:1.5;stroke-dasharray:5 3}
 .th-under{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:5 3}

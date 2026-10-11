@@ -90,16 +90,17 @@ function persColourOf(sid){
   return SCOL[sid] || "var(--other)";
 }
 
-/* The five highlight colours, as the stylesheet knows them (schema 13). Named here so
-   the chart, the legend and the table cell all reach for one definition, and defined as
-   CSS variables rather than hexes so each theme can pick a shade that reads on its own
-   ground - a yellow that works on white disappears on black. */
-const HIGHLIGHT_FILL = {red:"var(--hl-red)", yellow:"var(--hl-yellow)", blue:"var(--hl-blue)",
-                        green:"var(--hl-green)", orange:"var(--hl-orange)"};
+/* The highlight colours, as the stylesheet knows them (schema 13; thirteen since R-64).
+   Named here so the chart, the legend and the table cell all reach for one definition,
+   and defined as CSS variables rather than hexes so each theme can pick a shade that
+   reads on its own ground - a yellow that works on white disappears on black. */
+const HIGHLIGHT_FILL = Object.fromEntries(HIGHLIGHT_WORDS.map(w => [w, `var(--hl-${w})`]));
+/* The pale ones, on which a band's label is written dark rather than white. */
+const HIGHLIGHT_PALE = new Set(["yellow", "lime", "cyan", "pink"]);
 
 /* A PERIOD IS DRAWN GRAY UNLESS SOMEBODY CHOSE ITS COLOUR (R-59, schema 14). The bands
    used to take a hue per period name (O-10); asked from the field, the colour now belongs
-   to the user: ProjectPeriod.period_highlight picks one of the five, and an unmarked
+   to the user: ProjectPeriod.period_highlight picks one of the palette, and an unmarked
    period is a quiet gray so the marked ones are what the eye finds. Weight still shades
    both - lighter for a light period, darker for a heavy one - so nothing the old
    colouring said about weight is lost; the period's NAME is on the band and in its
