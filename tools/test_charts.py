@@ -243,7 +243,10 @@ with sync_playwright() as pw:
               marks: svg.querySelectorAll('polygon.ms').length,
               locks: svg.querySelectorAll('polygon.ms.key').length,
               legend: p.querySelectorAll('.legend li').length,
-              tips: [...svg.querySelectorAll('[data-tip]')].length};
+              // The Today marker (R-65) carries a pop-up of its own and is not a period
+              // or a milestone, so it is not counted among theirs.
+              tips: [...svg.querySelectorAll('[data-tip]')]
+                .filter(e => !e.classList.contains('nowmark')).length};
     }""")
     want = probe(pg, """() => {
       const pid = S.selProj;
