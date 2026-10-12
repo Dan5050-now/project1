@@ -194,6 +194,21 @@ function chartGantt(pids, opts){
         o.push(`<text class="bandlab${dk}" x="${(x0+w/2).toFixed(1)}" y="${(y+rowh/2+5).toFixed(1)}" `
           + `text-anchor="middle">${esc(s.period_name)}</text>`);
     }
+    /* WHEN THE SELECTED PERSON IS ON THIS PROJECT (R-65, the person tab's timeline). A
+       thin bar under the period bands for each of their assignments, so the row says
+       both what the project is doing and which part of it this person is part of. */
+    for (const a of ((opts.assign || {})[p] || [])){
+      const s0 = a.from || pr.start_date, s1 = a.to || pr.end_date;
+      if (!s0 || !s1) continue;
+      const ax0 = x(s0.getTime()), ax1 = x(s1.getTime());
+      const tip = `<b>${esc(opts.who || "")}</b> on ${esc(pr.project_name)}<br>`
+        + `${esc(a.role || "")}<br>${ymd(s0)} to ${ymd(s1)}`
+        + (a.from || a.to ? "" : `<br><span class="tr">the whole project</span>`)
+        + (a.weight !== null && a.weight !== undefined
+            ? `<br><span class="tr">person weight ${Number(a.weight).toFixed(2)}</span>` : "");
+      o.push(`<rect class="asgbar" x="${ax0.toFixed(1)}" y="${y + rowh - 6}" `
+        + `width="${Math.max(2, ax1 - ax0).toFixed(1)}" height="5" rx="2" data-tip="${att(tip)}"/>`);
+    }
     for (const [nm, dates] of Object.entries(M.milestones[p] || {}))
       for (const d of dates){
         if (!d) continue;
@@ -214,6 +229,15 @@ function chartGantt(pids, opts){
           + `${(xx+w_).toFixed(1)},${y+1} ${xx.toFixed(1)},${y+1+h_}" data-tip="${att(tip)}"></polygon>`);
       }
   });
+  /* TODAY (R-65), across every row - drawn last so no band covers it. */
+  const tNow = today().getTime();
+  const nowOn = tNow >= lo && tNow <= hi + DAY;
+  if (nowOn){
+    const xx = x(tNow).toFixed(1);
+    o.push(`<g class="nowmark" data-tip="${att(`<b>Today</b> &#183; ${todayLabel()}`)}">`
+      + `<line class="nowln" x1="${xx}" y1="${padT - 6}" x2="${xx}" y2="${H - 22}"/>`
+      + `<text class="nowlab" x="${xx}" y="${H - 8}" text-anchor="middle">Today</text></g>`);
+  }
   o.push("</svg>");
   const seen = new Set();
   const leg = ['<ul class="legend">'];
@@ -235,6 +259,9 @@ function chartGantt(pids, opts){
      answers "what is that red triangle" and stops. */
   for (const t of HIGHLIGHT_WORDS) if (hlUsed.has(t))
     leg.push(`<li><span class="sw tri hl-${t}"></span>${esc(M.hlLabels[t] || t)}</li>`);
+  if (opts.assign)
+    leg.push(`<li><span class="sw asg"></span>when ${esc(opts.who || "this person")} is on it</li>`);
+  if (nowOn) leg.push('<li><span class="sw now"></span>today</li>');
   leg.push('<li class="hint">darker band = higher period weight</li></ul>');
   leg.push(`<p class="note">${opts.note || `All ${rows.length} project(s) in the current filter, `
     + `scrolling in both directions inside this panel.`}</p>`);
@@ -307,7 +334,8 @@ function chartLines(items, valueAt, opts){
         + `fill="${colour}"${sKey(id)}></circle>`);
     }
   }
-  monthAxis(o, G, i => xOf(i) - step / 2, step, H - padB + 17, H - padB + 32, padT, H - padB);
+  monthAxis(o, G, i => xOf(i) - step / 2, step, H - padB + 17, H - padB + 32, padT, H - padB,
+    [padL, W - padR]);
   o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}"/></svg>`);
   const leg = ['<ul class="legend">'];
   for (const [[id, label, colour]] of shown)
@@ -392,7 +420,8 @@ function chartStacked(pids){
       base -= h;
     }
   });
-  monthAxis(o, G, i => padL + i * bw + 3, bw - 8, H - padB + 17, H - padB + 32, padT, H - padB);
+  monthAxis(o, G, i => padL + i * bw + 3, bw - 8, H - padB + 17, H - padB + 32, padT, H - padB,
+    [padL, W - 8]);
   o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-8}" y2="${H-padB}"/></svg>`);
   return o.join("");
 }
@@ -483,7 +512,8 @@ function chartPeople(sids){
       base -= h;
     }
   });
-  monthAxis(o, G, i => padL + i * bw + 3, bw - 8, H - padB + 17, H - padB + 32, padT, H - padB);
+  monthAxis(o, G, i => padL + i * bw + 3, bw - 8, H - padB + 17, H - padB + 32, padT, H - padB,
+    [padL, W - 8]);
   o.push(`<line class="base" x1="${padL}" y1="${H-padB}" x2="${W-8}" y2="${H-padB}"/></svg>`);
   const leg = ['<ul class="legend">'];
   for (const s of order)
@@ -584,7 +614,7 @@ function chartProjectUtil(pid){
       + `y="${Math.min(y0, base - 4).toFixed(1)}" width="${(bw - 1).toFixed(1)}" `
       + `height="${Math.max(4, base - y0).toFixed(1)}" rx="3"></rect>`);
   });
-  monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base);
+  monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base, [padL, W - padR]);
   for (const [v, cls, lab] of [[upper,"th-over",`2 × portfolio avg — ${upper.toFixed(2)}`],
                                [lower,"th-under",`0.5 × portfolio avg — ${lower.toFixed(2)}`],
                                [ownAvg,"th-own",`this project avg — ${ownAvg.toFixed(2)}`]]){
@@ -690,7 +720,7 @@ function chartPersonStrip(sid){
         + `fill="${projColourOf(p)}" data-tip="${att(tip)}"${sKey(p)}></rect>`);
     }
   });
-  monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base);
+  monthAxis(o, G, i => padL + i * bw, bw, H - 21, H - 6, top, base, [padL, W - padR]);
   for (const [v, cls, lab] of [[M.OVER,"th-over",`ceiling ${M.OVER.toFixed(2)}`],
                                [M.UNDER,"th-under",`floor ${M.UNDER.toFixed(2)}`]]){
     const yy = base - (v/vmax) * (base-top);

@@ -1229,3 +1229,29 @@ td.cell.gapnew{cursor:text}
 td.cell.gapnew:empty::before{content:"type to state";color:var(--muted);
  font-style:italic;font-size:var(--t-xs)}
 td.cell.gapnew:focus:empty::before{content:""}
+
+/* ---- TODAY (R-65) ------------------------------------------------------------
+   Drawn in the ink colour, not a hue: every hue on this page already means something -
+   the blues are load, orange is short, red is over or a DB lock, and the timeline uses
+   all thirteen highlight colours - and "now" must not be mistaken for any of them. A
+   dashed rule on the charts and a solid pill reading "Today"; in the month tables the
+   current month's column (or row) is outlined and its heading carries the same pill. */
+.nowmark{cursor:help}
+.nowln{stroke:var(--ink);stroke-width:1.6;stroke-dasharray:5 3;opacity:.85;pointer-events:stroke}
+.nowlab{font-size:10.5px;font-weight:700;fill:var(--ink);paint-order:stroke;
+  stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+.nowtag{display:block;width:max-content;margin:0 auto 2px;font-size:9.5px;font-weight:700;
+  letter-spacing:.02em;line-height:1;padding:2px 5px;border-radius:999px;
+  background:var(--ink);color:var(--surface)}
+.grid-t th.now{color:var(--ink)}
+.grid-t td.now,.grid-t td.c.now,.grid-t th.now{background-image:linear-gradient(90deg,var(--ink) 0 2px,
+  transparent 2px calc(100% - 2px),var(--ink) calc(100% - 2px))!important}
+.data-t tr[data-now] > td{box-shadow:inset 0 2px 0 var(--ink),inset 0 -2px 0 var(--ink)}
+.data-t tr[data-now] > td.cell[data-col="month"]::after{content:"this month";margin-left:.5em;
+  font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:999px;background:var(--ink);
+  color:var(--surface);vertical-align:1px}
+.legend .sw.now{width:0;height:12px;border-left:2px dashed var(--ink);border-radius:0;
+  background:none}
+/* The selected person's time on each project, under that project's bands. */
+.asgbar{fill:var(--ink);opacity:.72}
+.legend .sw.asg{height:5px;width:16px;border-radius:2px;background:var(--ink);opacity:.72}

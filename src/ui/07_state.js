@@ -130,6 +130,34 @@ function fileBase(name, fallback){
 }
 const grid = () => { const g = []; for (let k = S.from; k <= S.to; k++) g.push(k); return g; };
 
+/* TODAY, on every chart and month table (R-65). A plan is read against the date it is
+   read on: "is this project short NOW, or in a year" was answered by counting columns
+   from the left. So the current month is marked wherever months are drawn - a line on
+   the charts, placed at today's day within the month, and the month's column or row
+   outlined in the tables. The machine's own clock, in its own time zone, because "today"
+   is the reader's today. */
+const today = () => new Date();
+const nowKey = () => { const d = today(); return monthKey(d.getFullYear(), d.getMonth()); };
+/** How far through the current month today is, 0 at the first morning, near 1 at the last. */
+const nowFrac = () => {
+  const d = today(), days = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return (d.getDate() - 1 + d.getHours() / 24) / days;
+};
+const todayLabel = () => {
+  const d = today(), p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+/** The current month's cell in a row of month cells, marked (R-65). `cells` is the
+ *  array of <td> strings a table builds over `G`; only the one for today's month is
+ *  touched, by adding the class `now` to it. */
+function markNow(cells, G){
+  const i = G.indexOf(nowKey());
+  if (i < 0) return cells;
+  cells[i] = cells[i].replace(/^<td(?: class="([^"]*)")?/,
+    (m, c) => `<td class="${c ? c + " " : ""}now"`);
+  return cells;
+}
+
 /* Sort order for the project lists: new-drug trials, then biosimilars, then everything
    else. Schema 6 split the biosimilar type in two, so the rank is taken from the START
    of the name rather than from an exact match - otherwise both new types would fall to

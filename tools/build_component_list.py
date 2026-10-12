@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.8.xlsx
+Output: docs/PRAP_UI_Component_List_v2.9.xlsx
 """
 
 from pathlib import Path
@@ -40,8 +40,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.8"
-DATE = "2026-10-09"
+VERSION = "2.9"
+DATE = "2026-10-12"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
@@ -561,6 +561,13 @@ C = [
      "assumptions reaching these months, and switching back DELETES every stated figure. "
      "Names how many months are affected before it does anything.",
      "REQ-CAL-18", A, "", "R-30."),
+    ("S-08", "Person tab", "[NEW v2.9] Project timeline (the selected person's)",
+     "The Overall tab's Project timeline cut to the projects the selected person has an "
+     "assignment on - the same bands, milestones and colours - with a bar under each row for "
+     "when they are on it, one per assignment, naming the role and dates. Every project they "
+     "are on, whatever the filters above say: this is about the person, not the view. A "
+     "person with no assignment is told so.",
+     "REQ-DSH-22", A, "", "R-65."),
     ("E-04", "Editing", "[NEW v2.0] Calendar panel on date cells",
      "A month opens beside the cell being edited, on that cell's own month. The cell never "
      "stops accepting keys - what you type moves the calendar. Today, and the month and year "
@@ -663,6 +670,13 @@ C = [
      "about six data columns at a time instead of ten, which is the right trade: six you can "
      "attribute to a project beat ten you cannot.",
      "REQ-DSH-19, REQ-DSH-13", A, "", "R-53."),
+    ("X-16", "Charts and tables", "[NEW v2.9] Today",
+     "Every chart drawn over months carries one dashed line at today's day within the current "
+     "month, labelled Today; the Project timeline carries one through every row. The two "
+     "month-column tables outline the current month's column and badge its heading; Monthly "
+     "estimation marks the current month's row. Drawn in the ink colour, because every hue "
+     "on the page already means something. Not drawn when today is outside the horizon.",
+     "REQ-DSH-21", A, "", "R-65."),
     ("G-13", "Global", "[NEW v2.0] Start with no file",
      "The application opens without a workbook and seeds the delivered defaults - value "
      "lists, settings, standard period weights and role factors - so a plan can be entered "

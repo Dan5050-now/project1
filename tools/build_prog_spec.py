@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.42"
+DOC_VERSION = "1.43"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.73.xlsx"
+PLAN = "PRAP_Development_Plan_v2.74.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,19 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.43", "2026-10-12", "Claude Code", "Dan",
+         "R-65, REQ-DSH-21 and REQ-DSH-22. ui/07_state.js gains today(), nowKey(), nowFrac() "
+         "(days into the month over its length) and todayLabel(), all from the machine's "
+         "clock, and markNow(cells, G), which adds class `now` to the current month's <td>. "
+         "monthAxis() takes an optional plot [left, right] and, where nowKey() is in G, draws "
+         "g.nowmark: a dashed line.nowln at xOf(i) + bw x nowFrac(), clamped to the plot, and "
+         "a 'Today' label beside it. chartGantt() draws the same through every row when today "
+         "falls inside the projects' span, and with opts.assign {pid: [{from, to, role, "
+         "weight}]} a rect.asgbar under each row per assignment. monthHead() marks th.now with "
+         "a 'Today' pill; every row of month cells in tableProjects() and tablePeople() goes "
+         "through markNow(); a MonthlyEstimate row of the current month carries data-now. "
+         "persTimeline(sid) in ui/11_tabs.js draws the person's Project timeline below their "
+         "Utilisation chart, from M.assignments regardless of S.f. No figure moves.", "Draft"],
         ["1.42", "2026-10-11", "Claude Code", "Dan",
          "R-64, REQ-PRJ-17. HIGHLIGHT_WORDS (core/03_parse.js and tools/prap_io.py alike) "
          "holds thirteen words in rainbow order; hlToken() matches HL_RE, "

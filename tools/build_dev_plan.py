@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.73"
-DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.62, source schema 16 - Gate 4 "
+DOC_VERSION = "2.74"
+DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.63, source schema 16 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, milestone and period highlighting, and the "
               "manager's review of issues.")
@@ -398,6 +398,24 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.74", "2026-10-12", "Claude Code", "Pending",
+     "R-65, TWO REQUESTS FROM THE FIELD. REQ-DSH-21 - TODAY ON EVERY CHART AND MONTH TABLE: "
+     "'in all run-charts and tables of all tabs, present where the current time is'. Every "
+     "chart drawn over months - Monthly resource trend, both stacked charts, Monthly load "
+     "trend, both Utilisation charts - carries one dashed line at today's day within the "
+     "current month, labelled Today, drawn through the axis they all share so none can be "
+     "left out; the Project timeline, on all three tabs, carries one through every row. "
+     "Resource by project and Resource by person outline the current month's column in "
+     "every row and badge its heading 'Today'; Monthly estimation marks the current month's "
+     "row 'this month'. Drawn in the ink colour, because every hue already means something "
+     "here. Not drawn where today is outside the horizon - a line pinned to an edge would "
+     "claim a month it is not in. The machine's own clock. REQ-DSH-22 - A PERSON'S OWN "
+     "PROJECT TIMELINE: Source data (person) gains a Project timeline of the projects the "
+     "selected person has an assignment on, drawn exactly as on Overall, with a bar under "
+     "each row for when they are on it, one per assignment; every project they are on, "
+     "whatever the filters say. No figure moves. tools/test_now.py is new: 20 checks, three "
+     "proved by putting the fault back. Python edition 1.37.",
+     "Issued for review"],
     [f"{MARK_NEW}2.73", "2026-10-11", "Claude Code", "Pending",
      "R-64, REQ-PRJ-17: THIRTEEN HIGHLIGHT COLOURS. Asked for from the field: 'at least 12 "
      "distinctive colours' for highlighting - five ran out as soon as a team gave each kind "
@@ -417,7 +435,7 @@ rows = [
      "Also asked for: the Monthly estimation panel on Source data (project) is titled by "
      "the project's NAME, with its identifier quieter beside it, instead of the identifier "
      "alone (an assignment's panel keeps its id, with the line under it).",
-     "Issued for review"],
+     "Superseded by v2.74"],
     [f"{MARK_NEW}2.72", "2026-10-09", "Claude Code", "Pending",
      "R-62, REQ-DSH-20: AN ISSUE A MANAGER HAS REVIEWED IS SHOWN AS REVIEWED. Asked for from "
      "the field: a month short of its standard, over it or with nobody on it may be a "
@@ -2534,6 +2552,8 @@ reqs = [
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-DSH-22", "Dashboard", "THE PERSON TAB SHOWS THE SELECTED PERSON'S PROJECTS AS A TIMELINE - the Project timeline of the Overall tab, cut to the projects the person has an assignment on, whatever the filters say - with a mark under each project for when the person is on it, one per assignment.", "Should", "R-65", "4"],
+    [f"{MARK_NEW}REQ-DSH-21", "Dashboard", "TODAY IS MARKED WHEREVER MONTHS ARE DRAWN: a line at today's day within the current month on every chart drawn over months, and through every row of the Project timeline; the current month's column outlined in the month-column tables and its heading marked; the current month's row marked in Monthly estimation. In a colour no other mark uses. Not drawn when today is outside what is shown.", "Should", "R-65", "4"],
     [f"{MARK_NEW}REQ-DSH-20", "Dashboard", "AN ISSUE A MANAGER HAS REVIEWED IS SHOWN AS REVIEWED, AND THE REVIEW CAN BE READ FROM THE ISSUE. Each short, over or not-staffed project-month (REQ-DSH-15, REQ-DSH-17) can carry one review on the IssueReview sheet: a decision (Confirmed - no issue, Accepted, To be fixed), who confirmed it, when, why, and the gap it was made at. It is made and changed from the month itself - clicking the issue opens it - optionally across the whole run of consecutive months with the same issue. Confirmed and Accepted CLOSE the issue and need a reason: it stays marked, drawn muted, and its decision and reason are shown whenever it is opened; the open counts leave it out and count it apart. To be fixed keeps it open. A review whose month's gap has since moved, or whose issue has gone, no longer closes anything and is reported (V-40).", "Should", "R-62", "4"],
     [f"{MARK_NEW}REQ-DSH-19", "Dashboard", "A ROW'S IDENTITY STAYS ON SCREEN WHILE ITS TABLE SCROLLS SIDEWAYS. A source-data sheet can be far wider than the panel that holds it - the Project sheet is twenty-five columns in a panel that shows less than half of them - so a reader editing a far column is working on a row with nothing on screen to say which record it is. The row's handle, its identifier and its name are FROZEN at the left edge and the rest of the table scrolls under them. They remain ordinary editable cells where they stand. Which columns is declared PER SHEET rather than per place the table is drawn, so one sheet cannot be pinned two ways, and only a leading run of columns can be frozen. The frozen cells must be OPAQUE in every state a row can be in - striped, hovered, selected, edited - because a row passing underneath would otherwise show through; and they must leave no seam at their boundaries, which costs a pixel of overlap that nothing can see. This changes no figure and no file.", "Should", "R-53", "4"],
     [f"{MARK_NEW}REQ-DSH-18", "Dashboard", "ANY SECTION CAN BE GIVEN THE WHOLE WINDOW, AND THE DATA IN IT IS STILL EDITABLE THERE. Every panel holding a bounded scroll region carries a control in its head that draws that panel against the viewport instead of against the 1400px page column: the same table, every column it had, at the height of the screen rather than the 340px REQ-DSH-13 caps an entry table at. It is the SAME SCREEN and not a view of it - nothing is moved, nothing is copied, and editing, validation, the type-ahead, the column filters and the pop-ups all work exactly as they do on the page, because none of them is told it is happening. THE EDIT BAR AND THE TABS STAY IN FRONT: a full screen that hides Save is a trap, so the sticky band is lifted above the section rather than covered by it, and the section begins underneath it. The filter bar is covered and Escape brings it back. A SHELL WITH ITS OWN WINDOW BARS - the desktop and Python editions both put a title strip and a status strip above everything the page draws - keeps those in front too, and the section begins below them; the room they take is measured from the shells' own declaration of which elements they are, so the page layer names none of them. A section is remembered BY NAME, so it stays open across the re-render every committed edit causes, and across a change of selected row that rewrites its heading. Changing tab closes it, because a hidden pane draws nothing; loading a plan closes it, because that load's own report must not appear behind it. No figure changes and nothing is written to the file.", "Should", "R-51", "4"],
@@ -3460,6 +3480,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-65", "Dashboard", "Show where the current time is on every run-chart and month table of every tab; add the project timeline to Source data (person) for the selected person's projects.", "Applied. A Today line on every monthly chart and through the Project timeline; the current month's column and row marked in the tables; a person's own Project timeline with a bar per assignment. REQ-DSH-21 and REQ-DSH-22 added; no figure moves.", "Applied"],
     ["R-64", "Data model", "Offer at least 12 distinctive highlight colours.", "Applied. Thirteen colours for milestones and periods, distinct in both themes; offered in every workbook, older ones included; a swatch per colour in the chooser; the colour word read as a word. REQ-PRJ-17 added; template v1.21; no figure moves.", "Applied"],
     ["R-63", "Python edition", "Make the file search windows more graphical and useful; do not apply the session time-out to a private plan; when a session does time out, say so in a pop-up.", "Applied (Python edition 1.35; desktop plan v1.18). A plan in My plans takes no hold, so it never times out (NR-STO-20). A lapsed hold on a team plan raises a pop-up naming who took over and offering to keep your version (NR-STO-21). The file window gains places, a clickable path with back/forward/up, type badges, how-long-ago and date groups, a filter, list or tiles, details, the keyboard, and who saved / is editing a plan (NR-IMP-10).", "Applied"],
     ["R-62", "Dashboard", "Let a manager confirm a short / over / not-staffed issue - 'no issue' or 'accepted', with a rationale - from the issue itself, changeable later; show confirmed issues distinguished (muted) but still readable, with the confirmation and rationale shown whenever the issue is clicked.", "Applied. New sheet IssueReview; source schema steps 15 to 16. Clicking an issue month opens it with a Manager review box (decision, manager, reason, whole run); Confirmed and Accepted close it and need a reason, To be fixed keeps it open. Closed months are drawn muted, counted apart, and filterable. A review covers the gap it was made at; V-40 added; REQ-DSH-20 added; no figure moves.", "Applied"],

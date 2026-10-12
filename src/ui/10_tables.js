@@ -4,7 +4,7 @@
  *  boundary. Repeating the year under all 24 columns is noise; showing it only at the
  *  first column and each January is the smallest mark that answers "which year is this".
  *  One helper so the three time charts label their axes identically. */
-function monthAxis(o, G, xOf, bw, yLabel, yTick, yDiv0, yDiv1){
+function monthAxis(o, G, xOf, bw, yLabel, yTick, yDiv0, yDiv1, plot){
   G.forEach((k, i) => {
     const [mon, yr] = keyToLabel(k).split(" ");
     const cx = xOf(i) + bw / 2;
@@ -17,15 +17,41 @@ function monthAxis(o, G, xOf, bw, yLabel, yTick, yDiv0, yDiv1){
       }
     }
   });
+  /* TODAY (R-65): one line through the plot at today's day within its month, labelled
+     above it. Here, in the axis every monthly chart already draws through, so all of
+     them carry it and none can be left without. Not drawn when today is outside the
+     horizon - a line pinned to an edge would claim a month it is not in. */
+  const ni = G.indexOf(nowKey());
+  if (ni >= 0){
+    // `plot` is the plotting area's [left, right] where a month's slot can run past it
+    // (the line chart puts each month at the CENTRE of its slot, so the first slot
+    // starts left of the axis); the line is kept inside it.
+    let xv = xOf(ni) + bw * nowFrac();
+    if (plot) xv = Math.min(plot[1], Math.max(plot[0] + 1, xv));
+    const xx = xv.toFixed(1);
+    // The label sits BESIDE the line, at the top of the plot, so it never lands on the
+    // unit label left of the axis; it flips to the other side near the right edge.
+    const right = plot ? xv > plot[1] - 60 : false;
+    const tip = `<b>Today</b> &#183; ${todayLabel()}<br><span class="tr">everything to the `
+      + `left of this line is the past</span>`;
+    o.push(`<g class="nowmark" data-tip="${att(tip)}"><line class="nowln" x1="${xx}" `
+      + `y1="${yDiv0 - 4}" x2="${xx}" y2="${yDiv1}"/>`
+      + `<text class="nowlab" x="${(xv + (right ? -5 : 5)).toFixed(1)}" y="${yDiv0 + 9}" `
+      + `text-anchor="${right ? "end" : "start"}">Today</text></g>`);
+  }
 }
 
 function monthHead(){
+  const nk = nowKey();
   return grid().map(k => {
     const [mon, yr] = keyToLabel(k).split(" ");
-    const tip = `<b>${keyToLabel(k)}</b><br>Each cell is that month's load in ${unitLabel()}: `
+    const now = k === nk;
+    const tip = `<b>${keyToLabel(k)}</b>${now ? ` &#183; <b>this month</b> (today is ${todayLabel()})` : ""}`
+      + `<br>Each cell is that month's load in ${unitLabel()}: `
       + `period weight × role factor × person weight × the fraction of the month covered. `
       + `A partial month is prorated by calendar days.`;
-    return `<th data-tip="${att(tip)}">${mon}<br><span class="sub">${yr}</span></th>`;
+    return `<th${now ? ' class="now"' : ""} data-tip="${att(tip)}">${now
+      ? '<span class="nowtag">Today</span>' : ""}${mon}<br><span class="sub">${yr}</span></th>`;
   }).join("");
 }
 
@@ -130,7 +156,7 @@ function tableProjects(pids){
   for (const pid of listed){
     const open = S.expanded.has("p-"+pid);
     let tot = 0;
-    const tds = G.map(k => {
+    const tds = markNow(G.map(k => {
       const v = C.projMonth.get(pid+"|"+k) || 0; tot += v;
       /* A month that is not what the project's own standard asks for is marked HERE,
          on the figure, rather than only in a pop-up or a panel (V-34). A shortfall you
@@ -183,7 +209,7 @@ function tableProjects(pids){
       const i = seqStep(v, vmax);
       return `<td class="c${mark}"${gtip} style="background:${SEQ[i]};`
         + `color:${i>6?"#fff":"var(--ink)"}">${fmt(v)}</td>`;
-    }).join("");
+    }), G).join("");
     // The unallocated sum for this row, alongside the applied total and never inside it.
     let utot = 0;
     for (const k of G) utot += C.projUnallocated.get(pid + "|" + k) || 0;
@@ -203,10 +229,10 @@ function tableProjects(pids){
                      (a.person_id||"").localeCompare(b.person_id||""));
     for (const a of rows){
       let dt = 0;
-      const dtds = G.map(k => {
+      const dtds = markNow(G.map(k => {
         const v = C.cell.get([pid, a.person_id, a.role_name, k].join("|")) || 0; dt += v;
         return v > 0.004 ? `<td class="c">${fmt(v)}</td>` : '<td class="c z">&middot;</td>';
-      }).join("");
+      }), G).join("");
       if (dt <= 0.004) continue;
       const stated = M.isManual && (M.isManual("assignment", a.assignment_id)
                                     || M.isManual("project", pid));
@@ -223,10 +249,10 @@ function tableProjects(pids){
     }
   }
   let gt = 0;
-  const gtds = G.map(k => {
+  const gtds = markNow(G.map(k => {
     let s = 0; for (const p of listed) s += C.projMonth.get(p+"|"+k) || 0; gt += s;
     return `<td>${fmt(s)}</td>`;
-  }).join("");
+  }), G).join("");
   body.push(`<tr class="grand"><th class="rh">${f ? `${listed.length} of ${pids.length} `
     + `projects shown` : `All ${listed.length} projects`}</th>${gtds}<td>${fmt(gt)}</td></tr>`);
   /* ON ITS OWN LINE, NEVER ADDED TO THE ONE ABOVE. The row above is what is APPLIED,
@@ -235,10 +261,10 @@ function tableProjects(pids){
      reconciliation this screen guarantees - and would also assert that the work is being
      done by somebody, which is the opposite of what it says. */
   let ut = 0;
-  const utds = G.map(k => {
+  const utds = markNow(G.map(k => {
     let s = 0; for (const p of listed) s += C.projUnallocated.get(p+"|"+k) || 0; ut += s;
     return s > 0.004 ? `<td class="unal">${fmt(s)}</td>` : `<td class="z">&middot;</td>`;
-  }).join("");
+  }), G).join("");
   if (ut > 0.004)
     body.push(`<tr class="grand unalrow"><th class="rh">&#9702; Not staffed — what the `
       + `standards ask for with nobody on it<span class="sub">not included in the row `
@@ -257,14 +283,14 @@ function tablePeople(sids){
   for (const sid of listed){
     const open = S.expanded.has("s-"+sid);
     let tot = 0;
-    const tds = G.map(k => {
+    const tds = markNow(G.map(k => {
       const v = C.persMonth.get(sid+"|"+k) || 0; tot += v;
       if (v > M.OVER) return `<td class="c over">&#9650; ${fmt(v)}</td>`;
       if (v > 0 && v < M.UNDER) return `<td class="c under">&#9660; ${fmt(v)}</td>`;
       if (v <= 0.004) return '<td class="c z">&middot;</td>';
       const i = seqStep(v, vmax);
       return `<td class="c" style="background:${SEQ[i]};color:${i>6?"#fff":"var(--ink)"}">${fmt(v)}</td>`;
-    }).join("");
+    }), G).join("");
     const cap = num((M.people[sid]||{}).capacity_fte);
     body.push(`<tr class="parent" data-k="s-${esc(sid)}" tabindex="0" role="button" `
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
@@ -276,10 +302,10 @@ function tablePeople(sids){
       .sort((a,b) => byRank(a.project_id, b.project_id));
     for (const a of mine){
       let dt = 0;
-      const dtds = G.map(k => {
+      const dtds = markNow(G.map(k => {
         const v = C.cell.get([a.project_id, sid, a.role_name, k].join("|")) || 0; dt += v;
         return v > 0.004 ? `<td class="c">${fmt(v)}</td>` : '<td class="c z">&middot;</td>';
-      }).join("");
+      }), G).join("");
       if (dt <= 0.004) continue;
       body.push(`<tr class="child"><th class="rh">&#8627; `
         + `${esc((M.projects[a.project_id]||{}).project_name || a.project_id)}`
@@ -288,10 +314,10 @@ function tablePeople(sids){
     }
   }
   let gt = 0;
-  const gtds = G.map(k => {
+  const gtds = markNow(G.map(k => {
     let s = 0; for (const p of listed) s += C.persMonth.get(p+"|"+k) || 0; gt += s;
     return `<td>${fmt(s)}</td>`;
-  }).join("");
+  }), G).join("");
   body.push(`<tr class="grand"><th class="rh">All ${listed.length} people</th>${gtds}<td>${fmt(gt)}</td></tr>`);
   return `<table class="grid-t"><thead><tr><th class="rh">Person</th>${monthHead()}`
     + `<th>Total</th></tr></thead><tbody>${body.join("")}</tbody></table>`;
@@ -716,7 +742,10 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
         + `data-row="${r.__row}" data-col="${att(c)}"${hl ? ` data-hl="${att(hl)}"` : ""} `
         + `data-tip="${att(tip)}">${esc(disp)}</td>`;
     }).join("");
-    return `<tr${sel} data-id="${att(r[selKey] ?? "")}">`
+    // R-65: the current month's row of a month-by-month table (Monthly estimation).
+    const nowRow = sheet === "MonthlyEstimate" && r.month
+      && String(r.month).slice(0, 7) === todayLabel().slice(0, 7);
+    return `<tr${sel}${nowRow ? ' data-now="1"' : ""} data-id="${att(r[selKey] ?? "")}">`
       + (FIXED_ROWS.has(sheet)
           ? `<td class="ins muted" data-tip="${att(HELP.fixedrows)}">&#8212;</td>`
           : `<td class="ins"><button class="btn tiny" data-ins="${att(sheet)}" data-after="${r.__row}"`

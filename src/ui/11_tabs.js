@@ -493,6 +493,7 @@ function persDetail(sid){
         for the person's total. Dashed lines are the ceiling and floor — the same two figures for
         everyone, since both thresholds are absolute.</p>
       <div class="scrollx fit">${chartPersonStrip(sid)}</div></div>
+    ${persTimeline(sid)}
     ${/* ONE COLUMN, NOT TWO. These three tables were a two-column grid with Assignments
          on the left and the overrides and estimation stacked on the right, which gave
          each of them half a screen. Every one of the three is WIDE - Assignments carries
@@ -514,6 +515,36 @@ function persDetail(sid){
           "assignment_id", aid)}</div>
       <div id="asgDetail">${overridesPanel(sid)}</div>
     </div>`;
+}
+
+/** THE PROJECTS THIS PERSON IS ON, AS A TIMELINE (R-65). The Overall tab's Project
+ *  timeline, cut to the projects the selected person has an assignment on - the same
+ *  bands, milestones and colours - with a bar under each row for when they are on it.
+ *  "What is coming up on the work I am part of" is asked of a person, and until now it
+ *  could only be answered by filtering the Overall tab by hand. Every project they are
+ *  on, whatever the filters above say: this is about the person, not the view. */
+function persTimeline(sid){
+  const M = S.model, pe = M.people[sid] || {};
+  const assign = {};
+  for (const a of M.assignments){
+    if (a.person_id !== sid || !M.projects[a.project_id]) continue;
+    (assign[a.project_id] ||= []).push({from: a.assign_start_date || null,
+      to: a.assign_end_date || null, role: a.role_name, weight: a.person_weight});
+  }
+  const pids = Object.keys(assign).sort(byRank);
+  const who = pe.person_name || sid;
+  return `<div class="panel" data-panel="pers-timeline">
+      <div class="phead"><h2>Project timeline — ${esc(who)}</h2>
+        <span class="scope k">${pids.length} project(s)</span></div>
+      <p class="cap">The projects ${esc(who)} is assigned to, drawn as on the Overall tab:
+        one row per project, its periods as bands and its milestones as markers.
+        <strong>The bar under each row is when ${esc(who)} is on it</strong>, one per
+        assignment. The vertical line is today. Hover any band, marker or bar for detail.</p>
+      ${pids.length ? `<div class="scrollx xl">${chartGantt(pids, {assign, who,
+          note: `${pids.length} project(s) ${esc(who)} has an assignment on, whatever the `
+            + `filters above say.`})}</div>`
+        : `<p class="note">${esc(who)} has no assignment yet. Add one under Assignments and
+            the project appears here.</p>`}</div>`;
 }
 
 /** WHICH ASSIGNMENT THE PANEL BELOW IS ABOUT, in one line.
