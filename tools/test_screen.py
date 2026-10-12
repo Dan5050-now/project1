@@ -217,7 +217,16 @@ with sync_playwright() as pw:
           .find(e => (e.querySelector('h2')||{}).textContent === 'Monthly resource trend')
           .querySelector('ul.legend li[data-s]').getAttribute('data-s')""")
     pg.click(f'#t-overall ul.legend li[data-s="{first}"]')
-    pg.wait_for_timeout(400)          # the fade is a transition, so let it land
+    # The fade is a transition, so let it LAND rather than wait a fixed time: on a loaded
+    # machine (the suite runs six files at once) 400 ms was not always enough, and the
+    # check then read marks mid-fade and failed a pick that had worked.
+    try:
+        pg.wait_for_function("""() => { const m = document.querySelector(
+            '#t-overall svg.chart.picked [data-s]:not(.hi)');
+            return m && parseFloat(getComputedStyle(m).opacity) < 0.3; }""", timeout=5000)
+    except Exception:
+        pass                          # the check below says what it found
+    pg.wait_for_timeout(200)
     picked = probe(pg, """(key) => {
       const tab = document.getElementById('t-overall');
       const dim = m => parseFloat(getComputedStyle(m).opacity);
