@@ -225,7 +225,15 @@ with sync_playwright() as pw:
 
     # ---- 4. still the application ------------------------------------------------
     cell = f"{TABLE} tbody tr:nth-child(3) .pin2"
-    pg.click(cell)
+    # Clicked where it IS ON SCREEN, as a person clicks it. pg.click() first scrolls its
+    # target "into view", and a newer Playwright does that for a sticky cell by scrolling
+    # the table back to where the cell would rest unstuck - which moved the table before
+    # the click ever reached the page, and then blamed the page for it.
+    pg.evaluate("""s => { const r = document.querySelector(s).getBoundingClientRect();
+        window.scrollBy(0, r.top - innerHeight / 2); }""", cell)     # the PAGE, not the table
+    pg.wait_for_timeout(300)
+    bb = pg.locator(cell).bounding_box()
+    pg.mouse.click(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
     pg.wait_for_timeout(300)
     pg.keyboard.press("Control+A")
     pg.keyboard.type("NEU-103 Phase 3 (renamed while scrolled)")
