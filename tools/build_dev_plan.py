@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.74"
-DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.63, source schema 16 - Gate 4 "
+DOC_VERSION = "2.75"
+DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.64, source schema 16 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, milestone and period highlighting, and the "
               "manager's review of issues.")
@@ -398,6 +398,26 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.75", "2026-10-25", "Claude Code", "Pending",
+     "R-66, REQ-DSH-23: A PROJECT'S TEAM IS CHANGED WHERE THE PROJECT IS LOOKED AT. Asked for "
+     "from the field: while seeing everybody's load, change the members of a project directly "
+     "rather than in each person's assignment table, and have it land in the people's own "
+     "assignments on Save. Every project row of Resource by project carries a Team button, and "
+     "the project's Utilisation panel a Change team button; both open one dialog listing every "
+     "assignment on the project - person, role, window, weight and what they put on it - each "
+     "editable in place. Each person is offered with their average and peak load over the "
+     "project's months in view, in red when over the ceiling, and the least loaded are "
+     "suggested for adding. Add to team creates an assignment numbered like the rest; Remove "
+     "deletes one, but not one carrying weight windows or stated months, which would be left "
+     "pointing at nothing (said in the dialog). It is the Assignment sheet edited the ordinary "
+     "way: each change is a pending edit through the same edit session and the same "
+     "re-validation that refuses an edit introducing an error, shows on every tab at once - "
+     "the person tab's Assignments table included - and is kept by Save changes, undone by "
+     "Leave without change, and written to the change log. No figure moves by itself. "
+     "tools/test_team.py is new: 19 checks. Also: app/PRAP_Demo.html, the application with "
+     "the 62-project dummy plan loaded, for trying it out (tools/build_demo.py). Python "
+     "edition 1.38.",
+     "Issued for review"],
     [f"{MARK_NEW}2.74", "2026-10-12", "Claude Code", "Pending",
      "R-65, TWO REQUESTS FROM THE FIELD. REQ-DSH-21 - TODAY ON EVERY CHART AND MONTH TABLE: "
      "'in all run-charts and tables of all tabs, present where the current time is'. Every "
@@ -415,7 +435,7 @@ rows = [
      "each row for when they are on it, one per assignment; every project they are on, "
      "whatever the filters say. No figure moves. tools/test_now.py is new: 20 checks, three "
      "proved by putting the fault back. Python edition 1.37.",
-     "Issued for review"],
+     "Superseded by v2.75"],
     [f"{MARK_NEW}2.73", "2026-10-11", "Claude Code", "Pending",
      "R-64, REQ-PRJ-17: THIRTEEN HIGHLIGHT COLOURS. Asked for from the field: 'at least 12 "
      "distinctive colours' for highlighting - five ran out as soon as a team gave each kind "
@@ -2552,6 +2572,7 @@ reqs = [
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-DSH-23", "Dashboard", "A PROJECT'S TEAM CAN BE CHANGED FROM WHERE THE PROJECT IS VIEWED - Resource by project and the project's Utilisation - in one place: swap a person, change a role, window or weight, add or remove somebody, with each candidate's load beside them. Each change is an ordinary edit of the Assignment sheet: validated as any other, shown on every tab at once, kept by Save and recorded in the change log.", "Should", "R-66", "4"],
     [f"{MARK_NEW}REQ-DSH-22", "Dashboard", "THE PERSON TAB SHOWS THE SELECTED PERSON'S PROJECTS AS A TIMELINE - the Project timeline of the Overall tab, cut to the projects the person has an assignment on, whatever the filters say - with a mark under each project for when the person is on it, one per assignment.", "Should", "R-65", "4"],
     [f"{MARK_NEW}REQ-DSH-21", "Dashboard", "TODAY IS MARKED WHEREVER MONTHS ARE DRAWN: a line at today's day within the current month on every chart drawn over months, and through every row of the Project timeline; the current month's column outlined in the month-column tables and its heading marked; the current month's row marked in Monthly estimation. In a colour no other mark uses. Not drawn when today is outside what is shown.", "Should", "R-65", "4"],
     [f"{MARK_NEW}REQ-DSH-20", "Dashboard", "AN ISSUE A MANAGER HAS REVIEWED IS SHOWN AS REVIEWED, AND THE REVIEW CAN BE READ FROM THE ISSUE. Each short, over or not-staffed project-month (REQ-DSH-15, REQ-DSH-17) can carry one review on the IssueReview sheet: a decision (Confirmed - no issue, Accepted, To be fixed), who confirmed it, when, why, and the gap it was made at. It is made and changed from the month itself - clicking the issue opens it - optionally across the whole run of consecutive months with the same issue. Confirmed and Accepted CLOSE the issue and need a reason: it stays marked, drawn muted, and its decision and reason are shown whenever it is opened; the open counts leave it out and count it apart. To be fixed keeps it open. A review whose month's gap has since moved, or whose issue has gone, no longer closes anything and is reported (V-40).", "Should", "R-62", "4"],
@@ -3480,6 +3501,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-66", "Dashboard", "Let a user change a project's members easily while looking at everybody's load - from Resource by project and the project's Utilisation - and have it update the people's assignments on Save.", "Applied. A Team dialog per project: swap, re-role, re-window, re-weight, add and remove, each person shown with their load; every change an ordinary pending edit of the Assignment sheet, kept by Save. REQ-DSH-23 added; no figure moves by itself.", "Applied"],
     ["R-65", "Dashboard", "Show where the current time is on every run-chart and month table of every tab; add the project timeline to Source data (person) for the selected person's projects.", "Applied. A Today line on every monthly chart and through the Project timeline; the current month's column and row marked in the tables; a person's own Project timeline with a bar per assignment. REQ-DSH-21 and REQ-DSH-22 added; no figure moves.", "Applied"],
     ["R-64", "Data model", "Offer at least 12 distinctive highlight colours.", "Applied. Thirteen colours for milestones and periods, distinct in both themes; offered in every workbook, older ones included; a swatch per colour in the chooser; the colour word read as a word. REQ-PRJ-17 added; template v1.21; no figure moves.", "Applied"],
     ["R-63", "Python edition", "Make the file search windows more graphical and useful; do not apply the session time-out to a private plan; when a session does time out, say so in a pop-up.", "Applied (Python edition 1.35; desktop plan v1.18). A plan in My plans takes no hold, so it never times out (NR-STO-20). A lapsed hold on a team plan raises a pop-up naming who took over and offering to keep your version (NR-STO-21). The file window gains places, a clickable path with back/forward/up, type badges, how-long-ago and date groups, a filter, list or tiles, details, the keyboard, and who saved / is editing a plan (NR-IMP-10).", "Applied"],

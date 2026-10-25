@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.9.xlsx
+Output: docs/PRAP_UI_Component_List_v2.10.xlsx
 """
 
 from pathlib import Path
@@ -40,8 +40,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.9"
-DATE = "2026-10-12"
+VERSION = "2.10"
+DATE = "2026-10-25"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
@@ -535,6 +535,16 @@ C = [
      "still on automatic - for whom the application first asks, because switching seeds every "
      "other month and a lone row would be a figure nothing reads.",
      "REQ-DSH-15, REQ-CAL-18", A, "", "R-42, extended by R-43."),
+    ("O-15", "Overall / Project tab", "[NEW v2.10] Team dialog",
+     "Opened by the Team button on every project row of Resource by project, and by Change "
+     "team on the project's Utilisation panel. Lists every assignment on the project - person, "
+     "role, from, to, weight, and what they put on it - each editable in place; each person is "
+     "offered with their average and peak load over the project's months in view, red when "
+     "over the ceiling, and the least loaded are suggested for adding. Add to team creates the "
+     "assignment; Remove deletes one (not one carrying weight windows or stated months). Every "
+     "change is an ordinary pending edit, refused if it would introduce an error, and kept by "
+     "Save changes.",
+     "REQ-DSH-23", A, "", "R-66."),
     ("O-14", "Overall", "[NEW v2.8] Manager review (in the month dialog)",
      "Opened by clicking any short, over or not-staffed month in Resource by project, or its "
      "row in the list. A decision - Confirmed - no issue, Accepted, To be fixed - with the "

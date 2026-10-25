@@ -320,8 +320,14 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.74.xlsx` — **current.** 95 requirements, 41 live
-  validation rules, source schema version 16. The latest change is **R-65**: **today is
+- `docs/PRAP_Development_Plan_v2.75.xlsx` — **current.** 96 requirements, 41 live
+  validation rules, source schema version 16. The latest change is **R-66**: **a
+  project's team is changed where the project is looked at** — a *Team* button on every
+  row of Resource by project and *Change team* on the project's Utilisation open one
+  dialog to swap, re-role, add or remove people, each shown with their load; every change
+  is an ordinary edit of the Assignment sheet, so it shows on the person tab at once and
+  is kept by Save (`REQ-DSH-23`). Also `app/PRAP_Demo.html`, the application with the
+  dummy plan already loaded. Before it, **R-65**: **today is
   marked wherever months are drawn** — a dashed *Today* line on every monthly chart and
   through the Project timeline, the current month's column outlined in Resource by
   project and Resource by person, and its row marked in Monthly estimation
@@ -452,7 +458,9 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.43.xlsx` — **current specification.** Schema 16.
+- `docs/PRAP_Programming_Specification_v1.44.xlsx` — **current specification.** Schema 16.
+  Records the Team dialog (`ui/13d_team.js`) and how its changes go through the ordinary
+  edit path (R-66).
   Records where today is drawn and how (`monthAxis`, `markNow`), and the person's own
   Project timeline (R-65).
   Records the thirteen-colour palette, how a colour word is read, and what the chooser
@@ -474,7 +482,9 @@ document through the manifest rather than by sorting filenames.
   and states the quantity it had been missing: the Overall tab's cost follows
   `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same
   rendering problem.
-- `docs/PRAP_UI_Component_List_v2.9.xlsx` — **current component list.** Adds `X-16`, Today
+- `docs/PRAP_UI_Component_List_v2.10.xlsx` — **current component list.** Adds `O-15`, the
+  Team dialog (R-66).
+- `docs/PRAP_UI_Component_List_v2.9.xlsx` — superseded component list. Adds `X-16`, Today
   on every chart and month table, and `S-08`, the person's own Project timeline (R-65).
 - `docs/PRAP_UI_Component_List_v2.8.xlsx` — superseded component list. Adds `O-14`, the
   Manager review in the month dialog (R-62).

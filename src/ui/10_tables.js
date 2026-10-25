@@ -221,6 +221,9 @@ function tableProjects(pids){
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
       + `<span class="nm">${esc(M.projects[pid].project_name)}</span>${typePill(pid)}${phasePill(pid)}`
       + estimationPill(pid)
+      + `<button class="btn tiny teambtn" data-team="${att(pid)}" data-tip="${att(
+          "<b>Change the team</b><br>Swap, add or take people off this project in one place, "
+          + "with each person's load beside them. Kept when you press Save.")}">Team</button>`
       + `<span class="sub">${esc(pid)} &middot; starts ${ymd(M.projects[pid].start_date)}${usub}</span></th>`
       + `${tds}<td>${fmt(tot)}</td></tr>`);
     if (!open) continue;

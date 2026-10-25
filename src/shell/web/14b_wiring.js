@@ -309,6 +309,13 @@ document.addEventListener("click", e => {
     openGap(gp.dataset.gap, +gp.dataset.gk, gp.dataset.gapis || "");
     return;
   }
+  /* The project's team (R-66) - also before the row, whose own click would fold it. */
+  const tb = e.target.closest("[data-team]");
+  if (tb){
+    e.stopPropagation();
+    openTeam(tb.dataset.team);
+    return;
+  }
   const parent = e.target.closest("tr.parent");
   if (parent){
     const k = parent.dataset.k;

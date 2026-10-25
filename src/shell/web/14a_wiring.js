@@ -199,6 +199,7 @@ function renderKeepingTab(){
      during it: applyEdit runs on focusout, so the cell being typed into has already
      been left by the time this fires. */
   gapRefresh();
+  teamRefresh();                    // and the project team (R-66), for the same reason
 }
 function showTab(id){
   S.tab = id;

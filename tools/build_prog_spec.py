@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.43"
+DOC_VERSION = "1.44"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.74.xlsx"
+PLAN = "PRAP_Development_Plan_v2.75.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,16 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.44", "2026-10-25", "Claude Code", "Dan",
+         "R-66, REQ-DSH-23. ui/13d_team.js: openTeam(pid) shows dialog#teamdlg (made on first "
+         "use) over the raw Assignment rows of that project. teamMonths() is the horizon cut to "
+         "the project's run; teamLoad() a person's mean, peak and over-ceiling count over it. "
+         "teamSet(row, col, v) is applyEdit() without a cell: beginEditSession, write, rebuild() "
+         "probe, refuse when blocking findings grow, else S.pending + editedCells, rebuild(true), "
+         "renderKeepingTab(). teamAdd() takes nextKey('Assignment', 'assignment_id') and newRow(), "
+         "pushes '(new row)' and each set column; teamRemove() refuses an assignment that "
+         "PersonPeriodWeight or MonthlyEstimate rows reference, else deleteRow(). The click on "
+         "[data-team] is handled before tr.parent. renderKeepingTab() calls teamRefresh().", "Draft"],
         ["1.43", "2026-10-12", "Claude Code", "Dan",
          "R-65, REQ-DSH-21 and REQ-DSH-22. ui/07_state.js gains today(), nowKey(), nowFrac() "
          "(days into the month over its length) and todayLabel(), all from the machine's "

@@ -283,7 +283,11 @@ function projDetail(pid){
            + `this redraws.`})}</div></div>
     <div class="panel" data-panel="proj-util">
       <div class="phead"><h2>Utilisation — ${esc(pr.project_name)}</h2>
-        <span class="scope k">${grid().length} months &#183; stacked by person</span></div>
+        <span class="scope k">${grid().length} months &#183; stacked by person</span>
+        <button class="btn tiny primary" data-team="${att(pid)}"
+          data-tip="${att("<b>Change the team</b><br>Swap, add or take people off this project in "
+            + "one place, with each person's load beside them. Kept when you press Save.")}"
+          >Change team</button></div>
       <p class="cap">Monthly resource for the selected project, <strong>each bar split into the
         people who make it up</strong>. A project has no absolute ceiling or floor, so the reference
         lines are <strong>relative</strong>: twice and half the average an active project draws across
