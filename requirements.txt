@@ -1,0 +1,13 @@
+# Python dependencies for the TEA controlled documents and CI guards.
+#
+# The document build scripts and all four check_*.py guards need only openpyxl.
+# Nothing here reaches a network at run time.
+#
+# Install on the company laptop with:
+#     python3 -m pip install -r requirements.txt
+#
+# If the company environment has no package index, openpyxl and et-xmlfile are
+# pure-Python wheels and can be carried in alongside this repository.
+
+openpyxl==3.1.5
+et-xmlfile==2.0.0
