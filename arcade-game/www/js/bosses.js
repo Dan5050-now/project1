@@ -634,13 +634,15 @@ function createBoss(id, world, x, y) {
 // 컷신용: 정화된 보스 모습 그리기
 function drawBossPortrait(c, id, x, y, t) {
   const fake = { world: { cam: { x: 0 }, diff: DIFFICULTY.normal, arenaCol: 0, level: { w: 2000, cols: 100 }, bossState: 'fight' } };
+  // 모든 보스가 draw()에서 읽는 공통 필드 (빠지면 오류로 게임이 멈춤)
+  const base = { world: fake.world, hazards: [], flash: 0, hp: 10, maxHp: 10, dir: -1, t: 0, dead: false, vy: 0 };
   let b;
   switch (id) {
-    case 'bramble': b = Object.create(Bramble.prototype); Object.assign(b, { w: 34, h: 24, x: x - 17, y: y - 24, dir: -1, state: 'idle', flash: 0, hp: 10, maxHp: 10 }); break;
-    case 'granit': b = Object.create(Granit.prototype); Object.assign(b, { w: 30, h: 40, x: x - 15, y: y - 40, dir: -1, state: 'idle', arm: 0, flash: 0, hp: 10, maxHp: 10 }); break;
-    case 'okto': b = Object.create(Okto.prototype); Object.assign(b, { w: 36, h: 34, x: x - 18, y: y - 52 + Math.sin(t * 2) * 3, dir: -1, state: 'float', flash: 0, hazards: [], hp: 10, maxHp: 10 }); break;
-    case 'dungar': b = Object.create(Dungar.prototype); Object.assign(b, { hx: x, hy: y - 30, trail: [], segs: 7, flash: 0, state: 'idle', vy: 0, hp: 10, maxHp: 10, world: fake.world }); for (let i = 0; i < 60; i++) b.trail.push({ x: x + 14 - Math.sin(i * 0.08) * 10, y: y - 30 + i * 1.2 }); break;
-    case 'tempest': b = Object.create(Tempest.prototype); Object.assign(b, { w: 36, h: 26, x: x - 18, y: y - 26, dir: -1, state: 'rest', flash: 0, hazards: [], hp: 10, maxHp: 10 }); break;
+    case 'bramble': b = Object.create(Bramble.prototype); Object.assign(b, base, { w: 34, h: 24, x: x - 17, y: y - 24, state: 'idle' }); break;
+    case 'granit': b = Object.create(Granit.prototype); Object.assign(b, base, { w: 30, h: 40, x: x - 15, y: y - 40, state: 'idle', arm: 0 }); break;
+    case 'okto': b = Object.create(Okto.prototype); Object.assign(b, base, { w: 36, h: 34, x: x - 18, y: y - 52 + Math.sin(t * 2) * 3, state: 'float' }); break;
+    case 'dungar': b = Object.create(Dungar.prototype); Object.assign(b, base, { hx: x, hy: y - 30, trail: [], segs: 7, state: 'idle' }); for (let i = 0; i < 60; i++) b.trail.push({ x: x + 14 - Math.sin(i * 0.08) * 10, y: y - 30 + i * 1.2 }); break;
+    case 'tempest': b = Object.create(Tempest.prototype); Object.assign(b, base, { w: 36, h: 26, x: x - 18, y: y - 26, state: 'rest' }); break;
     default: return;
   }
   b.draw(c, t);
