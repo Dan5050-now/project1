@@ -55,6 +55,16 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
+      - name: 서명·버전 확인
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          "$BT/apksigner" verify --print-certs "$APK" | tee certs.txt
+          # 저장소의 고정 키(android/app/debug.keystore) 지문과 같아야 덮어쓰기 설치가 된다
+          grep -qi "SHA-256 digest: 1374c635bbfe58e196ea99770fe4eabf61b55f19eecde3446c1b139db70e0406" certs.txt \
+            || { echo "::error::APK 서명이 고정 키와 다릅니다"; exit 1; }
+          "$BT/aapt2" dump badging "$APK" | head -1
+
       - name: APK 이름 정리
         run: |
           mkdir -p dist
