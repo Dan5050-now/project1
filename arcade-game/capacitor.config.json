@@ -1,0 +1,8 @@
+{
+  "appId": "com.starshard.quest",
+  "appName": "별조각 퀘스트",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#0b0a1a"
+  }
+}

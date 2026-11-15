@@ -1,0 +1,20 @@
+{
+  "name": "starshard-quest",
+  "version": "1.0.0",
+  "description": "별조각 퀘스트 - 모바일 횡스크롤 액션 아케이드 게임",
+  "private": true,
+  "scripts": {
+    "serve": "node scripts/serve.js",
+    "bundle": "node scripts/bundle.js",
+    "sync": "npx cap sync android",
+    "apk": "npx cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}

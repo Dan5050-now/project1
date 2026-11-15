@@ -1,0 +1,83 @@
+# 별조각 퀘스트 — 안드로이드 APK 자동 빌드
+# arcade-game 폴더가 바뀌어 푸시되면 GitHub 서버가 APK를 만들어
+#  1) Actions 실행 결과의 Artifacts 와
+#  2) 저장소 Releases 페이지(휴대폰에서 바로 내려받기 쉬움)에 올린다.
+name: Android APK 빌드
+
+on:
+  push:
+    paths:
+      - 'arcade-game/**'
+      - '.github/workflows/android-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: arcade-game
+    steps:
+      - name: 코드 내려받기
+        uses: actions/checkout@v5
+
+      - name: Node.js 준비
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: arcade-game/package-lock.json
+
+      - name: Java 21 준비
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: 패키지 설치
+        run: npm ci
+
+      - name: 웹 게임을 안드로이드 프로젝트로 복사
+        run: npx cap sync android
+
+      - name: APK 빌드 (debug)
+        working-directory: arcade-game/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: APK 이름 정리
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk "dist/StarshardQuest-${{ github.run_number }}.apk"
+          ls -la dist
+
+      - name: Artifacts 업로드
+        uses: actions/upload-artifact@v5
+        with:
+          name: StarshardQuest-APK-${{ github.run_number }}
+          path: arcade-game/dist/*.apk
+          retention-days: 30
+
+      - name: Releases 페이지에 게시
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        with:
+          tag_name: apk-build-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: 별조각 퀘스트 APK (빌드 ${{ github.run_number }})
+          prerelease: true
+          files: arcade-game/dist/*.apk
+          body: |
+            안드로이드 휴대폰에서 아래 **StarshardQuest-${{ github.run_number }}.apk** 파일을 눌러 내려받은 뒤 설치하세요.
+            - 처음 설치할 때 "출처를 알 수 없는 앱 설치"를 허용해야 할 수 있습니다.
+            - 브랜치: `${{ github.ref_name }}` / 커밋: `${{ github.sha }}`

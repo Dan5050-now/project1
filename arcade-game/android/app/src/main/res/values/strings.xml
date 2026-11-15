@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">별조각 퀘스트</string>
+    <string name="title_activity_main">별조각 퀘스트</string>
+    <string name="package_name">com.starshard.quest</string>
+    <string name="custom_url_scheme">com.starshard.quest</string>
+</resources>
