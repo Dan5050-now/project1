@@ -226,7 +226,7 @@ function showTab(id){
   cueScrollers();
 }
 
-const FILTER_KEY = {fType:"type", fPhase:"phase", fOut:"out", fProj:"proj",
+const FILTER_KEY = {fType:"type", fPhase:"phase", fOut:"out", fStatus:"status", fProj:"proj",
                     fPers:"pers", fRole:"role", fDept:"dept"};
 
 /* PROJECTS AND PEOPLE ARE LISTED BY NAME (R-56). The value behind each tick is still
@@ -267,6 +267,13 @@ function fillFilters(){
   set("fType", [...new Set(Object.values(M.projects).map(p => p.project_type))].filter(Boolean));
   set("fPhase", [...new Set(Object.values(M.projects).map(p => p.clinical_phase))].filter(Boolean));
   set("fOut", [...new Set(Object.values(M.projects).map(p => p.work_scope_type))].filter(Boolean));
+  /* Status in the order a project lives through it - the file's own list (Planned,
+     Active, On hold, Completed) - rather than alphabetically, then any other value the
+     file carries, then the projects with none (R-68). */
+  const have = new Set(Object.values(M.projects).map(statusOf));
+  const life = (M.lists.project_status || []).map(v => String(v).trim()).filter(v => have.has(v));
+  set("fStatus", [...new Set([...life, ...[...have].filter(v => v !== NO_STATUS).sort(),
+                              ...(have.has(NO_STATUS) ? [NO_STATUS] : [])])]);
   set("fProj", Object.keys(M.projects).sort(), pid => M.projects[pid].project_name);
   set("fPers", Object.keys(M.people).sort(), sid => M.people[sid].person_name);
   set("fRole", [...new Set(M.assignments.map(a => a.role_name))].filter(Boolean).sort());

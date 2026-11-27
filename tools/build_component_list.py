@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.11.xlsx
+Output: docs/PRAP_UI_Component_List_v2.12.xlsx
 """
 
 from pathlib import Path
@@ -40,7 +40,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.11"
+VERSION = "2.12"
 DATE = "2026-11-27"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
@@ -536,6 +536,20 @@ C = [
      "still on automatic - for whom the application first asks, because switching seeds every "
      "other month and a lone row would be a figure nothing reads.",
      "REQ-DSH-15, REQ-CAL-18", A, "", "R-42, extended by R-43."),
+    ("O-16", "Overall", "[NEW v2.12] Project status filter",
+     "In the filter bar beside Work scope: the project statuses in the plan, in the order a "
+     "project lives through them - Planned, Active, On hold, Completed - then any other, then "
+     "'(no status)' where a project has none. Ticking one or more leaves only those projects on "
+     "every tab; with the other filters it narrows together. Cleared by Reset filters; named in "
+     "the calculated-FTE export.",
+     "REQ-DSH-28", A, "", "R-68."),
+    ("X-19", "Charts and tables", "[NEW v2.12] The timeline's years stay on screen",
+     "On a Project timeline of more than one project - Overall, the person tab, the person card - "
+     "the years are a bar above the drawing, held at the top of the timeline's scroll region "
+     "while the rows scroll under it and moving sideways with the drawing, each label over its "
+     "own year line; Today is marked in it, clear of the years' labels. A one-project timeline "
+     "keeps its years in the drawing.",
+     "REQ-DSH-27", A, "", "R-68."),
     ("P-09", "Project tab / Person tab", "[NEW v2.11] A name is a link to its card",
      "In the Projects and People tables a saved project's or person's name is drawn as a link; "
      "clicking it selects the row, as any click on the row does, and opens the record's card. "

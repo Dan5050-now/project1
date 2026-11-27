@@ -350,13 +350,16 @@ body.busy{cursor:progress}
 .scope.k{color:var(--ink2);font-variant-numeric:tabular-nums}
 
 /* --- filter bar ---------------------------------------------------------- */
-.controls{display:flex;flex-wrap:wrap;gap:var(--sp-3) var(--sp-4);align-items:flex-end}
+.controls{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:flex-end}
 .ctl{display:flex;flex-direction:column;gap:4px}
 .ctl label,.ctl .lbl{display:block;font-size:var(--t-xs);color:var(--muted);font-weight:510;letter-spacing:.01em}
 .ctl select,.ctl input{border:1px solid var(--base);background:var(--surface);
  color:var(--ink);border-radius:9px;padding:6px 10px;font-size:var(--t-md);min-height:34px;
  font-family:inherit;line-height:1.4;box-shadow:0 1px 1px rgba(0,0,0,.03)}
 .ctl select:hover,.ctl input:hover{border-color:var(--accent)}
+/* A YYYY-MM needs no more than this, and the room is wanted: one more filter (R-68) and
+   the bar should still fit on one line of a 1600px window. */
+#fFrom,#fTo{width:100px}
 .ctl select:focus,.ctl input:focus{outline:none;border-color:var(--accent);
  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
 
@@ -1545,3 +1548,21 @@ dialog.card[open]{display:flex;flex-direction:column}
 .fgroup dt{color:var(--ink2);font-size:var(--t-sm)}
 .fgroup dd{margin:0;font-weight:560;overflow-wrap:anywhere}
 .fgroup dd.none{color:var(--muted);font-weight:400}
+
+/* ---- the timeline's years, held above it while it scrolls (R-68) ----------------
+   Opaque and sticky to the top of the timeline's own scroll region, so the rows pass
+   under it; positioned in shares of the drawing's width, so it scrolls sideways with the
+   drawing and each year sits over its own line. Today is marked in it too - the line is
+   in the drawing, and this is where the eye goes for "when". */
+.gaxis{position:sticky;top:0;z-index:3;height:30px;background:var(--surface);
+  box-shadow:0 1px 0 var(--hairline);font-size:11.5px;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.gaxis .gy{position:absolute;top:6px;transform:translateX(-50%);font-weight:650;line-height:16px}
+.gaxis .gy::after{content:"";position:absolute;left:50%;top:100%;margin-top:3px;width:1px;
+  height:5px;background:var(--base)}
+.gaxis .gcol{position:absolute;left:8px;top:7px;font-size:var(--t-xs);line-height:16px;
+  color:var(--muted);font-weight:650;letter-spacing:.06em;text-transform:uppercase}
+.gaxis .gnow{position:absolute;top:6px;font-size:10px;font-weight:700;line-height:1;
+  padding:3px 7px;background:var(--ink);color:var(--surface);z-index:1}
+.gaxis .gnow.l{transform:translateX(-100%);border-radius:999px 2px 2px 999px}
+.gaxis .gnow.r{border-radius:2px 999px 999px 2px}

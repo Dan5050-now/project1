@@ -367,13 +367,16 @@ body.busy{cursor:progress}
 .scope.k{color:var(--ink2);font-variant-numeric:tabular-nums}
 
 /* --- filter bar ---------------------------------------------------------- */
-.controls{display:flex;flex-wrap:wrap;gap:var(--sp-3) var(--sp-4);align-items:flex-end}
+.controls{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:flex-end}
 .ctl{display:flex;flex-direction:column;gap:4px}
 .ctl label,.ctl .lbl{display:block;font-size:var(--t-xs);color:var(--muted);font-weight:510;letter-spacing:.01em}
 .ctl select,.ctl input{border:1px solid var(--base);background:var(--surface);
  color:var(--ink);border-radius:9px;padding:6px 10px;font-size:var(--t-md);min-height:34px;
  font-family:inherit;line-height:1.4;box-shadow:0 1px 1px rgba(0,0,0,.03)}
 .ctl select:hover,.ctl input:hover{border-color:var(--accent)}
+/* A YYYY-MM needs no more than this, and the room is wanted: one more filter (R-68) and
+   the bar should still fit on one line of a 1600px window. */
+#fFrom,#fTo{width:100px}
 .ctl select:focus,.ctl input:focus{outline:none;border-color:var(--accent);
  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
 
@@ -1563,6 +1566,24 @@ dialog.card[open]{display:flex;flex-direction:column}
 .fgroup dd{margin:0;font-weight:560;overflow-wrap:anywhere}
 .fgroup dd.none{color:var(--muted);font-weight:400}
 
+/* ---- the timeline's years, held above it while it scrolls (R-68) ----------------
+   Opaque and sticky to the top of the timeline's own scroll region, so the rows pass
+   under it; positioned in shares of the drawing's width, so it scrolls sideways with the
+   drawing and each year sits over its own line. Today is marked in it too - the line is
+   in the drawing, and this is where the eye goes for "when". */
+.gaxis{position:sticky;top:0;z-index:3;height:30px;background:var(--surface);
+  box-shadow:0 1px 0 var(--hairline);font-size:11.5px;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.gaxis .gy{position:absolute;top:6px;transform:translateX(-50%);font-weight:650;line-height:16px}
+.gaxis .gy::after{content:"";position:absolute;left:50%;top:100%;margin-top:3px;width:1px;
+  height:5px;background:var(--base)}
+.gaxis .gcol{position:absolute;left:8px;top:7px;font-size:var(--t-xs);line-height:16px;
+  color:var(--muted);font-weight:650;letter-spacing:.06em;text-transform:uppercase}
+.gaxis .gnow{position:absolute;top:6px;font-size:10px;font-weight:700;line-height:1;
+  padding:3px 7px;background:var(--ink);color:var(--surface);z-index:1}
+.gaxis .gnow.l{transform:translateX(-100%);border-radius:999px 2px 2px 999px}
+.gaxis .gnow.r{border-radius:2px 999px 999px 2px}
+
 /* ---- the demo strip (tools/build_demo.py) ---- */
 #demo-strip{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 16px;
   font-size:12.5px;background:var(--underbg);color:var(--underink);
@@ -1628,6 +1649,9 @@ dialog.card[open]{display:flex;flex-direction:column}
     <div class="ctl"><span class="lbl" id="lbl-fOut">Work scope</span>
       <details class="ms" id="fOut"><summary role="button" aria-haspopup="listbox"
         aria-labelledby="lbl-fOut">All</summary><div class="msp"></div></details></div>
+    <div class="ctl"><span class="lbl" id="lbl-fStatus">Project status</span>
+      <details class="ms" id="fStatus"><summary role="button" aria-haspopup="listbox"
+        aria-labelledby="lbl-fStatus">All</summary><div class="msp"></div></details></div>
     <div class="ctl"><span class="lbl" id="lbl-fProj">Project</span>
       <details class="ms" id="fProj"><summary role="button" aria-haspopup="listbox"
         aria-labelledby="lbl-fProj">All</summary><div class="msp"></div></details></div>
@@ -1793,7 +1817,7 @@ dialog.card[open]{display:flex;flex-direction:column}
 
 <script>
 "use strict";
-const APP_VERSION = "1.65";
+const APP_VERSION = "1.66";
 const SCHEMA_EXPECTED = 16;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1802,11 +1826,11 @@ const SCHEMA_EXPECTED = 16;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.76.xlsx",          ver:"2.76",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.77.xlsx",          ver:"2.77",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.45.xlsx", ver:"1.45",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.46.xlsx", ver:"1.46",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
-  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.11.xlsx",          ver:"2.11",
+  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.12.xlsx",          ver:"2.12",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
           + "R-13 to R-46, which added 22 components and made five of the old entries wrong; "
           + "v2.1 closes X-04 — row virtualisation is not built and, at the volume REQ-NFR-03 now "
@@ -6122,7 +6146,7 @@ const S = {
   from:null, to:null,                       // month keys
   // Each filter holds a SET of chosen values. Empty means "All" - which is both the
   // natural reading of "nothing narrowed" and what keeps every predicate below short.
-  f:{type:new Set(), phase:new Set(), out:new Set(), proj:new Set(),
+  f:{type:new Set(), phase:new Set(), out:new Set(), status:new Set(), proj:new Set(),
      pers:new Set(), role:new Set(), dept:new Set()},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
   /* Projects and people ADDED in this session with + row (R-56). The selection stays on
@@ -6176,6 +6200,13 @@ const S = {
 /** A filter with nothing ticked narrows nothing. */
 const anyOf = (set, v) => !set.size || set.has(v);
 
+/* A PROJECT'S STATUS, AS THE FILTER READS IT (R-68). Planned, Active, On hold or
+   Completed - and a project with none still has to be reachable, or narrowing to the
+   ones nobody has classified would be impossible, so the empty status is a value of its
+   own. */
+const NO_STATUS = "(no status)";
+const statusOf = p => String((p && p.status) ?? "").trim() || NO_STATUS;
+
 function activeProjects(){
   const M = S.model, out = [];
   for (const [pid, p] of Object.entries(M.projects)){
@@ -6185,6 +6216,8 @@ function activeProjects(){
     // reads. outsourcing_scope_det replaced outsourcing_type and is free text - a
     // drop-down built from whatever sentences people have typed is not a filter.
     if (!anyOf(S.f.out, p.work_scope_type)) continue;
+    // R-68: a project not started yet, or already finished, is filtered out by its status.
+    if (!anyOf(S.f.status, statusOf(p))) continue;
     if (!anyOf(S.f.proj, pid)) continue;
     if (S.f.pers.size && !M.assignments.some(a => a.project_id === pid && S.f.pers.has(a.person_id)))
       continue;
@@ -6438,7 +6471,9 @@ const CHART = {
   // so it has its own pair: the whole gutter goes to the bands instead. 250 rather than
   // the 220 it was: the line under each name - "2025-09-01 -> 2027-02-28 · 18 months" -
   // is about 215 units long, and at 220 it lost its first digit off the left edge (R-67).
-  gantt:  {W:1180, padT:34, padR:14, foot:30,
+  // padTAxis is the top margin when the years are not in the drawing but in the bar
+  // that stays above it (R-68): only the milestone markers need room up there then.
+  gantt:  {W:1180, padT:34, padTAxis:14, padR:14, foot:30,
            rowh:42, rowhSingle:74, padL:250, padLSingle:26},
   // One line per project or person across the horizon.
   lines:  {Wmin:720, Wbase:96, Wper:46, H:300, padL:62, padR:16, padT:24, padB:46},
@@ -6583,7 +6618,16 @@ function chartGantt(pids, opts){
   const span = Math.max(1, (hi - lo) / DAY);
   // One project needs no row label - the panel heading already names it, and the dates go
   // in the note - so the whole gutter goes to the bands instead.
-  const K = CHART.gantt, W0 = K.W, W = fitW(W0), padT = K.padT;
+  /* THE YEARS STAY ON SCREEN (R-68). A timeline of sixty projects scrolls inside its
+     panel, and the years were drawn at the top of the drawing - so after the first
+     screenful every year line was an unlabelled rule, and which one was 2028 had to be
+     remembered or scrolled back up for. They are drawn instead in a bar of their own,
+     above the drawing and sticky to the top of the scroll region, positioned as a share
+     of the same width so it moves sideways with the chart and every label stays over its
+     own line. One project's timeline is a single row with nothing to scroll past, and
+     keeps its years in the drawing. */
+  const axis = !opts.single;
+  const K = CHART.gantt, W0 = K.W, W = fitW(W0), padT = axis ? K.padTAxis : K.padT;
   const rowh = opts.single ? K.rowhSingle : K.rowh;
   const padL = opts.single ? K.padLSingle : K.padL;
   const H = padT + rowh * rows.length + K.foot, inner = W - padL - K.padR;
@@ -6595,11 +6639,13 @@ function chartGantt(pids, opts){
   const hlUsed = new Set(), perUsed = new Set();
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Project timeline: one row per project, one band per period">`];
+  const years = [];
   for (let y = new Date(lo).getUTCFullYear(); y <= new Date(hi).getUTCFullYear(); y++){
     const xx = x(Date.UTC(y, 0, 1));
     if (xx >= padL){
       o.push(`<line class="grid" x1="${xx.toFixed(1)}" y1="${padT-8}" x2="${xx.toFixed(1)}" y2="${H-22}"/>`);
-      o.push(`<text class="ax" x="${xx.toFixed(1)}" y="${padT-12}" text-anchor="middle">${y}</text>`);
+      if (axis) years.push([y, xx]);
+      else o.push(`<text class="ax" x="${xx.toFixed(1)}" y="${padT-12}" text-anchor="middle">${y}</text>`);
     }
   }
   rows.forEach((p, i) => {
@@ -6715,7 +6761,20 @@ function chartGantt(pids, opts){
   leg.push('<li class="hint">darker band = higher period weight</li></ul>');
   leg.push(`<p class="note">${opts.note || `All ${rows.length} project(s) in the current filter, `
     + `scrolling in both directions inside this panel.`}</p>`);
-  return o.join("") + leg.join("");
+  if (!axis) return o.join("") + leg.join("");
+  const pct = v => `${(v / W * 100).toFixed(3)}%`;
+  /* Today's tag reaches AWAY from the nearest year line, whose label is centred on it -
+     in late autumn the tag would otherwise sit on top of the coming year's number. */
+  const xNow = nowOn ? x(tNow) : 0;
+  const near = years.reduce((b, [, xx]) => b === null || Math.abs(xx - xNow) < Math.abs(b - xNow)
+    ? xx : b, null);
+  const side = near !== null && near >= xNow ? "l" : "r";
+  const bar = `<div class="gaxis" style="min-width:${W0}px" aria-hidden="true">`
+    + `<span class="gcol">Project</span>`
+    + years.map(([y, xx]) => `<span class="gy" style="left:${pct(xx)}">${y}</span>`).join("")
+    + (nowOn ? `<span class="gnow ${side}" style="left:${pct(xNow)}">Today</span>` : "")
+    + `</div>`;
+  return bar + o.join("") + leg.join("");
 }
 
 /** Monthly resource as LINES, one per series.
@@ -10246,7 +10305,8 @@ function exportResults(){
 
 /** How each filter is named to a reader who was not looking at the screen. */
 const FILTER_LABEL = {type:"Project type", phase:"Clinical phase", out:"Work scope",
-                      proj:"Project", pers:"Person", role:"Role", dept:"Department"};
+                      status:"Project status", proj:"Project", pers:"Person", role:"Role",
+                      dept:"Department"};
 /* =============================================== the change log, in the web shell
 
    THE ARCHIVE IS THE ONLY ROUTE OUT. Every saved change is appended to a CSV in the
@@ -12420,7 +12480,7 @@ function showTab(id){
   cueScrollers();
 }
 
-const FILTER_KEY = {fType:"type", fPhase:"phase", fOut:"out", fProj:"proj",
+const FILTER_KEY = {fType:"type", fPhase:"phase", fOut:"out", fStatus:"status", fProj:"proj",
                     fPers:"pers", fRole:"role", fDept:"dept"};
 
 /* PROJECTS AND PEOPLE ARE LISTED BY NAME (R-56). The value behind each tick is still
@@ -12461,6 +12521,13 @@ function fillFilters(){
   set("fType", [...new Set(Object.values(M.projects).map(p => p.project_type))].filter(Boolean));
   set("fPhase", [...new Set(Object.values(M.projects).map(p => p.clinical_phase))].filter(Boolean));
   set("fOut", [...new Set(Object.values(M.projects).map(p => p.work_scope_type))].filter(Boolean));
+  /* Status in the order a project lives through it - the file's own list (Planned,
+     Active, On hold, Completed) - rather than alphabetically, then any other value the
+     file carries, then the projects with none (R-68). */
+  const have = new Set(Object.values(M.projects).map(statusOf));
+  const life = (M.lists.project_status || []).map(v => String(v).trim()).filter(v => have.has(v));
+  set("fStatus", [...new Set([...life, ...[...have].filter(v => v !== NO_STATUS).sort(),
+                              ...(have.has(NO_STATUS) ? [NO_STATUS] : [])])]);
   set("fProj", Object.keys(M.projects).sort(), pid => M.projects[pid].project_name);
   set("fPers", Object.keys(M.people).sort(), sid => M.people[sid].person_name);
   set("fRole", [...new Set(M.assignments.map(a => a.role_name))].filter(Boolean).sort());

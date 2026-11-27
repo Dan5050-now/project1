@@ -5,7 +5,7 @@ const S = {
   from:null, to:null,                       // month keys
   // Each filter holds a SET of chosen values. Empty means "All" - which is both the
   // natural reading of "nothing narrowed" and what keeps every predicate below short.
-  f:{type:new Set(), phase:new Set(), out:new Set(), proj:new Set(),
+  f:{type:new Set(), phase:new Set(), out:new Set(), status:new Set(), proj:new Set(),
      pers:new Set(), role:new Set(), dept:new Set()},
   tab:"t-overall", expanded:new Set(), selProj:null, selPers:null, selAsg:null,
   /* Projects and people ADDED in this session with + row (R-56). The selection stays on
@@ -59,6 +59,13 @@ const S = {
 /** A filter with nothing ticked narrows nothing. */
 const anyOf = (set, v) => !set.size || set.has(v);
 
+/* A PROJECT'S STATUS, AS THE FILTER READS IT (R-68). Planned, Active, On hold or
+   Completed - and a project with none still has to be reachable, or narrowing to the
+   ones nobody has classified would be impossible, so the empty status is a value of its
+   own. */
+const NO_STATUS = "(no status)";
+const statusOf = p => String((p && p.status) ?? "").trim() || NO_STATUS;
+
 function activeProjects(){
   const M = S.model, out = [];
   for (const [pid, p] of Object.entries(M.projects)){
@@ -68,6 +75,8 @@ function activeProjects(){
     // reads. outsourcing_scope_det replaced outsourcing_type and is free text - a
     // drop-down built from whatever sentences people have typed is not a filter.
     if (!anyOf(S.f.out, p.work_scope_type)) continue;
+    // R-68: a project not started yet, or already finished, is filtered out by its status.
+    if (!anyOf(S.f.status, statusOf(p))) continue;
     if (!anyOf(S.f.proj, pid)) continue;
     if (S.f.pers.size && !M.assignments.some(a => a.project_id === pid && S.f.pers.has(a.person_id)))
       continue;

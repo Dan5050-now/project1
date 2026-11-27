@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.76"
-DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.65, source schema 16 - Gate 4 "
+DOC_VERSION = "2.77"
+DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.66, source schema 16 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, milestone and period highlighting, and the "
               "manager's review of issues.")
@@ -398,6 +398,24 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.77", "2026-11-27", "Claude Code", "Pending",
+     "R-68, TWO REQUESTS FROM THE FIELD. REQ-DSH-27 - THE TIMELINE'S YEARS STAY ON SCREEN: on "
+     "the Overall tab's Project timeline the years were drawn at the top of the chart and "
+     "scrolled away with the rows, so further down every year line was an unlabelled rule. "
+     "They are now a bar of their own above the drawing, sticky to the top of the timeline's "
+     "scroll region, positioned in shares of the drawing's width so it scrolls sideways with "
+     "it and each label stays over its own line; Today is marked in it, reaching away from the "
+     "nearest year's label. The same holds on the person tab's timeline and the person card; a "
+     "one-project timeline, with nothing to scroll past, keeps its years in the drawing. "
+     "REQ-DSH-28 - A FILTER ON PROJECT STATUS: projects not started yet or already finished "
+     "made the page busy. The filter bar gains Project status beside the other project "
+     "attributes, offering the statuses in the file in the order a project lives through them "
+     "(Planned, Active, On hold, Completed) and '(no status)' where a project has none; like "
+     "every filter it narrows every tab, ticks within it widen (OR) and it narrows together "
+     "with the others (AND), Reset filters clears it, and the calculated-FTE export names it. "
+     "No figure moves. tools/test_r68.py is new: 20 checks, one proved by putting the fault "
+     "back. Python edition 1.40.",
+     "Issued for review"],
     [f"{MARK_NEW}2.76", "2026-11-27", "Claude Code", "Pending",
      "R-67, THREE REQUESTS FROM THE FIELD. REQ-DSH-24 - THE PAGE IS THE WINDOW: everything "
      "under the title stopped at 1400px and centred, leaving two broad grey margins on a wide "
@@ -418,7 +436,7 @@ rows = [
      "controls of one height, the edit state as a pill, and dialogs that fade in; in both "
      "themes. No figure moves. tools/test_card.py is new: 32 checks, two proved by putting "
      "the fault back. Python edition 1.39.",
-     "Issued for review"],
+     "Superseded by v2.77"],
     [f"{MARK_NEW}2.75", "2026-10-25", "Claude Code", "Pending",
      "R-66, REQ-DSH-23: A PROJECT'S TEAM IS CHANGED WHERE THE PROJECT IS LOOKED AT. Asked for "
      "from the field: while seeing everybody's load, change the members of a project directly "
@@ -2593,6 +2611,8 @@ reqs = [
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-DSH-28", "Dashboard", "PROJECTS CAN BE FILTERED BY STATUS. The filter bar offers the project statuses present in the plan - in the order a project lives through them, Planned, Active, On hold, Completed, then any other, then '(no status)' for projects with none - and choosing one or more leaves only the projects with those statuses on every tab, together with the other filters. Reset filters clears it; the calculated-FTE export records it.", "Should", "R-68", "4"],
+    [f"{MARK_NEW}REQ-DSH-27", "Dashboard", "THE YEARS OF A PROJECT TIMELINE STAY ON SCREEN WHILE IT SCROLLS. On a timeline of more than one project the year labels, and today, are held at the top of the timeline's scroll region, each over its own year line, however far the rows have been scrolled in either direction.", "Should", "R-68", "4"],
     [f"{MARK_NEW}REQ-DSH-26", "Dashboard", "ONE VISUAL SYSTEM ACROSS THE APPLICATION, IN BOTH THEMES. Every colour, size, radius and shadow is drawn from a named token; colour carries meaning (blue interactive, red over the ceiling, amber under the floor) and the few decorative touches - a brand mark, the tab icons, the rules on the figure tiles and the bars before section headings - repeat the accent rather than adding hues. Text keeps its contrast in both themes.", "Should", "R-67", "4"],
     [f"{MARK_NEW}REQ-DSH-25", "Dashboard", "A PROJECT OR A PERSON CAN BE READ ON ONE PAGE. Clicking a saved name in the Projects or People table opens a single scrolling pop-up with everything about that record: its span with today marked, headline figures, its charts, its team or its assignments, its milestones and periods, its open standard-vs-staffed months, and every field of its row. From it: the other side's card for any person or project named, Back, Previous and Next in the table's order, and the row itself on its tab. It changes nothing; the name stays renamable from its cell.", "Should", "R-67", "4"],
     [f"{MARK_NEW}REQ-DSH-24", "Dashboard", "THE PAGE USES THE WHOLE WIDTH OF THE WINDOW, less a gutter, and every chart is drawn to the width it is shown at - the extra width goes to the plot, the text stays at its designed size - and redrawn when the window is resized. A window narrower than a chart needs still scrolls it rather than squeezing it.", "Should", "R-67", "4"],
@@ -3525,6 +3545,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-68", "Dashboard", "On the Overall tab's Project timeline, keep the year axis fixed while scrolling; add a filter on project status so that projects not started or already ended can be left out.", "Applied. The years are a sticky bar over the timeline, with Today in it (REQ-DSH-27). A Project status filter in the filter bar, in lifecycle order (REQ-DSH-28). No figure moves.", "Applied"],
     ["R-67", "Dashboard", "Make the page under the title full width; open one project's or one person's information as a single scrolling pop-up when its name is clicked in Projects or People; review the whole UI and make it more polished, clear and friendly.", "Applied. The 1400px column is gone and the charts are drawn to the width they get (REQ-DSH-24). A saved name is a link to a read-only card with everything about the record, cross-linked between projects and people (REQ-DSH-25). A visual refresh in both themes (REQ-DSH-26). No figure moves.", "Applied"],
     ["R-66", "Dashboard", "Let a user change a project's members easily while looking at everybody's load - from Resource by project and the project's Utilisation - and have it update the people's assignments on Save.", "Applied. A Team dialog per project: swap, re-role, re-window, re-weight, add and remove, each person shown with their load; every change an ordinary pending edit of the Assignment sheet, kept by Save. REQ-DSH-23 added; no figure moves by itself.", "Applied"],
     ["R-65", "Dashboard", "Show where the current time is on every run-chart and month table of every tab; add the project timeline to Source data (person) for the selected person's projects.", "Applied. A Today line on every monthly chart and through the Project timeline; the current month's column and row marked in the tables; a person's own Project timeline with a bar per assignment. REQ-DSH-21 and REQ-DSH-22 added; no figure moves.", "Applied"],

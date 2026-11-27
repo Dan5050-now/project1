@@ -97,4 +97,5 @@ function exportResults(){
 
 /** How each filter is named to a reader who was not looking at the screen. */
 const FILTER_LABEL = {type:"Project type", phase:"Clinical phase", out:"Work scope",
-                      proj:"Project", pers:"Person", role:"Role", dept:"Department"};
+                      status:"Project status", proj:"Project", pers:"Person", role:"Role",
+                      dept:"Department"};

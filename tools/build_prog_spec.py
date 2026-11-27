@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.45"
+DOC_VERSION = "1.46"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.76.xlsx"
+PLAN = "PRAP_Development_Plan_v2.77.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,18 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.46", "2026-11-27", "Claude Code", "Dan",
+         "R-68, REQ-DSH-27 and REQ-DSH-28. ui/09_charts.js chartGantt(): for more than one row "
+         "the year labels leave the SVG (its top margin drops to CHART.gantt.padTAxis, 14) and are "
+         "drawn in div.gaxis before it - position:sticky, top 0, in the same .scrollx, min-width the "
+         "chart's own - each span.gy at left = x / W as a percentage, so it scales and scrolls with "
+         "the drawing; span.gnow at today, classed l or r to reach away from the nearest year line. "
+         "opts.single keeps its years in the SVG. ui/07_state.js: S.f.status; NO_STATUS = "
+         "'(no status)'; statusOf(p) is the trimmed Project.status or NO_STATUS; activeProjects() "
+         "skips a project whose statusOf is not ticked. shell/web: #fStatus in the filter bar, "
+         "FILTER_KEY fStatus -> status, fillFilters() offers M.lists.project_status in its order "
+         "where present, then other values sorted, then NO_STATUS; storage/web/export.js "
+         "FILTER_LABEL.status = 'Project status'.", "Draft"],
         ["1.45", "2026-11-27", "Claude Code", "Dan",
          "R-67, REQ-DSH-24 to REQ-DSH-26. style.css: .wrap loses its 1400px cap (max-width:none, "
          "padding var(--gutter)), and the zoomed band its matching one. ui/09_charts.js: "

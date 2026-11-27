@@ -19,7 +19,9 @@ const CHART = {
   // so it has its own pair: the whole gutter goes to the bands instead. 250 rather than
   // the 220 it was: the line under each name - "2025-09-01 -> 2027-02-28 · 18 months" -
   // is about 215 units long, and at 220 it lost its first digit off the left edge (R-67).
-  gantt:  {W:1180, padT:34, padR:14, foot:30,
+  // padTAxis is the top margin when the years are not in the drawing but in the bar
+  // that stays above it (R-68): only the milestone markers need room up there then.
+  gantt:  {W:1180, padT:34, padTAxis:14, padR:14, foot:30,
            rowh:42, rowhSingle:74, padL:250, padLSingle:26},
   // One line per project or person across the horizon.
   lines:  {Wmin:720, Wbase:96, Wper:46, H:300, padL:62, padR:16, padT:24, padB:46},
@@ -164,7 +166,16 @@ function chartGantt(pids, opts){
   const span = Math.max(1, (hi - lo) / DAY);
   // One project needs no row label - the panel heading already names it, and the dates go
   // in the note - so the whole gutter goes to the bands instead.
-  const K = CHART.gantt, W0 = K.W, W = fitW(W0), padT = K.padT;
+  /* THE YEARS STAY ON SCREEN (R-68). A timeline of sixty projects scrolls inside its
+     panel, and the years were drawn at the top of the drawing - so after the first
+     screenful every year line was an unlabelled rule, and which one was 2028 had to be
+     remembered or scrolled back up for. They are drawn instead in a bar of their own,
+     above the drawing and sticky to the top of the scroll region, positioned as a share
+     of the same width so it moves sideways with the chart and every label stays over its
+     own line. One project's timeline is a single row with nothing to scroll past, and
+     keeps its years in the drawing. */
+  const axis = !opts.single;
+  const K = CHART.gantt, W0 = K.W, W = fitW(W0), padT = axis ? K.padTAxis : K.padT;
   const rowh = opts.single ? K.rowhSingle : K.rowh;
   const padL = opts.single ? K.padLSingle : K.padL;
   const H = padT + rowh * rows.length + K.foot, inner = W - padL - K.padR;
@@ -176,11 +187,13 @@ function chartGantt(pids, opts){
   const hlUsed = new Set(), perUsed = new Set();
   const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Project timeline: one row per project, one band per period">`];
+  const years = [];
   for (let y = new Date(lo).getUTCFullYear(); y <= new Date(hi).getUTCFullYear(); y++){
     const xx = x(Date.UTC(y, 0, 1));
     if (xx >= padL){
       o.push(`<line class="grid" x1="${xx.toFixed(1)}" y1="${padT-8}" x2="${xx.toFixed(1)}" y2="${H-22}"/>`);
-      o.push(`<text class="ax" x="${xx.toFixed(1)}" y="${padT-12}" text-anchor="middle">${y}</text>`);
+      if (axis) years.push([y, xx]);
+      else o.push(`<text class="ax" x="${xx.toFixed(1)}" y="${padT-12}" text-anchor="middle">${y}</text>`);
     }
   }
   rows.forEach((p, i) => {
@@ -296,7 +309,20 @@ function chartGantt(pids, opts){
   leg.push('<li class="hint">darker band = higher period weight</li></ul>');
   leg.push(`<p class="note">${opts.note || `All ${rows.length} project(s) in the current filter, `
     + `scrolling in both directions inside this panel.`}</p>`);
-  return o.join("") + leg.join("");
+  if (!axis) return o.join("") + leg.join("");
+  const pct = v => `${(v / W * 100).toFixed(3)}%`;
+  /* Today's tag reaches AWAY from the nearest year line, whose label is centred on it -
+     in late autumn the tag would otherwise sit on top of the coming year's number. */
+  const xNow = nowOn ? x(tNow) : 0;
+  const near = years.reduce((b, [, xx]) => b === null || Math.abs(xx - xNow) < Math.abs(b - xNow)
+    ? xx : b, null);
+  const side = near !== null && near >= xNow ? "l" : "r";
+  const bar = `<div class="gaxis" style="min-width:${W0}px" aria-hidden="true">`
+    + `<span class="gcol">Project</span>`
+    + years.map(([y, xx]) => `<span class="gy" style="left:${pct(xx)}">${y}</span>`).join("")
+    + (nowOn ? `<span class="gnow ${side}" style="left:${pct(xNow)}">Today</span>` : "")
+    + `</div>`;
+  return bar + o.join("") + leg.join("");
 }
 
 /** Monthly resource as LINES, one per series.
