@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.10.xlsx
+Output: docs/PRAP_UI_Component_List_v2.11.xlsx
 """
 
 from pathlib import Path
@@ -40,8 +40,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.10"
-DATE = "2026-10-25"
+VERSION = "2.11"
+DATE = "2026-11-27"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
 
@@ -497,7 +497,8 @@ C = [
      "REQ-DSH-02", "", "",
      "Added for O-06 and O-10. The native SVG tooltip cannot show a list of people and waits half a "
      "second to appear, so it could not do what you asked for. This moves off the deferred list, where "
-     "v0.3 had it."),
+     "v0.3 had it. [CHANGED v2.11, R-67] Shown inside a dialog too: it is moved into the open "
+     "dialog, which is drawn above the page and used to hide it."),
     ("X-06", "Layout", "[NEW] Insert-row control",
      "'+ row' leading every row of every editable table; the new row lands directly below that row.",
      "REQ-IMP-11", "", "",
@@ -535,6 +536,48 @@ C = [
      "still on automatic - for whom the application first asks, because switching seeds every "
      "other month and a lone row would be a figure nothing reads.",
      "REQ-DSH-15, REQ-CAL-18", A, "", "R-42, extended by R-43."),
+    ("P-09", "Project tab / Person tab", "[NEW v2.11] A name is a link to its card",
+     "In the Projects and People tables a saved project's or person's name is drawn as a link; "
+     "clicking it selects the row, as any click on the row does, and opens the record's card. "
+     "A pencil at the cell's right edge, shown when the row is pointed at, or F2 on the link, "
+     "turns the cell back into the ordinary editable cell - the value list, the commit and "
+     "Escape as in any other - and the link returns once it is left. A row still being typed "
+     "keeps the plain cell: it has no record to show yet.",
+     "REQ-DSH-25", A, "", "R-67."),
+    ("P-10", "Project tab", "[NEW v2.11] Project card",
+     "One scrolling pop-up page for one project, read top to bottom: the name, identifier, "
+     "type, phase, scope, status and estimation; a track from start to end with today on it; "
+     "six headline figures - team, this month, average a month, peak month, total in view, "
+     "open issues; the Monthly resource and Timeline charts drawn to the card's width; the "
+     "team, each with role, window, weight, share of the project and their whole load against "
+     "the ceiling, each name opening that person's card; the milestones as a dated list, the "
+     "next one marked; the periods with weight and standard, the current one marked; the open "
+     "standard-vs-staffed months, each opening its month dialog; and every field of the "
+     "Project row. Change team, Back, Previous and Next in the table's order (arrow keys too), "
+     "and Show on Source data (project). Read-only.",
+     "REQ-DSH-25", A, "", "R-67."),
+    ("S-09", "Person tab", "[NEW v2.11] Person card",
+     "The same page for one person: name, identifier, department, usual role and capacity; "
+     "six headline figures - projects, this month against the floor and ceiling, average a "
+     "month, peak month, months over the ceiling, months under the floor; the Monthly load "
+     "chart and their own Project timeline; every assignment with role, window, weight and "
+     "what it puts on them, each project name opening that project's card; and every field of "
+     "the Person row. Back, Previous and Next, and Show on Source data (person).",
+     "REQ-DSH-25", A, "", "R-67."),
+    ("X-17", "Layout", "[NEW v2.11] The page is the window",
+     "No fixed column: everything under the title runs the width of the window less a "
+     "gutter. Every chart is drawn to the width it is shown at - the extra width goes to the "
+     "plot, the text stays at its designed size - and redrawn once a resized window settles; "
+     "narrower than a chart needs, it still scrolls rather than squeezes.",
+     "REQ-DSH-24", A, "", "R-67."),
+    ("X-18", "Layout", "[NEW v2.11] One visual system",
+     "A brand mark before the title; the version and the loaded file as chips; an icon on "
+     "each tab, the selected one lifted and coloured; a coloured rule along each figure tile "
+     "saying what kind of figure it is; a bar of the accent before each section heading; "
+     "tinted, opaque table headings; a mark on each banner as well as its colour; form "
+     "controls of one height with a halo on focus; the edit state as a pill with a dot; "
+     "dialogs that fade in. Every value from a named token, in both themes.",
+     "REQ-DSH-26", A, "", "R-67."),
     ("O-15", "Overall / Project tab", "[NEW v2.10] Team dialog",
      "Opened by the Team button on every project row of Resource by project, and by Change "
      "team on the project's Utilisation panel. Lists every assignment on the project - person, "

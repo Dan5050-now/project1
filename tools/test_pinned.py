@@ -232,8 +232,12 @@ with sync_playwright() as pw:
     pg.evaluate("""s => { const r = document.querySelector(s).getBoundingClientRect();
         window.scrollBy(0, r.top - innerHeight / 2); }""", cell)     # the PAGE, not the table
     pg.wait_for_timeout(300)
+    # The pinned name is a link to its card since R-67, and is typed into through the
+    # pencil at its right edge - pressed where IT is on screen, for the same reason.
     bb = pg.locator(cell).bounding_box()
-    pg.mouse.click(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
+    pg.mouse.move(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
+    pen = pg.locator(f"{cell} .renbtn").bounding_box()
+    pg.mouse.click(pen["x"] + pen["width"] / 2, pen["y"] + pen["height"] / 2)
     pg.wait_for_timeout(300)
     pg.keyboard.press("Control+A")
     pg.keyboard.type("NEU-103 Phase 3 (renamed while scrolled)")

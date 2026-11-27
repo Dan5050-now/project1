@@ -89,7 +89,8 @@ with sync_playwright() as pw:
         const ln = svg.querySelector('.nowln'); const x = +ln.getAttribute('x1');
         const G = grid(), i = G.indexOf(k);
         const vb = svg.viewBox.baseVal, K = CHART.stack;
-        const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper), bw = (W - K.padL - K.padR) / G.length;
+        // The width the chart was DRAWN to - its own, or the room it was given (R-67).
+        const W = vb.width, bw = (W - K.padL - K.padR) / G.length;
         const left = K.padL + i * bw + 3;
         return {x, left, right: left + bw - 8, frac: nowFrac()}; }""", NOWK)
     want = pos["left"] + (pos["right"] - pos["left"]) * pos["frac"]

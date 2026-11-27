@@ -1,6 +1,6 @@
 /* ============================================== 11b. one section, the whole screen */
 
-/* WHY. The page is 1400px wide at most and every scroll region is deliberately bounded
+/* WHY. Every scroll region on the page is deliberately bounded
  * on both axes (REQ-DSH-13), which is right for reading and wrong for typing: the
  * entry tables cap at 340px, so a twenty-two column sheet is filled in through a window
  * about a fifth of its own size, and every committed cell costs a re-scroll in two

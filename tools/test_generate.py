@@ -220,7 +220,8 @@ with sync_playwright() as pw:
     add_row(pg, P, other)
     pg.click("#saveBtn")
     pg.wait_for_timeout(1700)
-    pg.locator(f"{P} tbody tr[data-id='PRJ-002'] td[data-col='project_name']").first.click()
+    # By the identifier: a saved project's NAME opens its card (R-67).
+    pg.locator(f"{P} tbody tr[data-id='PRJ-002'] td[data-col='project_id']").first.click()
     pg.wait_for_timeout(900)
     check(pg.locator("[data-act='autoper']").count() == 0
           and pg.locator("[data-act='blankper']").count() == 1,
@@ -245,7 +246,7 @@ with sync_playwright() as pw:
     add_row(pg, P, third)
     pg.click("#saveBtn")
     pg.wait_for_timeout(1700)
-    pg.locator(f"{P} tbody tr[data-id='PRJ-003'] td[data-col='project_name']").first.click()
+    pg.locator(f"{P} tbody tr[data-id='PRJ-003'] td[data-col='project_id']").first.click()
     pg.wait_for_timeout(900)
     pg.click("[data-act='blankms']")
     pg.wait_for_timeout(1300)

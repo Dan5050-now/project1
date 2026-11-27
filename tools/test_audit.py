@@ -57,7 +57,9 @@ def edit_cell(pg, col, value, nth=0):
         const t = [...document.querySelectorAll(
           "#t-proj td[data-sheet='Project'][data-col='" + c + "']")][n];
         t.scrollIntoView({block: 'center'});
-        t.focus(); t.textContent = v;
+        // A saved project's name is a link to its card (R-67); its pencil makes it a cell.
+        if (t.classList.contains('namecell')) startRename(t); else t.focus();
+        t.textContent = v;
         t.dispatchEvent(new Event('input', {bubbles: true}));
         t.blur();}""", [col, value, nth])
     pg.wait_for_timeout(600)

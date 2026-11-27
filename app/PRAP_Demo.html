@@ -63,13 +63,21 @@
   --hl-navy:#1f2f86;--hl-purple:#7b3fbf;--hl-magenta:#c2188f;--hl-pink:#f37fb2;
   --hl-brown:#8d5524;
   --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
-  --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
+  --shadow:0 0 0 1px rgba(17,24,39,.04),0 1px 2px rgba(17,24,39,.05),
+    0 8px 24px -12px rgba(17,24,39,.16);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
   --hairline:rgba(60,60,67,.16);
   --shade:rgba(60,60,67,.30);
+  /* R-67: the second accent the brand mark, the primary buttons and the section bars
+     run into; the two soft glows at the head of the page; the tint of a table's heading
+     row - opaque, because headings stick while rows scroll beneath them; and the quieter
+     ground of the provenance strip, a step off the card white and as opaque. */
+  --accent2:#5e5ce6;
+  --glow1:rgba(0,102,204,.11);--glow2:rgba(94,92,230,.10);
+  --thead:#f8f8fb;--quiet:#fbfbfd;
 
   /* --- radius: Apple's continuous-corner scale --------------------------- */
-  --r-xs:5px;--r-sm:7px;--r-md:10px;--r-lg:14px;--r-xl:18px;
+  --r-xs:5px;--r-sm:7px;--r-md:10px;--r-lg:16px;--r-xl:20px;
 
   /* --- type -------------------------------------------------------------- */
   --f-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",
@@ -120,9 +128,12 @@
   --hl-navy:#7d8cff;--hl-purple:#bf5af2;--hl-magenta:#ff4fd8;--hl-pink:#ffadd2;
   --hl-brown:#c8915c;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
-  --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
+  --shadow:0 0 0 1px rgba(255,255,255,.06),0 1px 2px rgba(0,0,0,.5);
+  --shadow-lift:0 12px 34px rgba(0,0,0,.6);
   --hairline:rgba(235,235,245,.18);
-  --shade:rgba(0,0,0,.55);}}
+  --shade:rgba(0,0,0,.55);
+  --accent2:#7d7aff;--glow1:rgba(10,132,255,.17);--glow2:rgba(125,122,255,.13);
+  --thead:#242426;--quiet:#151517;}}
 :root[data-theme="dark"]{
   --page:#000000;--surface:#1c1c1e;--raised:#2c2c2e;
   --ink:#f5f5f7;--ink2:rgba(235,235,245,.70);--muted:rgba(235,235,245,.55);
@@ -135,9 +146,12 @@
   --hl-navy:#7d8cff;--hl-purple:#bf5af2;--hl-magenta:#ff4fd8;--hl-pink:#ffadd2;
   --hl-brown:#c8915c;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
-  --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
+  --shadow:0 0 0 1px rgba(255,255,255,.06),0 1px 2px rgba(0,0,0,.5);
+  --shadow-lift:0 12px 34px rgba(0,0,0,.6);
   --hairline:rgba(235,235,245,.18);
-  --shade:rgba(0,0,0,.55);}
+  --shade:rgba(0,0,0,.55);
+  --accent2:#7d7aff;--glow1:rgba(10,132,255,.17);--glow2:rgba(125,122,255,.13);
+  --thead:#242426;--quiet:#151517;}
 :root[data-theme="light"]{
   --page:#f2f2f7;--surface:#ffffff;--raised:#ffffff;
   --ink:#1d1d1f;--ink2:rgba(60,60,67,.78);--muted:rgba(60,60,67,.72);
@@ -150,10 +164,29 @@
   --hl-navy:#1f2f86;--hl-purple:#7b3fbf;--hl-magenta:#c2188f;--hl-pink:#f37fb2;
   --hl-brown:#8d5524;
   --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
-  --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
+  --shadow:0 0 0 1px rgba(17,24,39,.04),0 1px 2px rgba(17,24,39,.05),
+    0 8px 24px -12px rgba(17,24,39,.16);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
   --hairline:rgba(60,60,67,.16);
-  --shade:rgba(60,60,67,.30);}
+  --shade:rgba(60,60,67,.30);
+  --accent2:#5e5ce6;--glow1:rgba(0,102,204,.11);--glow2:rgba(94,92,230,.10);
+  --thead:#f8f8fb;--quiet:#fbfbfd;}
+
+
+/* ---- R-67: the marks the stylesheet draws -------------------------------------
+   As masks and backgrounds rather than markup, so the Python edition - which words its
+   heading differently - and the web page carry them alike, and no test that reads a
+   label's text finds an icon in it. Line icons, one stroke weight, on a 24px grid. */
+:root{
+  --mark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3E%3Crect x='2' y='10.5' width='4' height='7.5' rx='1.3'/%3E%3Crect x='8' y='6.5' width='4' height='11.5' rx='1.3'/%3E%3Crect x='14' y='2' width='4' height='16' rx='1.3' opacity='.85'/%3E%3C/svg%3E");
+  --ico-doc:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 3v5h5'/%3E%3C/svg%3E");
+  --ico-overall:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7.5' height='9' rx='1.8'/%3E%3Crect x='13.5' y='3' width='7.5' height='5' rx='1.8'/%3E%3Crect x='13.5' y='11' width='7.5' height='10' rx='1.8'/%3E%3Crect x='3' y='15' width='7.5' height='6' rx='1.8'/%3E%3C/svg%3E");
+  --ico-proj:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/%3E%3C/svg%3E");
+  --ico-pers:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='9' cy='8' r='3.6'/%3E%3Cpath d='M2.5 20.5c.8-3.7 3.4-5.7 6.5-5.7s5.7 2 6.5 5.7'/%3E%3Cpath d='M15.5 4.6a3.6 3.6 0 0 1 0 6.9M18 14.9c1.8.8 3 2.7 3.5 5.6'/%3E%3C/svg%3E");
+  --ico-gen:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6.5h9M19 6.5h1M4 12h3M11 12h9M4 17.5h11M20 17.5h0'/%3E%3Ccircle cx='16' cy='6.5' r='2.3'/%3E%3Ccircle cx='9' cy='12' r='2.3'/%3E%3Ccircle cx='17.5' cy='17.5' r='2.3'/%3E%3C/svg%3E");
+  --ico-up:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 15V4M7.5 8.5 12 4l4.5 4.5'/%3E%3Cpath d='M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'/%3E%3C/svg%3E");
+  --ico-new:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+}
 
 *{box-sizing:border-box}
 /* The `hidden` attribute is only display:none at UA-stylesheet weight, so any rule
@@ -174,7 +207,19 @@ body{margin:0;background:var(--page);color:var(--ink);
  font:var(--t-lg)/1.55 var(--f-ui);
  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
  font-synthesis:none;text-rendering:optimizeLegibility}
-.wrap{max-width:1400px;margin:0 auto;padding:20px var(--sp-5) 72px}
+/* R-67: two soft glows of the accent at the head of the page - the one touch here that
+   carries no information, so it is kept to the first screenful and painted on the body,
+   where it scrolls away with the header instead of sitting behind the tables. */
+body{background-image:radial-gradient(1100px 420px at 6% -180px,var(--glow1),transparent 70%),
+  radial-gradient(1000px 420px at 94% -200px,var(--glow2),transparent 70%);
+  background-repeat:no-repeat}
+/* THE WHOLE WINDOW, edge to edge (R-67). The page used to stop at 1400px and centre,
+   which on a 1920px screen left a quarter of it as two empty grey margins while every
+   table beside them scrolled sideways for want of room. Only a gutter is kept now - it
+   grows a little with the window so the cards never touch its edge - and the reading
+   measure is held where it matters, on the captions (.cap caps itself at 92ch). */
+:root{--gutter:clamp(14px,1.6vw,32px);--panel-px:20px}
+.wrap{max-width:none;margin:0;padding:18px var(--gutter) 72px}
 
 /* --- header ------------------------------------------------------------- */
 /* nowrap while there is room, so the controls stay on one line and the file name is
@@ -184,22 +229,35 @@ header{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;padding-bottom:
 header>h1,header>.vers,header>.btn{flex:none;white-space:nowrap}
 h1{font-size:var(--t-3xl);margin:0;letter-spacing:-.021em;font-weight:650;line-height:1.2}
 h2{font-size:var(--t-xl);margin:0 0 3px;letter-spacing:-.012em;font-weight:620;line-height:1.3}
-.vers{color:var(--ink2);font-size:var(--t-sm);letter-spacing:0}
+.vers{color:var(--ink2);font-size:var(--t-xs);letter-spacing:0;padding:2px 9px;border-radius:999px;
+ background:var(--fill)}
+/* The brand mark (R-67). Drawn here, before the heading, so both editions carry it. */
+header > h1{display:flex;align-items:center;gap:11px}
+header > h1::before{content:"";flex:none;width:34px;height:34px;border-radius:10px;
+ background:var(--mark) center/19px 19px no-repeat,linear-gradient(140deg,var(--accent),var(--accent2));
+ box-shadow:0 6px 14px -6px color-mix(in srgb,var(--accent) 75%,transparent),
+   inset 0 1px 0 rgba(255,255,255,.25)}
+header .btn{min-height:34px}
 /* The loaded-file line takes whatever is left and gives it back first: it is the one
    thing in the header that can be truncated without losing a control. Without this the
    header wraps and the buttons drop to a second row. */
 .file{margin-left:auto;color:var(--ink2);font-size:var(--t-md);font-variant-numeric:tabular-nums;
- flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ padding:5px 12px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow)}
+.file::before{content:"";display:inline-block;width:13px;height:13px;margin-right:7px;vertical-align:-2px;
+ background:var(--accent);-webkit-mask:var(--ico-doc) center/contain no-repeat;
+ mask:var(--ico-doc) center/contain no-repeat}
 .file .tz{color:var(--muted)}
 
 /* --- buttons: filled, tinted, plain ------------------------------------- */
-.btn{border:0;background:var(--fill);color:var(--accent);border-radius:var(--r-sm);
- padding:6px 13px;font-size:var(--t-md);font-weight:520;cursor:pointer;font-family:inherit;
+.btn{border:0;background:var(--fill);color:var(--accent);border-radius:9px;
+ padding:6px 14px;font-size:var(--t-md);font-weight:560;cursor:pointer;font-family:inherit;
  line-height:1.4;letter-spacing:-.005em}
 .btn:hover{background:var(--fill2);color:var(--accent)}
-.btn.primary{background:var(--accent);color:#fff;font-weight:590;
- box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.btn.primary:hover{background:var(--accent);color:#fff;filter:brightness(1.08)}
+.btn.primary{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 84%,#fff),var(--accent));
+ color:#fff;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.14),
+   0 6px 14px -8px color-mix(in srgb,var(--accent) 85%,transparent),inset 0 1px 0 rgba(255,255,255,.2)}
+.btn.primary:hover{color:#fff;filter:brightness(1.07)}
 .btn.primary[disabled],.btn[disabled]{opacity:.38;cursor:not-allowed;transform:none}
 /* Two of these on every row of every table. At rest they are furniture; they take
    colour only on hover, where blue means 'this adds' and red means 'this removes'. */
@@ -230,8 +288,8 @@ td.ins,th.ins{white-space:nowrap}
 .btn.reset{color:var(--accent)}
 
 /* --- provenance strip ---------------------------------------------------- */
-#prov{margin:12px 0 0;border-radius:var(--r-md);background:var(--surface);
- box-shadow:var(--shadow);font-size:var(--t-md)}
+#prov{margin:12px 0 0;border-radius:var(--r-md);background:var(--quiet);
+ box-shadow:0 0 0 1px var(--hairline);font-size:var(--t-md)}
 #prov > summary{cursor:pointer;padding:9px 14px;color:var(--ink2);list-style:none;
  display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;border-radius:var(--r-md)}
 #prov > summary::-webkit-details-marker{display:none}
@@ -257,6 +315,11 @@ td.ins,th.ins{white-space:nowrap}
  border-radius:var(--r-md);background:var(--surface);font-size:var(--t-lg);
  box-shadow:var(--shadow);border-left:3px solid var(--good)}
 .banner.bad{background:var(--overbg);border-left-color:var(--crit)}
+.banner::before{content:"\2713";flex:none;display:grid;place-items:center;width:22px;height:22px;
+ border-radius:50%;background:var(--good);color:#fff;font-size:12px;font-weight:800;line-height:1}
+.banner.bad::before{content:"!";background:var(--crit)}
+.banner.warn::before{content:"!";background:var(--warn)}
+.banner.busy::before{content:none}
 /* Saved, but with something knowingly left unresolved - neither a clean save nor
    a failure, and it should not read as either. */
 .banner.warn{background:var(--underbg);border-left-color:var(--warn)}
@@ -283,10 +346,14 @@ td.ins,th.ins{white-space:nowrap}
 body.busy{cursor:progress}
 
 /* --- panels: white cards on a grey field --------------------------------- */
-.panel{background:var(--surface);border-radius:var(--r-lg);padding:var(--sp-4) 18px;margin:var(--sp-4) 0;
- box-shadow:var(--shadow)}
+.panel{background:var(--surface);border-radius:var(--r-lg);padding:18px var(--panel-px);
+ margin:var(--sp-4) 0;box-shadow:var(--shadow)}
 .phead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px}
 .phead h2{margin:0}
+.panel > .phead > h2,#filterbar > h2{font-size:16px;font-weight:660}
+.panel > .phead > h2::before,#filterbar > h2::before{content:"";display:inline-block;width:4px;
+ height:.95em;border-radius:2px;margin-right:9px;vertical-align:-.1em;
+ background:linear-gradient(180deg,var(--accent),var(--accent2))}
 /* An identifier beside the name it belongs to: there to be matched, not read first. */
 .phead h2 .tid{font-size:var(--t-sm);font-weight:500;color:var(--muted);margin-left:.4em}
 .subhead{margin:18px 0 6px;font-size:var(--t-lg);color:var(--ink2)}
@@ -304,9 +371,11 @@ body.busy{cursor:progress}
 .ctl{display:flex;flex-direction:column;gap:4px}
 .ctl label,.ctl .lbl{display:block;font-size:var(--t-xs);color:var(--muted);font-weight:510;letter-spacing:.01em}
 .ctl select,.ctl input{border:1px solid var(--base);background:var(--surface);
- color:var(--ink);border-radius:var(--r-sm);padding:5px 9px;font-size:var(--t-md);
- font-family:inherit;line-height:1.4}
+ color:var(--ink);border-radius:9px;padding:6px 10px;font-size:var(--t-md);min-height:34px;
+ font-family:inherit;line-height:1.4;box-shadow:0 1px 1px rgba(0,0,0,.03)}
 .ctl select:hover,.ctl input:hover{border-color:var(--accent)}
+.ctl select:focus,.ctl input:focus{outline:none;border-color:var(--accent);
+ box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
 
 /* --- a filter that takes several values at once --------------------------
    Built on <details> rather than as a widget: the browser gives open/close,
@@ -316,11 +385,12 @@ body.busy{cursor:progress}
    summary reports, so the bar reads the same as it did with single selects. */
 .ms{position:relative}
 .ms>summary{list-style:none;cursor:pointer;border:1px solid var(--base);
- background:var(--surface);color:var(--ink);border-radius:var(--r-sm);
- padding:5px 26px 5px 9px;font-size:var(--t-md);line-height:1.4;min-width:112px;
- max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ background:var(--surface);color:var(--ink);border-radius:9px;min-height:34px;
+ padding:6px 28px 6px 10px;font-size:var(--t-md);line-height:1.4;min-width:112px;
+ max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ box-shadow:0 1px 1px rgba(0,0,0,.03)}
 .ms>summary::-webkit-details-marker{display:none}
-.ms>summary::after{content:"";position:absolute;right:9px;top:12px;
+.ms>summary::after{content:"";position:absolute;right:10px;top:15px;
  border:4px solid transparent;border-top-color:var(--ink2)}
 .ms>summary:hover{border-color:var(--accent)}
 .ms[open]>summary{border-color:var(--accent)}
@@ -333,7 +403,12 @@ body.busy{cursor:progress}
 .exp{position:relative}
 .exp>summary{list-style:none;cursor:pointer}
 .exp>summary::-webkit-details-marker{display:none}
-.exp>summary::after{content:"  \25BE";font-size:.85em;opacity:.75}
+.exp>summary::after{content:"\25BE";font-size:.85em;opacity:.8;position:static;border:0;
+ margin-left:7px}
+/* The menu's button is a button first: the picker frame .ms gives its summaries does not
+   belong on it, and drew a second, smaller arrow in its corner. */
+.ms.exp>summary{border:0;padding:7px 14px;min-width:0;max-width:none;display:inline-flex;
+ align-items:center}
 .exp.off{pointer-events:none;opacity:.45}
 .exp>.msp{width:340px;max-width:min(340px,calc(100vw - 32px));padding:6px;
  max-height:none;left:auto;right:0}
@@ -383,38 +458,56 @@ body.busy{cursor:progress}
 #stickybar{position:sticky;top:0;z-index:20;background:var(--page);
  padding-bottom:8px;margin-bottom:-8px}
 #editbar{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);
- align-items:center;margin:14px 0 0;padding:10px 16px;border-radius:var(--r-md);
+ align-items:center;margin:14px 0 0;padding:10px 16px;border-radius:var(--r-lg);
  background:var(--surface);
  box-shadow:var(--shadow);font-size:var(--t-md);color:var(--ink2)}
 #editbar.dirty{background:color-mix(in srgb,var(--underbg) 95%,transparent);color:var(--ink)}
 #editbar .guide{max-width:min(760px,58%)}
 #editbar .guide strong{color:var(--ink);font-weight:590}
-#editbar #editstate{margin-left:auto;font-weight:620;white-space:nowrap}
-#editbar.dirty #editstate{color:var(--underink)}
+#editbar #editstate{margin-left:auto;font-weight:620;white-space:nowrap;display:inline-flex;
+ align-items:center;gap:7px;padding:3px 11px;border-radius:999px;background:var(--fill)}
+#editbar #editstate::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--good)}
+#editbar #editstate:empty{display:none}
+#editbar.dirty #editstate{color:var(--underink);background:color-mix(in srgb,var(--warn) 20%,transparent)}
+#editbar.dirty #editstate::before{background:var(--warn);
+ box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 30%,transparent)}
+#editbar.dirty{box-shadow:inset 4px 0 0 var(--warn),var(--shadow)}
 #editbar .btn{white-space:nowrap}
 
 /* --- tabs: a segmented control ------------------------------------------- */
 /* A full-width bar, not a floating pill: content scrolls UNDER the band, and a pill only
    as wide as its labels would let the page slide past beside them. */
-nav{display:flex;gap:2px;margin:18px 0 0;flex-wrap:wrap;
- padding:5px 4px;border-radius:var(--r-md);background:var(--fill)}
-nav button{border:0;background:none;color:var(--ink2);padding:6px 16px;font-size:var(--t-lg);
- cursor:pointer;font-family:inherit;border-radius:var(--r-sm);font-weight:520;
- letter-spacing:-.006em;white-space:nowrap}
+nav{display:flex;gap:4px;margin:18px 0 0;flex-wrap:wrap;
+ padding:5px;border-radius:13px;background:var(--fill);box-shadow:inset 0 0 0 1px var(--hairline)}
+nav button{border:0;background:none;color:var(--ink2);padding:7px 16px;font-size:var(--t-lg);
+ cursor:pointer;font-family:inherit;border-radius:9px;font-weight:540;
+ letter-spacing:-.006em;white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
+nav button::before{content:"";flex:none;width:16px;height:16px;background:currentColor;opacity:.7;
+ -webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat}
+nav button[data-tab="t-overall"]{--ico:var(--ico-overall)}
+nav button[data-tab="t-proj"]{--ico:var(--ico-proj)}
+nav button[data-tab="t-pers"]{--ico:var(--ico-pers)}
+nav button[data-tab="t-gen"]{--ico:var(--ico-gen)}
 nav button:hover{color:var(--ink);background:var(--fill)}
-nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var(--surface);
+nav button[aria-selected="true"]{color:var(--ink);font-weight:620;background:var(--surface);
  box-shadow:0 1px 3px rgba(0,0,0,.13),0 0 0 .5px rgba(0,0,0,.05)}
+nav button[aria-selected="true"]::before{opacity:1;
+ background:linear-gradient(135deg,var(--accent),var(--accent2))}
 
 /* --- summary tiles ------------------------------------------------------- */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:14px;
  margin:16px 0}
-.tile{background:var(--surface);border-radius:var(--r-lg);padding:13px 16px;
- box-shadow:var(--shadow)}
+.tile{background:var(--surface);border-radius:var(--r-lg);padding:15px 18px 14px;
+ box-shadow:var(--shadow);position:relative;overflow:hidden}
+.tile::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+ background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.tile.over::before{background:var(--crit)}
+.tile.under::before,.tile.gap::before{background:var(--warn)}
 .tile.over{background:var(--overbg)}.tile.under{background:var(--underbg)}
 .tile{transition:none}
 .tile .tl{font-size:var(--t-xs);color:var(--muted);font-weight:590;letter-spacing:.03em;
  text-transform:uppercase}
-.tile .tv{font-size:var(--t-4xl);font-weight:600;letter-spacing:-.03em;line-height:1.15;
+.tile .tv{font-size:32px;font-weight:700;letter-spacing:-.03em;line-height:1.15;
  margin:5px 0 2px;font-variant-numeric:tabular-nums}
 .tile.over .tv{color:var(--crit)}.tile.under .tv{color:var(--underink)}
 .tile .ts{font-size:var(--t-sm);color:var(--muted);line-height:1.4}
@@ -485,7 +578,7 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var
    Three layers, and the order matters: the corner cell has to out-rank both the row
    header it sits above and the column header it sits beside, or it is overprinted by
    whichever scrolls under it. */
-.scrollx thead th,.dlg-b thead th{position:sticky;top:0;z-index:3;background:var(--surface)}
+.scrollx thead th,.dlg-b thead th{position:sticky;top:0;z-index:3;background:var(--thead)}
 .scrollx thead th::after,.dlg-b thead th::after{content:"";position:absolute;left:0;right:0;
  bottom:-1px;height:1px;background:var(--hairline)}
 .grid-t th.rh{z-index:2}
@@ -526,12 +619,10 @@ body.zoomed{overflow:hidden}
    with the page at the top, which is a strip of the old page showing above a full screen.
    It starts at --zoomchrome rather than at 0 because the Python and desktop shells put
    their own title and status strips above everything this stylesheet draws; on the web
-   page that variable is 0 and the band is at the top. Its inner padding keeps the same
-   1400px column the page uses, so Save does not jump across the screen as the section
-   opens. */
+   page that variable is 0 and the band is at the top. Its inner padding is the same
+   gutter the page uses, so Save does not jump across the screen as the section opens. */
 body.zoomed #stickybar{position:fixed;top:var(--zoomchrome,0px);left:0;right:0;z-index:45;
- margin:0;padding:0 var(--sp-5) 8px;box-shadow:0 1px 0 var(--hairline)}
-body.zoomed #stickybar > *{max-width:1400px;margin-left:auto;margin-right:auto}
+ margin:0;padding:0 var(--gutter) 8px;box-shadow:0 1px 0 var(--hairline)}
 body.zoomed #editbar,body.zoomed #stickybar nav{margin-top:8px}
 
 /* --zoomtop is the measured height of that band - see fitZoom(). The fallback of 0 is
@@ -585,12 +676,13 @@ body.zoomed #editbar,body.zoomed #stickybar nav{margin-top:8px}
 table{border-collapse:collapse;width:100%;font-size:var(--t-md)}
 .grid-t th,.grid-t td{border:1px solid var(--grid);padding:5px 8px;text-align:right;
  font-variant-numeric:tabular-nums;white-space:nowrap}
-.grid-t thead th{background:var(--surface);color:var(--muted);font-weight:590;
+.grid-t thead th{background:var(--thead);color:var(--muted);font-weight:590;
  font-size:var(--t-xs);text-align:center;letter-spacing:.02em}
 .grid-t th.rh{text-align:left;position:sticky;left:0;background:var(--surface);
  min-width:240px;max-width:320px;white-space:normal;
  box-shadow:1px 0 0 var(--grid)}
-.grid-t thead th.rh{background:var(--surface)}
+.grid-t thead th.rh{background:var(--thead)}
+.grid-t tr.parent:hover th.rh{background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
 .grid-t .nm{font-weight:590;margin-right:2px}
 .grid-t th.rh{line-height:1.45;padding-top:7px;padding-bottom:7px}
 .grid-t .sub{display:block;color:var(--muted);font-size:var(--t-xs);font-weight:400;
@@ -634,7 +726,7 @@ td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .data-t th:last-child,.data-t td:last-child{border-right:0}
 .data-t tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--ink) 2%,transparent)}
 .data-t tbody tr:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
-.data-t thead th{background:var(--surface);color:var(--muted);font-weight:590;
+.data-t thead th{background:var(--thead);color:var(--muted);font-weight:590;
  font-size:var(--t-xs);letter-spacing:.02em;border-bottom:1px solid var(--hairline)}
 /* THE HEADING IS THE PLAIN NAME, and nothing else. The workbook's own column name is in
    the pop-up, not on the page: it is wanted occasionally - editing the workbook, reading
@@ -644,6 +736,7 @@ td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .data-t thead th .lab{color:var(--ink2);font-weight:620;
  font-size:var(--t-sm);letter-spacing:0;text-transform:none}
 .data-t tr.sel td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.data-t tr.sel td.ins{box-shadow:inset 3px 0 0 var(--accent)}
 .data-t tr{cursor:pointer}
 .data-t td[contenteditable="true"]:focus{outline:2px solid var(--accent);outline-offset:-2px;
  border-radius:3px;background:var(--surface)}
@@ -698,6 +791,8 @@ td.under{background:var(--underbg);color:var(--underink);font-weight:590}
    same one wins. */
 .data-t[data-pin] th.ins,.data-t[data-pin] td.ins,
 .data-t[data-pin] .pin1,.data-t[data-pin] .pin2{background:var(--surface)}
+.data-t[data-pin] thead th.ins,.data-t[data-pin] thead .pin1,
+.data-t[data-pin] thead .pin2{background:var(--thead)}
 .data-t[data-pin] tbody tr:nth-child(even) td.ins,
 .data-t[data-pin] tbody tr:nth-child(even) .pin1,
 .data-t[data-pin] tbody tr:nth-child(even) .pin2{
@@ -865,7 +960,7 @@ td.cell[data-hl="brown"]::before{background:var(--hl-brown)}
  -webkit-backdrop-filter:saturate(180%) blur(20px);
  backdrop-filter:saturate(180%) blur(20px);
  color:var(--ink);border-radius:var(--r-md);padding:10px 12px;
- font-size:var(--t-sm);line-height:1.5;box-shadow:var(--shadow-lift)}
+ font-size:var(--t-sm);line-height:1.5;box-shadow:var(--shadow-lift),0 0 0 1px var(--hairline)}
 .tip b{font-weight:620}.tip .tr{color:var(--muted);font-size:var(--t-xs)}
 /* Separates the two halves of a pop-up that answers two questions at once - what this
    project drew this month, and what the person drew in total. */
@@ -1013,6 +1108,12 @@ td.drvcell[data-drv="period"]{min-width:36em;font-style:normal}
 .choose .drop{padding:34px 26px 28px;display:flex;flex-direction:column;
  align-items:center;justify-content:flex-start}
 .drop.start{border-style:solid;border-color:var(--grid)}
+#drop::before,#startCard::before{content:"";flex:none;width:58px;height:58px;border-radius:17px;
+ margin:0 0 14px;background:var(--ico-e) center/28px 28px no-repeat,
+   linear-gradient(140deg,var(--accent),var(--accent2));
+ box-shadow:0 12px 26px -14px color-mix(in srgb,var(--accent) 80%,transparent)}
+#drop{--ico-e:var(--ico-up)}
+#startCard{--ico-e:var(--ico-new)}
 .drop .tag{display:inline-block;font-size:var(--t-xs);font-weight:640;letter-spacing:.06em;
  text-transform:uppercase;color:var(--muted);margin-bottom:12px}
 .choose .btn{margin-top:6px}
@@ -1023,8 +1124,16 @@ dialog{border:0;border-radius:var(--r-xl);background:var(--surface);
  color:var(--ink);max-width:900px;width:92vw;padding:0;box-shadow:var(--shadow-lift)}
 dialog::backdrop{background:rgba(0,0,0,.35);
  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
-.dlg-h{display:flex;align-items:center;gap:10px;padding:14px 18px;
- border-bottom:1px solid var(--hairline)}
+.dlg-h{display:flex;align-items:center;gap:10px;padding:15px 20px;
+ border-bottom:1px solid var(--hairline);
+ background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 6%,var(--surface)),var(--surface))}
+.dlg-h > strong:first-child{font-size:var(--t-xl);font-weight:660;letter-spacing:-.012em}
+/* A fade, and only a fade: a transform would make the dialog the containing block of the
+   fixed-position pop-up drawn inside it, and cut the pop-up off at the dialog's edge. */
+@media (prefers-reduced-motion:no-preference){
+  dialog[open]{animation:dlg-in .18s var(--ease)}
+  dialog[open]::backdrop{animation:dlg-in .18s var(--ease)}}
+@keyframes dlg-in{from{opacity:0}to{opacity:1}}
 .dlg-b{padding:14px 18px;max-height:64vh;overflow:auto}
 /* The dialog's own scroll region gets the same visible bar as every other one - a change
    log is exactly the kind of list that runs off the bottom. */
@@ -1302,6 +1411,158 @@ td.cell.gapnew:focus:empty::before{content:""}
 .tmroom .chip i{font-style:normal;color:var(--muted);margin-left:4px}
 .teambtn{margin-left:6px;vertical-align:1px}
 
+/* ---- a project's or person's name opens its card (R-67) ------------------------
+   The name is a link, in the accent colour that means "this does something" everywhere
+   else on the page; the pencil that renames it waits at the cell's right edge until the
+   row is pointed at, so a column of names does not read as a column of pencils. The cell
+   is still the editable cell underneath - see startRename() - and while it is being
+   renamed it looks exactly like any other cell being typed into. */
+td.namecell{position:relative;padding-right:30px}
+.namelink{border:0;background:none;padding:0;margin:0;font:inherit;color:var(--accent);
+  font-weight:600;text-align:left;cursor:pointer;line-height:inherit;border-radius:var(--r-xs)}
+.namelink:hover{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.namelink .noname{color:var(--muted);font-weight:400}
+.renbtn{position:absolute;right:4px;top:50%;margin-top:-11px;width:22px;height:22px;padding:0;
+  border:0;border-radius:var(--r-xs);background:none;color:var(--muted);cursor:pointer;
+  opacity:0;transition:opacity var(--dur) var(--ease),background var(--dur) var(--ease)}
+.renbtn::before{content:"\270E";font-size:13px;line-height:22px}
+.data-t tr:hover .renbtn,.renbtn:focus-visible,td.namecell:focus-within .renbtn{opacity:1}
+.renbtn:hover{background:var(--fill2);color:var(--accent)}
+td.namecell.renaming{padding-right:10px}
+
+/* ---- the card itself -------------------------------------------------------------
+   A page of its own rather than a form: white sections on the grey field, the same
+   material as the tab behind it, so it reads as "the same application, about one thing".
+   The record's own colour - the one it has on every chart - tints the head and fills
+   the badge, which is what makes the card recognisably THIS project at a glance. The
+   opening is a fade and nothing else: a transform would make the dialog the containing
+   block of the fixed-position pop-up inside it, and the pop-up would be cut off at the
+   dialog's edge. */
+dialog.card{width:min(1200px,96vw);max-width:none;max-height:92vh;padding:0;overflow:hidden;
+  background:var(--page);--card-tint:var(--accent)}
+dialog.card[open]{display:flex;flex-direction:column}
+.card-h{flex:none;display:flex;align-items:center;gap:12px;padding:16px 22px 14px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--card-tint) 16%,var(--surface)) 0%,
+    var(--surface) 100%);border-bottom:1px solid var(--hairline)}
+.card-who{display:flex;align-items:center;gap:14px;min-width:0;flex:1 1 auto}
+.mono{flex:none;display:inline-grid;place-items:center;width:48px;height:48px;border-radius:50%;
+  background:var(--card-tint);color:#fff;font-weight:700;font-size:16px;letter-spacing:.02em;
+  box-shadow:0 1px 2px rgba(0,0,0,.12),inset 0 0 0 1px rgba(255,255,255,.18);
+  text-shadow:0 1px 1px rgba(0,0,0,.25)}
+.mono.sq{border-radius:13px}
+.mono.xs{width:24px;height:24px;font-size:10px;margin-right:8px;box-shadow:none}
+.mono.xs.sq{border-radius:7px}
+.card-tt{display:flex;flex-direction:column;min-width:0}
+.card-kind{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+  font-weight:650}
+.card-tt strong{font-size:var(--t-3xl);font-weight:700;letter-spacing:-.022em;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-sub{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.card-sub .ty,.card-sub .ph,.card-sub .scope,.card-sub .estb{margin-left:0}
+.idchip{font-family:var(--f-mono);font-size:var(--t-xs);padding:2px 8px;border-radius:999px;
+  background:var(--fill);color:var(--ink2);white-space:nowrap}
+.card-nav{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--t-sm);
+  white-space:nowrap;font-variant-numeric:tabular-nums}
+.card-nav .btn.tiny{min-width:28px;font-size:var(--t-lg);line-height:1}
+.card-h > .btn{white-space:nowrap}
+.card-b{flex:1 1 auto;overflow:auto;padding:18px 24px 30px;scrollbar-color:var(--base) transparent}
+.card-b:focus{outline:none}
+.card-b::-webkit-scrollbar{width:12px}
+.card-b::-webkit-scrollbar-thumb{background:var(--base);border-radius:8px;
+  border:3px solid transparent;background-clip:padding-box}
+@media (max-width:760px){.card-h{flex-wrap:wrap}.card-tt strong{font-size:var(--t-2xl)}}
+
+.life{background:var(--surface);border-radius:var(--r-lg);padding:14px 18px 16px;box-shadow:var(--shadow)}
+.life-ends{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;
+  font-size:var(--t-sm);color:var(--ink2);margin-bottom:9px;font-variant-numeric:tabular-nums}
+.life-ends b{color:var(--ink);font-weight:620}
+.life-mid{color:var(--ink);font-weight:600}
+.life-track{position:relative;height:10px;border-radius:999px;background:var(--fill)}
+.life-fill{position:absolute;left:0;top:0;bottom:0;border-radius:999px;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--card-tint) 55%,var(--surface)),var(--card-tint))}
+.life-now{position:absolute;top:-5px;width:3px;height:20px;margin-left:-1.5px;border-radius:2px;
+  background:var(--ink);box-shadow:0 0 0 2px var(--surface)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin:14px 0}
+.kpi{background:var(--surface);border-radius:var(--r-lg);padding:12px 15px 13px;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:1px;min-width:0;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--grid)}
+.kpi.now::before{background:var(--ink)}
+.kpi.over::before{background:var(--crit)}.kpi.under::before,.kpi.gap::before{background:var(--warn)}
+.kpi.ok::before{background:var(--good)}
+.kpi .kl{font-size:var(--t-xs);color:var(--muted);font-weight:650;letter-spacing:.05em;text-transform:uppercase}
+.kpi .kv{font-size:26px;font-weight:680;letter-spacing:-.025em;font-variant-numeric:tabular-nums;line-height:1.25}
+.kpi .ks{font-size:var(--t-xs);color:var(--ink2);line-height:1.45}
+.kpi.over .kv{color:var(--crit)}.kpi.under .kv,.kpi.gap .kv{color:var(--underink)}
+.kpi .kmeter{display:block;margin-top:5px}
+
+.csec{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:14px 18px 16px;
+  margin:14px 0;min-width:0}
+.csec-h{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.csec-h h3{margin:0;font-size:var(--t-xl);font-weight:660;letter-spacing:-.012em}
+.csec-a{margin-left:auto;font-size:var(--t-sm);color:var(--muted);display:flex;gap:8px;align-items:center}
+.csplit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:14px;margin:14px 0;
+  align-items:start}
+.csplit > .csec{margin:0}
+@media (max-width:900px){.csplit{grid-template-columns:1fr}}
+
+.ctwrap{overflow-x:auto}
+.ct{width:100%;border-collapse:collapse;font-size:var(--t-md)}
+.ct th{font-size:var(--t-xs);color:var(--muted);font-weight:650;text-align:left;padding:6px 10px;
+  border-bottom:1px solid var(--hairline);white-space:nowrap;vertical-align:bottom;
+  letter-spacing:.02em}
+.ct td{padding:8px 10px;border-bottom:1px solid var(--grid);vertical-align:middle}
+.ct tbody tr:last-child td{border-bottom:0}
+.ct .num{text-align:right;font-variant-numeric:tabular-nums}
+.ct .sub{display:block;font-size:var(--t-xs);color:var(--muted);font-weight:400;letter-spacing:0}
+.ct .muted{color:var(--muted)}
+.ct tr.on td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.ct tbody tr:hover td{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.ct td.load{min-width:200px}
+.plink{border:0;background:none;padding:0;margin:0;font:inherit;color:var(--accent);font-weight:600;
+  cursor:pointer;display:inline-flex;align-items:center;text-align:left;border-radius:var(--r-xs)}
+.plink:hover{text-decoration:underline;text-underline-offset:3px}
+.ct .chip{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;
+  background:var(--fill2);vertical-align:-1px;box-shadow:inset 0 0 0 1px var(--hairline)}
+.nowpill{font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--ink);
+  color:var(--surface);margin-left:4px;vertical-align:1px}
+
+.mslist{list-style:none;margin:0;padding:0;position:relative}
+.mslist::before{content:"";position:absolute;left:5px;top:10px;bottom:10px;width:2px;
+  background:var(--grid);border-radius:1px}
+.mslist li{display:flex;align-items:baseline;gap:12px;padding:5px 0;position:relative}
+.mslist .dot{width:12px;height:12px;border-radius:50%;background:var(--ink2);flex:none;z-index:1;
+  box-shadow:0 0 0 3px var(--surface);align-self:center}
+.mslist .dot.key{background:var(--crit)}
+.csec .tr{color:var(--muted);font-size:var(--t-xs);font-weight:400}
+.life-none{margin:0 0 4px}
+.mslist li.past{color:var(--ink2)}
+.mslist li.past .dot{opacity:.5}
+.mslist .mnm{flex:1 1 auto;min-width:0}
+.mslist .mdt{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:var(--t-sm);white-space:nowrap}
+.mslist li.upcoming .mnm{font-weight:650}
+.mslist li.upcoming .mnm::after{content:"next";font-size:10px;font-weight:700;padding:1px 6px;
+  border-radius:999px;background:var(--accent);color:#fff;margin-left:6px;vertical-align:1px}
+
+.meter{position:relative;display:block;height:6px;border-radius:999px;background:var(--fill);
+  min-width:90px;margin:4px 0 3px}
+.meter .mfill{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--accent)}
+.meter.over .mfill{background:var(--crit)}.meter.under .mfill{background:var(--warn)}
+.meter .mtick{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;border-radius:1px;
+  background:var(--warn)}
+.meter .mtick.hi{background:var(--crit)}
+
+.fgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:10px 30px}
+.fgroup h4{margin:2px 0 4px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);font-weight:650}
+.fgroup dl{margin:0}
+.fgroup .f{display:grid;grid-template-columns:minmax(130px,42%) 1fr;gap:12px;padding:6px 0;
+  border-bottom:1px solid var(--grid)}
+.fgroup .f:last-child{border-bottom:0}
+.fgroup dt{color:var(--ink2);font-size:var(--t-sm)}
+.fgroup dd{margin:0;font-weight:560;overflow-wrap:anywhere}
+.fgroup dd.none{color:var(--muted);font-weight:400}
+
 /* ---- the demo strip (tools/build_demo.py) ---- */
 #demo-strip{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 16px;
   font-size:12.5px;background:var(--underbg);color:var(--underink);
@@ -1532,7 +1793,7 @@ td.cell.gapnew:focus:empty::before{content:""}
 
 <script>
 "use strict";
-const APP_VERSION = "1.64";
+const APP_VERSION = "1.65";
 const SCHEMA_EXPECTED = 16;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1541,11 +1802,11 @@ const SCHEMA_EXPECTED = 16;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.75.xlsx",          ver:"2.75",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.76.xlsx",          ver:"2.76",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.44.xlsx", ver:"1.44",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.45.xlsx", ver:"1.45",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
-  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.10.xlsx",          ver:"2.10",
+  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.11.xlsx",          ver:"2.11",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
           + "R-13 to R-46, which added 22 components and made five of the old entries wrong; "
           + "v2.1 closes X-04 — row virtualisation is not built and, at the volume REQ-NFR-03 now "
@@ -6174,9 +6435,11 @@ function periodBandStyle(seg, wmax){
  * R for the threshold labels that sit outside the plot. */
 const CHART = {
   // One row per project. The label gutter is what a single-project view does not need,
-  // so it has its own pair: the whole gutter goes to the bands instead.
+  // so it has its own pair: the whole gutter goes to the bands instead. 250 rather than
+  // the 220 it was: the line under each name - "2025-09-01 -> 2027-02-28 · 18 months" -
+  // is about 215 units long, and at 220 it lost its first digit off the left edge (R-67).
   gantt:  {W:1180, padT:34, padR:14, foot:30,
-           rowh:42, rowhSingle:74, padL:220, padLSingle:26},
+           rowh:42, rowhSingle:74, padL:250, padLSingle:26},
   // One line per project or person across the horizon.
   lines:  {Wmin:720, Wbase:96, Wper:46, H:300, padL:62, padR:16, padT:24, padB:46},
   // Stacked months - drawn TWICE, by project and by person, to the same geometry.
@@ -6204,6 +6467,35 @@ const CHART = {
 
 /** How wide a chart has to be to give every month `K.Wper` of plot area. */
 const chartW = (K, n) => Math.max(K.Wmin, K.padL + K.padR + Math.max(1, n) * K.Wper);
+
+/* THE ROOM A CHART IS DRAWN INTO (R-67).
+ *
+ * A viewBox scales its whole drawing to the box, text included. While the page stopped
+ * at 1400px that was a gentle 1.1x; across a full 1920px window it is 1.6x, and an axis
+ * label designed at 11.5px came out at 18px on a chart half as tall again as the screen
+ * wanted. So a chart is drawn to the width it will actually have, whenever that is MORE
+ * than it needs: the extra width goes to the plot - wider months, longer bands - and the
+ * text stays the size it was designed at. min-width stays the chart's own natural width,
+ * so a narrower window still scrolls rather than squeezes, exactly as before.
+ *
+ * Measured once per pane render from the page column, less the panel's padding and the
+ * gutter a vertical scrollbar takes; withRoom() lends a different figure to something
+ * drawn somewhere narrower, such as the card dialog. */
+let CHART_ROOM = 0;
+const fitW = W => Math.max(W, Math.floor(CHART_ROOM) || 0);
+function measureRoom(){
+  const w = document.querySelector(".wrap");
+  if (!w || !w.clientWidth) return;
+  const cs = getComputedStyle(w), root = getComputedStyle(document.documentElement);
+  const pad = parseFloat(root.getPropertyValue("--panel-px")) || 20;
+  CHART_ROOM = w.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+    - 2 * pad - 18;
+}
+function withRoom(px, fn){
+  const was = CHART_ROOM;
+  CHART_ROOM = px;
+  try { return fn(); } finally { CHART_ROOM = was; }
+}
 
 /* WHICH SERIES A MARK BELONGS TO.
  *
@@ -6291,7 +6583,7 @@ function chartGantt(pids, opts){
   const span = Math.max(1, (hi - lo) / DAY);
   // One project needs no row label - the panel heading already names it, and the dates go
   // in the note - so the whole gutter goes to the bands instead.
-  const K = CHART.gantt, W = K.W, padT = K.padT;
+  const K = CHART.gantt, W0 = K.W, W = fitW(W0), padT = K.padT;
   const rowh = opts.single ? K.rowhSingle : K.rowh;
   const padL = opts.single ? K.padLSingle : K.padL;
   const H = padT + rowh * rows.length + K.foot, inner = W - padL - K.padR;
@@ -6301,7 +6593,7 @@ function chartGantt(pids, opts){
   wmax = wmax || 1;
 
   const hlUsed = new Set(), perUsed = new Set();
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Project timeline: one row per project, one band per period">`];
   for (let y = new Date(lo).getUTCFullYear(); y <= new Date(hi).getUTCFullYear(); y++){
     const xx = x(Date.UTC(y, 0, 1));
@@ -6446,7 +6738,7 @@ function chartLines(items, valueAt, opts){
   if (!totals.length) return `<p class="note">${esc(opts.empty || "Nothing draws resource inside this horizon.")}</p>`;
   const shown = totals.slice(0, LINE_LIMIT);
   const K = CHART.lines, H = K.H, padL = K.padL, padR = K.padR, padT = K.padT, padB = K.padB;
-  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
+  const W0 = Math.max(K.Wmin, K.Wbase + G.length * K.Wper), W = fitW(W0);
   const step = (W - padL - padR) / Math.max(1, G.length - 1 || 1);
   const xOf = i => G.length === 1 ? padL + (W - padL - padR) / 2 : padL + i * step;
   let vmax = 0;
@@ -6454,7 +6746,7 @@ function chartLines(items, valueAt, opts){
   vmax = (vmax || 1) * 1.12;
   const yOf = v => H - padB - (v / vmax) * (H - padB - padT);
 
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="${att(opts.aria || "Monthly resource, one line per series")}">`];
   o.push(`<text class="ax" x="${padL-8}" y="${padT-8}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 4; i++){
@@ -6530,13 +6822,13 @@ function chartStacked(pids){
   const colour = {};
   for (const p of order) colour[p] = projColourOf(p);
   const K = CHART.stack, H = K.H, padL = K.padL, padB = K.padB, padT = K.padT;
-  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
+  const W0 = Math.max(K.Wmin, K.Wbase + G.length * K.Wper), W = fitW(W0);
   const bw = (W - padL - K.padR) / G.length;
   let vmax = 0;
   for (const k of G){ let s = 0; for (const p of order) s += C.projMonth.get(p+"|"+k) || 0; vmax = Math.max(vmax, s); }
   vmax = vmax || 1;
   const scale = (H - padB - padT) / (vmax * K.headroom);
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Monthly resource demand, one stacked band per project">`];
   o.push(`<text class="ax" x="${padL-8}" y="${padT-12}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 4; i++){
@@ -6613,7 +6905,7 @@ function chartPeople(sids){
   const restSet = new Set(rest);
 
   const K = CHART.stack, H = K.H, padL = K.padL, padB = K.padB, padT = K.padT;
-  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
+  const W0 = Math.max(K.Wmin, K.Wbase + G.length * K.Wper), W = fitW(W0);
   const bw = (W - padL - K.padR) / G.length;
   let vmax = 0;
   for (const k of G){
@@ -6623,7 +6915,7 @@ function chartPeople(sids){
   }
   vmax = vmax || 1;
   const scale = (H - padB - padT) / (vmax * K.headroom);
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Monthly resource demand, one stacked band per person">`];
   o.push(`<text class="ax" x="${padL-8}" y="${padT-12}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 4; i++){
@@ -6697,11 +6989,11 @@ function chartProjectUtil(pid){
   const ownAvg = own.length ? own.reduce((a,b)=>a+b,0) / own.length : 0;
   const vals = G.map(k => C.projMonth.get(pid+"|"+k) || 0);
   const K = CHART.single, H = K.H, padL = K.padL, padR = K.padR;
-  const W = chartW(K, G.length);
+  const W0 = chartW(K, G.length), W = fitW(W0);
   const vmax = Math.max(Math.max(...vals, upper), 0.01) * 1.18;
   const bw = (W - padL - padR) / Math.max(1, G.length);
   const base = H - K.padB, top = K.padT;
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Monthly resource for this project against the portfolio average">`];
   o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 3; i++){
@@ -6824,11 +7116,11 @@ function chartPersonStrip(sid){
     .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).map(x => x[0]);
 
   const K = CHART.strip, H = K.H, padL = K.padL, padR = K.padR;
-  const W = chartW(K, G.length);
+  const W0 = chartW(K, G.length), W = fitW(W0);
   const vmax = Math.max(Math.max(...vals, M.OVER), 0.01) * 1.15;
   const bw = (W - padL - padR) / Math.max(1, G.length);
   const base = H - K.padB, top = K.padT;
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Monthly load for the selected person, split by project, against both thresholds">`];
   o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 3; i++){
@@ -7634,6 +7926,11 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
       const marked = S.editedCells.has(`${sheet}|${r.__row}|${c}`) ? " edited" : "";
       const help = COLUMN_HELP[c] ? `<br><span class="tr">${esc(COLUMN_HELP[c])}</span>` : "";
       const tip = `${colHead(c)}<br>${disp === "" ? "<i>empty</i>" : esc(disp)}${help}`;
+      /* A SAVED project's or person's name opens its card (R-67) - see 13e_card.js. A row
+         still being typed has no record to show yet, so its name stays a plain cell. */
+      if (CARD_NAME_COL[sheet] === c && !r.__new
+          && cardRecord(cardKind(sheet), r[KEY_COL[sheet]]))
+        return nameCellHTML(sheet, r, `cell${marked}${pin}`, tip);
       /* The colour a highlight names, shown in the cell as a small square - as an
          ATTRIBUTE the stylesheet draws from, never as an element inside the cell. The
          cell is contenteditable and what is typed in it is read straight back off the
@@ -8222,6 +8519,18 @@ function persDetail(sid){
     </div>`;
 }
 
+/** When one person is on each of their projects: the bars the timeline draws under the
+ *  rows, and the projects in timeline order. Shared with the person's card (R-67). */
+function personSpans(sid){
+  const M = S.model, assign = {};
+  for (const a of M.assignments){
+    if (a.person_id !== sid || !M.projects[a.project_id]) continue;
+    (assign[a.project_id] ||= []).push({from: a.assign_start_date || null,
+      to: a.assign_end_date || null, role: a.role_name, weight: a.person_weight});
+  }
+  return {assign, pids: Object.keys(assign).sort(byRank)};
+}
+
 /** THE PROJECTS THIS PERSON IS ON, AS A TIMELINE (R-65). The Overall tab's Project
  *  timeline, cut to the projects the selected person has an assignment on - the same
  *  bands, milestones and colours - with a bar under each row for when they are on it.
@@ -8230,13 +8539,7 @@ function persDetail(sid){
  *  on, whatever the filters above say: this is about the person, not the view. */
 function persTimeline(sid){
   const M = S.model, pe = M.people[sid] || {};
-  const assign = {};
-  for (const a of M.assignments){
-    if (a.person_id !== sid || !M.projects[a.project_id]) continue;
-    (assign[a.project_id] ||= []).push({from: a.assign_start_date || null,
-      to: a.assign_end_date || null, role: a.role_name, weight: a.person_weight});
-  }
-  const pids = Object.keys(assign).sort(byRank);
+  const {assign, pids} = personSpans(sid);
   const who = pe.person_name || sid;
   return `<div class="panel" data-panel="pers-timeline">
       <div class="phead"><h2>Project timeline — ${esc(who)}</h2>
@@ -8484,6 +8787,7 @@ const ALL_TABS = Object.keys(TAB_RENDER);
 function renderTab(id){
   const fn = TAB_RENDER[id];
   if (!fn) return;
+  measureRoom();                    // the width the charts will have (R-67)
   fn();
   /* A section that had the whole screen has just been replaced along with everything
      else in its pane, so the state is put back on the panel that now carries its name -
@@ -8520,7 +8824,7 @@ function renderAll(){
 
 /* ============================================== 11b. one section, the whole screen */
 
-/* WHY. The page is 1400px wide at most and every scroll region is deliberately bounded
+/* WHY. Every scroll region on the page is deliberately bounded
  * on both axes (REQ-DSH-13), which is right for reading and wrong for typing: the
  * entry tables cap at 340px, so a twenty-two column sheet is filled in through a window
  * about a fifth of its own size, and every committed cell costs a re-scroll in two
@@ -11339,6 +11643,555 @@ function teamRemove(rowNum){
   deleteRow("Assignment", rowNum);
   teamSay("ok", `${who} is off the team (${r.assignment_id}). Press Save changes to keep it.`);
 }
+/* ============================================ one project or one person, on one card (R-67)
+
+   The two source-data tabs are built for ENTERING a plan: a wide table of every field,
+   and under it the panels of whichever row is selected. Reading one project there means
+   scrolling a twenty-five column row sideways and then down through half a dozen panels,
+   and reading one person the same. The request from the field was the other way round -
+   click a name and see everything about that one, top to bottom, on one page.
+
+   So a name in the Projects and People tables is a link, and it opens this card: one
+   scrolling column holding what the tab spreads out - the figures that matter first, the
+   two charts, the team or the assignments, the milestones and periods, the open issues,
+   and every field of the record. READ-ONLY on purpose: the tables are where a plan is
+   edited, and a second editing surface would be a second set of rules to keep in step.
+   What it does offer is the way across - a person on a project's card opens that
+   person's card, a project on a person's opens the project's, and Back returns - and the
+   way back to the tab, with the row selected.
+
+   THE NAME IS STILL EDITABLE. A link cannot also be the place a caret goes, so renaming
+   moved to the pencil beside it (or F2 on the link). The pencil turns the cell back into
+   the ordinary editable cell, with the value list and the same commit as any other, and
+   the link comes back when the cell is left. */
+
+let CARD = null;                  // {kind, id, back:[[kind, id], ...]} while it is open
+
+const CARD_OF = {
+  project: {sheet:"Project", tab:"t-proj", key:"project_id", name:"project_name"},
+  person:  {sheet:"Person",  tab:"t-pers", key:"person_id",  name:"person_name"},
+};
+/** The column of each sheet whose cell opens a card. */
+const CARD_NAME_COL = {Project:"project_name", Person:"person_name"};
+const cardKind = sheet => sheet === "Project" ? "project" : sheet === "Person" ? "person" : null;
+
+function cardRecord(kind, id){
+  const M = S.model;
+  if (!M || !CARD_OF[kind]) return null;
+  return (kind === "project" ? M.projects : M.people)[id] || null;
+}
+
+/** Two letters for the round badge: the initials of the first two words that start with
+ *  a letter - "DER-139 Phase 3" is DP, not D1 - or the first two letters of a one-word
+ *  name, which is also what a Korean name written without a space gives. */
+function monogram(s){
+  const w = String(s || "").trim().split(/[\s\-_/.]+/).filter(x => /^\p{L}/u.test(x));
+  if (!w.length) return "#";
+  return (w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0, 2)).toUpperCase();
+}
+
+/* ------------------------------------------------------------------ the name cell */
+
+/** The name cell of a saved project or person: the name as a link to its card, and a
+ *  pencil to rename it. The cell keeps every attribute an editable cell carries, so the
+ *  pencil only has to switch it on. */
+function nameCellHTML(sheet, r, cls, tip){
+  const kind = cardKind(sheet), col = CARD_NAME_COL[sheet], id = r[CARD_OF[kind].key];
+  const v = r[col] === null || r[col] === undefined ? "" : String(r[col]);
+  const what = kind === "project" ? "project" : "person";
+  return `<td class="${cls} namecell" data-sheet="${att(sheet)}" data-row="${r.__row}" `
+    + `data-col="${att(col)}" data-tip="${att(tip)}">`
+    + `<button type="button" class="namelink" data-card="${kind}" data-cid="${att(id)}" `
+    + `data-tip="${att(`<b>${esc(v || id)}</b><br>Click to open this ${what}'s card — `
+      + `everything about it on one page.<br><span class="tr">&#9998; beside the name, or F2, `
+      + `renames it</span>`)}">${v === "" ? `<i class="noname">no name</i>` : esc(v)}</button>`
+    + `<button type="button" class="renbtn" data-rename tabindex="-1" aria-label="Rename" `
+    + `data-tip="${att(`<b>Rename</b><br>Edit the ${what}'s name here, as any other cell.`)}">`
+    + `</button></td>`;
+}
+
+/** The pencil: the cell becomes the ordinary editable cell, holding the plain value. */
+function startRename(td){
+  if (!td || td.isContentEditable || !td.dataset.sheet) return;
+  const r = (S.model.raw[td.dataset.sheet] || []).find(x => x.__row === +td.dataset.row);
+  td.dataset.link = td.innerHTML;
+  td.textContent = r && r[td.dataset.col] !== null && r[td.dataset.col] !== undefined
+    ? String(r[td.dataset.col]) : "";
+  td.setAttribute("contenteditable", "true");
+  td.classList.add("renaming");
+  td.focus();
+  const rg = document.createRange();
+  rg.selectNodeContents(td);
+  const sel = getSelection();
+  sel.removeAllRanges();
+  sel.addRange(rg);
+}
+
+/** And back to the link once the cell is left with nothing changed. A changed name has
+ *  already been committed, which redraws the table and the link with it. */
+function endRename(td){
+  if (!td || !td.isConnected || !td.classList.contains("renaming")) return;
+  if (document.activeElement === td) return;
+  td.removeAttribute("contenteditable");
+  td.classList.remove("renaming");
+  td.innerHTML = td.dataset.link || esc(td.textContent);
+  delete td.dataset.link;
+}
+
+/* ------------------------------------------------------------------ the dialog */
+
+function cardDialog(){
+  let d = el("carddlg");
+  if (d) return d;
+  d = document.createElement("dialog");
+  d.id = "carddlg";
+  d.className = "card";
+  d.setAttribute("aria-labelledby", "cardTitle");
+  d.innerHTML = `<div class="card-h">
+      <button class="btn tiny" id="cardBack" data-cardback hidden>&#8249; Back</button>
+      <div class="card-who" id="cardHead"></div>
+      <div class="card-nav">
+        <button class="btn tiny" id="cardPrev" data-cardstep="-1" aria-label="Previous">&#8249;</button>
+        <span id="cardPos"></span>
+        <button class="btn tiny" id="cardNext" data-cardstep="1" aria-label="Next">&#8250;</button>
+      </div>
+      <button class="btn" id="cardGo" data-cardgo></button>
+      <button class="btn primary" id="cardClose">Close</button></div>
+    <div class="card-b" id="cardBody" tabindex="-1"></div>`;
+  document.body.appendChild(d);
+  d.querySelector("#cardClose").onclick = () => d.close();
+  d.addEventListener("close", () => { CARD = null; });
+  d.addEventListener("click", e => {
+    // The backdrop is the dialog itself: everything drawn is inside .card-h or .card-b.
+    if (e.target === d) return d.close();
+    if (e.target.closest("[data-cardback]")){
+      const [kind, id] = CARD.back.pop() || [];
+      if (kind) showCard(kind, id);
+      return;
+    }
+    const st = e.target.closest("[data-cardstep]");
+    if (st){
+      const ids = cardOrder(CARD.kind), i = ids.indexOf(CARD.id);
+      const j = i + +st.dataset.cardstep;
+      if (i >= 0 && j >= 0 && j < ids.length){ CARD.back = []; showCard(CARD.kind, ids[j]); }
+      return;
+    }
+    if (e.target.closest("[data-cardgo]")) cardGo();
+  });
+  /* Left and right step through the list. On the document rather than the dialog: a
+     button that hides itself as it is pressed - Back, on the last step back - drops the
+     focus to the body, and a listener on the dialog would never hear the next key. Not
+     while another dialog has the keys, such as the team opened from the card. */
+  document.addEventListener("keydown", e => {
+    if (!d.open || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
+    const a = document.activeElement;
+    if (a && a !== document.body && !d.contains(a)) return;
+    if (e.target.closest && e.target.closest("input, select, textarea, [contenteditable='true']"))
+      return;
+    const b = el(e.key === "ArrowLeft" ? "cardPrev" : "cardNext");
+    if (b && !b.disabled){ e.preventDefault(); b.click(); }
+  });
+  return d;
+}
+
+/** Open the card of one project or one person. `across` is set when it is opened from
+ *  inside the card, which is what gives Back somewhere to go. */
+function openCard(kind, id, across){
+  if (!cardRecord(kind, id)) return;
+  const back = across && CARD && !(CARD.kind === kind && CARD.id === id)
+    ? [...CARD.back, [CARD.kind, CARD.id]] : across && CARD ? CARD.back : [];
+  const d = cardDialog();
+  CARD = {kind, id, back};
+  if (!d.open) d.showModal();
+  showCard(kind, id);
+}
+
+function showCard(kind, id){
+  CARD.kind = kind; CARD.id = id;
+  drawCard();
+  const body = el("cardBody");
+  body.scrollTop = 0;
+  /* The focus goes to the page being read unless it is on a control that is still there
+     to press again - Next, held down the list. A link in the old page, or Back once it
+     has hidden itself, would otherwise leave it on nothing, and the arrow keys and Page
+     Down would have nowhere to go. */
+  const a = document.activeElement, d = el("carddlg");
+  if (!a || !d.contains(a) || !a.offsetParent) body.focus({preventScroll:true});
+}
+
+function closeCard(){ const d = el("carddlg"); if (d && d.open) d.close(); }
+
+/** Redraw an open card after an edit made anywhere - the team dialog opened from it is
+ *  the usual one - at the same scroll position. */
+function cardRefresh(){
+  const d = el("carddlg");
+  if (!CARD || !d || !d.open) return;
+  const b = el("cardBody"), keep = b.scrollTop;
+  drawCard();
+  b.scrollTop = keep;
+}
+
+/** The order Previous and Next walk: the rows of the table the card was opened from, as
+ *  they stand - filtered, in the order shown - or every record when that table is not
+ *  drawn, as when the card was reached from the other tab's card. */
+function cardOrder(kind){
+  const K = CARD_OF[kind], ids = [];
+  const t = document.querySelector(`#${K.tab} .data-t[data-sheet="${K.sheet}"]`);
+  if (t) for (const tr of t.querySelectorAll("tbody tr[data-id]"))
+    if (cardRecord(kind, tr.dataset.id) && !ids.includes(tr.dataset.id)) ids.push(tr.dataset.id);
+  if (CARD && ids.includes(CARD.id)) return ids;
+  return Object.keys(kind === "project" ? S.model.projects : S.model.people);
+}
+
+/** To the tab, with the row selected and its own panels underneath it in view. */
+function cardGo(){
+  if (!CARD) return;
+  const {kind, id} = CARD, K = CARD_OF[kind];
+  closeCard();
+  if (kind === "project") S.selProj = id;
+  else { S.selPers = id; S.selAsg = null; }
+  showTab(K.tab); renderAll(); showTab(K.tab);
+  const row = [...document.querySelectorAll(`#${K.tab} .data-t[data-sheet="${K.sheet}"] tbody tr`)]
+    .find(tr => tr.dataset.id === id);
+  if (row) row.scrollIntoView({block:"nearest"});
+  const det = el(kind === "project" ? "projDetail" : "persDetail");
+  if (det) det.scrollIntoView({block:"start"});
+}
+
+function drawCard(){
+  const d = el("carddlg");
+  if (!d || !d.open || !CARD) return;
+  const rec = cardRecord(CARD.kind, CARD.id);
+  if (!rec){ d.close(); return; }
+  const isP = CARD.kind === "project", K = CARD_OF[CARD.kind];
+  const body = el("cardBody");
+  // The charts are drawn to the card's own width, as the page's are to the page's.
+  const pad = parseFloat(getComputedStyle(body).paddingLeft) || 24;
+  const room = body.clientWidth - 2 * pad - 18;
+  body.innerHTML = withRoom(room, () => isP ? cardProject(CARD.id) : cardPerson(CARD.id));
+
+  const name = rec[K.name] || CARD.id;
+  const tint = isP ? projColourOf(CARD.id) : persColourOf(CARD.id);
+  d.style.setProperty("--card-tint", tint);
+  el("cardHead").innerHTML = `<span class="mono${isP ? " sq" : ""}" aria-hidden="true">`
+    + `${esc(monogram(name))}</span><div class="card-tt"><span class="card-kind">`
+    + `${isP ? "Project" : "Person"}</span><strong id="cardTitle">${esc(name)}</strong>`
+    + `<span class="card-sub">${isP ? cardProjectSub(CARD.id) : cardPersonSub(CARD.id)}</span></div>`;
+  const ids = cardOrder(CARD.kind), i = ids.indexOf(CARD.id);
+  el("cardPrev").disabled = i <= 0;
+  el("cardNext").disabled = i < 0 || i >= ids.length - 1;
+  el("cardPos").textContent = i >= 0 ? `${i + 1} of ${ids.length}` : "";
+  el("cardBack").hidden = !CARD.back.length;
+  const go = el("cardGo");
+  go.textContent = `Show on ${isP ? "Source data (project)" : "Source data (person)"}`;
+  go.title = "Close the card and select this row on its tab, with its own panels in view";
+  cueScrollers();
+}
+
+/* ------------------------------------------------------------------ shared pieces */
+
+/** A small figure with its label, the card's equivalent of the Overall tiles. */
+const cardKpi = (label, value, sub, cls, tip) =>
+  `<div class="kpi${cls ? " " + cls : ""}"${tip ? ` data-tip="${att(tip)}"` : ""}>`
+  + `<span class="kl">${label}</span><span class="kv">${value}</span>`
+  + `<span class="ks">${sub || "&nbsp;"}</span></div>`;
+
+const cardSec = (title, aside, inner, cls) =>
+  `<section class="csec${cls ? " " + cls : ""}"><div class="csec-h"><h3>${title}</h3>`
+  + `${aside ? `<span class="csec-a">${aside}</span>` : ""}</div>${inner}</section>`;
+
+/** How far through its life something dated is: a track from start to end with today
+ *  marked on it, and the words for where today falls. Without both dates there is no
+ *  track, and `missing` is what is said instead - nothing, if it is empty. */
+function cardLife(start, end, missing){
+  if (!(start instanceof Date) || !(end instanceof Date) || end < start)
+    return missing ? `<p class="note life-none">${missing}</p>` : "";
+  const t = today().getTime(), a = start.getTime(), b = end.getTime();
+  const f = Math.max(0, Math.min(1, (t - a) / Math.max(1, b - a)));
+  const months = monthsBetween(start, end).length;
+  const nowK = nowKey(), ka = monthKey(start.getUTCFullYear(), start.getUTCMonth());
+  const kb = monthKey(end.getUTCFullYear(), end.getUTCMonth());
+  const where = t < a ? `starts in ${ka - nowK} month(s)`
+    : t > b ? `ended ${nowK - kb} month(s) ago`
+    : `${Math.round(f * 100)}% through — month ${nowK - ka + 1} of ${months}`;
+  return `<div class="life"><div class="life-ends"><span><b>${ymd(start)}</b> start</span>`
+    + `<span class="life-mid">${months} months &#183; ${where}</span>`
+    + `<span>end <b>${ymd(end)}</b></span></div>`
+    + `<div class="life-track"><span class="life-fill" style="width:${(f * 100).toFixed(1)}%"></span>`
+    + (t >= a && t <= b ? `<span class="life-now" style="left:${(f * 100).toFixed(1)}%" `
+      + `data-tip="${att(`<b>Today</b><br>${todayLabel()}`)}"></span>` : "")
+    + `</div></div>`;
+}
+
+/** A load against the two thresholds, as a bar: the floor and the ceiling marked on it. */
+function cardMeter(v, vmax){
+  const M = S.model, top = Math.max(vmax, M.OVER * 1.2, 0.01);
+  const pct = x => `${Math.min(100, (x / top) * 100).toFixed(1)}%`;
+  const cls = v > M.OVER ? "over" : v > 0 && v < M.UNDER ? "under" : "";
+  return `<span class="meter ${cls}"><span class="mfill" style="width:${pct(v)}"></span>`
+    + `<span class="mtick" style="left:${pct(M.UNDER)}"></span>`
+    + `<span class="mtick hi" style="left:${pct(M.OVER)}"></span></span>`;
+}
+
+/** Every field of the record, in labelled groups - nothing the tables hold is missing
+ *  from the card. Groups are named for what the fields are for; anything a later schema
+ *  adds that no group names is shown under the last heading rather than dropped. */
+function cardFields(sheet, rec, groups){
+  const cols = entryCols(sheet), named = new Set(groups.flatMap(g => g[1]));
+  const rest = cols.filter(c => !named.has(c));
+  const all = groups.map(([t, cs]) => [t, cs.filter(c => cols.includes(c))]);
+  if (rest.length) all[all.length - 1][1].push(...rest);
+  return `<div class="fgroups">` + all.filter(g => g[1].length).map(([t, cs]) =>
+    `<div class="fgroup"><h4>${esc(t)}</h4><dl>` + cs.map(c => {
+      const v = rec[c];
+      const s = v instanceof Date ? ymd(v) : v === null || v === undefined ? "" : String(v);
+      return `<div class="f"><dt data-tip="${att(`${colHead(c)}<br>${COLUMN_HELP[c] || ""}`)}">`
+        + `${esc(COLUMN_LABEL[c] || c)}</dt><dd${s === "" ? ' class="none"' : ""}>`
+        + `${s === "" ? "—" : esc(s)}</dd></div>`;
+    }).join("") + `</dl></div>`).join("") + `</div>`;
+}
+
+const cardDate = d => d instanceof Date ? ymd(d) : "";
+/** An assignment's window in words, with the project's own dates where it leaves one open. */
+function cardWindow(a){
+  const pr = S.model.projects[a.project_id] || {};
+  const f = cardDate(a.assign_start_date), t = cardDate(a.assign_end_date);
+  return `${f || `<span class="muted">${cardDate(pr.start_date) || "start"}</span>`} &#8594; `
+    + `${t || `<span class="muted">${cardDate(pr.end_date) || "end"}</span>`}`;
+}
+
+/* ------------------------------------------------------------------ a project */
+
+function cardProjectSub(pid){
+  const pr = S.model.projects[pid];
+  return `<span class="idchip">${esc(pid)}</span>${typePill(pid)}${phasePill(pid)}`
+    + (pr.work_scope_type ? `<span class="scope">${esc(pr.work_scope_type)}</span>` : "")
+    + (pr.status ? `<span class="scope k">${esc(pr.status)}</span>` : "")
+    + estimationPill(pid);
+}
+
+function cardProject(pid){
+  const M = S.model, C = S.calc, pr = M.projects[pid], G = grid(), U = unitLabel();
+  let tot = 0, peak = 0, peakK = null, active = 0;
+  for (const k of G){
+    const v = C.projMonth.get(pid + "|" + k) || 0;
+    tot += v;
+    if (v > 0.004) active++;
+    if (v > peak){ peak = v; peakK = k; }
+  }
+  const nk = nowKey(), nowV = C.projMonth.get(pid + "|" + nk) || 0;
+  const per = periodOf(pid, nk);
+  const team = M.assignments.filter(a => a.project_id === pid);
+  const people = [...new Set(team.map(a => a.person_id))];
+  const issues = gapRows([pid]), open = issues.filter(r => !(r.rev && r.rev.closed));
+  const n = d => open.filter(r => r.dir === d).length;
+  const planned = num(pr.planned_member_count);
+
+  const kpis = `<div class="kpis">`
+    + cardKpi("Team", people.length, `${team.length} assignment(s)`
+        + (planned !== null && planned !== undefined ? ` &#183; planned ${planned}` : ""), "",
+        "<b>Team</b><br>The distinct people with an assignment on this project, and how many "
+        + "assignments they hold between them.")
+    + cardKpi("This month", nowV > 0.004 ? fmt(nowV) : "—",
+        `${keyToLabel(nk)}${per ? ` &#183; ${esc(per.name)}` : ""}`, "now",
+        `<b>${keyToLabel(nk)}</b><br>What the project draws in the current month, and the period `
+        + `it is in.`)
+    + cardKpi("Average a month", active ? fmt(tot / active) : "—",
+        `${U} over ${active} active month(s) in view`)
+    + cardKpi("Peak month", peak > 0.004 ? fmt(peak) : "—", peakK !== null && peak > 0.004
+        ? keyToLabel(peakK) : "nothing in view")
+    + cardKpi("Total in view", fmt(tot), `${U}-months over ${G.length} months`)
+    + cardKpi("Off the standard", open.length,
+        open.length ? `${n("short")} short &#183; ${n("over")} over`
+          + (n("unstaffed") ? ` &#183; ${n("unstaffed")} not staffed` : "")
+          + (issues.length - open.length ? ` &#183; &#10003; ${issues.length - open.length} reviewed` : "")
+        : issues.length ? `all ${issues.length} reviewed` : "every month on its standard",
+        open.length ? "gap" : "ok",
+        "<b>Off the standard</b><br>Months where what this project needs is not what it is "
+        + "given (V-34), still open. Each one is listed under Issues below.")
+    + `</div>`;
+
+  const util = chartProjectUtil(pid);
+  const ms = Object.entries(M.milestones[pid] || {})
+    .flatMap(([nm, ds]) => ds.filter(Boolean).map(d => [nm, d]))
+    .sort((a, b) => a[1] - b[1]);
+  const nowT = today().getTime();
+  const nextMs = ms.find(([, d]) => d.getTime() >= nowT);
+  const msList = ms.length ? `<ol class="mslist">` + ms.map(([nm, d]) => {
+      const hl = (M.msHighlight[pid] || {})[`${nm}|${ymd(d)}`] || "";
+      const key = KEY_MILESTONES.has(nm), past = d.getTime() < nowT;
+      return `<li class="${past ? "past" : "next"}`
+        + `${nextMs && nextMs[0] === nm && +nextMs[1] === +d ? " upcoming" : ""}">`
+        + `<span class="dot${key ? " key" : ""}"${hl ? ` style="background:${HIGHLIGHT_FILL[hl]}"` : ""}></span>`
+        + `<span class="mnm">${esc(nm)}${key ? ` <span class="tr">sets a period boundary</span>` : ""}</span>`
+        + `<span class="mdt">${ymd(d)}</span></li>`;
+    }).join("") + `</ol>` : `<p class="note">No milestones are dated yet.</p>`;
+
+  const per2 = (M.periods[pid] || []).slice()
+    .sort((a, b) => (a.period_start || 0) - (b.period_start || 0));
+  const perRows = per2.map(s => {
+    const {hl} = periodColour(s), w = num(s.weight);
+    const std = num(stdWeight(M, pr, s.period_name));
+    const on = per && per.name === s.period_name;
+    return `<tr${on ? ' class="on"' : ""}><td><span class="chip"${hl ? ` style="background:${HIGHLIGHT_FILL[hl]}"` : ""}>`
+      + `</span>${esc(s.period_name)}${on ? ` <span class="nowpill">now</span>` : ""}</td>`
+      + `<td>${cardDate(s.period_start)} &#8594; ${cardDate(s.period_end)}</td>`
+      + `<td class="num">${w === null || w === undefined ? "—" : w.toFixed(2)}</td>`
+      + `<td class="num">${std === null || std === undefined ? `<span class="muted">none</span>`
+          : std.toFixed(2) + (w === null || w === undefined ? "" : ` <span class="muted">&#8594; ${(std * w).toFixed(2)}</span>`)}</td></tr>`;
+  }).join("");
+
+  const ks = teamMonths(pid);
+  const teamRows = team.slice().sort((a, b) =>
+      String(a.role_name || "").localeCompare(String(b.role_name || ""))
+      || String((M.people[a.person_id] || {}).person_name || "").localeCompare(
+         String((M.people[b.person_id] || {}).person_name || "")))
+    .map(a => {
+      const pe = M.people[a.person_id] || {}, L = teamLoad(a.person_id, ks);
+      const here = ks.reduce((t, k) => t + (C.cell.get([pid, a.person_id, a.role_name, k].join("|")) || 0), 0)
+        / Math.max(1, ks.length);
+      const manual = M.isManual && M.isManual("assignment", a.assignment_id);
+      return `<tr><td><button type="button" class="plink" data-card="person" data-cid="${att(a.person_id)}">`
+        + `<span class="mono xs" style="--card-tint:${persColourOf(a.person_id)}">`
+        + `${esc(monogram(pe.person_name || a.person_id))}</span>${esc(pe.person_name || a.person_id)}</button>`
+        + `<span class="sub">${esc(pe.department || "")}</span></td>`
+        + `<td>${esc(a.role_name || "")}${manual ? ` <span class="estb manual sm">manual</span>` : ""}</td>`
+        + `<td>${cardWindow(a)}</td>`
+        + `<td class="num">${a.person_weight === null || a.person_weight === undefined ? "—" : Number(a.person_weight).toFixed(2)}</td>`
+        + `<td class="num">${fmt(here)}</td>`
+        + `<td class="load">${cardMeter(L.avg, L.peak)}<span class="sub">avg ${fmt(L.avg)} &#183; peak ${fmt(L.peak)}`
+        + `${L.over ? ` &#183; <b class="gover">&#9650; over in ${L.over} mo</b>` : ""}</span></td></tr>`;
+    }).join("");
+
+  const issueRows = open.slice().sort((a, b) => a.k - b.k).map(r => {
+    const g = r.dir === "short" ? ["gshort", "&#9660; short"] : r.dir === "over" ? ["gover", "&#9650; over"]
+      : ["gunst", "&#9702; not staffed"];
+    return `<tr class="gaprow ${r.dir}" data-gap="${att(pid)}" data-gk="${r.k}" data-gapis="${r.dir}" `
+      + `tabindex="0" role="button"><td>${keyToLabel(r.k)}</td><td class="${g[0]}">${g[1]}</td>`
+      + `<td class="num">${r.demand.toFixed(2)}</td><td class="num">${r.applied.toFixed(2)}</td>`
+      + `<td class="num ${g[0]}">${Math.abs(r.gap).toFixed(2)}</td>`
+      + `<td>${r.rev ? `<span class="revtag ${r.rev.fix ? "fix" : r.rev.changed ? "stale" : "done"}">`
+        + `${esc(r.rev.status || "reviewed")}</span>` : `<span class="muted">not reviewed</span>`}</td></tr>`;
+  }).join("");
+
+  return `${cardLife(pr.start_date, pr.end_date,
+      "The start or end date is not entered yet, so there is no span to draw.")}
+    ${kpis}
+    ${cardSec("Monthly resource", `${G.length} months &#183; stacked by person`,
+      `<div class="scrollx fit">${util.svg}</div>`)}
+    ${cardSec("Timeline", `${per2.length} period(s) &#183; ${ms.length} milestone(s)`,
+      `<div class="scrollx fit">${chartGantt([pid], {single:true,
+        note:`${ymd(pr.start_date)} &#8594; ${ymd(pr.end_date)}`})}</div>`)}
+    ${cardSec("Team", `<button class="btn tiny primary" data-team="${att(pid)}">Change team</button>`,
+      teamRows ? `<div class="ctwrap"><table class="ct"><thead><tr><th>Person</th><th>Role</th>
+        <th>On the project</th><th class="num">Weight</th><th class="num">${U} here<span class="sub">avg in view</span></th>
+        <th>Their whole load<span class="sub">over this project's months</span></th></tr></thead>
+        <tbody>${teamRows}</tbody></table></div>`
+      : `<p class="note">Nobody is on this project yet. <strong>Change team</strong> adds somebody.</p>`)}
+    <div class="csplit">
+      ${cardSec("Milestones", `${ms.length}`, msList)}
+      ${cardSec("Periods", `${per2.length}${per2.some(p => p.__derived) ? " &#183; derived" : ""}`,
+        per2.length ? `<div class="ctwrap"><table class="ct"><thead><tr><th>Period</th><th>Dates</th>
+          <th class="num">Weight</th><th class="num">Standard<span class="sub">a month</span></th></tr></thead>
+          <tbody>${perRows}</tbody></table></div>`
+        : `<p class="note">No periods yet.</p>`)}
+    </div>
+    ${cardSec("Issues — standard vs staffed", open.length ? `${open.length} open` : "none open",
+      open.length ? `<div class="ctwrap"><table class="ct gapt"><thead><tr><th>Month</th><th>Issue</th>
+        <th class="num">Needs</th><th class="num">Staffed</th><th class="num">Gap</th><th>Review</th></tr></thead>
+        <tbody>${issueRows}</tbody></table></div>
+        <p class="note">Click a month to see the figures behind it and to record a review.</p>`
+      : `<p class="note">${issues.length ? `Every issue on this project has been reviewed and closed.`
+                                         : `Every month in the plan is staffed at its standard.`}</p>`)}
+    ${cardSec("All fields", "as in the Projects table", cardFields("Project", pr, [
+      ["Identity", ["project_id", "project_name", "project_type", "project_category",
+                    "clinical_phase", "work_scope_type", "status"]],
+      ["Plan", ["start_date", "end_date", "total_period_months", "planned_member_count",
+                "estimation_type"]],
+      ["Set-up", ["outsourcing_scope_det", "EDC_setup", "EDC_system", "DataReviewSystem_setup",
+                  "DataReviewSystem", "RBQM_setup", "RBQM_system", "DM_conduct"]],
+      ["Notes", ["note_1", "note_2", "note_3", "note_4", "note_5"]],
+    ]))}`;
+}
+
+/* ------------------------------------------------------------------ a person */
+
+function cardPersonSub(sid){
+  const pe = S.model.people[sid], cap = num(pe.capacity_fte);
+  return `<span class="idchip">${esc(sid)}</span>`
+    + (pe.department ? `<span class="scope">${esc(pe.department)}</span>` : "")
+    + (pe.primary_role ? `<span class="scope k">${esc(pe.primary_role)}</span>` : "")
+    + (cap !== null && cap !== undefined ? `<span class="scope">capacity ${cap.toFixed(2)} FTE</span>` : "");
+}
+
+function cardPerson(sid){
+  const M = S.model, C = S.calc, pe = M.people[sid], G = grid(), U = unitLabel();
+  let tot = 0, peak = 0, peakK = null, over = 0, under = 0;
+  for (const k of G){
+    const v = C.persMonth.get(sid + "|" + k) || 0;
+    tot += v;
+    if (v > peak){ peak = v; peakK = k; }
+    if (v > M.OVER) over++;
+    else if (v > 0.004 && v < M.UNDER) under++;
+  }
+  const nk = nowKey(), nowV = C.persMonth.get(sid + "|" + nk) || 0;
+  const mine = M.assignments.filter(a => a.person_id === sid);
+  const pids = [...new Set(mine.map(a => a.project_id))].filter(p => M.projects[p]);
+  const nowOn = [...(C.persProj.get(sid + "|" + nk) || new Map())].filter(([, v]) => v > 0.004).length;
+
+  const kpis = `<div class="kpis">`
+    + cardKpi("Projects", pids.length, `${mine.length} assignment(s) &#183; ${nowOn} active now`)
+    + cardKpi("This month", fmt(nowV), `${keyToLabel(nk)}`
+        + `<span class="kmeter">${cardMeter(nowV, peak)}</span>`,
+        nowV > M.OVER ? "over now" : nowV > 0.004 && nowV < M.UNDER ? "under now" : "now",
+        `<b>${keyToLabel(nk)}</b><br>This person's load in the current month, against the `
+        + `${M.UNDER.toFixed(2)} floor and the ${M.OVER.toFixed(2)} ceiling marked on the bar.`)
+    + cardKpi("Average a month", fmt(G.length ? tot / G.length : 0), `${U} over ${G.length} months in view`)
+    + cardKpi("Peak month", fmt(peak), peakK !== null && peak > 0.004 ? keyToLabel(peakK) : "nothing in view",
+        peak > M.OVER ? "over" : "")
+    + cardKpi("Over the ceiling", over ? `&#9650; ${over}` : "0",
+        `month(s) above ${M.OVER.toFixed(2)} FTE`, over ? "over" : "ok")
+    + cardKpi("Under the floor", under ? `&#9660; ${under}` : "0",
+        `month(s) below ${M.UNDER.toFixed(2)} FTE`, under ? "under" : "ok")
+    + `</div>`;
+
+  const {assign} = personSpans(sid);
+  const asgRows = mine.slice().sort((a, b) => byRank(a.project_id, b.project_id)).map(a => {
+    const pr = M.projects[a.project_id] || {};
+    let t = 0;
+    for (const k of G) t += C.cell.get([a.project_id, sid, a.role_name, k].join("|")) || 0;
+    const manual = M.isManual && M.isManual("assignment", a.assignment_id);
+    return `<tr><td><button type="button" class="plink" data-card="project" data-cid="${att(a.project_id)}">`
+      + `<span class="mono xs sq" style="--card-tint:${projColourOf(a.project_id)}">`
+      + `${esc(monogram(pr.project_name || a.project_id))}</span>${esc(pr.project_name || a.project_id)}</button>`
+      + `<span class="sub">${esc(a.project_id)}${M.projects[a.project_id] ? " &#183; " + esc(pr.project_type || "") : ""}</span></td>`
+      + `<td>${esc(a.role_name || "")}${manual ? ` <span class="estb manual sm">manual</span>` : ""}</td>`
+      + `<td>${cardWindow(a)}</td>`
+      + `<td class="num">${a.person_weight === null || a.person_weight === undefined ? "—" : Number(a.person_weight).toFixed(2)}</td>`
+      + `<td class="num">${fmt(G.length ? t / G.length : 0)}</td>`
+      + `<td class="num">${fmt(t)}</td></tr>`;
+  }).join("");
+
+  return `${cardLife(pe.employment_start, pe.employment_end, "")}
+    ${kpis}
+    ${cardSec("Monthly load", `${G.length} months &#183; stacked by project`,
+      `<div class="scrollx fit">${chartPersonStrip(sid)}</div>`)}
+    ${cardSec("Project timeline", `${pids.length} project(s)`,
+      pids.length ? `<div class="scrollx fit">${chartGantt(pids.slice().sort(byRank), {assign,
+          who: pe.person_name || sid, note: `The bar under each row is when ${esc(pe.person_name || sid)} is on it.`})}</div>`
+      : `<p class="note">No assignment yet.</p>`)}
+    ${cardSec("Assignments", `${mine.length}`,
+      asgRows ? `<div class="ctwrap"><table class="ct"><thead><tr><th>Project</th><th>Role</th>
+        <th>On the project</th><th class="num">Weight</th><th class="num">${U} a month<span class="sub">avg in view</span></th>
+        <th class="num">${U}-months<span class="sub">in view</span></th></tr></thead>
+        <tbody>${asgRows}</tbody></table></div>`
+      : `<p class="note">No assignment yet. Assignments are entered on Source data (person).</p>`)}
+    ${cardSec("All fields", "as in the People table", cardFields("Person", pe, [
+      ["Identity", ["person_id", "person_name", "department", "primary_role"]],
+      ["Capacity", ["capacity_fte", "employment_start", "employment_end"]],
+      ["Notes", ["note_1", "note_2", "note_3", "note_4", "note_5"]],
+    ]))}`;
+}
 /* ============================================================ 14. wiring */
 
 /* Re-rendering a panel replaces its DOM, and a fresh element starts at the top left.
@@ -11541,6 +12394,7 @@ function renderKeepingTab(){
      been left by the time this fires. */
   gapRefresh();
   teamRefresh();                    // and the project team (R-66), for the same reason
+  cardRefresh();                    // and a project's or person's card (R-67)
 }
 function showTab(id){
   S.tab = id;
@@ -12177,7 +13031,7 @@ document.addEventListener("click", e => {
     e.stopPropagation();
     // Opening the other tab from INSIDE the gap dialog has to shut it first, or the tab
     // it just took you to is drawn behind a modal nobody asked to keep.
-    if (act.dataset.act === "gopers" || act.dataset.act === "goproj"){ closeGap(); closeGaps(); }
+    if (act.dataset.act === "gopers" || act.dataset.act === "goproj"){ closeGap(); closeGaps(); closeCard(); }
     if (act.dataset.act === "blankms") blankMilestones(act.dataset.pid);
     if (act.dataset.act === "autoper") autoPeriods(act.dataset.pid);
     if (act.dataset.act === "blankper") blankPeriods(act.dataset.pid);
@@ -12244,6 +13098,11 @@ document.addEventListener("click", e => {
     return;
   }
   const row = e.target.closest(".data-t tbody tr");
+  /* A name's link and its pencil (R-67). Read here, before the row is selected: the
+     pencil replaces the cell's contents, and a target taken out of the page has no row
+     to find any more. */
+  const ren = e.target.closest("[data-rename]"), card = e.target.closest("[data-card]");
+  if (ren || card) e.preventDefault();
   if (row && row.dataset.id) keepScroll(() => {
     const sheet = row.closest(".data-t").dataset.sheet;
     // Re-render the DEPENDENT panels only. Re-rendering the table itself would replace
@@ -12268,6 +13127,14 @@ document.addEventListener("click", e => {
       const d = el("asgDetail"); if (d) d.innerHTML = overridesPanel(S.selPers);
     }
   });
+  if (ren) startRename(ren.closest("td"));
+  else if (card) openCard(card.dataset.card, card.dataset.cid, !!card.closest("#carddlg"));
+});
+/* F2 on a name's link renames it, as it would a cell in a spreadsheet (R-67). */
+document.addEventListener("keydown", e => {
+  if (e.key !== "F2") return;
+  const b = e.target.closest && e.target.closest(".namelink");
+  if (b){ e.preventDefault(); startRename(b.closest("td")); }
 });
 
 // Clicking a cell that ALREADY has the caret fires no focusin, so after Escape has
@@ -12296,6 +13163,11 @@ document.addEventListener("focusout", e => {
      applyEdit would be called with an undefined sheet and a NaN row number, and
      M.raw[undefined] throws before anything can say why. */
   if (!td.dataset.sheet) return;
+  /* A name being renamed goes back to its link once it is left (R-67) - after the same
+     delay, so a drag on the value list's scrollbar, which takes the focus for a moment
+     and gives it back, does not end the rename under the person doing it. */
+  if (td.classList.contains("renaming"))
+    setTimeout(() => { if (!SUGG.holding) endRename(td); }, 150);
   /* Close on a delay, and only if the panel is still THIS cell's. Clicking straight
      from one cell to the next opens the panel for the new one before this timer fires,
      and an unconditional close would then shut the panel that had just been opened -
@@ -12805,7 +13677,19 @@ const CAL = (() => {
     tip.style.left = Math.max(8, nx) + "px";
     tip.style.top = Math.max(8, ny) + "px";
   };
-  const show = (html, x, y, isPin) => {
+  /* INSIDE A MODAL DIALOG THE POP-UP HAS TO BE IN THE DIALOG. A modal is drawn in the
+     top layer, above the whole page whatever anybody's z-index says, so a pop-up left on
+     the body was drawn BEHIND the dialog it was explaining - every chart in the card
+     (R-67), and every figure in the month and team dialogs, hovered to nothing. It is
+     fixed-position either way, so moving it changes what it is drawn over and nothing
+     about where. */
+  const lodge = node => {
+    const d = node && node.closest && node.closest("dialog[open]");
+    const host = d || document.body;
+    if (tip.parentNode !== host) host.appendChild(tip);
+  };
+  const show = (html, x, y, isPin, node) => {
+    lodge(node);
     tip.innerHTML = html + (isPin ? `<span class="tipclose">click anywhere to close</span>` : "");
     tip.hidden = false;
     tip.classList.toggle("pinned", !!isPin);
@@ -12817,7 +13701,7 @@ const CAL = (() => {
     const el_ = e.target.closest("[data-tip]");
     if (!el_ || pinned) return;
     last = {x:e.clientX, y:e.clientY};
-    show(el_.dataset.tip, last.x, last.y, false);
+    show(el_.dataset.tip, last.x, last.y, false, el_);
   });
   document.addEventListener("mousemove", e => {
     last = {x:e.clientX, y:e.clientY};
@@ -12843,7 +13727,7 @@ const CAL = (() => {
     if (el_ && !isControl){
       e.stopPropagation();
       pinned = (pinned === el_) ? null : el_;
-      if (pinned) show(el_.dataset.tip, e.clientX, e.clientY, true);
+      if (pinned) show(el_.dataset.tip, e.clientX, e.clientY, true, el_);
       else hide();
       return;
     }
@@ -12858,7 +13742,7 @@ const CAL = (() => {
     const el_ = e.target.closest("[data-tip]");
     if (!el_ || pinned) return;
     const r = el_.getBoundingClientRect();
-    show(el_.dataset.tip, r.left + r.width / 2, r.bottom, false);
+    show(el_.dataset.tip, r.left + r.width / 2, r.bottom, false, el_);
   });
   document.addEventListener("focusout", e => { if (e.target.closest("[data-tip]")) hide(); });
 })();
@@ -12911,6 +13795,23 @@ addEventListener("resize", () => {
   if (!S.zoom) return;
   fitZoom();
   cueScrollers();
+});
+/* The charts are drawn to the width the page has (R-67), so a window made much wider or
+   narrower redraws them once it has settled - otherwise the drawing is only stretched or
+   squeezed, which is exactly the oversized text that measuring was for. Not while a cell
+   is being typed into: a redraw replaces the cell, and the edit with it. */
+let roomTimer = 0;
+addEventListener("resize", () => {
+  clearTimeout(roomTimer);
+  roomTimer = setTimeout(() => {
+    if (!S.model || el("tabs").hidden) return;
+    const was = CHART_ROOM;
+    measureRoom();
+    if (Math.abs(CHART_ROOM - was) < 24) return;
+    const a = document.activeElement;
+    if (a && a.isContentEditable) return;
+    renderKeepingTab();
+  }, 250);
 });
 
 el("saveBtn").onclick = saveEdits;

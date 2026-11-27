@@ -79,7 +79,14 @@ with sync_playwright() as pw:
 
     print("app/PRAP.html — type-ahead value list")
     name = pg.locator(f"{LOC} td[data-col='project_name']").first
-    name.click()
+
+    def rename():
+        # A saved project's name is a link to its card (R-67); the pencil makes it the
+        # ordinary editable cell, with its value list, which is what is tested here.
+        name.hover()
+        name.locator(".renbtn").click()
+
+    rename()
     pg.wait_for_timeout(400)
     s = state(pg)
     check(s["open"] and s["n"] > 1 and s["scrollable"],
@@ -146,11 +153,14 @@ with sync_playwright() as pw:
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(400)
     check(not state(pg)["open"], "Escape closes it")
-    pg.keyboard.press("Escape")            # again: cancel the edit, so nothing commits
-    pg.wait_for_timeout(400)
-    name.click()
+    name.click()                           # the caret is still in it
     pg.wait_for_timeout(400)
     check(state(pg)["open"], "clicking the field re-opens it")
+    pg.keyboard.press("Escape")
+    pg.keyboard.press("Escape")            # again: cancel the edit, so nothing commits
+    pg.wait_for_timeout(400)
+    rename()
+    pg.wait_for_timeout(400)
     pg.click("h1")
     pg.wait_for_timeout(500)
     check(not state(pg)["open"], "clicking outside the field closes it")

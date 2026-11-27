@@ -128,7 +128,7 @@
 <div class="wrap">
 
 <header>
-  <p class="kicker">PM_APP 1.38 · Windows</p>
+  <p class="kicker">PM_APP 1.39 · Windows</p>
   <h1>PM_APP 배포와 첫 실행</h1>
   <p class="dek">어느 PC에 어떤 폴더를 두고, 어떤 순서로 실행하는지. <strong>사용자 PC에는 아무것도 설치하지 않습니다</strong> — 파이썬이 없는 PC도 포함해서입니다.</p>
   <dl class="facts">
@@ -138,6 +138,12 @@
     <div><dt>사용자 1인 소요</dt><dd>2~3분</dd></div>
   </dl>
 </header>
+
+<div class="note"><span class="lbl">1.39에서 달라진 것</span>
+<p><strong>화면을 창의 폭 전체로 씁니다.</strong> 제목 아래 모든 내용이 더 이상 가운데 좁은 칸에 머물지 않고 창 가로 폭을 다 씁니다. 그래프는 늘어난 폭만큼 월 간격이 넓어지고, 글자 크기는 그대로입니다. 창 크기를 바꾸면 그래프가 다시 그려집니다.</p>
+<p><strong>과제 · 사람을 한 장의 카드로 봅니다.</strong> Source data (project) 의 <strong>Projects</strong>, Source data (person) 의 <strong>People</strong> 표에서 이름을 누르면 그 과제(또는 그 사람)의 정보가 한 팝업 페이지에 위에서 아래로 정리되어 나옵니다 — 기간과 오늘의 위치, 주요 숫자, 그래프, 팀(또는 배정), 마일스톤 · 기간, 기준과 다른 달, 모든 항목. 카드 안의 사람 · 과제 이름을 누르면 그쪽 카드로 넘어가고 <strong>Back</strong> 으로 돌아옵니다. ‹ › 단추(또는 ← → 키)로 표 순서대로 다음 · 이전을 봅니다. 이름을 고치려면 이름 오른쪽의 <strong>연필</strong>(✎)을 누르거나 F2 를 누르십시오.</p>
+<p><strong>화면 디자인을 다듬었습니다.</strong> 탭 아이콘, 숫자 카드의 색 띠, 표 머리글 음영, 알림의 표시 아이콘 등 — 밝은 · 어두운 테마 모두.</p>
+<p><strong>숫자는 달라지지 않습니다.</strong></p></div>
 
 <div class="note"><span class="lbl">1.38에서 달라진 것</span>
 <p><strong>과제의 팀을 한 곳에서 바꿉니다.</strong> Overall 탭 Resource by project 의 과제 줄마다 <strong>Team</strong> 단추가, Source data (project) 의 Utilisation 에 <strong>Change team</strong> 단추가 생겼습니다. 누르면 그 과제에 배정된 사람이 모두 나오고, 그 자리에서 <strong>사람 바꾸기 · 역할 · 기간 · 가중치</strong>를 고치거나, 사람을 <strong>추가 · 제외</strong>할 수 있습니다. 사람 이름 옆에 그 기간의 평균 · 최대 부하가 나오고 천장을 넘는 사람은 빨갛게, 여유 있는 사람이 먼저 추천됩니다. 바꾼 내용은 Source data (person) 의 각자 배정 표에 바로 반영되고, <strong>Save changes</strong> 를 눌러야 저장되며 변경 이력에 남습니다.</p>
@@ -263,7 +269,7 @@
   <li><div>
     <b>런타임을 앱 폴더에 넣고 압축본 만들기</b>
     <pre><code>python tools\bundle_runtime.py python-3.13.15-embed-amd64.zip --zip</code></pre>
-    <p><code>dist\PM_APP_python_v1.38_with_runtime.zip</code> 이 만들어집니다. <strong>이것이 나눠 주실 파일입니다.</strong></p>
+    <p><code>dist\PM_APP_python_v1.39_with_runtime.zip</code> 이 만들어집니다. <strong>이것이 나눠 주실 파일입니다.</strong></p>
     <p><strong>파이썬 압축을 푸는 일은 여기서 끝납니다.</strong> 이 명령이 1번에서 받은 zip 을 앱 폴더 안 <code>runtime\</code> 으로 풀어 넣고, 그 상태를 통째로 다시 압축합니다. 사용자 PC에서는 파이썬을 다시 풀 일이 없습니다.</p>
     <div class="note stop"><span class="lbl">이 순서를 반드시 지키십시오</span>
     <p><code>build_python_app.py --zip</code> 으로 압축하지 마십시오. 그 명령은 <strong>먼저 다시 빌드</strong>하는데, 다시 빌드하면 앱 폴더가 비워지면서 <strong>런타임도 함께 지워집니다.</strong> 그렇게 만든 압축본에는 런타임이 없고, 아무 경고도 없습니다.</p>
@@ -298,7 +304,7 @@
 <ol class="steps">
   <li><div>
     <b>압축본을 내 PC로 복사</b>
-    <p><code>\\서버\공유\PRAP\배포\</code> 에서 <code>PM_APP_python_v1.38_with_runtime.zip</code> 을 <strong>자기 PC로 복사</strong>하십시오.</p>
+    <p><code>\\서버\공유\PRAP\배포\</code> 에서 <code>PM_APP_python_v1.39_with_runtime.zip</code> 을 <strong>자기 PC로 복사</strong>하십시오.</p>
   </div></li>
 
   <li><div>
@@ -330,7 +336,7 @@
   <li><div>
     <b>PM_APP.cmd 더블클릭</b>
     <p>검은 창이 뜨고 브라우저가 열립니다. 창에는 이렇게 나옵니다.</p>
-    <pre class="out"><code>  version      1.38
+    <pre class="out"><code>  version      1.39
   application  C:\Users\...\Documents\PM_APP
   your data    C:\Users\...\Documents\PM_APP\data\users\&lt;내계정&gt;
   chosen by    3 - writable data\ beside the application
@@ -463,7 +469,7 @@
 <p><strong>폴더를 지우면 끝입니다.</strong> 레지스트리에 남는 것도, PATH에 더해진 것도, 시작 프로그램에 등록된 것도 없습니다. 공유 폴더의 계획서는 그대로 남습니다.</p>
 
 <footer>
-  <p>이 안내서의 경로·화면 출력·폴더 구조는 모두 PM_APP 1.38 을 실제로 실행해 얻은 것입니다. 버전이 올라가면 <code>version.txt</code> 와 압축본 이름이 달라집니다.</p>
+  <p>이 안내서의 경로·화면 출력·폴더 구조는 모두 PM_APP 1.39 을 실제로 실행해 얻은 것입니다. 버전이 올라가면 <code>version.txt</code> 와 압축본 이름이 달라집니다.</p>
 </footer>
 
 </div>

@@ -168,8 +168,9 @@ with sync_playwright() as pw:
           "one person assigned makes planned_member_count 1",
           f"{banner.strip()[:90]}")
 
+    # By the identifier: a saved person's NAME opens their card (R-67).
     pg.locator("#t-pers .data-t[data-sheet='Person'] tbody tr[data-id='PSN-002'] "
-               "td[data-col='person_name']").first.click()
+               "td[data-col='person_id']").first.click()
     pg.wait_for_timeout(800)
     add_row(pg, A, {"project_name": "Trial One", "role_name": "Clinical Database Programmer",
                     "assign_start_date": "2027-06-01", "person_weight": "0.3"})

@@ -46,13 +46,21 @@
   --hl-navy:#1f2f86;--hl-purple:#7b3fbf;--hl-magenta:#c2188f;--hl-pink:#f37fb2;
   --hl-brown:#8d5524;
   --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
-  --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
+  --shadow:0 0 0 1px rgba(17,24,39,.04),0 1px 2px rgba(17,24,39,.05),
+    0 8px 24px -12px rgba(17,24,39,.16);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
   --hairline:rgba(60,60,67,.16);
   --shade:rgba(60,60,67,.30);
+  /* R-67: the second accent the brand mark, the primary buttons and the section bars
+     run into; the two soft glows at the head of the page; the tint of a table's heading
+     row - opaque, because headings stick while rows scroll beneath them; and the quieter
+     ground of the provenance strip, a step off the card white and as opaque. */
+  --accent2:#5e5ce6;
+  --glow1:rgba(0,102,204,.11);--glow2:rgba(94,92,230,.10);
+  --thead:#f8f8fb;--quiet:#fbfbfd;
 
   /* --- radius: Apple's continuous-corner scale --------------------------- */
-  --r-xs:5px;--r-sm:7px;--r-md:10px;--r-lg:14px;--r-xl:18px;
+  --r-xs:5px;--r-sm:7px;--r-md:10px;--r-lg:16px;--r-xl:20px;
 
   /* --- type -------------------------------------------------------------- */
   --f-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",
@@ -103,9 +111,12 @@
   --hl-navy:#7d8cff;--hl-purple:#bf5af2;--hl-magenta:#ff4fd8;--hl-pink:#ffadd2;
   --hl-brown:#c8915c;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
-  --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
+  --shadow:0 0 0 1px rgba(255,255,255,.06),0 1px 2px rgba(0,0,0,.5);
+  --shadow-lift:0 12px 34px rgba(0,0,0,.6);
   --hairline:rgba(235,235,245,.18);
-  --shade:rgba(0,0,0,.55);}}
+  --shade:rgba(0,0,0,.55);
+  --accent2:#7d7aff;--glow1:rgba(10,132,255,.17);--glow2:rgba(125,122,255,.13);
+  --thead:#242426;--quiet:#151517;}}
 :root[data-theme="dark"]{
   --page:#000000;--surface:#1c1c1e;--raised:#2c2c2e;
   --ink:#f5f5f7;--ink2:rgba(235,235,245,.70);--muted:rgba(235,235,245,.55);
@@ -118,9 +129,12 @@
   --hl-navy:#7d8cff;--hl-purple:#bf5af2;--hl-magenta:#ff4fd8;--hl-pink:#ffadd2;
   --hl-brown:#c8915c;
   --overbg:#3a1f1e;--underbg:#332810;--underink:#ffb340;
-  --shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lift:0 12px 34px rgba(0,0,0,.6);
+  --shadow:0 0 0 1px rgba(255,255,255,.06),0 1px 2px rgba(0,0,0,.5);
+  --shadow-lift:0 12px 34px rgba(0,0,0,.6);
   --hairline:rgba(235,235,245,.18);
-  --shade:rgba(0,0,0,.55);}
+  --shade:rgba(0,0,0,.55);
+  --accent2:#7d7aff;--glow1:rgba(10,132,255,.17);--glow2:rgba(125,122,255,.13);
+  --thead:#242426;--quiet:#151517;}
 :root[data-theme="light"]{
   --page:#f2f2f7;--surface:#ffffff;--raised:#ffffff;
   --ink:#1d1d1f;--ink2:rgba(60,60,67,.78);--muted:rgba(60,60,67,.72);
@@ -133,10 +147,29 @@
   --hl-navy:#1f2f86;--hl-purple:#7b3fbf;--hl-magenta:#c2188f;--hl-pink:#f37fb2;
   --hl-brown:#8d5524;
   --overbg:#ffeceb;--underbg:#fff6e0;--underink:#9a5b00;
-  --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px -6px rgba(0,0,0,.10);
+  --shadow:0 0 0 1px rgba(17,24,39,.04),0 1px 2px rgba(17,24,39,.05),
+    0 8px 24px -12px rgba(17,24,39,.16);
   --shadow-lift:0 2px 6px rgba(0,0,0,.07),0 18px 40px -12px rgba(0,0,0,.20);
   --hairline:rgba(60,60,67,.16);
-  --shade:rgba(60,60,67,.30);}
+  --shade:rgba(60,60,67,.30);
+  --accent2:#5e5ce6;--glow1:rgba(0,102,204,.11);--glow2:rgba(94,92,230,.10);
+  --thead:#f8f8fb;--quiet:#fbfbfd;}
+
+
+/* ---- R-67: the marks the stylesheet draws -------------------------------------
+   As masks and backgrounds rather than markup, so the Python edition - which words its
+   heading differently - and the web page carry them alike, and no test that reads a
+   label's text finds an icon in it. Line icons, one stroke weight, on a 24px grid. */
+:root{
+  --mark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3E%3Crect x='2' y='10.5' width='4' height='7.5' rx='1.3'/%3E%3Crect x='8' y='6.5' width='4' height='11.5' rx='1.3'/%3E%3Crect x='14' y='2' width='4' height='16' rx='1.3' opacity='.85'/%3E%3C/svg%3E");
+  --ico-doc:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 3v5h5'/%3E%3C/svg%3E");
+  --ico-overall:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7.5' height='9' rx='1.8'/%3E%3Crect x='13.5' y='3' width='7.5' height='5' rx='1.8'/%3E%3Crect x='13.5' y='11' width='7.5' height='10' rx='1.8'/%3E%3Crect x='3' y='15' width='7.5' height='6' rx='1.8'/%3E%3C/svg%3E");
+  --ico-proj:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/%3E%3C/svg%3E");
+  --ico-pers:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='9' cy='8' r='3.6'/%3E%3Cpath d='M2.5 20.5c.8-3.7 3.4-5.7 6.5-5.7s5.7 2 6.5 5.7'/%3E%3Cpath d='M15.5 4.6a3.6 3.6 0 0 1 0 6.9M18 14.9c1.8.8 3 2.7 3.5 5.6'/%3E%3C/svg%3E");
+  --ico-gen:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6.5h9M19 6.5h1M4 12h3M11 12h9M4 17.5h11M20 17.5h0'/%3E%3Ccircle cx='16' cy='6.5' r='2.3'/%3E%3Ccircle cx='9' cy='12' r='2.3'/%3E%3Ccircle cx='17.5' cy='17.5' r='2.3'/%3E%3C/svg%3E");
+  --ico-up:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 15V4M7.5 8.5 12 4l4.5 4.5'/%3E%3Cpath d='M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'/%3E%3C/svg%3E");
+  --ico-new:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+}
 
 *{box-sizing:border-box}
 /* The `hidden` attribute is only display:none at UA-stylesheet weight, so any rule
@@ -157,7 +190,19 @@ body{margin:0;background:var(--page);color:var(--ink);
  font:var(--t-lg)/1.55 var(--f-ui);
  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
  font-synthesis:none;text-rendering:optimizeLegibility}
-.wrap{max-width:1400px;margin:0 auto;padding:20px var(--sp-5) 72px}
+/* R-67: two soft glows of the accent at the head of the page - the one touch here that
+   carries no information, so it is kept to the first screenful and painted on the body,
+   where it scrolls away with the header instead of sitting behind the tables. */
+body{background-image:radial-gradient(1100px 420px at 6% -180px,var(--glow1),transparent 70%),
+  radial-gradient(1000px 420px at 94% -200px,var(--glow2),transparent 70%);
+  background-repeat:no-repeat}
+/* THE WHOLE WINDOW, edge to edge (R-67). The page used to stop at 1400px and centre,
+   which on a 1920px screen left a quarter of it as two empty grey margins while every
+   table beside them scrolled sideways for want of room. Only a gutter is kept now - it
+   grows a little with the window so the cards never touch its edge - and the reading
+   measure is held where it matters, on the captions (.cap caps itself at 92ch). */
+:root{--gutter:clamp(14px,1.6vw,32px);--panel-px:20px}
+.wrap{max-width:none;margin:0;padding:18px var(--gutter) 72px}
 
 /* --- header ------------------------------------------------------------- */
 /* nowrap while there is room, so the controls stay on one line and the file name is
@@ -167,22 +212,35 @@ header{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;padding-bottom:
 header>h1,header>.vers,header>.btn{flex:none;white-space:nowrap}
 h1{font-size:var(--t-3xl);margin:0;letter-spacing:-.021em;font-weight:650;line-height:1.2}
 h2{font-size:var(--t-xl);margin:0 0 3px;letter-spacing:-.012em;font-weight:620;line-height:1.3}
-.vers{color:var(--ink2);font-size:var(--t-sm);letter-spacing:0}
+.vers{color:var(--ink2);font-size:var(--t-xs);letter-spacing:0;padding:2px 9px;border-radius:999px;
+ background:var(--fill)}
+/* The brand mark (R-67). Drawn here, before the heading, so both editions carry it. */
+header > h1{display:flex;align-items:center;gap:11px}
+header > h1::before{content:"";flex:none;width:34px;height:34px;border-radius:10px;
+ background:var(--mark) center/19px 19px no-repeat,linear-gradient(140deg,var(--accent),var(--accent2));
+ box-shadow:0 6px 14px -6px color-mix(in srgb,var(--accent) 75%,transparent),
+   inset 0 1px 0 rgba(255,255,255,.25)}
+header .btn{min-height:34px}
 /* The loaded-file line takes whatever is left and gives it back first: it is the one
    thing in the header that can be truncated without losing a control. Without this the
    header wraps and the buttons drop to a second row. */
 .file{margin-left:auto;color:var(--ink2);font-size:var(--t-md);font-variant-numeric:tabular-nums;
- flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ padding:5px 12px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow)}
+.file::before{content:"";display:inline-block;width:13px;height:13px;margin-right:7px;vertical-align:-2px;
+ background:var(--accent);-webkit-mask:var(--ico-doc) center/contain no-repeat;
+ mask:var(--ico-doc) center/contain no-repeat}
 .file .tz{color:var(--muted)}
 
 /* --- buttons: filled, tinted, plain ------------------------------------- */
-.btn{border:0;background:var(--fill);color:var(--accent);border-radius:var(--r-sm);
- padding:6px 13px;font-size:var(--t-md);font-weight:520;cursor:pointer;font-family:inherit;
+.btn{border:0;background:var(--fill);color:var(--accent);border-radius:9px;
+ padding:6px 14px;font-size:var(--t-md);font-weight:560;cursor:pointer;font-family:inherit;
  line-height:1.4;letter-spacing:-.005em}
 .btn:hover{background:var(--fill2);color:var(--accent)}
-.btn.primary{background:var(--accent);color:#fff;font-weight:590;
- box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.btn.primary:hover{background:var(--accent);color:#fff;filter:brightness(1.08)}
+.btn.primary{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 84%,#fff),var(--accent));
+ color:#fff;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.14),
+   0 6px 14px -8px color-mix(in srgb,var(--accent) 85%,transparent),inset 0 1px 0 rgba(255,255,255,.2)}
+.btn.primary:hover{color:#fff;filter:brightness(1.07)}
 .btn.primary[disabled],.btn[disabled]{opacity:.38;cursor:not-allowed;transform:none}
 /* Two of these on every row of every table. At rest they are furniture; they take
    colour only on hover, where blue means 'this adds' and red means 'this removes'. */
@@ -213,8 +271,8 @@ td.ins,th.ins{white-space:nowrap}
 .btn.reset{color:var(--accent)}
 
 /* --- provenance strip ---------------------------------------------------- */
-#prov{margin:12px 0 0;border-radius:var(--r-md);background:var(--surface);
- box-shadow:var(--shadow);font-size:var(--t-md)}
+#prov{margin:12px 0 0;border-radius:var(--r-md);background:var(--quiet);
+ box-shadow:0 0 0 1px var(--hairline);font-size:var(--t-md)}
 #prov > summary{cursor:pointer;padding:9px 14px;color:var(--ink2);list-style:none;
  display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;border-radius:var(--r-md)}
 #prov > summary::-webkit-details-marker{display:none}
@@ -240,6 +298,11 @@ td.ins,th.ins{white-space:nowrap}
  border-radius:var(--r-md);background:var(--surface);font-size:var(--t-lg);
  box-shadow:var(--shadow);border-left:3px solid var(--good)}
 .banner.bad{background:var(--overbg);border-left-color:var(--crit)}
+.banner::before{content:"\2713";flex:none;display:grid;place-items:center;width:22px;height:22px;
+ border-radius:50%;background:var(--good);color:#fff;font-size:12px;font-weight:800;line-height:1}
+.banner.bad::before{content:"!";background:var(--crit)}
+.banner.warn::before{content:"!";background:var(--warn)}
+.banner.busy::before{content:none}
 /* Saved, but with something knowingly left unresolved - neither a clean save nor
    a failure, and it should not read as either. */
 .banner.warn{background:var(--underbg);border-left-color:var(--warn)}
@@ -266,10 +329,14 @@ td.ins,th.ins{white-space:nowrap}
 body.busy{cursor:progress}
 
 /* --- panels: white cards on a grey field --------------------------------- */
-.panel{background:var(--surface);border-radius:var(--r-lg);padding:var(--sp-4) 18px;margin:var(--sp-4) 0;
- box-shadow:var(--shadow)}
+.panel{background:var(--surface);border-radius:var(--r-lg);padding:18px var(--panel-px);
+ margin:var(--sp-4) 0;box-shadow:var(--shadow)}
 .phead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px}
 .phead h2{margin:0}
+.panel > .phead > h2,#filterbar > h2{font-size:16px;font-weight:660}
+.panel > .phead > h2::before,#filterbar > h2::before{content:"";display:inline-block;width:4px;
+ height:.95em;border-radius:2px;margin-right:9px;vertical-align:-.1em;
+ background:linear-gradient(180deg,var(--accent),var(--accent2))}
 /* An identifier beside the name it belongs to: there to be matched, not read first. */
 .phead h2 .tid{font-size:var(--t-sm);font-weight:500;color:var(--muted);margin-left:.4em}
 .subhead{margin:18px 0 6px;font-size:var(--t-lg);color:var(--ink2)}
@@ -287,9 +354,11 @@ body.busy{cursor:progress}
 .ctl{display:flex;flex-direction:column;gap:4px}
 .ctl label,.ctl .lbl{display:block;font-size:var(--t-xs);color:var(--muted);font-weight:510;letter-spacing:.01em}
 .ctl select,.ctl input{border:1px solid var(--base);background:var(--surface);
- color:var(--ink);border-radius:var(--r-sm);padding:5px 9px;font-size:var(--t-md);
- font-family:inherit;line-height:1.4}
+ color:var(--ink);border-radius:9px;padding:6px 10px;font-size:var(--t-md);min-height:34px;
+ font-family:inherit;line-height:1.4;box-shadow:0 1px 1px rgba(0,0,0,.03)}
 .ctl select:hover,.ctl input:hover{border-color:var(--accent)}
+.ctl select:focus,.ctl input:focus{outline:none;border-color:var(--accent);
+ box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
 
 /* --- a filter that takes several values at once --------------------------
    Built on <details> rather than as a widget: the browser gives open/close,
@@ -299,11 +368,12 @@ body.busy{cursor:progress}
    summary reports, so the bar reads the same as it did with single selects. */
 .ms{position:relative}
 .ms>summary{list-style:none;cursor:pointer;border:1px solid var(--base);
- background:var(--surface);color:var(--ink);border-radius:var(--r-sm);
- padding:5px 26px 5px 9px;font-size:var(--t-md);line-height:1.4;min-width:112px;
- max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ background:var(--surface);color:var(--ink);border-radius:9px;min-height:34px;
+ padding:6px 28px 6px 10px;font-size:var(--t-md);line-height:1.4;min-width:112px;
+ max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ box-shadow:0 1px 1px rgba(0,0,0,.03)}
 .ms>summary::-webkit-details-marker{display:none}
-.ms>summary::after{content:"";position:absolute;right:9px;top:12px;
+.ms>summary::after{content:"";position:absolute;right:10px;top:15px;
  border:4px solid transparent;border-top-color:var(--ink2)}
 .ms>summary:hover{border-color:var(--accent)}
 .ms[open]>summary{border-color:var(--accent)}
@@ -316,7 +386,12 @@ body.busy{cursor:progress}
 .exp{position:relative}
 .exp>summary{list-style:none;cursor:pointer}
 .exp>summary::-webkit-details-marker{display:none}
-.exp>summary::after{content:"  \25BE";font-size:.85em;opacity:.75}
+.exp>summary::after{content:"\25BE";font-size:.85em;opacity:.8;position:static;border:0;
+ margin-left:7px}
+/* The menu's button is a button first: the picker frame .ms gives its summaries does not
+   belong on it, and drew a second, smaller arrow in its corner. */
+.ms.exp>summary{border:0;padding:7px 14px;min-width:0;max-width:none;display:inline-flex;
+ align-items:center}
 .exp.off{pointer-events:none;opacity:.45}
 .exp>.msp{width:340px;max-width:min(340px,calc(100vw - 32px));padding:6px;
  max-height:none;left:auto;right:0}
@@ -366,38 +441,56 @@ body.busy{cursor:progress}
 #stickybar{position:sticky;top:0;z-index:20;background:var(--page);
  padding-bottom:8px;margin-bottom:-8px}
 #editbar{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);
- align-items:center;margin:14px 0 0;padding:10px 16px;border-radius:var(--r-md);
+ align-items:center;margin:14px 0 0;padding:10px 16px;border-radius:var(--r-lg);
  background:var(--surface);
  box-shadow:var(--shadow);font-size:var(--t-md);color:var(--ink2)}
 #editbar.dirty{background:color-mix(in srgb,var(--underbg) 95%,transparent);color:var(--ink)}
 #editbar .guide{max-width:min(760px,58%)}
 #editbar .guide strong{color:var(--ink);font-weight:590}
-#editbar #editstate{margin-left:auto;font-weight:620;white-space:nowrap}
-#editbar.dirty #editstate{color:var(--underink)}
+#editbar #editstate{margin-left:auto;font-weight:620;white-space:nowrap;display:inline-flex;
+ align-items:center;gap:7px;padding:3px 11px;border-radius:999px;background:var(--fill)}
+#editbar #editstate::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--good)}
+#editbar #editstate:empty{display:none}
+#editbar.dirty #editstate{color:var(--underink);background:color-mix(in srgb,var(--warn) 20%,transparent)}
+#editbar.dirty #editstate::before{background:var(--warn);
+ box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 30%,transparent)}
+#editbar.dirty{box-shadow:inset 4px 0 0 var(--warn),var(--shadow)}
 #editbar .btn{white-space:nowrap}
 
 /* --- tabs: a segmented control ------------------------------------------- */
 /* A full-width bar, not a floating pill: content scrolls UNDER the band, and a pill only
    as wide as its labels would let the page slide past beside them. */
-nav{display:flex;gap:2px;margin:18px 0 0;flex-wrap:wrap;
- padding:5px 4px;border-radius:var(--r-md);background:var(--fill)}
-nav button{border:0;background:none;color:var(--ink2);padding:6px 16px;font-size:var(--t-lg);
- cursor:pointer;font-family:inherit;border-radius:var(--r-sm);font-weight:520;
- letter-spacing:-.006em;white-space:nowrap}
+nav{display:flex;gap:4px;margin:18px 0 0;flex-wrap:wrap;
+ padding:5px;border-radius:13px;background:var(--fill);box-shadow:inset 0 0 0 1px var(--hairline)}
+nav button{border:0;background:none;color:var(--ink2);padding:7px 16px;font-size:var(--t-lg);
+ cursor:pointer;font-family:inherit;border-radius:9px;font-weight:540;
+ letter-spacing:-.006em;white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
+nav button::before{content:"";flex:none;width:16px;height:16px;background:currentColor;opacity:.7;
+ -webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat}
+nav button[data-tab="t-overall"]{--ico:var(--ico-overall)}
+nav button[data-tab="t-proj"]{--ico:var(--ico-proj)}
+nav button[data-tab="t-pers"]{--ico:var(--ico-pers)}
+nav button[data-tab="t-gen"]{--ico:var(--ico-gen)}
 nav button:hover{color:var(--ink);background:var(--fill)}
-nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var(--surface);
+nav button[aria-selected="true"]{color:var(--ink);font-weight:620;background:var(--surface);
  box-shadow:0 1px 3px rgba(0,0,0,.13),0 0 0 .5px rgba(0,0,0,.05)}
+nav button[aria-selected="true"]::before{opacity:1;
+ background:linear-gradient(135deg,var(--accent),var(--accent2))}
 
 /* --- summary tiles ------------------------------------------------------- */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:14px;
  margin:16px 0}
-.tile{background:var(--surface);border-radius:var(--r-lg);padding:13px 16px;
- box-shadow:var(--shadow)}
+.tile{background:var(--surface);border-radius:var(--r-lg);padding:15px 18px 14px;
+ box-shadow:var(--shadow);position:relative;overflow:hidden}
+.tile::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+ background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.tile.over::before{background:var(--crit)}
+.tile.under::before,.tile.gap::before{background:var(--warn)}
 .tile.over{background:var(--overbg)}.tile.under{background:var(--underbg)}
 .tile{transition:none}
 .tile .tl{font-size:var(--t-xs);color:var(--muted);font-weight:590;letter-spacing:.03em;
  text-transform:uppercase}
-.tile .tv{font-size:var(--t-4xl);font-weight:600;letter-spacing:-.03em;line-height:1.15;
+.tile .tv{font-size:32px;font-weight:700;letter-spacing:-.03em;line-height:1.15;
  margin:5px 0 2px;font-variant-numeric:tabular-nums}
 .tile.over .tv{color:var(--crit)}.tile.under .tv{color:var(--underink)}
 .tile .ts{font-size:var(--t-sm);color:var(--muted);line-height:1.4}
@@ -468,7 +561,7 @@ nav button[aria-selected="true"]{color:var(--ink);font-weight:590;background:var
    Three layers, and the order matters: the corner cell has to out-rank both the row
    header it sits above and the column header it sits beside, or it is overprinted by
    whichever scrolls under it. */
-.scrollx thead th,.dlg-b thead th{position:sticky;top:0;z-index:3;background:var(--surface)}
+.scrollx thead th,.dlg-b thead th{position:sticky;top:0;z-index:3;background:var(--thead)}
 .scrollx thead th::after,.dlg-b thead th::after{content:"";position:absolute;left:0;right:0;
  bottom:-1px;height:1px;background:var(--hairline)}
 .grid-t th.rh{z-index:2}
@@ -509,12 +602,10 @@ body.zoomed{overflow:hidden}
    with the page at the top, which is a strip of the old page showing above a full screen.
    It starts at --zoomchrome rather than at 0 because the Python and desktop shells put
    their own title and status strips above everything this stylesheet draws; on the web
-   page that variable is 0 and the band is at the top. Its inner padding keeps the same
-   1400px column the page uses, so Save does not jump across the screen as the section
-   opens. */
+   page that variable is 0 and the band is at the top. Its inner padding is the same
+   gutter the page uses, so Save does not jump across the screen as the section opens. */
 body.zoomed #stickybar{position:fixed;top:var(--zoomchrome,0px);left:0;right:0;z-index:45;
- margin:0;padding:0 var(--sp-5) 8px;box-shadow:0 1px 0 var(--hairline)}
-body.zoomed #stickybar > *{max-width:1400px;margin-left:auto;margin-right:auto}
+ margin:0;padding:0 var(--gutter) 8px;box-shadow:0 1px 0 var(--hairline)}
 body.zoomed #editbar,body.zoomed #stickybar nav{margin-top:8px}
 
 /* --zoomtop is the measured height of that band - see fitZoom(). The fallback of 0 is
@@ -568,12 +659,13 @@ body.zoomed #editbar,body.zoomed #stickybar nav{margin-top:8px}
 table{border-collapse:collapse;width:100%;font-size:var(--t-md)}
 .grid-t th,.grid-t td{border:1px solid var(--grid);padding:5px 8px;text-align:right;
  font-variant-numeric:tabular-nums;white-space:nowrap}
-.grid-t thead th{background:var(--surface);color:var(--muted);font-weight:590;
+.grid-t thead th{background:var(--thead);color:var(--muted);font-weight:590;
  font-size:var(--t-xs);text-align:center;letter-spacing:.02em}
 .grid-t th.rh{text-align:left;position:sticky;left:0;background:var(--surface);
  min-width:240px;max-width:320px;white-space:normal;
  box-shadow:1px 0 0 var(--grid)}
-.grid-t thead th.rh{background:var(--surface)}
+.grid-t thead th.rh{background:var(--thead)}
+.grid-t tr.parent:hover th.rh{background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
 .grid-t .nm{font-weight:590;margin-right:2px}
 .grid-t th.rh{line-height:1.45;padding-top:7px;padding-bottom:7px}
 .grid-t .sub{display:block;color:var(--muted);font-size:var(--t-xs);font-weight:400;
@@ -617,7 +709,7 @@ td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .data-t th:last-child,.data-t td:last-child{border-right:0}
 .data-t tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--ink) 2%,transparent)}
 .data-t tbody tr:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
-.data-t thead th{background:var(--surface);color:var(--muted);font-weight:590;
+.data-t thead th{background:var(--thead);color:var(--muted);font-weight:590;
  font-size:var(--t-xs);letter-spacing:.02em;border-bottom:1px solid var(--hairline)}
 /* THE HEADING IS THE PLAIN NAME, and nothing else. The workbook's own column name is in
    the pop-up, not on the page: it is wanted occasionally - editing the workbook, reading
@@ -627,6 +719,7 @@ td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .data-t thead th .lab{color:var(--ink2);font-weight:620;
  font-size:var(--t-sm);letter-spacing:0;text-transform:none}
 .data-t tr.sel td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.data-t tr.sel td.ins{box-shadow:inset 3px 0 0 var(--accent)}
 .data-t tr{cursor:pointer}
 .data-t td[contenteditable="true"]:focus{outline:2px solid var(--accent);outline-offset:-2px;
  border-radius:3px;background:var(--surface)}
@@ -681,6 +774,8 @@ td.under{background:var(--underbg);color:var(--underink);font-weight:590}
    same one wins. */
 .data-t[data-pin] th.ins,.data-t[data-pin] td.ins,
 .data-t[data-pin] .pin1,.data-t[data-pin] .pin2{background:var(--surface)}
+.data-t[data-pin] thead th.ins,.data-t[data-pin] thead .pin1,
+.data-t[data-pin] thead .pin2{background:var(--thead)}
 .data-t[data-pin] tbody tr:nth-child(even) td.ins,
 .data-t[data-pin] tbody tr:nth-child(even) .pin1,
 .data-t[data-pin] tbody tr:nth-child(even) .pin2{
@@ -848,7 +943,7 @@ td.cell[data-hl="brown"]::before{background:var(--hl-brown)}
  -webkit-backdrop-filter:saturate(180%) blur(20px);
  backdrop-filter:saturate(180%) blur(20px);
  color:var(--ink);border-radius:var(--r-md);padding:10px 12px;
- font-size:var(--t-sm);line-height:1.5;box-shadow:var(--shadow-lift)}
+ font-size:var(--t-sm);line-height:1.5;box-shadow:var(--shadow-lift),0 0 0 1px var(--hairline)}
 .tip b{font-weight:620}.tip .tr{color:var(--muted);font-size:var(--t-xs)}
 /* Separates the two halves of a pop-up that answers two questions at once - what this
    project drew this month, and what the person drew in total. */
@@ -996,6 +1091,12 @@ td.drvcell[data-drv="period"]{min-width:36em;font-style:normal}
 .choose .drop{padding:34px 26px 28px;display:flex;flex-direction:column;
  align-items:center;justify-content:flex-start}
 .drop.start{border-style:solid;border-color:var(--grid)}
+#drop::before,#startCard::before{content:"";flex:none;width:58px;height:58px;border-radius:17px;
+ margin:0 0 14px;background:var(--ico-e) center/28px 28px no-repeat,
+   linear-gradient(140deg,var(--accent),var(--accent2));
+ box-shadow:0 12px 26px -14px color-mix(in srgb,var(--accent) 80%,transparent)}
+#drop{--ico-e:var(--ico-up)}
+#startCard{--ico-e:var(--ico-new)}
 .drop .tag{display:inline-block;font-size:var(--t-xs);font-weight:640;letter-spacing:.06em;
  text-transform:uppercase;color:var(--muted);margin-bottom:12px}
 .choose .btn{margin-top:6px}
@@ -1006,8 +1107,16 @@ dialog{border:0;border-radius:var(--r-xl);background:var(--surface);
  color:var(--ink);max-width:900px;width:92vw;padding:0;box-shadow:var(--shadow-lift)}
 dialog::backdrop{background:rgba(0,0,0,.35);
  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
-.dlg-h{display:flex;align-items:center;gap:10px;padding:14px 18px;
- border-bottom:1px solid var(--hairline)}
+.dlg-h{display:flex;align-items:center;gap:10px;padding:15px 20px;
+ border-bottom:1px solid var(--hairline);
+ background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 6%,var(--surface)),var(--surface))}
+.dlg-h > strong:first-child{font-size:var(--t-xl);font-weight:660;letter-spacing:-.012em}
+/* A fade, and only a fade: a transform would make the dialog the containing block of the
+   fixed-position pop-up drawn inside it, and cut the pop-up off at the dialog's edge. */
+@media (prefers-reduced-motion:no-preference){
+  dialog[open]{animation:dlg-in .18s var(--ease)}
+  dialog[open]::backdrop{animation:dlg-in .18s var(--ease)}}
+@keyframes dlg-in{from{opacity:0}to{opacity:1}}
 .dlg-b{padding:14px 18px;max-height:64vh;overflow:auto}
 /* The dialog's own scroll region gets the same visible bar as every other one - a change
    log is exactly the kind of list that runs off the bottom. */
@@ -1284,3 +1393,155 @@ td.cell.gapnew:focus:empty::before{content:""}
   border:1px solid var(--grid);background:var(--surface);color:var(--ink);cursor:pointer}
 .tmroom .chip i{font-style:normal;color:var(--muted);margin-left:4px}
 .teambtn{margin-left:6px;vertical-align:1px}
+
+/* ---- a project's or person's name opens its card (R-67) ------------------------
+   The name is a link, in the accent colour that means "this does something" everywhere
+   else on the page; the pencil that renames it waits at the cell's right edge until the
+   row is pointed at, so a column of names does not read as a column of pencils. The cell
+   is still the editable cell underneath - see startRename() - and while it is being
+   renamed it looks exactly like any other cell being typed into. */
+td.namecell{position:relative;padding-right:30px}
+.namelink{border:0;background:none;padding:0;margin:0;font:inherit;color:var(--accent);
+  font-weight:600;text-align:left;cursor:pointer;line-height:inherit;border-radius:var(--r-xs)}
+.namelink:hover{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.namelink .noname{color:var(--muted);font-weight:400}
+.renbtn{position:absolute;right:4px;top:50%;margin-top:-11px;width:22px;height:22px;padding:0;
+  border:0;border-radius:var(--r-xs);background:none;color:var(--muted);cursor:pointer;
+  opacity:0;transition:opacity var(--dur) var(--ease),background var(--dur) var(--ease)}
+.renbtn::before{content:"\270E";font-size:13px;line-height:22px}
+.data-t tr:hover .renbtn,.renbtn:focus-visible,td.namecell:focus-within .renbtn{opacity:1}
+.renbtn:hover{background:var(--fill2);color:var(--accent)}
+td.namecell.renaming{padding-right:10px}
+
+/* ---- the card itself -------------------------------------------------------------
+   A page of its own rather than a form: white sections on the grey field, the same
+   material as the tab behind it, so it reads as "the same application, about one thing".
+   The record's own colour - the one it has on every chart - tints the head and fills
+   the badge, which is what makes the card recognisably THIS project at a glance. The
+   opening is a fade and nothing else: a transform would make the dialog the containing
+   block of the fixed-position pop-up inside it, and the pop-up would be cut off at the
+   dialog's edge. */
+dialog.card{width:min(1200px,96vw);max-width:none;max-height:92vh;padding:0;overflow:hidden;
+  background:var(--page);--card-tint:var(--accent)}
+dialog.card[open]{display:flex;flex-direction:column}
+.card-h{flex:none;display:flex;align-items:center;gap:12px;padding:16px 22px 14px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--card-tint) 16%,var(--surface)) 0%,
+    var(--surface) 100%);border-bottom:1px solid var(--hairline)}
+.card-who{display:flex;align-items:center;gap:14px;min-width:0;flex:1 1 auto}
+.mono{flex:none;display:inline-grid;place-items:center;width:48px;height:48px;border-radius:50%;
+  background:var(--card-tint);color:#fff;font-weight:700;font-size:16px;letter-spacing:.02em;
+  box-shadow:0 1px 2px rgba(0,0,0,.12),inset 0 0 0 1px rgba(255,255,255,.18);
+  text-shadow:0 1px 1px rgba(0,0,0,.25)}
+.mono.sq{border-radius:13px}
+.mono.xs{width:24px;height:24px;font-size:10px;margin-right:8px;box-shadow:none}
+.mono.xs.sq{border-radius:7px}
+.card-tt{display:flex;flex-direction:column;min-width:0}
+.card-kind{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+  font-weight:650}
+.card-tt strong{font-size:var(--t-3xl);font-weight:700;letter-spacing:-.022em;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-sub{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.card-sub .ty,.card-sub .ph,.card-sub .scope,.card-sub .estb{margin-left:0}
+.idchip{font-family:var(--f-mono);font-size:var(--t-xs);padding:2px 8px;border-radius:999px;
+  background:var(--fill);color:var(--ink2);white-space:nowrap}
+.card-nav{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--t-sm);
+  white-space:nowrap;font-variant-numeric:tabular-nums}
+.card-nav .btn.tiny{min-width:28px;font-size:var(--t-lg);line-height:1}
+.card-h > .btn{white-space:nowrap}
+.card-b{flex:1 1 auto;overflow:auto;padding:18px 24px 30px;scrollbar-color:var(--base) transparent}
+.card-b:focus{outline:none}
+.card-b::-webkit-scrollbar{width:12px}
+.card-b::-webkit-scrollbar-thumb{background:var(--base);border-radius:8px;
+  border:3px solid transparent;background-clip:padding-box}
+@media (max-width:760px){.card-h{flex-wrap:wrap}.card-tt strong{font-size:var(--t-2xl)}}
+
+.life{background:var(--surface);border-radius:var(--r-lg);padding:14px 18px 16px;box-shadow:var(--shadow)}
+.life-ends{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;
+  font-size:var(--t-sm);color:var(--ink2);margin-bottom:9px;font-variant-numeric:tabular-nums}
+.life-ends b{color:var(--ink);font-weight:620}
+.life-mid{color:var(--ink);font-weight:600}
+.life-track{position:relative;height:10px;border-radius:999px;background:var(--fill)}
+.life-fill{position:absolute;left:0;top:0;bottom:0;border-radius:999px;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--card-tint) 55%,var(--surface)),var(--card-tint))}
+.life-now{position:absolute;top:-5px;width:3px;height:20px;margin-left:-1.5px;border-radius:2px;
+  background:var(--ink);box-shadow:0 0 0 2px var(--surface)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin:14px 0}
+.kpi{background:var(--surface);border-radius:var(--r-lg);padding:12px 15px 13px;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:1px;min-width:0;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--grid)}
+.kpi.now::before{background:var(--ink)}
+.kpi.over::before{background:var(--crit)}.kpi.under::before,.kpi.gap::before{background:var(--warn)}
+.kpi.ok::before{background:var(--good)}
+.kpi .kl{font-size:var(--t-xs);color:var(--muted);font-weight:650;letter-spacing:.05em;text-transform:uppercase}
+.kpi .kv{font-size:26px;font-weight:680;letter-spacing:-.025em;font-variant-numeric:tabular-nums;line-height:1.25}
+.kpi .ks{font-size:var(--t-xs);color:var(--ink2);line-height:1.45}
+.kpi.over .kv{color:var(--crit)}.kpi.under .kv,.kpi.gap .kv{color:var(--underink)}
+.kpi .kmeter{display:block;margin-top:5px}
+
+.csec{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:14px 18px 16px;
+  margin:14px 0;min-width:0}
+.csec-h{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.csec-h h3{margin:0;font-size:var(--t-xl);font-weight:660;letter-spacing:-.012em}
+.csec-a{margin-left:auto;font-size:var(--t-sm);color:var(--muted);display:flex;gap:8px;align-items:center}
+.csplit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:14px;margin:14px 0;
+  align-items:start}
+.csplit > .csec{margin:0}
+@media (max-width:900px){.csplit{grid-template-columns:1fr}}
+
+.ctwrap{overflow-x:auto}
+.ct{width:100%;border-collapse:collapse;font-size:var(--t-md)}
+.ct th{font-size:var(--t-xs);color:var(--muted);font-weight:650;text-align:left;padding:6px 10px;
+  border-bottom:1px solid var(--hairline);white-space:nowrap;vertical-align:bottom;
+  letter-spacing:.02em}
+.ct td{padding:8px 10px;border-bottom:1px solid var(--grid);vertical-align:middle}
+.ct tbody tr:last-child td{border-bottom:0}
+.ct .num{text-align:right;font-variant-numeric:tabular-nums}
+.ct .sub{display:block;font-size:var(--t-xs);color:var(--muted);font-weight:400;letter-spacing:0}
+.ct .muted{color:var(--muted)}
+.ct tr.on td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.ct tbody tr:hover td{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.ct td.load{min-width:200px}
+.plink{border:0;background:none;padding:0;margin:0;font:inherit;color:var(--accent);font-weight:600;
+  cursor:pointer;display:inline-flex;align-items:center;text-align:left;border-radius:var(--r-xs)}
+.plink:hover{text-decoration:underline;text-underline-offset:3px}
+.ct .chip{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;
+  background:var(--fill2);vertical-align:-1px;box-shadow:inset 0 0 0 1px var(--hairline)}
+.nowpill{font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--ink);
+  color:var(--surface);margin-left:4px;vertical-align:1px}
+
+.mslist{list-style:none;margin:0;padding:0;position:relative}
+.mslist::before{content:"";position:absolute;left:5px;top:10px;bottom:10px;width:2px;
+  background:var(--grid);border-radius:1px}
+.mslist li{display:flex;align-items:baseline;gap:12px;padding:5px 0;position:relative}
+.mslist .dot{width:12px;height:12px;border-radius:50%;background:var(--ink2);flex:none;z-index:1;
+  box-shadow:0 0 0 3px var(--surface);align-self:center}
+.mslist .dot.key{background:var(--crit)}
+.csec .tr{color:var(--muted);font-size:var(--t-xs);font-weight:400}
+.life-none{margin:0 0 4px}
+.mslist li.past{color:var(--ink2)}
+.mslist li.past .dot{opacity:.5}
+.mslist .mnm{flex:1 1 auto;min-width:0}
+.mslist .mdt{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:var(--t-sm);white-space:nowrap}
+.mslist li.upcoming .mnm{font-weight:650}
+.mslist li.upcoming .mnm::after{content:"next";font-size:10px;font-weight:700;padding:1px 6px;
+  border-radius:999px;background:var(--accent);color:#fff;margin-left:6px;vertical-align:1px}
+
+.meter{position:relative;display:block;height:6px;border-radius:999px;background:var(--fill);
+  min-width:90px;margin:4px 0 3px}
+.meter .mfill{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--accent)}
+.meter.over .mfill{background:var(--crit)}.meter.under .mfill{background:var(--warn)}
+.meter .mtick{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;border-radius:1px;
+  background:var(--warn)}
+.meter .mtick.hi{background:var(--crit)}
+
+.fgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:10px 30px}
+.fgroup h4{margin:2px 0 4px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);font-weight:650}
+.fgroup dl{margin:0}
+.fgroup .f{display:grid;grid-template-columns:minmax(130px,42%) 1fr;gap:12px;padding:6px 0;
+  border-bottom:1px solid var(--grid)}
+.fgroup .f:last-child{border-bottom:0}
+.fgroup dt{color:var(--ink2);font-size:var(--t-sm)}
+.fgroup dd{margin:0;font-weight:560;overflow-wrap:anywhere}
+.fgroup dd.none{color:var(--muted);font-weight:400}

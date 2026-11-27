@@ -87,7 +87,11 @@ def unpick(pg, fid, *values):
 
 def edit(pg, col, text):
     td = pg.locator(f"{P} td[data-col='{col}']").first
-    td.click()
+    if td.locator(".renbtn").count():      # a saved name is a link to its card (R-67)
+        td.hover()
+        td.locator(".renbtn").click()
+    else:
+        td.click()
     pg.wait_for_timeout(160)
     pg.keyboard.press("Control+A")
     pg.keyboard.type(text)

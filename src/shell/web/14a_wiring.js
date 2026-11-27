@@ -200,6 +200,7 @@ function renderKeepingTab(){
      been left by the time this fires. */
   gapRefresh();
   teamRefresh();                    // and the project team (R-66), for the same reason
+  cardRefresh();                    // and a project's or person's card (R-67)
 }
 function showTab(id){
   S.tab = id;

@@ -86,7 +86,10 @@ with sync_playwright() as pw:
 
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(250)
-    cell(pg, "Project", "project_name").click()
+    # A saved project's name opens its card (R-67); it is typed into through its pencil.
+    nm = cell(pg, "Project", "project_name")
+    nm.hover()
+    nm.locator(".renbtn").click()
     pg.wait_for_timeout(450)
     check(pg.evaluate("document.getElementById('cal').hidden"),
           "and only on a date column — a text cell gets the value list, not a calendar")

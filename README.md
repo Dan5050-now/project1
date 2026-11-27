@@ -320,8 +320,14 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.75.xlsx` — **current.** 96 requirements, 41 live
-  validation rules, source schema version 16. The latest change is **R-66**: **a
+- `docs/PRAP_Development_Plan_v2.76.xlsx` — **current.** 99 requirements, 41 live
+  validation rules, source schema version 16. The latest change is **R-67**: **the page
+  is the window** — no 1400px column, and every chart drawn to the width it gets, so the
+  extra width goes to the plot and the text stays its designed size (`REQ-DSH-24`);
+  **one project or one person on one card** — a saved name in the Projects and People
+  tables opens a single scrolling pop-up with everything about it, cross-linked between
+  projects and people, renaming moved to a pencil beside the name (`REQ-DSH-25`); and a
+  **visual refresh** in both themes (`REQ-DSH-26`). Before it, **R-66**: **a
   project's team is changed where the project is looked at** — a *Team* button on every
   row of Resource by project and *Change team* on the project's Utilisation open one
   dialog to swap, re-role, add or remove people, each shown with their load; every change
@@ -458,7 +464,10 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.44.xlsx` — **current specification.** Schema 16.
+- `docs/PRAP_Programming_Specification_v1.45.xlsx` — **current specification.** Schema 16.
+  Records how a chart is drawn to the room it has (`CHART_ROOM`, `fitW`, `withRoom`), the
+  card (`ui/13e_card.js`), the name cell and its rename path, and why the pop-up moves
+  into an open dialog (R-67).
   Records the Team dialog (`ui/13d_team.js`) and how its changes go through the ordinary
   edit path (R-66).
   Records where today is drawn and how (`monthAxis`, `markNow`), and the person's own
@@ -482,7 +491,10 @@ document through the manifest rather than by sorting filenames.
   and states the quantity it had been missing: the Overall tab's cost follows
   `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same
   rendering problem.
-- `docs/PRAP_UI_Component_List_v2.10.xlsx` — **current component list.** Adds `O-15`, the
+- `docs/PRAP_UI_Component_List_v2.11.xlsx` — **current component list.** Adds `P-09`, the
+  name link; `P-10` and `S-09`, the project and person cards; `X-17`, the page is the
+  window; and `X-18`, one visual system (R-67).
+- `docs/PRAP_UI_Component_List_v2.10.xlsx` — superseded component list. Adds `O-15`, the
   Team dialog (R-66).
 - `docs/PRAP_UI_Component_List_v2.9.xlsx` — superseded component list. Adds `X-16`, Today
   on every chart and month table, and `S-08`, the person's own Project timeline (R-65).

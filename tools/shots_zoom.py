@@ -76,7 +76,8 @@ with sync_playwright() as pw:
     # 3. AND IT IS STILL THE APPLICATION. A cell being typed into, from inside it, with
     #    the unsaved-change count and Save live in the band above.
     cell = "#t-proj .panel[data-panel='projects'] td[data-col='project_name']"
-    pg.locator(cell).nth(1).click()
+    pg.locator(cell).nth(1).hover()                 # renamed through its pencil (R-67)
+    pg.locator(cell).nth(1).locator(".renbtn").click()
     pg.wait_for_timeout(300)
     pg.keyboard.press("Control+A")
     pg.keyboard.type("CAR-102 Phase 2 — typed here")

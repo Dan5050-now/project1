@@ -193,7 +193,9 @@ with sync_playwright() as pw:
 
     # ---- 4. and 5. editing, then saving, from inside it -----------------------
     cell = "#t-proj .panel[data-panel='projects'] td[data-col='project_name']"
-    pg.locator(cell).nth(1).click()
+    # The name is renamed through its pencil - a click on it opens the card (R-67).
+    pg.locator(cell).nth(1).hover()
+    pg.locator(cell).nth(1).locator(".renbtn").click()
     pg.wait_for_timeout(300)
     pg.keyboard.press("Control+A")
     pg.keyboard.type("CAR-102 Phase 2 (typed full screen)")

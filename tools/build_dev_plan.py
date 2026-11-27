@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.75"
-DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.64, source schema 16 - Gate 4 "
+DOC_VERSION = "2.76"
+DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.65, source schema 16 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, milestone and period highlighting, and the "
               "manager's review of issues.")
@@ -398,6 +398,27 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.76", "2026-11-27", "Claude Code", "Pending",
+     "R-67, THREE REQUESTS FROM THE FIELD. REQ-DSH-24 - THE PAGE IS THE WINDOW: everything "
+     "under the title stopped at 1400px and centred, leaving two broad grey margins on a wide "
+     "screen while the tables beside them scrolled sideways for want of room. The column is "
+     "gone; only a gutter is kept. Every chart is now DRAWN to the width it has - the extra "
+     "goes to the plot and the text stays at its designed size, where stretching the old "
+     "drawing would have scaled it 1.6x on a 1920px screen - and is redrawn when the window "
+     "is resized. REQ-DSH-25 - ONE PROJECT OR ONE PERSON ON ONE CARD: a saved name in the "
+     "Projects and People tables is a link that opens a single scrolling pop-up page: the "
+     "record's span with today on it, six headline figures, its charts, the team or the "
+     "assignments (each name opening the other's card, Back returning), milestones, periods, "
+     "the open standard-vs-staffed months, and every field of the row; Previous and Next walk "
+     "the table's order and Show on returns to the row. Read-only; renaming moves to a pencil "
+     "beside the name, or F2. A chart's pop-up now shows inside any dialog - it used to be "
+     "drawn behind it. REQ-DSH-26 - ONE VISUAL SYSTEM, more polished: a brand mark, the "
+     "version and file as chips, an icon on each tab, a coloured rule on each figure tile and "
+     "a bar before each section heading, tinted table headings, a mark on each banner, form "
+     "controls of one height, the edit state as a pill, and dialogs that fade in; in both "
+     "themes. No figure moves. tools/test_card.py is new: 32 checks, two proved by putting "
+     "the fault back. Python edition 1.39.",
+     "Issued for review"],
     [f"{MARK_NEW}2.75", "2026-10-25", "Claude Code", "Pending",
      "R-66, REQ-DSH-23: A PROJECT'S TEAM IS CHANGED WHERE THE PROJECT IS LOOKED AT. Asked for "
      "from the field: while seeing everybody's load, change the members of a project directly "
@@ -417,7 +438,7 @@ rows = [
      "tools/test_team.py is new: 19 checks. Also: app/PRAP_Demo.html, the application with "
      "the 62-project dummy plan loaded, for trying it out (tools/build_demo.py). Python "
      "edition 1.38.",
-     "Issued for review"],
+     "Superseded by v2.76"],
     [f"{MARK_NEW}2.74", "2026-10-12", "Claude Code", "Pending",
      "R-65, TWO REQUESTS FROM THE FIELD. REQ-DSH-21 - TODAY ON EVERY CHART AND MONTH TABLE: "
      "'in all run-charts and tables of all tabs, present where the current time is'. Every "
@@ -2572,6 +2593,9 @@ reqs = [
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-DSH-26", "Dashboard", "ONE VISUAL SYSTEM ACROSS THE APPLICATION, IN BOTH THEMES. Every colour, size, radius and shadow is drawn from a named token; colour carries meaning (blue interactive, red over the ceiling, amber under the floor) and the few decorative touches - a brand mark, the tab icons, the rules on the figure tiles and the bars before section headings - repeat the accent rather than adding hues. Text keeps its contrast in both themes.", "Should", "R-67", "4"],
+    [f"{MARK_NEW}REQ-DSH-25", "Dashboard", "A PROJECT OR A PERSON CAN BE READ ON ONE PAGE. Clicking a saved name in the Projects or People table opens a single scrolling pop-up with everything about that record: its span with today marked, headline figures, its charts, its team or its assignments, its milestones and periods, its open standard-vs-staffed months, and every field of its row. From it: the other side's card for any person or project named, Back, Previous and Next in the table's order, and the row itself on its tab. It changes nothing; the name stays renamable from its cell.", "Should", "R-67", "4"],
+    [f"{MARK_NEW}REQ-DSH-24", "Dashboard", "THE PAGE USES THE WHOLE WIDTH OF THE WINDOW, less a gutter, and every chart is drawn to the width it is shown at - the extra width goes to the plot, the text stays at its designed size - and redrawn when the window is resized. A window narrower than a chart needs still scrolls it rather than squeezing it.", "Should", "R-67", "4"],
     [f"{MARK_NEW}REQ-DSH-23", "Dashboard", "A PROJECT'S TEAM CAN BE CHANGED FROM WHERE THE PROJECT IS VIEWED - Resource by project and the project's Utilisation - in one place: swap a person, change a role, window or weight, add or remove somebody, with each candidate's load beside them. Each change is an ordinary edit of the Assignment sheet: validated as any other, shown on every tab at once, kept by Save and recorded in the change log.", "Should", "R-66", "4"],
     [f"{MARK_NEW}REQ-DSH-22", "Dashboard", "THE PERSON TAB SHOWS THE SELECTED PERSON'S PROJECTS AS A TIMELINE - the Project timeline of the Overall tab, cut to the projects the person has an assignment on, whatever the filters say - with a mark under each project for when the person is on it, one per assignment.", "Should", "R-65", "4"],
     [f"{MARK_NEW}REQ-DSH-21", "Dashboard", "TODAY IS MARKED WHEREVER MONTHS ARE DRAWN: a line at today's day within the current month on every chart drawn over months, and through every row of the Project timeline; the current month's column outlined in the month-column tables and its heading marked; the current month's row marked in Monthly estimation. In a colour no other mark uses. Not drawn when today is outside what is shown.", "Should", "R-65", "4"],
@@ -3501,6 +3525,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-67", "Dashboard", "Make the page under the title full width; open one project's or one person's information as a single scrolling pop-up when its name is clicked in Projects or People; review the whole UI and make it more polished, clear and friendly.", "Applied. The 1400px column is gone and the charts are drawn to the width they get (REQ-DSH-24). A saved name is a link to a read-only card with everything about the record, cross-linked between projects and people (REQ-DSH-25). A visual refresh in both themes (REQ-DSH-26). No figure moves.", "Applied"],
     ["R-66", "Dashboard", "Let a user change a project's members easily while looking at everybody's load - from Resource by project and the project's Utilisation - and have it update the people's assignments on Save.", "Applied. A Team dialog per project: swap, re-role, re-window, re-weight, add and remove, each person shown with their load; every change an ordinary pending edit of the Assignment sheet, kept by Save. REQ-DSH-23 added; no figure moves by itself.", "Applied"],
     ["R-65", "Dashboard", "Show where the current time is on every run-chart and month table of every tab; add the project timeline to Source data (person) for the selected person's projects.", "Applied. A Today line on every monthly chart and through the Project timeline; the current month's column and row marked in the tables; a person's own Project timeline with a bar per assignment. REQ-DSH-21 and REQ-DSH-22 added; no figure moves.", "Applied"],
     ["R-64", "Data model", "Offer at least 12 distinctive highlight colours.", "Applied. Thirteen colours for milestones and periods, distinct in both themes; offered in every workbook, older ones included; a swatch per colour in the chooser; the colour word read as a word. REQ-PRJ-17 added; template v1.21; no figure moves.", "Applied"],

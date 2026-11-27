@@ -125,6 +125,17 @@ with sync_playwright() as pw:
     pg.goto(APP)
     pg.wait_for_timeout(400)
     load(pg, PLAN)
+    # The example reviews are for October to December 2026, and the page opens on the
+    # CURRENT month - so once the clock passed October the first of them fell outside the
+    # window and could not be drawn, muted or otherwise. Set the window a reader would to
+    # see them, the one the page opened on when this was written, so what is checked below
+    # does not depend on the day it runs.
+    # Typed and then LEFT, as a reader does: a field still holding the caret fires its
+    # change on the next click anywhere, and the redraw that causes swallows that click.
+    pg.fill("#fFrom", "2026-10")
+    pg.fill("#fTo", "2028-09")
+    pg.evaluate("document.activeElement.blur()")
+    pg.wait_for_timeout(1200)
 
     print("\n1. the fixture's reviews, and what they look like")
     rv = reviews(pg)

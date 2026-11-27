@@ -374,7 +374,7 @@ document.addEventListener("click", e => {
     e.stopPropagation();
     // Opening the other tab from INSIDE the gap dialog has to shut it first, or the tab
     // it just took you to is drawn behind a modal nobody asked to keep.
-    if (act.dataset.act === "gopers" || act.dataset.act === "goproj"){ closeGap(); closeGaps(); }
+    if (act.dataset.act === "gopers" || act.dataset.act === "goproj"){ closeGap(); closeGaps(); closeCard(); }
     if (act.dataset.act === "blankms") blankMilestones(act.dataset.pid);
     if (act.dataset.act === "autoper") autoPeriods(act.dataset.pid);
     if (act.dataset.act === "blankper") blankPeriods(act.dataset.pid);
@@ -441,6 +441,11 @@ document.addEventListener("click", e => {
     return;
   }
   const row = e.target.closest(".data-t tbody tr");
+  /* A name's link and its pencil (R-67). Read here, before the row is selected: the
+     pencil replaces the cell's contents, and a target taken out of the page has no row
+     to find any more. */
+  const ren = e.target.closest("[data-rename]"), card = e.target.closest("[data-card]");
+  if (ren || card) e.preventDefault();
   if (row && row.dataset.id) keepScroll(() => {
     const sheet = row.closest(".data-t").dataset.sheet;
     // Re-render the DEPENDENT panels only. Re-rendering the table itself would replace
@@ -465,6 +470,14 @@ document.addEventListener("click", e => {
       const d = el("asgDetail"); if (d) d.innerHTML = overridesPanel(S.selPers);
     }
   });
+  if (ren) startRename(ren.closest("td"));
+  else if (card) openCard(card.dataset.card, card.dataset.cid, !!card.closest("#carddlg"));
+});
+/* F2 on a name's link renames it, as it would a cell in a spreadsheet (R-67). */
+document.addEventListener("keydown", e => {
+  if (e.key !== "F2") return;
+  const b = e.target.closest && e.target.closest(".namelink");
+  if (b){ e.preventDefault(); startRename(b.closest("td")); }
 });
 
 // Clicking a cell that ALREADY has the caret fires no focusin, so after Escape has
@@ -493,6 +506,11 @@ document.addEventListener("focusout", e => {
      applyEdit would be called with an undefined sheet and a NaN row number, and
      M.raw[undefined] throws before anything can say why. */
   if (!td.dataset.sheet) return;
+  /* A name being renamed goes back to its link once it is left (R-67) - after the same
+     delay, so a drag on the value list's scrollbar, which takes the focus for a moment
+     and gives it back, does not end the rename under the person doing it. */
+  if (td.classList.contains("renaming"))
+    setTimeout(() => { if (!SUGG.holding) endRename(td); }, 150);
   /* Close on a delay, and only if the panel is still THIS cell's. Clicking straight
      from one cell to the next opens the panel for the new one before this timer fires,
      and an unconditional close would then shut the panel that had just been opened -
@@ -1002,7 +1020,19 @@ const CAL = (() => {
     tip.style.left = Math.max(8, nx) + "px";
     tip.style.top = Math.max(8, ny) + "px";
   };
-  const show = (html, x, y, isPin) => {
+  /* INSIDE A MODAL DIALOG THE POP-UP HAS TO BE IN THE DIALOG. A modal is drawn in the
+     top layer, above the whole page whatever anybody's z-index says, so a pop-up left on
+     the body was drawn BEHIND the dialog it was explaining - every chart in the card
+     (R-67), and every figure in the month and team dialogs, hovered to nothing. It is
+     fixed-position either way, so moving it changes what it is drawn over and nothing
+     about where. */
+  const lodge = node => {
+    const d = node && node.closest && node.closest("dialog[open]");
+    const host = d || document.body;
+    if (tip.parentNode !== host) host.appendChild(tip);
+  };
+  const show = (html, x, y, isPin, node) => {
+    lodge(node);
     tip.innerHTML = html + (isPin ? `<span class="tipclose">click anywhere to close</span>` : "");
     tip.hidden = false;
     tip.classList.toggle("pinned", !!isPin);
@@ -1014,7 +1044,7 @@ const CAL = (() => {
     const el_ = e.target.closest("[data-tip]");
     if (!el_ || pinned) return;
     last = {x:e.clientX, y:e.clientY};
-    show(el_.dataset.tip, last.x, last.y, false);
+    show(el_.dataset.tip, last.x, last.y, false, el_);
   });
   document.addEventListener("mousemove", e => {
     last = {x:e.clientX, y:e.clientY};
@@ -1040,7 +1070,7 @@ const CAL = (() => {
     if (el_ && !isControl){
       e.stopPropagation();
       pinned = (pinned === el_) ? null : el_;
-      if (pinned) show(el_.dataset.tip, e.clientX, e.clientY, true);
+      if (pinned) show(el_.dataset.tip, e.clientX, e.clientY, true, el_);
       else hide();
       return;
     }
@@ -1055,7 +1085,7 @@ const CAL = (() => {
     const el_ = e.target.closest("[data-tip]");
     if (!el_ || pinned) return;
     const r = el_.getBoundingClientRect();
-    show(el_.dataset.tip, r.left + r.width / 2, r.bottom, false);
+    show(el_.dataset.tip, r.left + r.width / 2, r.bottom, false, el_);
   });
   document.addEventListener("focusout", e => { if (e.target.closest("[data-tip]")) hide(); });
 })();
@@ -1108,6 +1138,23 @@ addEventListener("resize", () => {
   if (!S.zoom) return;
   fitZoom();
   cueScrollers();
+});
+/* The charts are drawn to the width the page has (R-67), so a window made much wider or
+   narrower redraws them once it has settled - otherwise the drawing is only stretched or
+   squeezed, which is exactly the oversized text that measuring was for. Not while a cell
+   is being typed into: a redraw replaces the cell, and the edit with it. */
+let roomTimer = 0;
+addEventListener("resize", () => {
+  clearTimeout(roomTimer);
+  roomTimer = setTimeout(() => {
+    if (!S.model || el("tabs").hidden) return;
+    const was = CHART_ROOM;
+    measureRoom();
+    if (Math.abs(CHART_ROOM - was) < 24) return;
+    const a = document.activeElement;
+    if (a && a.isContentEditable) return;
+    renderKeepingTab();
+  }, 250);
 });
 
 el("saveBtn").onclick = saveEdits;

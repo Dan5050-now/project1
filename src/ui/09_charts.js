@@ -16,9 +16,11 @@
  * R for the threshold labels that sit outside the plot. */
 const CHART = {
   // One row per project. The label gutter is what a single-project view does not need,
-  // so it has its own pair: the whole gutter goes to the bands instead.
+  // so it has its own pair: the whole gutter goes to the bands instead. 250 rather than
+  // the 220 it was: the line under each name - "2025-09-01 -> 2027-02-28 · 18 months" -
+  // is about 215 units long, and at 220 it lost its first digit off the left edge (R-67).
   gantt:  {W:1180, padT:34, padR:14, foot:30,
-           rowh:42, rowhSingle:74, padL:220, padLSingle:26},
+           rowh:42, rowhSingle:74, padL:250, padLSingle:26},
   // One line per project or person across the horizon.
   lines:  {Wmin:720, Wbase:96, Wper:46, H:300, padL:62, padR:16, padT:24, padB:46},
   // Stacked months - drawn TWICE, by project and by person, to the same geometry.
@@ -46,6 +48,35 @@ const CHART = {
 
 /** How wide a chart has to be to give every month `K.Wper` of plot area. */
 const chartW = (K, n) => Math.max(K.Wmin, K.padL + K.padR + Math.max(1, n) * K.Wper);
+
+/* THE ROOM A CHART IS DRAWN INTO (R-67).
+ *
+ * A viewBox scales its whole drawing to the box, text included. While the page stopped
+ * at 1400px that was a gentle 1.1x; across a full 1920px window it is 1.6x, and an axis
+ * label designed at 11.5px came out at 18px on a chart half as tall again as the screen
+ * wanted. So a chart is drawn to the width it will actually have, whenever that is MORE
+ * than it needs: the extra width goes to the plot - wider months, longer bands - and the
+ * text stays the size it was designed at. min-width stays the chart's own natural width,
+ * so a narrower window still scrolls rather than squeezes, exactly as before.
+ *
+ * Measured once per pane render from the page column, less the panel's padding and the
+ * gutter a vertical scrollbar takes; withRoom() lends a different figure to something
+ * drawn somewhere narrower, such as the card dialog. */
+let CHART_ROOM = 0;
+const fitW = W => Math.max(W, Math.floor(CHART_ROOM) || 0);
+function measureRoom(){
+  const w = document.querySelector(".wrap");
+  if (!w || !w.clientWidth) return;
+  const cs = getComputedStyle(w), root = getComputedStyle(document.documentElement);
+  const pad = parseFloat(root.getPropertyValue("--panel-px")) || 20;
+  CHART_ROOM = w.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+    - 2 * pad - 18;
+}
+function withRoom(px, fn){
+  const was = CHART_ROOM;
+  CHART_ROOM = px;
+  try { return fn(); } finally { CHART_ROOM = was; }
+}
 
 /* WHICH SERIES A MARK BELONGS TO.
  *
@@ -133,7 +164,7 @@ function chartGantt(pids, opts){
   const span = Math.max(1, (hi - lo) / DAY);
   // One project needs no row label - the panel heading already names it, and the dates go
   // in the note - so the whole gutter goes to the bands instead.
-  const K = CHART.gantt, W = K.W, padT = K.padT;
+  const K = CHART.gantt, W0 = K.W, W = fitW(W0), padT = K.padT;
   const rowh = opts.single ? K.rowhSingle : K.rowh;
   const padL = opts.single ? K.padLSingle : K.padL;
   const H = padT + rowh * rows.length + K.foot, inner = W - padL - K.padR;
@@ -143,7 +174,7 @@ function chartGantt(pids, opts){
   wmax = wmax || 1;
 
   const hlUsed = new Set(), perUsed = new Set();
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Project timeline: one row per project, one band per period">`];
   for (let y = new Date(lo).getUTCFullYear(); y <= new Date(hi).getUTCFullYear(); y++){
     const xx = x(Date.UTC(y, 0, 1));
@@ -288,7 +319,7 @@ function chartLines(items, valueAt, opts){
   if (!totals.length) return `<p class="note">${esc(opts.empty || "Nothing draws resource inside this horizon.")}</p>`;
   const shown = totals.slice(0, LINE_LIMIT);
   const K = CHART.lines, H = K.H, padL = K.padL, padR = K.padR, padT = K.padT, padB = K.padB;
-  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
+  const W0 = Math.max(K.Wmin, K.Wbase + G.length * K.Wper), W = fitW(W0);
   const step = (W - padL - padR) / Math.max(1, G.length - 1 || 1);
   const xOf = i => G.length === 1 ? padL + (W - padL - padR) / 2 : padL + i * step;
   let vmax = 0;
@@ -296,7 +327,7 @@ function chartLines(items, valueAt, opts){
   vmax = (vmax || 1) * 1.12;
   const yOf = v => H - padB - (v / vmax) * (H - padB - padT);
 
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="${att(opts.aria || "Monthly resource, one line per series")}">`];
   o.push(`<text class="ax" x="${padL-8}" y="${padT-8}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 4; i++){
@@ -372,13 +403,13 @@ function chartStacked(pids){
   const colour = {};
   for (const p of order) colour[p] = projColourOf(p);
   const K = CHART.stack, H = K.H, padL = K.padL, padB = K.padB, padT = K.padT;
-  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
+  const W0 = Math.max(K.Wmin, K.Wbase + G.length * K.Wper), W = fitW(W0);
   const bw = (W - padL - K.padR) / G.length;
   let vmax = 0;
   for (const k of G){ let s = 0; for (const p of order) s += C.projMonth.get(p+"|"+k) || 0; vmax = Math.max(vmax, s); }
   vmax = vmax || 1;
   const scale = (H - padB - padT) / (vmax * K.headroom);
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Monthly resource demand, one stacked band per project">`];
   o.push(`<text class="ax" x="${padL-8}" y="${padT-12}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 4; i++){
@@ -455,7 +486,7 @@ function chartPeople(sids){
   const restSet = new Set(rest);
 
   const K = CHART.stack, H = K.H, padL = K.padL, padB = K.padB, padT = K.padT;
-  const W = Math.max(K.Wmin, K.Wbase + G.length * K.Wper);
+  const W0 = Math.max(K.Wmin, K.Wbase + G.length * K.Wper), W = fitW(W0);
   const bw = (W - padL - K.padR) / G.length;
   let vmax = 0;
   for (const k of G){
@@ -465,7 +496,7 @@ function chartPeople(sids){
   }
   vmax = vmax || 1;
   const scale = (H - padB - padT) / (vmax * K.headroom);
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Monthly resource demand, one stacked band per person">`];
   o.push(`<text class="ax" x="${padL-8}" y="${padT-12}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 4; i++){
@@ -539,11 +570,11 @@ function chartProjectUtil(pid){
   const ownAvg = own.length ? own.reduce((a,b)=>a+b,0) / own.length : 0;
   const vals = G.map(k => C.projMonth.get(pid+"|"+k) || 0);
   const K = CHART.single, H = K.H, padL = K.padL, padR = K.padR;
-  const W = chartW(K, G.length);
+  const W0 = chartW(K, G.length), W = fitW(W0);
   const vmax = Math.max(Math.max(...vals, upper), 0.01) * 1.18;
   const bw = (W - padL - padR) / Math.max(1, G.length);
   const base = H - K.padB, top = K.padT;
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Monthly resource for this project against the portfolio average">`];
   o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 3; i++){
@@ -666,11 +697,11 @@ function chartPersonStrip(sid){
     .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).map(x => x[0]);
 
   const K = CHART.strip, H = K.H, padL = K.padL, padR = K.padR;
-  const W = chartW(K, G.length);
+  const W0 = chartW(K, G.length), W = fitW(W0);
   const vmax = Math.max(Math.max(...vals, M.OVER), 0.01) * 1.15;
   const bw = (W - padL - padR) / Math.max(1, G.length);
   const base = H - K.padB, top = K.padT;
-  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W}px" role="img" `
+  const o = [`<svg viewBox="0 0 ${W} ${H}" class="chart" style="min-width:${W0}px" role="img" `
     + `aria-label="Monthly load for the selected person, split by project, against both thresholds">`];
   o.push(`<text class="ax" x="${padL-8}" y="${top-11}" text-anchor="end">${unitLabel()}</text>`);
   for (let i = 0; i <= 3; i++){

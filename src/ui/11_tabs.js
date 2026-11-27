@@ -521,6 +521,18 @@ function persDetail(sid){
     </div>`;
 }
 
+/** When one person is on each of their projects: the bars the timeline draws under the
+ *  rows, and the projects in timeline order. Shared with the person's card (R-67). */
+function personSpans(sid){
+  const M = S.model, assign = {};
+  for (const a of M.assignments){
+    if (a.person_id !== sid || !M.projects[a.project_id]) continue;
+    (assign[a.project_id] ||= []).push({from: a.assign_start_date || null,
+      to: a.assign_end_date || null, role: a.role_name, weight: a.person_weight});
+  }
+  return {assign, pids: Object.keys(assign).sort(byRank)};
+}
+
 /** THE PROJECTS THIS PERSON IS ON, AS A TIMELINE (R-65). The Overall tab's Project
  *  timeline, cut to the projects the selected person has an assignment on - the same
  *  bands, milestones and colours - with a bar under each row for when they are on it.
@@ -529,13 +541,7 @@ function persDetail(sid){
  *  on, whatever the filters above say: this is about the person, not the view. */
 function persTimeline(sid){
   const M = S.model, pe = M.people[sid] || {};
-  const assign = {};
-  for (const a of M.assignments){
-    if (a.person_id !== sid || !M.projects[a.project_id]) continue;
-    (assign[a.project_id] ||= []).push({from: a.assign_start_date || null,
-      to: a.assign_end_date || null, role: a.role_name, weight: a.person_weight});
-  }
-  const pids = Object.keys(assign).sort(byRank);
+  const {assign, pids} = personSpans(sid);
   const who = pe.person_name || sid;
   return `<div class="panel" data-panel="pers-timeline">
       <div class="phead"><h2>Project timeline — ${esc(who)}</h2>
@@ -783,6 +789,7 @@ const ALL_TABS = Object.keys(TAB_RENDER);
 function renderTab(id){
   const fn = TAB_RENDER[id];
   if (!fn) return;
+  measureRoom();                    // the width the charts will have (R-67)
   fn();
   /* A section that had the whole screen has just been replaced along with everything
      else in its pane, so the state is put back on the panel that now carries its name -

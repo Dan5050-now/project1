@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.44"
+DOC_VERSION = "1.45"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.75.xlsx"
+PLAN = "PRAP_Development_Plan_v2.76.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,26 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.45", "2026-11-27", "Claude Code", "Dan",
+         "R-67, REQ-DSH-24 to REQ-DSH-26. style.css: .wrap loses its 1400px cap (max-width:none, "
+         "padding var(--gutter)), and the zoomed band its matching one. ui/09_charts.js: "
+         "CHART_ROOM is the width a chart will be shown at, set by measureRoom() at the top of "
+         "renderTab() from the .wrap column less the panel padding (--panel-px) and an 18px "
+         "scrollbar gutter; fitW(W) = max(W, CHART_ROOM) is the viewBox width of all six charts, "
+         "while min-width stays their own natural width; withRoom(px, fn) lends another figure, "
+         "for the card. A resize that moves the room by 24px or more re-renders, unless a cell "
+         "is being typed into. CHART.gantt.padL 220 -> 250. ui/13e_card.js: in dataTable a saved "
+         "Project.project_name or Person.person_name cell is nameCellHTML() - a button.namelink "
+         "[data-card][data-cid] and a button.renbtn[data-rename]; startRename() makes it the "
+         "contenteditable cell with the plain value, endRename() restores the link after a "
+         "focusout that changed nothing. openCard(kind, id, across) shows dialog#carddlg (made on "
+         "first use); drawCard() renders cardProject()/cardPerson() with withRoom(body width); "
+         "CARD.back holds the way back; cardOrder() reads the table's rows in order; cardGo() "
+         "selects the row on its tab. renderKeepingTab() calls cardRefresh(). shell/web/14b: the "
+         "click handler reads [data-rename]/[data-card] before the row selection and acts after "
+         "it; F2 on .namelink renames; the pop-up is re-parented into the open dialog that holds "
+         "the hovered element (lodge), because a modal is drawn in the top layer above it. "
+         "persTimeline()'s spans are personSpans(), shared with the card.", "Draft"],
         ["1.44", "2026-10-25", "Claude Code", "Dan",
          "R-66, REQ-DSH-23. ui/13d_team.js: openTeam(pid) shows dialog#teamdlg (made on first "
          "use) over the raw Assignment rows of that project. teamMonths() is the horizon cut to "

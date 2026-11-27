@@ -734,6 +734,11 @@ function dataTable(sheet, rows, cols, selKey, selVal, derived, lock, filterable)
       const marked = S.editedCells.has(`${sheet}|${r.__row}|${c}`) ? " edited" : "";
       const help = COLUMN_HELP[c] ? `<br><span class="tr">${esc(COLUMN_HELP[c])}</span>` : "";
       const tip = `${colHead(c)}<br>${disp === "" ? "<i>empty</i>" : esc(disp)}${help}`;
+      /* A SAVED project's or person's name opens its card (R-67) - see 13e_card.js. A row
+         still being typed has no record to show yet, so its name stays a plain cell. */
+      if (CARD_NAME_COL[sheet] === c && !r.__new
+          && cardRecord(cardKind(sheet), r[KEY_COL[sheet]]))
+        return nameCellHTML(sheet, r, `cell${marked}${pin}`, tip);
       /* The colour a highlight names, shown in the cell as a small square - as an
          ATTRIBUTE the stylesheet draws from, never as an element inside the cell. The
          cell is contenteditable and what is typed in it is read straight back off the
