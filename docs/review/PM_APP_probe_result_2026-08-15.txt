@@ -1,0 +1,24 @@
+PM_APP launch probe - result
+============================
+
+IT RAN. That is the main finding: this machine allowed an unsigned
+executable, extracted from a zip into a user folder, to start.
+
+When   2026-08-15 09:14
+Who    del09
+Where  BOOK-R8USOPHQ11
+Folder C:\Users\del09\DL-ClaudeCW\project management app develop\PM_APP_Probe_win64
+Write to its own folder   YES - the application would keep its data here
+
+WHAT THIS DOES NOT TELL US
+  Whether anti-virus tolerates the real package, which is 344 MB and
+  carries a browser engine, and how long that takes to start. Those need
+  the full build.
+
+PLEASE ALSO SAY
+  * Did Windows show a blue 'Windows protected your PC' box first?
+  * Did you have to click 'More info' then 'Run anyway'?
+  * Did anything else appear - anti-virus, a policy message, a block?
+  * Did the zip extract without complaint?
+
+Send this file back, with those four answers.
