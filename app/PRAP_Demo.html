@@ -184,6 +184,8 @@
   --ico-proj:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/%3E%3C/svg%3E");
   --ico-pers:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='9' cy='8' r='3.6'/%3E%3Cpath d='M2.5 20.5c.8-3.7 3.4-5.7 6.5-5.7s5.7 2 6.5 5.7'/%3E%3Cpath d='M15.5 4.6a3.6 3.6 0 0 1 0 6.9M18 14.9c1.8.8 3 2.7 3.5 5.6'/%3E%3C/svg%3E");
   --ico-gen:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6.5h9M19 6.5h1M4 12h3M11 12h9M4 17.5h11M20 17.5h0'/%3E%3Ccircle cx='16' cy='6.5' r='2.3'/%3E%3Ccircle cx='9' cy='12' r='2.3'/%3E%3Ccircle cx='17.5' cy='17.5' r='2.3'/%3E%3C/svg%3E");
+  /* R-69: Data issues - a warning sign, drawn like the other three. */
+  --ico-issues:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.6 2.6 19.8h18.8z'/%3E%3Cpath d='M12 10v4.3M12 17.1v.1'/%3E%3C/svg%3E");
   --ico-up:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 15V4M7.5 8.5 12 4l4.5 4.5'/%3E%3Cpath d='M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'/%3E%3C/svg%3E");
   --ico-new:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
 }
@@ -287,8 +289,8 @@ header .btn{min-height:34px}
 td.ins,th.ins{white-space:nowrap}
 .btn.reset{color:var(--accent)}
 
-/* --- provenance strip ---------------------------------------------------- */
-#prov{margin:12px 0 0;border-radius:var(--r-md);background:var(--quiet);
+/* --- provenance: the first section of General assumptions since R-69 ------- */
+#prov{margin:4px 0 0;border-radius:var(--r-md);background:var(--quiet);
  box-shadow:0 0 0 1px var(--hairline);font-size:var(--t-md)}
 #prov > summary{cursor:pointer;padding:9px 14px;color:var(--ink2);list-style:none;
  display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;border-radius:var(--r-md)}
@@ -333,6 +335,26 @@ td.ins,th.ins{white-space:nowrap}
    spinner is the part that keeps moving, so it is the part that says the wait is
    expected. Blue rather than green: this is in progress, not finished. */
 .banner.busy{border-left-color:var(--accent)}
+
+/* ---- the state of the data, in one band (R-69) -----------------------------------
+   What the checks found and what is waiting to be saved, side by side in one card at the
+   top of the sticky band. The rule between them is the 1px gap showing the hairline
+   behind: upright while they sit side by side, flat when a narrow window stacks them,
+   with nothing to switch. A part with nothing to say takes no room, and a band with
+   nothing in it at all - before anything is loaded - is not drawn. */
+#databand{display:flex;flex-wrap:wrap;gap:1px;margin:14px 0 0;border-radius:var(--r-lg);
+ background:var(--hairline);box-shadow:var(--shadow);overflow:hidden}
+#databand:not(:has(> #banner:not(:empty))):not(:has(> #editbar:not([hidden]))){display:none}
+#databand > #banner{flex:1 1 340px;min-width:0;display:flex;background:var(--surface)}
+#databand > #banner:empty{display:none}
+#databand > #banner > .banner{flex:1;margin:0;border-radius:0;box-shadow:none}
+#databand > #editbar{flex:2.2 1 640px;column-gap:10px;margin:0;border-radius:0;box-shadow:none}
+#databand > #editbar.dirty{box-shadow:inset 4px 0 0 var(--warn)}
+/* In the band the bar is two lines, always the same two: what the state of the work is,
+   in a sentence, and under it the controls. Letting them share a line made the sentence
+   the thing that gave way - one word to a line once the name box appeared beside it. */
+#databand > #editbar{row-gap:8px}
+#databand > #editbar .guide{flex:1 1 100%;max-width:none}
 .spin{width:14px;height:14px;flex:none;border-radius:50%;
  border:2px solid color-mix(in srgb,var(--accent) 25%,transparent);
  border-top-color:var(--accent);animation:spin .7s linear infinite}
@@ -491,6 +513,7 @@ nav button[data-tab="t-overall"]{--ico:var(--ico-overall)}
 nav button[data-tab="t-proj"]{--ico:var(--ico-proj)}
 nav button[data-tab="t-pers"]{--ico:var(--ico-pers)}
 nav button[data-tab="t-gen"]{--ico:var(--ico-gen)}
+nav button[data-tab="t-issues"]{--ico:var(--ico-issues)}
 nav button:hover{color:var(--ink);background:var(--fill)}
 nav button[aria-selected="true"]{color:var(--ink);font-weight:620;background:var(--surface);
  box-shadow:0 1px 3px rgba(0,0,0,.13),0 0 0 .5px rgba(0,0,0,.05)}
@@ -576,6 +599,8 @@ nav button[aria-selected="true"]::before{opacity:1;
 /* Charts are drawn at a fixed height, so their box only ever needs to grow sideways -
    but it is still bounded on both axes, and both scrollbars appear when they are needed. */
 .scrollx.fit{max-height:min(620px,70vh)}
+/* A list read top to bottom with the page, not in a window of its own (R-69). */
+.scrollx.free{max-height:none}
 /* Sticky headers in EVERY scroll region, not just the short ones. A month-column
    heading that scrolls away turns the table into a grid of unlabelled numbers.
    Three layers, and the order matters: the corner cell has to out-rank both the row
@@ -626,7 +651,7 @@ body.zoomed{overflow:hidden}
    gutter the page uses, so Save does not jump across the screen as the section opens. */
 body.zoomed #stickybar{position:fixed;top:var(--zoomchrome,0px);left:0;right:0;z-index:45;
  margin:0;padding:0 var(--gutter) 8px;box-shadow:0 1px 0 var(--hairline)}
-body.zoomed #editbar,body.zoomed #stickybar nav{margin-top:8px}
+body.zoomed #databand,body.zoomed #stickybar nav{margin-top:8px}
 
 /* --zoomtop is the measured height of that band - see fitZoom(). The fallback of 0 is
    deliberate: if the measurement has not happened yet the section covers the band for one
@@ -696,6 +721,20 @@ table{border-collapse:collapse;width:100%;font-size:var(--t-md)}
 .grid-t tr.child th.rh{padding-left:22px;font-weight:400;color:var(--ink2)}
 .grid-t td.c{color:var(--ink2)}
 .grid-t td.z{color:var(--muted)}
+/* The assumption matrices are typed into (R-69): a figure looks like a figure until the
+   pointer is on it, then like a field - the heat colour stays, ringed - and the caret
+   takes it to plain white, as any cell. An empty place shows its dot, and a plus under
+   the pointer: typing there adds the figure. An unsaved change is ringed in amber, since
+   the cell's own fill is the heat colour. */
+.grid-t td.mx,.grid-t td.mk{cursor:text;transition:box-shadow var(--dur) var(--ease)}
+.grid-t td.mx:hover,.grid-t td.mk:hover{box-shadow:inset 0 0 0 2px var(--accent)}
+.grid-t td.mx:focus,.grid-t td.mk:focus{outline:2px solid var(--accent);outline-offset:-2px;
+  background:var(--surface)!important;color:var(--ink)!important;box-shadow:none}
+.grid-t td.mk:empty::before{content:"\00B7"}
+.grid-t td.mk:hover:empty::before{content:"+";color:var(--accent);font-weight:600}
+.grid-t td.mk:focus:empty::before{content:""}
+.grid-t td.mx.edited{box-shadow:inset 0 0 0 2px var(--warn)}
+.grid-t td.mx.z:empty::before{content:"\00B7"}
 td.over{background:var(--overbg);color:var(--crit);font-weight:590}
 td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .grid-t tr.grand th,.grid-t tr.grand td{font-weight:620;border-top:1.5px solid var(--base)}
@@ -1584,6 +1623,174 @@ dialog.card[open]{display:flex;flex-direction:column}
 .gaxis .gnow.l{transform:translateX(-100%);border-radius:999px 2px 2px 999px}
 .gaxis .gnow.r{border-radius:2px 999px 999px 2px}
 
+/* ---- the card's cells, where the record is changed (R-69) -----------------------
+   Every value on the card is the same editable cell the tables use, so it has to LOOK
+   editable without looking like a form: quiet until the pointer is on it, a soft field
+   under the pointer, the accent ring while the caret is in it - the tables' own focus -
+   and the amber of an unsaved change, the same amber as everywhere else. An empty cell
+   says what it will mean, in grey, where the record leaves it to something else. */
+.ftab{width:100%;border-collapse:collapse;font-size:var(--t-md);table-layout:fixed}
+.ftab th{width:42%;text-align:left;font-weight:400;color:var(--ink2);font-size:var(--t-sm);
+  padding:5px 12px 5px 0;border-bottom:1px solid var(--grid);vertical-align:middle;cursor:help;
+  overflow-wrap:anywhere}
+.ftab td{border-bottom:1px solid var(--grid)}
+.ftab tr:last-child th,.ftab tr:last-child td{border-bottom:0}
+td.ccell{padding:5px 8px;border-radius:var(--r-xs);font-weight:560;cursor:text;
+  overflow-wrap:anywhere;transition:background var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+td.ccell:hover{background:var(--fill);box-shadow:inset 0 0 0 1px var(--hairline)}
+td.ccell:focus{outline:2px solid var(--accent);outline-offset:-2px;background:var(--surface);
+  box-shadow:none}
+td.ccell:empty::before{content:attr(data-ph);color:var(--muted);font-weight:400}
+/* The dash only says "nothing here"; with the caret in the cell it would read as text. */
+td.ccell:focus:empty[data-ph="\2014"]::before{content:""}
+td.ccell.edited{background:color-mix(in srgb,var(--warn) 20%,transparent)}
+td.ccell.num{text-align:right;font-variant-numeric:tabular-nums}
+td.ffix{padding:5px 8px;font-weight:560}
+td.ffix .btn.tiny{margin-left:8px}
+.ct.cedit td{padding:4px 6px}
+.ct.cedit td.ccell{padding:6px 8px}
+.ct.cedit td.ccell[data-col$="_date"],.ct.cedit td.ccell[data-col="period_start"],
+.ct.cedit td.ccell[data-col="period_end"],.ct.cedit td.num{white-space:nowrap}
+.ct.cedit th{padding:6px 8px}
+td.rowx{width:1%;white-space:nowrap;text-align:right}
+td.msdot{width:14px;padding-right:0}
+td.msdot .dot{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--ink2);
+  vertical-align:-1px}
+td.msdot .dot.key{background:var(--crit)}
+.ct tr.past td.ccell{color:var(--ink2)}
+.ct tr.past .dot{opacity:.5}
+.ct tr.upcoming .dot{background:var(--accent);box-shadow:0 0 0 3px var(--glow1)}
+.csec.editable .csec-h h3::after{content:"\270E";font-size:var(--t-sm);font-weight:400;
+  color:var(--muted);margin-left:8px}
+.csec-a .btn.tiny{white-space:nowrap}
+/* What the page's banner says, said again inside the card - the band is behind it. */
+.card-msg{flex:none;padding:8px 22px;font-size:var(--t-sm);line-height:1.45;
+  border-bottom:1px solid var(--hairline);background:var(--surface);color:var(--ink)}
+.card-msg.bad{background:var(--overbg);color:var(--crit)}
+.card-msg.warn{background:var(--underbg);color:var(--underink)}
+
+/* ---- Data issues (R-69) -----------------------------------------------------------
+   The levels carry the application's own colours for what it does about each one: red
+   is refused, the deep amber is asked about at Save, the pale amber is a warning, and
+   the two that never stop anything are grey. The solid pills take the surface colour
+   for their text, so they read in both themes - white on red in light, near-black on
+   the lighter red of dark. */
+.tabcount{display:inline-block;min-width:20px;padding:0 6px;margin-left:7px;border-radius:999px;
+  background:var(--underbg);color:var(--underink);font-size:var(--t-xs);font-weight:700;
+  line-height:18px;text-align:center;font-variant-numeric:tabular-nums;vertical-align:1px}
+.tabcount.must{background:var(--crit);color:var(--surface)}
+.lvpill{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-xs);font-weight:650;
+  padding:2px 9px 2px 8px;border-radius:999px;white-space:nowrap;line-height:17px;
+  background:var(--fill);color:var(--ink)}
+.lvpill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.lvpill.lv-must{background:var(--crit);color:var(--surface)}
+.lvpill.lv-keep{background:var(--underink);color:var(--surface)}
+.lvpill.lv-warn{background:var(--underbg);color:var(--underink)}
+.lvpill.lv-soon::before{background:var(--accent)}
+.lvpill.lv-note{color:var(--ink2)}
+.lvpill.lv-note::before{background:var(--muted)}
+
+.ichips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}
+.ichip{display:inline-flex;align-items:center;gap:9px;border:0;cursor:pointer;font:inherit;
+  font-size:var(--t-sm);font-weight:560;padding:8px 14px 8px 12px;border-radius:12px;
+  background:var(--fill);color:var(--ink);transition:background var(--dur) var(--ease),
+  box-shadow var(--dur) var(--ease)}
+.ichip b{font-size:var(--t-lg);font-weight:700;font-variant-numeric:tabular-nums}
+.ichip .idot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none}
+.ichip.lv-must .idot{background:var(--crit)}
+.ichip.lv-keep .idot{background:var(--underink)}
+.ichip.lv-warn .idot{background:var(--warn)}
+.ichip.lv-soon .idot{background:var(--accent)}
+.ichip:hover{background:var(--fill2)}
+.ichip.on{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.ichip.zero{color:var(--ink2)}
+.ichip.zero b{font-weight:500}
+.ichip.lv-must:not(.zero) b{color:var(--crit)}
+
+.itools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:0 0 12px;
+  padding:8px 10px;background:var(--quiet);border-radius:var(--r-md);
+  box-shadow:inset 0 0 0 1px var(--grid)}
+.itools .ilabel{font-size:var(--t-xs);color:var(--muted);font-weight:650;letter-spacing:.05em;
+  text-transform:uppercase}
+.itools .vtog{margin-left:0}
+.icats{display:inline-flex;flex-wrap:wrap;gap:4px}
+.btn.tiny.icat .n{color:var(--muted);font-variant-numeric:tabular-nums;margin-left:5px}
+.btn.tiny.icat.on{background:var(--accent);color:#fff}
+.btn.tiny.icat.on .n{color:inherit;opacity:.85}
+.iq{margin-left:auto;flex:0 1 320px;min-width:200px;font:inherit;font-size:var(--t-sm);color:var(--ink);
+  padding:6px 10px;border-radius:8px;border:1px solid var(--base);background:var(--surface)}
+.iq:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--glow1)}
+
+.isst{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--t-md)}
+.isst > thead > tr > th{background:var(--thead);text-align:left;padding:0;font-size:var(--t-xs);
+  color:var(--muted);font-weight:650;white-space:nowrap;border-bottom:1px solid var(--hairline)}
+.isort{border:0;background:none;font:inherit;color:inherit;padding:8px 10px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;border-radius:var(--r-xs);letter-spacing:.02em}
+.isort:hover{color:var(--accent)}
+.sarr{font-size:9px;color:var(--accent)}
+.isst > tbody > tr > td{padding:10px;border-bottom:1px solid var(--grid);vertical-align:top}
+.isst > tbody > tr.iss{cursor:pointer;--lvc:var(--base)}
+.isst > tbody > tr.lv-must{--lvc:var(--crit)}
+.isst > tbody > tr.lv-keep{--lvc:var(--underink)}
+.isst > tbody > tr.lv-warn{--lvc:var(--warn)}
+.isst > tbody > tr.lv-soon{--lvc:var(--accent)}
+.isst > tbody > tr.iss > td:first-child{box-shadow:inset 3px 0 0 var(--lvc)}
+.isst > tbody > tr.iss:hover > td{background:var(--quiet)}
+.isst > tbody > tr.iss.open > td{background:var(--quiet);border-bottom-color:transparent}
+.isst > tbody > tr > td.ilv{width:1%;white-space:nowrap}
+.isst > tbody > tr > td.icat-c{white-space:nowrap;color:var(--ink2);font-size:var(--t-sm)}
+.isst > tbody > tr > td.irec{min-width:150px;max-width:280px}
+.isst td.irec .sub{display:block;font-size:var(--t-xs);color:var(--muted);margin-top:1px}
+.isst > tbody > tr > td.ihead{min-width:320px;line-height:1.45}
+.isst > tbody > tr > td.irule{white-space:nowrap}
+.isst td.irule code,.imsg code{font-family:var(--f-mono);font-size:var(--t-xs);color:var(--ink2);
+  background:var(--fill);padding:1px 6px;border-radius:var(--r-xs)}
+.isst > tbody > tr > td.iact{width:1%;white-space:nowrap;text-align:right}
+.isst td.iact .btn.tiny + .btn.tiny{margin-left:4px}
+.isst .caret{margin-left:5px;font-size:9px}
+.isst > tbody > tr.acc .itext{color:var(--ink2)}
+.iacc{display:block;font-size:var(--t-xs);color:var(--good);font-weight:600;margin-top:3px}
+.inoacc{color:var(--muted);padding:0 10px}
+.isst > tbody > tr.igrp > th{background:var(--surface);padding:18px 10px 8px;text-align:left;
+  border-bottom:1px solid var(--hairline);font-weight:400;white-space:normal}
+.isst > tbody:first-of-type > tr.igrp > th{padding-top:12px}
+.ig{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ig-t{font-size:var(--t-lg);font-weight:660;color:var(--ink);letter-spacing:-.01em}
+.ig .namelink.ig-t{font-size:var(--t-lg);color:var(--accent)}
+.ig .mono.xs{margin-right:0}
+.ig-n{font-size:var(--t-xs);font-weight:700;background:var(--fill2);color:var(--ink);
+  border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.ig-s{font-size:var(--t-xs);color:var(--muted)}
+.isst > tbody > tr.issx > td{padding:2px 10px 16px;background:var(--quiet);border-bottom:1px solid var(--hairline);
+  box-shadow:inset 3px 0 0 var(--lvc)}
+.isst > tbody > tr.issx{--lvc:var(--base)}
+.isst > tbody > tr.issx.lv-must{--lvc:var(--crit)}
+.isst > tbody > tr.issx.lv-keep{--lvc:var(--underink)}
+.isst > tbody > tr.issx.lv-warn{--lvc:var(--warn)}
+.isst > tbody > tr.issx.lv-soon{--lvc:var(--accent)}
+.ifix{background:var(--surface);border-radius:var(--r-md);padding:12px 14px 14px;box-shadow:var(--shadow);
+  cursor:auto}
+.imsg{margin:0 0 12px;line-height:1.55;color:var(--ink);max-width:130ch}
+.imsg .lvpill{margin-right:4px;vertical-align:1px}
+.iacts{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}
+.iacts .btn.tiny{font-size:var(--t-sm);padding:4px 10px}
+.iacts .btn.tiny.danger{margin-left:0}
+.ied th.focus{color:var(--accent)}
+.ied tr.hit > td:not(.edited){background:var(--quiet)}
+.ied tr.hit > td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+#openIssues{white-space:nowrap}
+.ied td.ccell.focus{box-shadow:inset 0 0 0 1px var(--accent);background:var(--quiet)}
+.ied td.ccell.focus:focus{box-shadow:none;background:var(--surface)}
+.ied td.ccell.focus.edited{background:color-mix(in srgb,var(--warn) 20%,transparent)}
+.idone{background:var(--surface);color:var(--good);border-radius:var(--r-md);padding:9px 12px;
+  margin:0 0 10px;font-size:var(--t-sm);box-shadow:inset 3px 0 0 var(--good),var(--shadow)}
+.idone strong{font-weight:700}
+.iempty{display:flex;align-items:center;gap:14px;padding:24px 18px;border-radius:var(--r-lg);
+  background:var(--quiet);color:var(--ink2);box-shadow:inset 0 0 0 1px var(--grid)}
+.iempty strong{color:var(--ink)}
+.iok{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  background:var(--good);color:var(--surface);font-size:20px;font-weight:700}
+
 /* ---- the demo strip (tools/build_demo.py) ---- */
 #demo-strip{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 16px;
   font-size:12.5px;background:var(--underbg);color:var(--underink);
@@ -1623,15 +1830,6 @@ dialog.card[open]{display:flex;flex-direction:column}
   <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
 </header>
 
-<details id="prov">
-  <summary id="provSum"></summary>
-  <div id="provBody"></div>
-</details>
-
-<!-- Announced, because it is the only place a load reports what happened, and a
-     screen-reader user has nothing else to notice it by. Polite, not assertive: it
-     should not interrupt whatever is being read at the time. -->
-<div id="banner" aria-live="polite"></div>
 <div class="panel" id="filterbar" hidden>
   <h2>Horizon and filters <span class="scope">applies to every tab</span></h2>
   <p class="cap">One setting drives the whole page — the charts, both Overall tables and
@@ -1673,6 +1871,13 @@ dialog.card[open]{display:flex;flex-direction:column}
      through and nothing depends on the edit bar being exactly 60px tall - it wraps on a
      narrow window and its guide text changes length as you work. -->
 <div id="stickybar">
+<!-- THE STATE OF THE DATA, IN ONE BAND (R-69): what the plan's checks found and what is
+     waiting to be saved, side by side - the two are one question ("is this ready to
+     keep?") and used to be a page apart. The banner is announced, because it is the only
+     place a load reports what happened and a screen-reader user has nothing else to
+     notice it by; polite, so it does not interrupt whatever is being read. -->
+<div id="databand">
+<div id="banner" aria-live="polite"></div>
 <div id="editbar" hidden>
   <span class="guide" id="guide"></span>
   <span id="editstate"></span>
@@ -1690,12 +1895,14 @@ dialog.card[open]{display:flex;flex-direction:column}
   <button class="btn primary" id="saveBtn" disabled>Save</button>
   <button class="btn" id="discardBtn" disabled>Leave without change</button>
 </div>
+</div>
 
 <nav role="tablist" id="tabs" hidden>
   <button role="tab" aria-selected="true" data-tab="t-overall">Overall</button>
   <button role="tab" aria-selected="false" data-tab="t-proj">Source data (project)</button>
   <button role="tab" aria-selected="false" data-tab="t-pers">Source data (person)</button>
   <button role="tab" aria-selected="false" data-tab="t-gen">General assumptions</button>
+  <button role="tab" aria-selected="false" data-tab="t-issues">Data issues<span class="tabcount" id="issueCount" hidden></span></button>
 </nav>
 </div>
 
@@ -1734,6 +1941,7 @@ dialog.card[open]{display:flex;flex-direction:column}
 <section class="tab" id="t-proj" hidden></section>
 <section class="tab" id="t-pers" hidden></section>
 <section class="tab" id="t-gen" hidden></section>
+<section class="tab" id="t-issues" hidden></section>
 </div>
 
 <div id="tip" class="tip" hidden></div>
@@ -1817,7 +2025,7 @@ dialog.card[open]{display:flex;flex-direction:column}
 
 <script>
 "use strict";
-const APP_VERSION = "1.66";
+const APP_VERSION = "1.67";
 const SCHEMA_EXPECTED = 16;
 
 /* The controlled documents this build was written against (REQ-VC-01: plan,
@@ -1826,11 +2034,11 @@ const SCHEMA_EXPECTED = 16;
    tools/check_consistency.py - a provenance label nobody verifies is one that quietly
    goes stale, which is the whole failure mode it exists to prevent. */
 const BUILT_AGAINST = [
-  {what:"Development plan",       file:"PRAP_Development_Plan_v2.77.xlsx",          ver:"2.77",
+  {what:"Development plan",       file:"PRAP_Development_Plan_v2.78.xlsx",          ver:"2.78",
    status:"Baseline v2.0 APPROVED by Dan, 2026-08-02; v2.40 amends REQ-CAL-19 — a project-month IS its standard, and the people on it divide it"},
-  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.46.xlsx", ver:"1.46",
+  {what:"Programming specification", file:"PRAP_Programming_Specification_v1.47.xlsx", ver:"1.47",
    status:"v1.0 APPROVED by Dan, 2026-08-02; v1.14 makes the month the demand and the people its shares — this document governs the code"},
-  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.12.xlsx",          ver:"2.12",
+  {what:"UI component list",      file:"PRAP_UI_Component_List_v2.13.xlsx",          ver:"2.13",
    status:"v1.0 APPROVED by Dan, 2026-08-02 — Step 3 gate closed; v2.0 catches the list up with "
           + "R-13 to R-46, which added 22 components and made five of the old entries wrong; "
           + "v2.1 closes X-04 — row virtualisation is not built and, at the volume REQ-NFR-03 now "
@@ -6195,6 +6403,14 @@ const S = {
      shell that archives incrementally appends only what is new - and, if a write fails,
      retries the same entries at the next save instead of losing or duplicating them. */
   audit:[], events:[], who:null, archived:0, eventsArchived:0,
+  /* The Data issues tab (R-69): how its list is grouped, sorted and narrowed, and which
+     issue is open under its row - by id, with the open issue's first sentence and its
+     signature kept so a fix that only CHANGED it keeps it open and one that cleared it
+     can say so. Accepted issues are keyed by their text, so an issue whose figures move
+     is a new issue; they are the plan's, and go when another plan is opened. */
+  issueView:{group:"level", sort:"level", dir:1, lv:new Set(), cat:new Set(), q:"",
+             open:null, openHead:"", openSig:"", done:""},
+  issueAck:new Map(), issueAckV:0,
 };
 
 /** A filter with nothing ticked narrows nothing. */
@@ -7470,7 +7686,8 @@ function tableProjects(pids){
         + `it.">&#9702; ${fmt(utot)} unstaffed</span>` : "";
     body.push(`<tr class="parent" data-k="p-${esc(pid)}" tabindex="0" role="button" `
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
-      + `<span class="nm">${esc(M.projects[pid].project_name)}</span>${typePill(pid)}${phasePill(pid)}`
+      + cardLink("project", pid, M.projects[pid].project_name, "nm")
+      + `${typePill(pid)}${phasePill(pid)}`
       + estimationPill(pid)
       + `<button class="btn tiny teambtn" data-team="${att(pid)}" data-tip="${att(
           "<b>Change the team</b><br>Swap, add or take people off this project in one place, "
@@ -7491,7 +7708,7 @@ function tableProjects(pids){
       const stated = M.isManual && (M.isManual("assignment", a.assignment_id)
                                     || M.isManual("project", pid));
       body.push(`<tr class="child"><th class="rh">&#8627; `
-        + `${esc((M.people[a.person_id]||{}).person_name || a.person_id)}`
+        + cardLink("person", a.person_id, (M.people[a.person_id]||{}).person_name || a.person_id)
         + `<span class="role">${esc(a.role_name)}</span>`
         + (stated ? `<span class="estb manual sm" data-tip="${att(
             M.isManual("assignment", a.assignment_id)
@@ -7548,7 +7765,7 @@ function tablePeople(sids){
     const cap = num((M.people[sid]||{}).capacity_fte);
     body.push(`<tr class="parent" data-k="s-${esc(sid)}" tabindex="0" role="button" `
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
-      + `<span class="nm">${esc((M.people[sid]||{}).person_name || sid)}</span>`
+      + cardLink("person", sid, (M.people[sid]||{}).person_name || sid, "nm")
       + `<span class="sub">${esc(sid)}${cap!==null&&cap!==undefined?` &middot; capacity ${cap.toFixed(2)} FTE`:""}`
       + ` &middot; ${esc((M.people[sid]||{}).department || "")}</span></th>${tds}<td>${fmt(tot)}</td></tr>`);
     if (!open) continue;
@@ -7562,7 +7779,7 @@ function tablePeople(sids){
       }), G).join("");
       if (dt <= 0.004) continue;
       body.push(`<tr class="child"><th class="rh">&#8627; `
-        + `${esc((M.projects[a.project_id]||{}).project_name || a.project_id)}`
+        + cardLink("project", a.project_id, (M.projects[a.project_id]||{}).project_name || a.project_id)
         + `${typePill(a.project_id)}${phasePill(a.project_id)}`
         + `<span class="role">${esc(a.role_name)}</span></th>${dtds}<td>${fmt(dt)}</td></tr>`);
     }
@@ -8155,7 +8372,8 @@ function renderOverall(){
       <div class="phead"><h2>Resource by project</h2>
         <span class="scope k">${pids.length} project(s)</span>${projIssueControl()}${gapButton(pids)}</div>
       <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
-        <strong>Click a project name</strong> to expand it to the people and roles on it.
+        <strong>Click a project's name</strong> to open its page and change it there;
+        click anywhere else on the row (&#9656;) to expand it to the people and roles on it.
         Each project says how its figures are made — <span class="estb auto">Auto</span>
         from the standard, <span class="estb manual">Manual</span> stated by hand — and a
         month carrying a stated figure is marked &#9998;. <strong>Show</strong> narrows the
@@ -8174,7 +8392,8 @@ function renderOverall(){
       <div class="phead"><h2>Resource by person</h2>
         <span class="scope k">${sids.length} people</span></div>
       <p class="cap">Summed across every project. &#9650; above the ceiling, &#9660; below the floor.
-        <strong>Click a person name</strong> to expand to their projects and roles.</p>
+        <strong>Click a person's name</strong> to open their page; click anywhere else on
+        the row (&#9656;) to expand it to their projects and roles.</p>
       <div class="scrollx xl">${tablePeople(sids)}</div>
       <p class="note">Under-allocation is counted as a run of ${M.MINM} or more consecutive months, not
         per month — the run is what matters, a single quiet month is not.</p></div>`;
@@ -8710,24 +8929,57 @@ function selectedAssignment(asg){
    purpose, and it is usually the only row there is. */
 const scopeLabel = r => r.work_scope_type ? String(r.work_scope_type) : "any scope";
 
-function wmatrix(rows, keyOf, labelOf, colKey, valKey){
-  const cols = [], keys = [], grid = {};
+/** A sheet of figures keyed on several columns, read as a matrix: one line per key, one
+ *  column per `colKey`, the figure `valKey` in each place.
+ *
+ *  `edit` - {sheet, keyCols} - makes it the place the figures are CHANGED, too (R-69).
+ *  Every figure is the same editable cell the tables use, over the row it comes from, so
+ *  it goes through the same checks, change log and Save; and an empty place is a cell
+ *  that CREATES its row, carrying the key it stands for - the line's own key columns, as
+ *  the file spells them, and the column's name. The matrix is where a standard is read,
+ *  and it was the one place it could not be corrected: the rows it is made of are the
+ *  second view, and finding one figure among 289 rows to change what the matrix showed
+ *  at a glance was the wrong way round. */
+function wmatrix(rows, keyOf, labelOf, colKey, valKey, edit){
+  const cols = [], keys = [], grid = {}, at = {}, keyRaw = {};
   let vmax = 0;
   for (const r of rows){
     if (!cols.includes(r[colKey])) cols.push(r[colKey]);
     const k = keyOf(r).join(" · ");
-    if (!keys.includes(k)) keys.push(k);
+    if (!keys.includes(k)){
+      keys.push(k);
+      if (edit) keyRaw[k] = Object.fromEntries(edit.keyCols.map(c => [c, r[c] ?? null]));
+    }
     grid[k + "||" + r[colKey]] = num(r[valKey]);
+    at[k + "||" + r[colKey]] = r;
     vmax = Math.max(vmax, num(r[valKey]) || 0);
   }
   const head = cols.map(c => `<th>${esc(c)}</th>`).join("");
   const body = keys.map(k => {
     const [nm, sub] = labelOf(k);
     const tds = cols.map(c => {
-      const v = grid[k + "||" + c];
-      if (v === undefined || v === null) return '<td class="c z">&middot;</td>';
+      const v = grid[k + "||" + c], r = at[k + "||" + c];
+      const where = `<b>${esc(nm)}</b> &#183; ${esc(c)}<br><span class="tr">${esc(sub)}</span>`;
+      /* Only a place the calculation would read can be filled: a clinical type has the
+         clinical periods and an Others type the Others ones, and a figure for a period
+         the type never has would be a row that nothing uses. */
+      const fits = !edit || colKey !== "period_name" || !keyRaw[k]
+        || (CLINICAL_TYPES.has(keyRaw[k].project_type) ? CLINICAL_PERIODS : OTHER_PERIODS).includes(c);
+      if (edit && !r && !fits) return '<td class="c z">&middot;</td>';
+      if (edit && !r)
+        return `<td class="c z mk" contenteditable="true" data-mknew="${att(edit.sheet)}" `
+          + `data-col="${att(valKey)}" data-keys="${att(JSON.stringify({...keyRaw[k], [colKey]: c}))}" `
+          + `data-tip="${att(`${where}<br>No figure yet — type one to add it.`)}"></td>`;
+      const cell = edit
+        ? ` contenteditable="true" data-sheet="${att(edit.sheet)}" data-row="${r.__row}" `
+          + `data-col="${att(valKey)}" data-tip="${att(`${where}<br>Click to change it.`)}"`
+        : "";
+      const marked = edit && S.editedCells.has(`${edit.sheet}|${r.__row}|${valKey}`) ? " edited" : "";
+      if (v === undefined || v === null)
+        return edit ? `<td class="c z mx${marked}"${cell}></td>` : '<td class="c z">&middot;</td>';
       const i = seqStep(v, vmax);
-      return `<td class="c" style="background:${SEQ[i]};color:${i>6?"#fff":"var(--ink)"}">${v.toFixed(2)}</td>`;
+      return `<td class="c${edit ? " mx" : ""}${marked}"${cell} `
+        + `style="background:${SEQ[i]};color:${i>6?"#fff":"var(--ink)"}">${v.toFixed(2)}</td>`;
     }).join("");
     return `<tr><th class="rh"><span class="nm">${esc(nm)}</span>`
       + `<span class="sub">${esc(sub)}</span></th>${tds}</tr>`;
@@ -8750,6 +9002,42 @@ function viewToggle(id, label){
     + `</span>`;
 }
 
+/** REQ-VC-01 / REQ-VC-02: what this build was written against, and whether the loaded
+ *  workbook agrees with it. The first section of General assumptions since R-69: it was a
+ *  strip at the head of every page, read by almost nobody and pushing the plan down for
+ *  everybody - and it is a fact about the application's assumptions, so it sits with them.
+ *  The header keeps the one figure people look for, the application's own version. */
+function provenancePanel(){
+  const M = S.model;
+  const short = BUILT_AGAINST.map(d =>
+    `<span><span class="plabel">${esc(d.what.replace("Programming ","").replace("Source data ",""))}</span> `
+    + `<span class="pv">v${esc(d.ver)}</span></span>`).join("");
+  const loaded = M ? num(M.config.schema_version) : null;
+  const rows = BUILT_AGAINST.map(d =>
+    `<tr><td>${esc(d.what)}</td><td><span class="pv">v${esc(d.ver)}</span></td>`
+    + `<td><code>${esc(d.file)}</code></td><td>${esc(d.status)}</td></tr>`).join("");
+  const loadedRow = M
+    ? `<tr><td>Loaded workbook</td><td><span class="pv">schema v${loaded ?? "?"}</span></td>`
+      + `<td><code>${esc(S.fileName)}</code></td>`
+      + (String(loaded) === String(SCHEMA_EXPECTED)
+          ? `<td class="ok">✓ matches the schema this application expects</td>`
+          : `<td class="warn">▲ this application expects schema v${SCHEMA_EXPECTED} — see Data issues (V-09)</td>`)
+      + `</tr>`
+    : `<tr><td>Loaded workbook</td><td class="plabel">—</td><td colspan="2" class="plabel">nothing loaded yet</td></tr>`;
+  return `<div class="panel" data-panel="gen-ver">
+      <div class="phead"><h2>Version information</h2>
+        <span class="scope">this build and the file it has open</span></div>
+      <details id="prov"><summary id="provSum"><span><span class="plabel">Application</span> `
+    + `<span class="pv">v${APP_VERSION}</span></span><span class="plabel">built against</span>${short}`
+    + `</summary><div id="provBody">`
+    + `<div class="scrollx tall"><table><thead><tr><th>Controlled document</th><th>Version</th><th>File</th>`
+    + `<th>Status</th></tr></thead><tbody>${rows}${loadedRow}</tbody></table></div>`
+    + `<p class="note">These are the documents this build implements. The application does not read them —
+       they are recorded here so a file on someone's disk can be traced back to the issue it was built
+       from. tools/check_consistency.py verifies the list against the repository on every run.</p>`
+    + `</div></details></div>`;
+}
+
 function renderGenTab(){
   const M = S.model;
   const pwsRows = M.raw.PeriodFTEStandard, rfRows = M.raw.RoleFactor;
@@ -8759,7 +9047,8 @@ function renderGenTab(){
     : `<div class="scrollx tall">${wmatrix(pwsRows,
         r => [r.project_type, r.clinical_phase, scopeLabel(r)],
         k => { const p = k.split(" · "); return [p[1] + " · " + p[2], p[0]]; },
-        "period_name", "standard_fte")}</div>`;
+        "period_name", "standard_fte",
+        {sheet:"PeriodFTEStandard", keyCols:["project_type","clinical_phase","work_scope_type"]})}</div>`;
 
   const ct = rfRows.filter(r => CLINICAL_TYPES.has(r.project_type));
   const ot = rfRows.filter(r => !CLINICAL_TYPES.has(r.project_type));
@@ -8770,10 +9059,12 @@ function renderGenTab(){
     : `<div class="scrollx tall">${wmatrix(ct,
         r => [r.project_type, r.clinical_phase, scopeLabel(r), r.role_name],
         k => { const p = k.split(" · "); return [p[3], p[0] + " · " + p[1] + " · " + p[2]]; },
-        "period_name", "role_factor")}</div>
+        "period_name", "role_factor",
+        {sheet:"RoleFactor", keyCols:["project_type","clinical_phase","work_scope_type","role_name"]})}</div>
        <h2 class="subhead">Role factors — Others</h2>
        <div class="scrollx">${wmatrix(ot, r => [r.project_type, r.role_name],
-        k => { const p = k.split(" · "); return [p[1], p[0]]; }, "period_name", "role_factor")}</div>`;
+        k => { const p = k.split(" · "); return [p[1], p[0]]; }, "period_name", "role_factor",
+        {sheet:"RoleFactor", keyCols:["project_type","clinical_phase","work_scope_type","role_name"]})}</div>`;
 
   const grouped = {};
   for (const r of M.raw.Lists) (grouped[r.list_name] ||= []).push(String(r.value));
@@ -8784,7 +9075,7 @@ function renderGenTab(){
         `<tr><td>${esc(k)}</td><td class="vals">${esc(v.join(", "))}</td>`
         + `<td class="num">${v.length}</td></tr>`).join("")}</tbody></table></div>`;
 
-  el("t-gen").innerHTML =
+  el("t-gen").innerHTML = provenancePanel() +
     `<div class="panel" data-panel="gen-pws">
       <div class="phead"><h2>Standard period FTE for project types</h2>
         <span class="scope">PeriodFTEStandard</span>${viewToggle("pws")}</div>
@@ -8792,8 +9083,10 @@ function renderGenTab(){
         each period — a magnitude, not a multiplier: <strong>4.02</strong> means the project draws
         about four full-time people that month. This is where every figure gets its size; each
         project's own <strong>period weight</strong> then adjusts it up or down for that particular
-        study. The matrix is how a standard reads — across, not down. Switch to
-        <strong>Rows &amp; editing</strong> to add, change or delete individual rows.
+        study. The matrix is how a standard reads — across, not down, and it is where one is
+        changed: <strong>click any figure and type</strong>, or type into an empty
+        <strong>&middot;</strong> to add one. <strong>Rows &amp; editing</strong> lists the same
+        figures as rows, with their notes and a delete for each.
         <strong>Others</strong> projects are hand-entered per project instead.</p>
       ${pws}</div>
     <div class="panel" data-panel="gen-rf">
@@ -8802,7 +9095,9 @@ function renderGenTab(){
         <span class="scope k">${rfRows.length} row(s)</span>${viewToggle("rf")}</div>
       <p class="cap">What one person in this role costs the project per month, before their own weight
         and the period weight. Keyed on type, phase, period and role — read a row across to see how a
-        role's burden moves over the life of a project. ${rfRows.length} rows in all.</p>
+        role's burden moves over the life of a project. ${rfRows.length} rows in all.
+        <strong>Click any figure to change it</strong>, or type into an empty <strong>&middot;</strong>
+        to add one.</p>
       ${rf}</div>
     <div class="panel" data-panel="gen-phl">
       <div class="phead"><h2>Period colours</h2>
@@ -8839,7 +9134,8 @@ function renderGenTab(){
 }
 
 const TAB_RENDER = {"t-overall":renderOverall, "t-proj":renderProjTab,
-                    "t-pers":renderPersTab, "t-gen":renderGenTab};
+                    "t-pers":renderPersTab, "t-gen":renderGenTab,
+                    "t-issues":renderIssuesTab};
 const ALL_TABS = Object.keys(TAB_RENDER);
 
 /** Draw one pane, and remember that it now matches the model. */
@@ -8879,6 +9175,7 @@ function renderAll(){
   for (const id of ALL_TABS) S.stale.add(id);
   renderTab(S.tab);
   renderDirty();
+  issueCount();                     // the number on the Data issues tab (R-69)
 }
 
 /* ============================================== 11b. one section, the whole screen */
@@ -9345,6 +9642,7 @@ function renderDirty(){
   bar.hidden = !S.model;
   bar.classList.toggle("dirty", n > 0);
   el("saveBtn").disabled = el("discardBtn").disabled = el("chgBtn").disabled = (n === 0);
+  cardSaveState();                              // the card's own Save (R-69)
   if (!n && el("changes").open) el("changes").close();   // nothing left to show
   // The name request belongs to the same moment as the rest of this bar: something is
   // unsaved and about to be attributed to somebody. Hidden the instant it is answered,
@@ -9355,14 +9653,20 @@ function renderDirty(){
     ? `${n} unsaved change${n===1?"":"s"}`
     : (S.saved ? `${S.saved} saved change${S.saved===1?"":"s"} · nothing pending`
                : "no changes");
+  /* Short since R-69: the bar shares its band with the findings now, and the long form
+     of each sentence is in the pop-up for anybody who wants it. */
   el("guide").innerHTML = n
-    ? `<strong>${n} change${n===1?"":"s"} not yet saved.</strong> They are applied on screen so you can
-       see their effect, but they are <em>not final</em>. All ${n} pass validation — an edit that fails a
-       rule is rejected at entry, so nothing invalid can be saved. <strong>Export is held</strong> until
-       you choose.`
-    : `<strong>Changes are temporary.</strong> Edits are applied on screen so you can see their effect,
-       but they are <em>not final</em> until you choose. Click <strong>Save</strong> to keep them — only
-       saved changes go into the exported file.`;
+    ? `<strong>${n} change${n===1?"":"s"} not yet saved</strong> — applied on screen, not final;
+       every one passed validation. <strong>Export is held</strong> until you choose.`
+    : `<strong>Changes are temporary</strong> until you press <strong>Save</strong> — only saved
+       changes go into the exported file.`;
+  el("guide").dataset.tip = n
+    ? `<b>Not yet saved</b><br>They are applied on screen so you can see their effect, but they `
+      + `are not final. Every one passed validation — an edit that fails a rule is rejected at `
+      + `entry, so nothing invalid can be saved. Export is held until you Save or Leave without change.`
+    : `<b>Changes are temporary</b><br>Edits are applied on screen so you can see their effect, but `
+      + `they are not final until you choose. Save keeps them; only saved changes go into the `
+      + `exported file.`;
 }
 
 /** Apply one cell edit: coerce, validate, write to the model, recalculate. */
@@ -9498,6 +9802,42 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
               press Save.`
           : `. The other ${sibs} ${sibs === 1 ? "is" : "are"} untouched.`));
   }
+}
+
+/** A figure typed into an EMPTY place in one of the assumption matrices (R-69). There is
+ *  no row under it to write to, so the row is made - with the key the place stands for
+ *  and the figure typed - and then checked exactly as an edit is: refused, and taken back
+ *  out, if it breaks a rule that must hold; otherwise an ordinary unsaved change that
+ *  Save keeps and Leave without change removes. Complete from the start, unlike a row
+ *  made with + row: nothing about it is left to fill in, so it counts at once. */
+function matrixCreate(td){
+  const text = td.textContent.trim();
+  if (text === "") return;
+  const sheet = td.dataset.mknew, col = td.dataset.col;
+  let keys;
+  try { keys = JSON.parse(td.dataset.keys); } catch (_){ return; }
+  const n = num(text);
+  if (n === undefined || n === null){
+    td.textContent = "";
+    showBanner("bad", `Edit rejected — '${text}' is not a number.`);
+    return;
+  }
+  beginEditSession();
+  const r = newRow(sheet, {...keys, [col]: n});
+  delete r.__new;
+  const probe = rebuild();
+  const newErrors = probe.findings.filter(blocking);
+  if (newErrors.length > (S.model.findings || []).filter(blocking).length){
+    S.model.raw[sheet].splice(S.model.raw[sheet].indexOf(r), 1);
+    td.textContent = "";
+    showBanner("bad", `Edit rejected — ${newErrors[newErrors.length - 1].msg}`);
+    return;
+  }
+  S.pending.push({at:new Date(), sheet, row:r.__row, col:"(new row)", from:null,
+    to:`${Object.values(keys).filter(v => v !== null && v !== "").join(" · ")}: ${n.toFixed(2)}`});
+  S.editedCells.add(`${sheet}|${r.__row}|${col}`);
+  rebuild(true);
+  renderKeepingTab();
 }
 
 function flashBad(tdEl, msg){
@@ -10345,10 +10685,20 @@ function showBanner(kind, text, findings){
     + `<strong>${esc(text)}</strong>`
     + (n ? ` ${esc(summary)}.` : "")
     + (cfgN ? `<span class="lk" id="openCfg">Which settings changed</span>` : "")
-    + (n ? `<span class="lk" id="openRep">Open full report</span>` : "")
+    /* Once a plan is open its findings have a tab of their own (R-69), where they can be
+       sorted and fixed - and the way there stays in the band whatever it last said, with
+       the count of what is open beside it, since the band is where the state of the data
+       is read. The report is what a file that could not be opened still gets. */
+    + (!el("tabs").hidden && S.model
+        ? `<span class="lk" id="openIssues">Open data issues<span id="openIssuesN"></span></span>`
+        : n ? `<span class="lk" id="openRep">Open full report</span>` : "")
     + `</div>`;
   const b = el("openRep");
   if (b) b.onclick = () => { renderReport(findings); el("report").showModal(); };
+  const i = el("openIssues");
+  if (i) i.onclick = () => { closeCard(); showTab("t-issues"); window.scrollTo({top:0}); };
+  issueCount();
+  cardEcho(kind, text + (n ? ` ${summary}.` : ""));   // and inside an open card (R-69)
   const c = el("openCfg");
   if (c) c.onclick = () => { renderCfgChanges(); el("cfgchg").showModal(); };
 }
@@ -11714,11 +12064,16 @@ function teamRemove(rowNum){
    So a name in the Projects and People tables is a link, and it opens this card: one
    scrolling column holding what the tab spreads out - the figures that matter first, the
    two charts, the team or the assignments, the milestones and periods, the open issues,
-   and every field of the record. READ-ONLY on purpose: the tables are where a plan is
-   edited, and a second editing surface would be a second set of rules to keep in step.
-   What it does offer is the way across - a person on a project's card opens that
-   person's card, a project on a person's opens the project's, and Back returns - and the
-   way back to the tab, with the row selected.
+   and every field of the record. The way across - a person on a project's card opens
+   that person's card, a project on a person's opens the project's, and Back returns -
+   and the way back to the tab, with the row selected.
+
+   AND SINCE R-69 IT IS WHERE THE RECORD IS CHANGED, too. It was read-only, on the
+   reasoning that a second editing surface is a second set of rules to keep in step; the
+   answer from the field was that a page you can read but not correct sends you away to
+   do the one thing you came for. So every value on it is the SAME editable cell the
+   tables use - the same attributes, so the same value list, calendar, validation, change
+   log and Save - and there is no second set of rules because there is no second editor.
 
    THE NAME IS STILL EDITABLE. A link cannot also be the place a caret goes, so renaming
    moved to the pencil beside it (or F2 on the link). The pencil turns the cell back into
@@ -11770,6 +12125,16 @@ function nameCellHTML(sheet, r, cls, tip){
     + `</button></td>`;
 }
 
+/** A name anywhere else - the Overall tables, the Data issues tab - as a link to its card
+ *  (R-69). A button, so a click on it is a control and not the row's own click: the row
+ *  of Resource by project still folds open from anywhere else on it. */
+function cardLink(kind, id, name, cls){
+  return `<button type="button" class="namelink${cls ? " " + cls : ""}" data-card="${kind}" `
+    + `data-cid="${att(id)}" data-tip="${att(`<b>${esc(name)}</b><br>Click to open this `
+      + `${kind === "project" ? "project" : "person"}'s page — read it, and change it there.`)}">`
+    + `${esc(name)}</button>`;
+}
+
 /** The pencil: the cell becomes the ordinary editable cell, holding the plain value. */
 function startRename(td){
   if (!td || td.isContentEditable || !td.dataset.sheet) return;
@@ -11816,7 +12181,9 @@ function cardDialog(){
         <button class="btn tiny" id="cardNext" data-cardstep="1" aria-label="Next">&#8250;</button>
       </div>
       <button class="btn" id="cardGo" data-cardgo></button>
+      <button class="btn" id="cardSave" data-cardsave disabled>Save</button>
       <button class="btn primary" id="cardClose">Close</button></div>
+    <div class="card-msg" id="cardMsg" role="status" hidden></div>
     <div class="card-b" id="cardBody" tabindex="-1"></div>`;
   document.body.appendChild(d);
   d.querySelector("#cardClose").onclick = () => d.close();
@@ -11837,6 +12204,11 @@ function cardDialog(){
       return;
     }
     if (e.target.closest("[data-cardgo]")) cardGo();
+    /* The page's own Save, the one that asks about findings and writes the change log -
+       pressed from here because the band it lives in is behind the card. */
+    if (e.target.closest("[data-cardsave]")) el("saveBtn").click();
+    const add = e.target.closest("[data-cardadd]");
+    if (add) cardAdd(add.dataset.cardadd);
   });
   /* Left and right step through the list. On the document rather than the dialog: a
      button that hides itself as it is pressed - Back, on the last step back - drops the
@@ -11868,6 +12240,7 @@ function openCard(kind, id, across){
 
 function showCard(kind, id){
   CARD.kind = kind; CARD.id = id;
+  cardEcho(null);
   drawCard();
   const body = el("cardBody");
   body.scrollTop = 0;
@@ -11921,9 +12294,16 @@ function cardGo(){
 function drawCard(){
   const d = el("carddlg");
   if (!d || !d.open || !CARD) return;
-  const rec = cardRecord(CARD.kind, CARD.id);
-  if (!rec){ d.close(); return; }
   const isP = CARD.kind === "project", K = CARD_OF[CARD.kind];
+  let rec = cardRecord(CARD.kind, CARD.id);
+  /* Its identifier was just changed - from this card, as likely as not. The card follows
+     the record to its new name rather than closing on the old one. */
+  if (!rec){
+    const moved = [...S.pending].reverse().find(c =>
+      c.sheet === K.sheet && c.col === K.key && c.from === CARD.id);
+    if (moved && cardRecord(CARD.kind, moved.to)){ CARD.id = moved.to; rec = cardRecord(CARD.kind, CARD.id); }
+  }
+  if (!rec){ d.close(); return; }
   const body = el("cardBody");
   // The charts are drawn to the card's own width, as the page's are to the page's.
   const pad = parseFloat(getComputedStyle(body).paddingLeft) || 24;
@@ -11945,7 +12325,48 @@ function drawCard(){
   const go = el("cardGo");
   go.textContent = `Show on ${isP ? "Source data (project)" : "Source data (person)"}`;
   go.title = "Close the card and select this row on its tab, with its own panels in view";
+  cardSaveState();
   cueScrollers();
+}
+
+/** The card's Save says how much is waiting, as the band's does. */
+function cardSaveState(){
+  const b = el("cardSave");
+  if (!b) return;
+  const n = S.pending.length;
+  b.disabled = !n;
+  b.textContent = n ? `Save ${n} change${n === 1 ? "" : "s"}` : "Save";
+  b.classList.toggle("primary", n > 0);
+}
+
+/** What the page's banner says, said again inside the card while it is open - the band
+ *  the banner lives in is behind the dialog, and "Edit rejected" said where nobody can
+ *  see it is an edit that silently did not happen. `null` clears it. */
+function cardEcho(kind, text){
+  const m = el("cardMsg");
+  if (!m) return;
+  const d = el("carddlg");
+  if (kind === null || !d || !d.open){ m.hidden = true; m.textContent = ""; return; }
+  if (kind === "busy") return;
+  m.className = "card-msg" + (kind ? " " + kind : "");
+  m.textContent = text;
+  m.hidden = !text;
+}
+
+/** A row added from the card - a milestone or a period of this project - seeded with the
+ *  project and the next order number, the caret put in its first cell. */
+function cardAdd(sheet){
+  if (!CARD || CARD.kind !== "project") return;
+  const pid = CARD.id;
+  beginEditSession();
+  const seed = sheet === "Milestone"
+    ? {project_id: pid, milestone_seq: nextSeq("Milestone", "milestone_seq", "project_id", pid)}
+    : {project_id: pid, period_seq: nextSeq("ProjectPeriod", "period_seq", "project_id", pid), weight: 1.00};
+  const r = newRow(sheet, seed);
+  S.pending.push({at: new Date(), sheet, row: r.__row, col: "(new row)", from: null, to: ""});
+  renderKeepingTab();
+  const td = el("cardBody").querySelector(`td[data-sheet="${sheet}"][data-row="${r.__row}"]`);
+  if (td){ td.scrollIntoView({block: "nearest"}); td.focus(); }
 }
 
 /* ------------------------------------------------------------------ shared pieces */
@@ -11993,22 +12414,71 @@ function cardMeter(v, vmax){
     + `<span class="mtick hi" style="left:${pct(M.OVER)}"></span></span>`;
 }
 
-/** Every field of the record, in labelled groups - nothing the tables hold is missing
- *  from the card. Groups are named for what the fields are for; anything a later schema
- *  adds that no group names is shown under the last heading rather than dropped. */
-function cardFields(sheet, rec, groups){
+/** ONE EDITABLE CELL over a raw row (R-69): every attribute a table cell carries, so
+ *  typing in it goes through the same value list, calendar, validation, change log and
+ *  Save as the tables do - the card has no editing code of its own. `ph` is what an empty
+ *  cell shows it will mean, such as the project's own start for an open window. */
+function cardCell(sheet, r, col, ph, cls){
+  const v = r[col];
+  const s = v instanceof Date ? ymd(v) : v === null || v === undefined ? "" : String(v);
+  const marked = S.editedCells.has(`${sheet}|${r.__row}|${col}`) ? " edited" : "";
+  const hl = col === "milestone_highlight" || col === "period_highlight" ? hlToken(v) : "";
+  return `<td class="cell ccell${marked}${cls ? " " + cls : ""}" contenteditable="true" `
+    + `data-sheet="${att(sheet)}" data-row="${r.__row}" data-col="${att(col)}"`
+    + `${hl ? ` data-hl="${att(hl)}"` : ""}${ph ? ` data-ph="${att(ph)}"` : ""}>${esc(s)}</td>`;
+}
+
+/** How the figures are made has ONE way in (REQ-CAL-18) - the switch that copies the
+ *  months across - so it is shown with its button rather than as a cell to type into. */
+function cardEstCell(sheet, r){
+  const scope = sheet === "Project" ? "project" : "assignment", id = r[KEY_COL[sheet]];
+  return `<td class="ffix">${esc(r.estimation_type || "automatic")} `
+    + `<button class="btn tiny" data-act="estswitch" data-scope="${scope}" data-id="${att(id)}" `
+    + `data-tip="${att("<b>Switch how the figures are made</b><br>Asks first, and copies the "
+      + "calculated months across so nothing jumps.")}">Switch&#8230;</button></td>`;
+}
+
+/** Every field of the record, in labelled groups, each one editable where it stands -
+ *  nothing the tables hold is missing from the card. Groups are named for what the fields
+ *  are for; anything a later schema adds that no group names goes under the last heading
+ *  rather than being dropped. */
+function cardFields(sheet, r, groups){
   const cols = entryCols(sheet), named = new Set(groups.flatMap(g => g[1]));
   const rest = cols.filter(c => !named.has(c));
   const all = groups.map(([t, cs]) => [t, cs.filter(c => cols.includes(c))]);
   if (rest.length) all[all.length - 1][1].push(...rest);
   return `<div class="fgroups">` + all.filter(g => g[1].length).map(([t, cs]) =>
-    `<div class="fgroup"><h4>${esc(t)}</h4><dl>` + cs.map(c => {
-      const v = rec[c];
-      const s = v instanceof Date ? ymd(v) : v === null || v === undefined ? "" : String(v);
-      return `<div class="f"><dt data-tip="${att(`${colHead(c)}<br>${COLUMN_HELP[c] || ""}`)}">`
-        + `${esc(COLUMN_LABEL[c] || c)}</dt><dd${s === "" ? ' class="none"' : ""}>`
-        + `${s === "" ? "—" : esc(s)}</dd></div>`;
-    }).join("") + `</dl></div>`).join("") + `</div>`;
+    `<div class="fgroup"><h4>${esc(t)}</h4><table class="ftab"><tbody>` + cs.map(c =>
+      `<tr><th data-tip="${att(`${colHead(c)}<br>${COLUMN_HELP[c] || ""}`)}">`
+      + `${esc(COLUMN_LABEL[c] || c)}</th>`
+      + (c === "estimation_type" ? cardEstCell(sheet, r) : cardCell(sheet, r, c, "\u2014")) + `</tr>`).join("")
+    + `</tbody></table></div>`).join("") + `</div>`;
+}
+
+const cardDel = (sheet, r, what) =>
+  `<td class="rowx"><button class="btn tiny danger" data-del="${att(sheet)}" data-row="${r.__row}" `
+  + `aria-label="Delete this ${what}" data-tip="${att(`<b>Delete this ${what}</b><br>Kept as a `
+    + `pending change until you Save, like any other.`)}">&#10005;</button></td>`;
+
+/** A project's months off its standard, one row each in month order, every one the way
+ *  into its own dialog - the figures behind it and the manager's review. Shared by the
+ *  card and the Data issues tab (R-69), which show the same months for the same reason.
+ *  `wrap` is the box it scrolls in: the card's own sideways one, or a bounded one with the
+ *  headings held at the top where the list can run to two dozen months. */
+function gapMonthsTable(pid, rows, wrap){
+  return `<div class="${wrap || "ctwrap"}"><table class="ct gapt"><thead><tr><th>Month</th><th>Issue</th>
+    <th class="num">Needs</th><th class="num">Staffed</th><th class="num">Gap</th><th>Review</th></tr></thead>
+    <tbody>${rows.slice().sort((a, b) => a.k - b.k).map(r => {
+      const g = r.dir === "short" ? ["gshort", "&#9660; short"] : r.dir === "over" ? ["gover", "&#9650; over"]
+        : ["gunst", "&#9702; not staffed"];
+      return `<tr class="gaprow ${r.dir}" data-gap="${att(pid)}" data-gk="${r.k}" data-gapis="${r.dir}" `
+        + `tabindex="0" role="button"><td>${keyToLabel(r.k)}</td><td class="${g[0]}">${g[1]}</td>`
+        + `<td class="num">${r.demand.toFixed(2)}</td><td class="num">${r.applied.toFixed(2)}</td>`
+        + `<td class="num ${g[0]}">${Math.abs(r.gap).toFixed(2)}</td>`
+        + `<td>${r.rev ? `<span class="revtag ${r.rev.fix ? "fix" : r.rev.changed ? "stale" : r.rev.closed ? "done" : ""}">`
+          + `${esc(r.rev.status || "reviewed")}${r.rev.changed ? " &#183; re-check" : ""}</span>`
+          : `<span class="muted">not reviewed</span>`}</td></tr>`;
+    }).join("")}</tbody></table></div>`;
 }
 
 const cardDate = d => d instanceof Date ? ymd(d) : "";
@@ -12072,98 +12542,93 @@ function cardProject(pid){
     + `</div>`;
 
   const util = chartProjectUtil(pid);
-  const ms = Object.entries(M.milestones[pid] || {})
-    .flatMap(([nm, ds]) => ds.filter(Boolean).map(d => [nm, d]))
-    .sort((a, b) => a[1] - b[1]);
-  const nowT = today().getTime();
-  const nextMs = ms.find(([, d]) => d.getTime() >= nowT);
-  const msList = ms.length ? `<ol class="mslist">` + ms.map(([nm, d]) => {
-      const hl = (M.msHighlight[pid] || {})[`${nm}|${ymd(d)}`] || "";
-      const key = KEY_MILESTONES.has(nm), past = d.getTime() < nowT;
-      return `<li class="${past ? "past" : "next"}`
-        + `${nextMs && nextMs[0] === nm && +nextMs[1] === +d ? " upcoming" : ""}">`
-        + `<span class="dot${key ? " key" : ""}"${hl ? ` style="background:${HIGHLIGHT_FILL[hl]}"` : ""}></span>`
-        + `<span class="mnm">${esc(nm)}${key ? ` <span class="tr">sets a period boundary</span>` : ""}</span>`
-        + `<span class="mdt">${ymd(d)}</span></li>`;
-    }).join("") + `</ol>` : `<p class="note">No milestones are dated yet.</p>`;
+  const raw = (M.raw.Project || []).find(x => x.project_id === pid);
+  const nowT = today().getTime(), span = d => d instanceof Date ? d.getTime() : Infinity;
 
-  const per2 = (M.periods[pid] || []).slice()
-    .sort((a, b) => (a.period_start || 0) - (b.period_start || 0));
-  const perRows = per2.map(s => {
-    const {hl} = periodColour(s), w = num(s.weight);
-    const std = num(stdWeight(M, pr, s.period_name));
-    const on = per && per.name === s.period_name;
-    return `<tr${on ? ' class="on"' : ""}><td><span class="chip"${hl ? ` style="background:${HIGHLIGHT_FILL[hl]}"` : ""}>`
-      + `</span>${esc(s.period_name)}${on ? ` <span class="nowpill">now</span>` : ""}</td>`
-      + `<td>${cardDate(s.period_start)} &#8594; ${cardDate(s.period_end)}</td>`
-      + `<td class="num">${w === null || w === undefined ? "—" : w.toFixed(2)}</td>`
-      + `<td class="num">${std === null || std === undefined ? `<span class="muted">none</span>`
-          : std.toFixed(2) + (w === null || w === undefined ? "" : ` <span class="muted">&#8594; ${(std * w).toFixed(2)}</span>`)}</td></tr>`;
-  }).join("");
+  /* Milestones as rows to change, in date order, undated ones last; the next one marked. */
+  const msRows = (M.raw.Milestone || []).filter(m => m.project_id === pid)
+    .sort((a, b) => span(a.milestone_date) - span(b.milestone_date) || a.__row - b.__row);
+  const nextMs = msRows.find(m => m.milestone_date instanceof Date && m.milestone_date.getTime() >= nowT);
+  const msTable = msRows.length ? `<div class="ctwrap"><table class="ct cedit"><thead><tr><th></th>
+      <th>Milestone</th><th>Date</th><th>Highlight</th><th></th></tr></thead><tbody>` + msRows.map(m => {
+      const d = m.milestone_date instanceof Date ? m.milestone_date : null;
+      const hl = hlToken(m.milestone_highlight), key = KEY_MILESTONES.has(m.milestone_name);
+      return `<tr class="${d && d.getTime() < nowT ? "past" : ""}${m === nextMs ? " upcoming" : ""}">`
+        + `<td class="msdot"><span class="dot${key ? " key" : ""}"`
+        + `${hl ? ` style="background:${HIGHLIGHT_FILL[hl]}"` : ""} data-tip="${att(key
+            ? "<b>Sets a period boundary</b><br>The DB locks are what the period derivation hangs on."
+            : m === nextMs ? "<b>The next milestone</b>" : "<b>Milestone</b>")}"></span></td>`
+        + cardCell("Milestone", m, "milestone_name") + cardCell("Milestone", m, "milestone_date")
+        + cardCell("Milestone", m, "milestone_highlight") + cardDel("Milestone", m, "milestone")
+        + `</tr>`;
+    }).join("") + `</tbody></table></div>` : `<p class="note">No milestones yet.</p>`;
 
+  /* Periods: the project's own rows, to change - or, where none are entered and the
+     milestones derive them, the derived ones read-only, with the way to change them. */
+  const perRaw = (M.raw.ProjectPeriod || []).filter(r => r.project_id === pid)
+    .sort((a, b) => span(a.period_start) - span(b.period_start) || a.__row - b.__row);
+  const per2 = (M.periods[pid] || []).slice().sort((a, b) => span(a.period_start) - span(b.period_start));
+  const derived = !perRaw.length && per2.some(x => x.__derived);
+  const stdCell = (name, w) => {
+    const std = num(stdWeight(M, pr, name)), ww = num(w);
+    return `<td class="num">${std === null || std === undefined ? `<span class="muted">none</span>`
+      : std.toFixed(2) + (ww === null || ww === undefined ? "" : ` <span class="muted">&#8594; ${(std * ww).toFixed(2)}</span>`)}</td>`;
+  };
+  const perTable = perRaw.length
+    ? `<div class="ctwrap"><table class="ct cedit"><thead><tr><th>Period</th><th>From</th><th>To</th>
+        <th class="num">Weight</th><th>Highlight</th><th class="num">Standard<span class="sub">a month</span></th>
+        <th></th></tr></thead><tbody>` + perRaw.map(x =>
+        `<tr${per && per.name === x.period_name ? ' class="on"' : ""}>`
+        + cardCell("ProjectPeriod", x, "period_name") + cardCell("ProjectPeriod", x, "period_start")
+        + cardCell("ProjectPeriod", x, "period_end") + cardCell("ProjectPeriod", x, "weight", "", "num")
+        + cardCell("ProjectPeriod", x, "period_highlight") + stdCell(x.period_name, x.weight)
+        + cardDel("ProjectPeriod", x, "period") + `</tr>`).join("") + `</tbody></table></div>`
+    : derived
+    ? `<div class="ctwrap"><table class="ct"><thead><tr><th>Period</th><th>Dates</th>
+        <th class="num">Weight</th><th class="num">Standard<span class="sub">a month</span></th></tr></thead>
+        <tbody>${per2.map(x => `<tr${per && per.name === x.period_name ? ' class="on"' : ""}>`
+          + `<td>${esc(x.period_name)}${per && per.name === x.period_name ? ` <span class="nowpill">now</span>` : ""}</td>`
+          + `<td>${cardDate(x.period_start)} &#8594; ${cardDate(x.period_end)}</td>`
+          + `<td class="num">${(num(x.weight) ?? 1).toFixed(2)}</td>${stdCell(x.period_name, x.weight)}</tr>`).join("")}
+        </tbody></table></div>
+        <p class="note">Derived from the milestones — change a milestone date and these follow. Adding a
+          period starts a hand-entered set, which is then used as given.</p>`
+    : `<p class="note">No periods yet.</p>`;
+
+  /* The team, with what can be changed in place - role, window, weight - as cells, and
+     the person as the way to their own card. Swapping a person, adding and removing are
+     the Team dialog's. */
   const ks = teamMonths(pid);
-  const teamRows = team.slice().sort((a, b) =>
+  const team2 = (M.raw.Assignment || []).filter(a => a.project_id === pid).sort((a, b) =>
       String(a.role_name || "").localeCompare(String(b.role_name || ""))
       || String((M.people[a.person_id] || {}).person_name || "").localeCompare(
-         String((M.people[b.person_id] || {}).person_name || "")))
-    .map(a => {
+         String((M.people[b.person_id] || {}).person_name || "")));
+  const teamRows = team2.map(a => {
       const pe = M.people[a.person_id] || {}, L = teamLoad(a.person_id, ks);
       const here = ks.reduce((t, k) => t + (C.cell.get([pid, a.person_id, a.role_name, k].join("|")) || 0), 0)
         / Math.max(1, ks.length);
       const manual = M.isManual && M.isManual("assignment", a.assignment_id);
-      return `<tr><td><button type="button" class="plink" data-card="person" data-cid="${att(a.person_id)}">`
-        + `<span class="mono xs" style="--card-tint:${persColourOf(a.person_id)}">`
-        + `${esc(monogram(pe.person_name || a.person_id))}</span>${esc(pe.person_name || a.person_id)}</button>`
-        + `<span class="sub">${esc(pe.department || "")}</span></td>`
-        + `<td>${esc(a.role_name || "")}${manual ? ` <span class="estb manual sm">manual</span>` : ""}</td>`
-        + `<td>${cardWindow(a)}</td>`
-        + `<td class="num">${a.person_weight === null || a.person_weight === undefined ? "—" : Number(a.person_weight).toFixed(2)}</td>`
+      return `<tr><td>${a.person_id && M.people[a.person_id]
+          ? `<button type="button" class="plink" data-card="person" data-cid="${att(a.person_id)}">`
+            + `<span class="mono xs" style="--card-tint:${persColourOf(a.person_id)}">`
+            + `${esc(monogram(pe.person_name || a.person_id))}</span>${esc(pe.person_name || a.person_id)}</button>`
+          : `<span class="muted">${esc(a.person_id || "nobody yet")}</span>`}`
+        + `<span class="sub">${esc(a.assignment_id || "")}${pe.department ? " &#183; " + esc(pe.department) : ""}`
+        + `${manual ? ` &#183; <span class="estb manual sm">manual</span>` : ""}</span></td>`
+        + cardCell("Assignment", a, "role_name")
+        + cardCell("Assignment", a, "assign_start_date", `from ${cardDate(pr.start_date) || "the start"}`)
+        + cardCell("Assignment", a, "assign_end_date", `to ${cardDate(pr.end_date) || "the end"}`)
+        + cardCell("Assignment", a, "person_weight", "", "num")
         + `<td class="num">${fmt(here)}</td>`
         + `<td class="load">${cardMeter(L.avg, L.peak)}<span class="sub">avg ${fmt(L.avg)} &#183; peak ${fmt(L.peak)}`
         + `${L.over ? ` &#183; <b class="gover">&#9650; over in ${L.over} mo</b>` : ""}</span></td></tr>`;
     }).join("");
 
-  const issueRows = open.slice().sort((a, b) => a.k - b.k).map(r => {
-    const g = r.dir === "short" ? ["gshort", "&#9660; short"] : r.dir === "over" ? ["gover", "&#9650; over"]
-      : ["gunst", "&#9702; not staffed"];
-    return `<tr class="gaprow ${r.dir}" data-gap="${att(pid)}" data-gk="${r.k}" data-gapis="${r.dir}" `
-      + `tabindex="0" role="button"><td>${keyToLabel(r.k)}</td><td class="${g[0]}">${g[1]}</td>`
-      + `<td class="num">${r.demand.toFixed(2)}</td><td class="num">${r.applied.toFixed(2)}</td>`
-      + `<td class="num ${g[0]}">${Math.abs(r.gap).toFixed(2)}</td>`
-      + `<td>${r.rev ? `<span class="revtag ${r.rev.fix ? "fix" : r.rev.changed ? "stale" : "done"}">`
-        + `${esc(r.rev.status || "reviewed")}</span>` : `<span class="muted">not reviewed</span>`}</td></tr>`;
-  }).join("");
-
+  const ms = msRows.filter(m => m.milestone_date instanceof Date).length;
   return `${cardLife(pr.start_date, pr.end_date,
       "The start or end date is not entered yet, so there is no span to draw.")}
     ${kpis}
-    ${cardSec("Monthly resource", `${G.length} months &#183; stacked by person`,
-      `<div class="scrollx fit">${util.svg}</div>`)}
-    ${cardSec("Timeline", `${per2.length} period(s) &#183; ${ms.length} milestone(s)`,
-      `<div class="scrollx fit">${chartGantt([pid], {single:true,
-        note:`${ymd(pr.start_date)} &#8594; ${ymd(pr.end_date)}`})}</div>`)}
-    ${cardSec("Team", `<button class="btn tiny primary" data-team="${att(pid)}">Change team</button>`,
-      teamRows ? `<div class="ctwrap"><table class="ct"><thead><tr><th>Person</th><th>Role</th>
-        <th>On the project</th><th class="num">Weight</th><th class="num">${U} here<span class="sub">avg in view</span></th>
-        <th>Their whole load<span class="sub">over this project's months</span></th></tr></thead>
-        <tbody>${teamRows}</tbody></table></div>`
-      : `<p class="note">Nobody is on this project yet. <strong>Change team</strong> adds somebody.</p>`)}
-    <div class="csplit">
-      ${cardSec("Milestones", `${ms.length}`, msList)}
-      ${cardSec("Periods", `${per2.length}${per2.some(p => p.__derived) ? " &#183; derived" : ""}`,
-        per2.length ? `<div class="ctwrap"><table class="ct"><thead><tr><th>Period</th><th>Dates</th>
-          <th class="num">Weight</th><th class="num">Standard<span class="sub">a month</span></th></tr></thead>
-          <tbody>${perRows}</tbody></table></div>`
-        : `<p class="note">No periods yet.</p>`)}
-    </div>
-    ${cardSec("Issues — standard vs staffed", open.length ? `${open.length} open` : "none open",
-      open.length ? `<div class="ctwrap"><table class="ct gapt"><thead><tr><th>Month</th><th>Issue</th>
-        <th class="num">Needs</th><th class="num">Staffed</th><th class="num">Gap</th><th>Review</th></tr></thead>
-        <tbody>${issueRows}</tbody></table></div>
-        <p class="note">Click a month to see the figures behind it and to record a review.</p>`
-      : `<p class="note">${issues.length ? `Every issue on this project has been reviewed and closed.`
-                                         : `Every month in the plan is staffed at its standard.`}</p>`)}
-    ${cardSec("All fields", "as in the Projects table", cardFields("Project", pr, [
+    ${cardSec("Details", "click any value to change it", raw ? cardFields("Project", raw, [
       ["Identity", ["project_id", "project_name", "project_type", "project_category",
                     "clinical_phase", "work_scope_type", "status"]],
       ["Plan", ["start_date", "end_date", "total_period_months", "planned_member_count",
@@ -12171,7 +12636,33 @@ function cardProject(pid){
       ["Set-up", ["outsourcing_scope_det", "EDC_setup", "EDC_system", "DataReviewSystem_setup",
                   "DataReviewSystem", "RBQM_setup", "RBQM_system", "DM_conduct"]],
       ["Notes", ["note_1", "note_2", "note_3", "note_4", "note_5"]],
-    ]))}`;
+    ]) : `<p class="note">This project's row could not be found.</p>`, "editable")}
+    ${cardSec("Team", `<button class="btn tiny primary" data-team="${att(pid)}">Change team</button>`,
+      teamRows ? `<div class="ctwrap"><table class="ct cedit"><thead><tr><th>Person</th><th>Role</th>
+        <th>From</th><th>To</th><th class="num">Weight</th><th class="num">${U} here<span class="sub">avg in view</span></th>
+        <th>Their whole load<span class="sub">over this project's months</span></th></tr></thead>
+        <tbody>${teamRows}</tbody></table></div>
+        <p class="note">Role, dates and weight change here; <strong>Change team</strong> swaps, adds or
+          takes people off.</p>`
+      : `<p class="note">Nobody is on this project yet. <strong>Change team</strong> adds somebody.</p>`, "editable")}
+    <div class="csplit">
+      ${cardSec("Milestones", `${ms} dated &#183; <button class="btn tiny" data-act="blankms" `
+          + `data-pid="${att(pid)}" data-tip="${att(HELP.blankms)}">Blank list</button>`
+          + `<button class="btn tiny" data-cardadd="Milestone">+ Add</button>`, msTable, "editable")}
+      ${cardSec("Periods", `${per2.length}${derived ? " &#183; derived" : ""} &#183; `
+          + periodGenButton(pr, pid) + `<button class="btn tiny" data-cardadd="ProjectPeriod">+ Add</button>`,
+          perTable, "editable")}
+    </div>
+    ${cardSec("Monthly resource", `${G.length} months &#183; stacked by person`,
+      `<div class="scrollx fit">${util.svg}</div>`)}
+    ${cardSec("Timeline", `${per2.length} period(s) &#183; ${ms} milestone(s)`,
+      `<div class="scrollx fit">${chartGantt([pid], {single:true,
+        note:`${ymd(pr.start_date)} &#8594; ${ymd(pr.end_date)}`})}</div>`)}
+    ${cardSec("Issues — standard vs staffed", open.length ? `${open.length} open` : "none open",
+      open.length ? gapMonthsTable(pid, open)
+        + `<p class="note">Click a month to see the figures behind it and to record a review.</p>`
+      : `<p class="note">${issues.length ? `Every issue on this project has been reviewed and closed.`
+                                         : `Every month in the plan is staffed at its standard.`}</p>`)}`;
 }
 
 /* ------------------------------------------------------------------ a person */
@@ -12216,42 +12707,831 @@ function cardPerson(sid){
     + `</div>`;
 
   const {assign} = personSpans(sid);
-  const asgRows = mine.slice().sort((a, b) => byRank(a.project_id, b.project_id)).map(a => {
+  const raw = (M.raw.Person || []).find(x => x.person_id === sid);
+  /* Their assignments as rows to change in place - role, window, weight - with the
+     project as the way to its own card. */
+  const asg2 = (M.raw.Assignment || []).filter(a => a.person_id === sid)
+    .sort((a, b) => (M.projects[a.project_id] && M.projects[b.project_id]
+      ? byRank(a.project_id, b.project_id) : String(a.project_id).localeCompare(String(b.project_id))));
+  const asgRows = asg2.map(a => {
     const pr = M.projects[a.project_id] || {};
     let t = 0;
     for (const k of G) t += C.cell.get([a.project_id, sid, a.role_name, k].join("|")) || 0;
     const manual = M.isManual && M.isManual("assignment", a.assignment_id);
-    return `<tr><td><button type="button" class="plink" data-card="project" data-cid="${att(a.project_id)}">`
-      + `<span class="mono xs sq" style="--card-tint:${projColourOf(a.project_id)}">`
-      + `${esc(monogram(pr.project_name || a.project_id))}</span>${esc(pr.project_name || a.project_id)}</button>`
-      + `<span class="sub">${esc(a.project_id)}${M.projects[a.project_id] ? " &#183; " + esc(pr.project_type || "") : ""}</span></td>`
-      + `<td>${esc(a.role_name || "")}${manual ? ` <span class="estb manual sm">manual</span>` : ""}</td>`
-      + `<td>${cardWindow(a)}</td>`
-      + `<td class="num">${a.person_weight === null || a.person_weight === undefined ? "—" : Number(a.person_weight).toFixed(2)}</td>`
+    return `<tr><td>${M.projects[a.project_id]
+        ? `<button type="button" class="plink" data-card="project" data-cid="${att(a.project_id)}">`
+          + `<span class="mono xs sq" style="--card-tint:${projColourOf(a.project_id)}">`
+          + `${esc(monogram(pr.project_name || a.project_id))}</span>${esc(pr.project_name || a.project_id)}</button>`
+        : `<span class="muted">${esc(a.project_id || "no project yet")}</span>`}`
+      + `<span class="sub">${esc(a.assignment_id || "")} &#183; ${esc(a.project_id || "")}`
+      + `${manual ? ` &#183; <span class="estb manual sm">manual</span>` : ""}</span></td>`
+      + cardCell("Assignment", a, "role_name")
+      + cardCell("Assignment", a, "assign_start_date", `from ${cardDate(pr.start_date) || "the start"}`)
+      + cardCell("Assignment", a, "assign_end_date", `to ${cardDate(pr.end_date) || "the end"}`)
+      + cardCell("Assignment", a, "person_weight", "", "num")
       + `<td class="num">${fmt(G.length ? t / G.length : 0)}</td>`
       + `<td class="num">${fmt(t)}</td></tr>`;
   }).join("");
 
   return `${cardLife(pe.employment_start, pe.employment_end, "")}
     ${kpis}
+    ${cardSec("Details", "click any value to change it", raw ? cardFields("Person", raw, [
+      ["Identity", ["person_id", "person_name", "department", "primary_role"]],
+      ["Capacity", ["capacity_fte", "employment_start", "employment_end"]],
+      ["Notes", ["note_1", "note_2", "note_3", "note_4", "note_5"]],
+    ]) : `<p class="note">This person's row could not be found.</p>`, "editable")}
+    ${cardSec("Assignments", `${asg2.length}`,
+      asgRows ? `<div class="ctwrap"><table class="ct cedit"><thead><tr><th>Project</th><th>Role</th>
+        <th>From</th><th>To</th><th class="num">Weight</th><th class="num">${U} a month<span class="sub">avg in view</span></th>
+        <th class="num">${U}-months<span class="sub">in view</span></th></tr></thead>
+        <tbody>${asgRows}</tbody></table></div>
+        <p class="note">Role, dates and weight change here. To put this person on another project,
+          open that project and use <strong>Change team</strong>.</p>`
+      : `<p class="note">No assignment yet. Open a project and use <strong>Change team</strong> to add one.</p>`,
+      "editable")}
     ${cardSec("Monthly load", `${G.length} months &#183; stacked by project`,
       `<div class="scrollx fit">${chartPersonStrip(sid)}</div>`)}
     ${cardSec("Project timeline", `${pids.length} project(s)`,
       pids.length ? `<div class="scrollx fit">${chartGantt(pids.slice().sort(byRank), {assign,
           who: pe.person_name || sid, note: `The bar under each row is when ${esc(pe.person_name || sid)} is on it.`})}</div>`
-      : `<p class="note">No assignment yet.</p>`)}
-    ${cardSec("Assignments", `${mine.length}`,
-      asgRows ? `<div class="ctwrap"><table class="ct"><thead><tr><th>Project</th><th>Role</th>
-        <th>On the project</th><th class="num">Weight</th><th class="num">${U} a month<span class="sub">avg in view</span></th>
-        <th class="num">${U}-months<span class="sub">in view</span></th></tr></thead>
-        <tbody>${asgRows}</tbody></table></div>`
-      : `<p class="note">No assignment yet. Assignments are entered on Source data (person).</p>`)}
-    ${cardSec("All fields", "as in the People table", cardFields("Person", pe, [
-      ["Identity", ["person_id", "person_name", "department", "primary_role"]],
-      ["Capacity", ["capacity_fte", "employment_start", "employment_end"]],
-      ["Notes", ["note_1", "note_2", "note_3", "note_4", "note_5"]],
-    ]))}`;
+      : `<p class="note">No assignment yet.</p>`)}`;
 }
+/* ======================================================= the Data issues tab (R-69)
+
+   WHAT IS WRONG WITH THE PLAN, IN ONE PLACE, WITH THE WAY TO PUT IT RIGHT.
+
+   Every rule the plan is checked against already reports - into M.findings, rebuilt on
+   every edit - and until now the reports reached the reader as one line in a banner
+   ("3 errors, 14 warnings") and a modal table to read and close. Reading is half the
+   job. The other half is getting to the row, which meant knowing which tab it is on,
+   finding it there, and remembering what was wrong with it by the time you did.
+
+   So the findings are a worklist here:
+
+     LEVEL      what the application does about it: MUST FIX is refused until it is
+                corrected, MAY KEEP is asked about at Save, a WARNING never stops
+                anything, STILL TO COME answers itself, a NOTE is for information.
+     CATEGORY   which part of the plan it is about.
+     RECORD     the project, person or assumption table it is on - a link to the card.
+
+   sortable and groupable by any of them, narrowed by level, category or a search, and
+   each with its fix underneath it: the very row it is about, editable where it stands
+   through the same cells as everywhere else - so the same value lists, validation,
+   change log and Save - and, where the application already has one, the one-step fix:
+   derive the periods, lay out the standard milestones, switch a figure back to
+   automatic, review the months a project is off its standard.
+
+   AND A DECISION, where a decision is what is wanted. A warning is not a fault - it is
+   the application pointing at something that may well be deliberate - and a list that
+   cannot be worked down is a list nobody reads twice. ACCEPT takes an issue out of the
+   open count: in this session at once, and into the change log with the next Save, as
+   kept_by_user, which is the line an audit trail exists for. It is a decision about
+   THESE figures: the issue comes back if what it says changes, and when the plan is
+   opened again. A must-fix cannot be accepted - the application refuses it, and so
+   would the file.
+
+   NOT NARROWED BY THE FILTERS. They choose what the page shows; an issue is in the file
+   whatever the page is showing, and a list of problems that quietly left some out would
+   be worse than none. Allocation is the one category the findings do not carry, so it is
+   worked out here, from the same thresholds as the Overall tiles - from this month on,
+   because a month that has gone by is history, not something to fix. */
+
+const ISSUE_LEVELS = [
+  {id:"must", label:"Must fix", help:"Something is wrong with the row itself. An edit that "
+    + "would cause one is refused, and Save is held while one stands — correct it."},
+  {id:"keep", label:"May keep", help:"The row is sound, but something it depends on is "
+    + "missing, so the figures that need it are short an assumption. Save asks before "
+    + "keeping it; going ahead is your decision."},
+  {id:"warn", label:"Warning", help:"Probably not what was meant, or worth knowing before "
+    + "the plan is used. It never refuses anything."},
+  {id:"soon", label:"Still to come", help:"A row that is not finished yet. It answers itself "
+    + "as you carry on entering, and never refuses or asks."},
+  {id:"note", label:"Note", help:"For information: what the application did with something "
+    + "in the file, or a figure worth knowing."},
+];
+const ISSUE_CATS = [
+  {id:"proj", label:"Projects", help:"A project, its milestones or its periods."},
+  {id:"pers", label:"People & assignments", help:"A person, an assignment or a weight override."},
+  {id:"std",  label:"Standard vs staffed", help:"A project not given what its own standard "
+    + "says it needs (V-34, V-36), and reviews that no longer describe their month (V-40)."},
+  {id:"load", label:"Allocation", help:"A person above the ceiling, or below the floor for a "
+    + "run of months, from this month on — against the thresholds in Configuration."},
+  {id:"fig",  label:"Stated figures", help:"A monthly figure entered by hand that could not be "
+    + "applied as it stands (V-31 – V-33)."},
+  {id:"asm",  label:"Assumptions", help:"The standards, role factors, colours, value lists and "
+    + "settings on General assumptions."},
+  {id:"book", label:"Workbook", help:"The file itself — its sheets and its schema version."},
+];
+const ISSUE_LV = Object.fromEntries(ISSUE_LEVELS.map((l, i) => [l.id, {...l, rank:i}]));
+const ISSUE_CAT = Object.fromEntries(ISSUE_CATS.map((c, i) => [c.id, {...c, rank:i}]));
+const ISSUE_GROUPS = [["level", "Level"], ["cat", "Category"], ["rec", "Record"], ["none", "None"]];
+
+const ISSUE_SHEET_CAT = {
+  Project:"proj", Milestone:"proj", ProjectPeriod:"proj",
+  Person:"pers", Assignment:"pers", PersonPeriodWeight:"pers",
+  MonthlyEstimate:"fig",
+  PeriodFTEStandard:"asm", RoleFactor:"asm", Lists:"asm", Config:"asm", PeriodHighlight:"asm",
+};
+/* The field a rule is about, where its message does not name the column itself - the
+   editor puts these first and marks them. Every other rule names its column in so many
+   words, and the message is searched for it. */
+const ISSUE_FOCUS = {
+  "V-01":["project_id"], "V-02":["person_id"], "V-03":["role_name"],
+  "V-04":["project_category"], "V-07":["assign_end_date"],
+  "V-05":["start_date", "end_date", "assign_start_date", "assign_end_date",
+          "period_start", "period_end"],
+  "V-06":["period_start", "period_end"], "V-15":["period_name"],
+  "V-18":["period_name", "period_seq"], "V-19":["clinical_phase"], "V-26":["project_type"],
+  "V-22":["capacity_fte"], "V-35":["capacity_fte"],
+  "V-37":["milestone_highlight"], "V-38":["period_highlight"],
+};
+/* Which columns say WHICH row it is, kept beside the focus columns in a wide sheet. */
+const ISSUE_IDENT = {
+  Project:["project_id", "project_name"], Person:["person_id", "person_name"],
+  Assignment:["assignment_id", "project_id", "person_id", "role_name"],
+};
+/* Where on General assumptions each assumption sheet is changed. */
+const ISSUE_GEN_PANEL = {
+  PeriodFTEStandard:["gen-pws", "Standard period FTE"], RoleFactor:["gen-rf", "Role factors"],
+  PeriodHighlight:["gen-phl", "Period colours"], Config:["gen-cfg", "Configuration"],
+  Lists:["gen-lists", "Value lists"],
+};
+
+function issueLevel(f){
+  if (f.lv) return f.lv;
+  if (f.sev === "fatal") return "must";
+  if (f.sev === "error") return {conditional:"keep", incomplete:"soon"}[ruleClass(f.rule)] || "must";
+  return f.sev === "warning" ? "warn" : "note";
+}
+
+function issueCat(f){
+  if (f.load) return "load";
+  if (f.rule === "V-34" || f.rule === "V-36" || f.rule === "V-40") return "std";
+  if (f.sev === "fatal" || f.rule === "V-09") return "book";
+  return ISSUE_SHEET_CAT[f.sheet] || "book";
+}
+
+/* ------------------------------------------------------------- which record it is on */
+
+/** Every project, person and assignment identifier in the plan, as one expression that
+ *  finds them in a message - longest first, and only as whole identifiers, so PRJ-01 is
+ *  never read out of PRJ-010. Built once per model. */
+let ISSUE_IDX = null;
+function issueIdIndex(){
+  const M = S.model;
+  if (ISSUE_IDX && ISSUE_IDX.model === M) return ISSUE_IDX;
+  const kind = new Map();
+  for (const id of Object.keys(M.projects)) kind.set(id, "project");
+  for (const id of Object.keys(M.people)) if (!kind.has(id)) kind.set(id, "person");
+  for (const a of M.raw.Assignment || []){
+    const id = a.assignment_id === null || a.assignment_id === undefined ? "" : String(a.assignment_id);
+    if (id && !kind.has(id)) kind.set(id, "assignment");
+  }
+  const ids = [...kind.keys()].filter(Boolean).sort((a, b) => b.length - a.length)
+    .map(s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const re = ids.length ? new RegExp(`(?<![\\w-])(${ids.join("|")})(?![\\w-])`, "g") : null;
+  return (ISSUE_IDX = {model: M, kind, re});
+}
+
+/** The row a finding names, where it names one. V-27 is reported against the PROJECT's
+ *  row number on the standards sheet, so its row number is not a row of that sheet. */
+function issueRow(f){
+  if (!f.sheet || !(f.row > 0) || f.rule === "V-27" || f.load) return null;
+  const rows = S.model.raw[f.sheet];
+  return rows ? rows.find(r => r.__row === f.row) || null : null;
+}
+
+/** The projects, people and assignments an issue is about: off the row it names, and out
+ *  of its message - "Assignment ASG-014 refers to project PRJ-022" is about both. Only
+ *  records that exist can be opened, so an identifier that names nothing is left out. */
+function issueRecords(it){
+  const M = S.model, out = {project:[], person:[], assignment:[]};
+  const put = (k, id) => {
+    if (id === null || id === undefined || id === "") return;
+    const s = String(id);
+    if (out[k] && !out[k].includes(s)) out[k].push(s);
+  };
+  if (it.sid) put("person", it.sid);
+  const r = it.raw;
+  if (r){
+    if (it.sheet === "Project") put("project", r.project_id);
+    else if (it.sheet === "Person") put("person", r.person_id);
+    else {
+      put("assignment", r.assignment_id);
+      put("project", r.project_id);
+      put("person", r.person_id);
+    }
+  }
+  const X = issueIdIndex();
+  if (X.re) for (const m of it.msg.matchAll(X.re)) put(X.kind.get(m[1]), m[1]);
+  for (const aid of out.assignment){
+    const a = (M.raw.Assignment || []).find(x => String(x.assignment_id) === aid);
+    if (a){ put("project", a.project_id); put("person", a.person_id); }
+  }
+  out.project = out.project.filter(id => M.projects[id]);
+  out.person = out.person.filter(id => M.people[id]);
+  return out;
+}
+
+/** What an issue is grouped under in "Record": its project, else its person, else the
+ *  sheet - an assumption table is a record of its own. */
+function issueHome(it){
+  const M = S.model;
+  if (it.rec.project.length){
+    const id = it.rec.project[0];
+    return {kind:"project", id, label: M.projects[id].project_name || id};
+  }
+  if (it.rec.person.length){
+    const id = it.rec.person[0];
+    return {kind:"person", id, label: M.people[id].person_name || id};
+  }
+  const s = it.sheet && it.sheet !== "Workbook" ? (SECTION[it.sheet] || it.sheet) : "The workbook";
+  return {kind:"sheet", id: it.sheet || "", label: s};
+}
+
+/** The first sentence, which is what the rule found; the rest - why it matters and what
+ *  to do - is under it, opened. */
+function issueHead(msg){
+  const s = String(msg).replace(/\s+/g, " ").trim();
+  const m = s.match(/^(.+?[.!?])(?=\s+[A-Z(‘'"“]|$)/);
+  let h = m ? m[1] : s;
+  if (h.length > 210) h = h.slice(0, 196).replace(/\s+\S*$/, "") + " …";
+  return h;
+}
+
+function issueHash(s){
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(36);
+}
+
+/* ------------------------------------------------------------- allocation */
+
+/** Months as runs: "Jan 2027 – Jun 2027, Sep 2027". */
+function monthRuns(ks){
+  const out = [];
+  for (let i = 0; i < ks.length; i++){
+    let j = i;
+    while (j + 1 < ks.length && ks[j + 1] === ks[j] + 1) j++;
+    out.push(i === j ? keyToLabel(ks[i]) : `${keyToLabel(ks[i])} – ${keyToLabel(ks[j])}`);
+    i = j;
+  }
+  return out;
+}
+
+/** A person above the ceiling, and a person below the floor for a run of months -
+ *  measured the way the Overall tiles measure them (absolute thresholds, a month at
+ *  nothing ending a run), over every month from this one to the end of the plan. One
+ *  issue per person for each, with the months named inside it. */
+function loadIssues(){
+  const M = S.model, C = S.calc, out = [];
+  if (!C || !C.persMonth) return out;
+  const from = Math.max(nowKey(), C.lo), to = C.hi;
+  if (!(to >= from)) return out;
+  for (const [sid, p] of Object.entries(M.people)){
+    const name = p.person_name || sid, over = [], runs = [];
+    let run = null, peak = 0, peakK = null;
+    const close = () => { if (run && run.b - run.a + 1 >= M.MINM) runs.push(run); run = null; };
+    for (let k = from; k <= to; k++){
+      const v = C.persMonth.get(sid + "|" + k) || 0;
+      if (v > M.OVER){
+        over.push(k);
+        if (v > peak){ peak = v; peakK = k; }
+      }
+      if (v > 0 && v < M.UNDER){
+        if (!run) run = {a:k, b:k, lo:v};
+        else { run.b = k; run.lo = Math.min(run.lo, v); }
+      } else close();
+    }
+    close();
+    if (over.length){
+      const shown = monthRuns(over);
+      out.push({load:"over", lv:"warn", sev:"warning", rule:"Load", sheet:"Person", row:p.__row,
+        sid, peakK, months: over,
+        msg:`${name} is above the ${M.OVER.toFixed(2)} FTE ceiling in ${over.length} month(s) `
+          + `from this month on, at ${peak.toFixed(2)} at most, in ${keyToLabel(peakK)}. `
+          + `The months: ${shown.slice(0, 6).join(", ")}${shown.length > 6 ? ", …" : ""}. The `
+          + `ceiling is absolute — it is not scaled by anyone's capacity — so the load comes `
+          + `down by lowering a weight or shortening an assignment, below. Accept it if it is `
+          + `meant.`});
+    }
+    if (runs.length){
+      const low = Math.min(...runs.map(r => r.lo));
+      out.push({load:"under", lv:"note", sev:"information", rule:"Load", sheet:"Person",
+        row:p.__row, sid, peakK: runs[0].a, months: [],
+        msg:`${name} is below the ${M.UNDER.toFixed(2)} FTE floor for ${runs.length} run(s) `
+          + `of ${M.MINM} or more months from this month on, at ${low.toFixed(2)} at the `
+          + `lowest. ${runs.slice(0, 4).map(r => `${keyToLabel(r.a)} – ${keyToLabel(r.b)} `
+            + `(${r.b - r.a + 1} months)`).join(", ")}${runs.length > 4 ? ", …" : ""}. A `
+          + `month with nothing in it ends a run: somebody on nothing is unassigned, not `
+          + `under-allocated.`});
+    }
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------- the list itself */
+
+let ISSUE_CACHE = null;
+/** Every issue in the plan as it stands, worked out once per model - the tab, its count
+ *  in the tab bar and the banner's link all ask, often in the same moment. */
+function issues(){
+  if (!S.model || !S.calc) return [];
+  const c = ISSUE_CACHE, F = S.model.findings || [];
+  if (c && c.model === S.model && c.calc === S.calc && c.n === F.length
+      && c.ack === S.issueAckV && c.now === nowKey()) return c.list;
+  const list = F.map(f => ({sev:f.sev, rule:f.rule, sheet:f.sheet, row:f.row,
+                            msg:String(f.msg ?? ""), raw:issueRow(f)}))
+    .concat(loadIssues());
+  const seen = new Set();
+  for (const it of list){
+    it.lv = issueLevel(it);
+    it.cat = issueCat(it);
+    it.rec = issueRecords(it);
+    it.home = issueHome(it);
+    it.head = issueHead(it.msg);
+    it.key = [it.rule, it.sheet, it.row, it.msg].join("\u0000");
+    it.acc = S.issueAck.get(it.key) || null;
+    let id = "i" + issueHash(it.key);
+    while (seen.has(id)) id += "x";
+    seen.add(id);
+    it.id = id;
+    it.sig = [it.rule, it.load || "", it.sheet, it.row, it.home.kind, it.home.id].join("|");
+    it.find = [it.rule, it.msg, it.home.label, it.home.id, ISSUE_LV[it.lv].label,
+               ISSUE_CAT[it.cat].label].join(" ").toLowerCase();
+  }
+  ISSUE_CACHE = {model:S.model, calc:S.calc, n:F.length, ack:S.issueAckV, now:nowKey(), list};
+  return list;
+}
+
+/** The number on the tab: what is open and worth a look - must fix, may keep and
+ *  warnings. Red while anything must be fixed. */
+function issueCount(){
+  const b = el("issueCount");
+  if (!b) return;
+  if (!S.model || !S.calc){ b.hidden = true; return; }
+  const ln = el("openIssuesN");
+  const open = issues().filter(it => !it.acc);
+  const must = open.filter(it => it.lv === "must").length;
+  const n = open.filter(it => it.lv === "must" || it.lv === "keep" || it.lv === "warn").length;
+  b.hidden = !n;
+  b.textContent = n;
+  b.classList.toggle("must", must > 0);
+  if (ln) ln.textContent = n ? ` (${n})` : "";
+  b.parentNode.dataset.tip = `<b>Data issues</b><br>${n ? `${n} open: ${must} must fix, `
+    + `${open.filter(it => it.lv === "keep").length} may keep, `
+    + `${open.filter(it => it.lv === "warn").length} warning(s)` : "nothing that needs a look"}`
+    + `<br><span class="tr">${open.length - n} still to come or noted</span>`;
+}
+
+const issueAcceptable = it => it.lv !== "must";
+
+function issueSorter(){
+  const V = S.issueView, d = V.dir;
+  const by = {
+    level: (a, b) => ISSUE_LV[a.lv].rank - ISSUE_LV[b.lv].rank,
+    cat: (a, b) => ISSUE_CAT[a.cat].rank - ISSUE_CAT[b.cat].rank,
+    rec: (a, b) => a.home.label.localeCompare(b.home.label, undefined, {numeric:true})
+                   || a.home.id.localeCompare(b.home.id, undefined, {numeric:true}),
+    rule: (a, b) => (parseInt(String(a.rule).slice(2), 10) || 999)
+                    - (parseInt(String(b.rule).slice(2), 10) || 999),
+    issue: (a, b) => a.head.localeCompare(b.head),
+  };
+  const first = by[V.sort] || by.level;
+  return (a, b) => d * first(a, b) || by.level(a, b) || by.cat(a, b) || by.rec(a, b)
+    || by.rule(a, b) || by.issue(a, b);
+}
+
+/* ------------------------------------------------------------- drawing */
+
+function renderIssuesTab(){
+  const box = el("t-issues");
+  if (!box) return;
+  if (!S.model){ box.innerHTML = ""; return; }
+  const V = S.issueView, all = issues(), open = all.filter(it => !it.acc);
+  const nLv = id => open.filter(it => it.lv === id).length;
+  const nCat = id => open.filter(it => it.cat === id).length;
+  const narrowed = V.lv.size || V.cat.size || V.q.trim();
+  const lvChips = ISSUE_LEVELS.map(l => {
+    const n = nLv(l.id), on = V.lv.has(l.id);
+    return `<button type="button" class="ichip lv-${l.id}${on ? " on" : ""}${n ? "" : " zero"}" `
+      + `data-iss-lv="${l.id}" aria-pressed="${on}" data-tip="${att(`<b>${l.label}</b><br>${l.help}`
+        + `<br><span class="tr">click to show only these; click again to show all</span>`)}">`
+      + `<span class="idot"></span>${l.label}<b>${n}</b></button>`;
+  }).join("");
+  const catChips = ISSUE_CATS.filter(c => nCat(c.id) || V.cat.has(c.id)).map(c => {
+    const on = V.cat.has(c.id);
+    return `<button type="button" class="btn tiny icat${on ? " on" : ""}" data-iss-cat="${c.id}" `
+      + `aria-pressed="${on}" data-tip="${att(`<b>${c.label}</b><br>${c.help}`)}">${esc(c.label)}`
+      + ` <span class="n">${nCat(c.id)}</span></button>`;
+  }).join("");
+  const acc = all.length - open.length;
+  box.innerHTML = `<div class="panel ipanel" data-panel="iss">
+      <div class="phead"><h2>Data issues</h2>
+        <span class="scope">the whole plan — not narrowed by the filters</span>
+        <span class="scope k">${open.length} open${acc ? ` &#183; ${acc} accepted` : ""}</span></div>
+      <p class="cap">Everything the plan's checks have found, as a list to work down. Open one to read
+        all of it and to put it right where it stands — the row it is about is editable right there,
+        through the same checks and the same <strong>Save</strong> as everywhere else. A warning or a
+        note that is deliberate can be <strong>accepted</strong>: it leaves the open count for this
+        session, and the decision is written to the change log with the next Save.</p>
+      <div class="ichips" role="group" aria-label="Show issues of this level">${lvChips}</div>
+      <div class="itools">
+        <span class="ilabel">Group by</span>
+        <span class="vtog">${ISSUE_GROUPS.map(([g, t]) =>
+          `<button type="button" class="btn tiny${V.group === g ? " on" : ""}" data-iss-group="${g}" `
+          + `aria-pressed="${V.group === g}">${t}</button>`).join("")}</span>
+        ${catChips ? `<span class="ilabel">Category</span><span class="icats">${catChips}</span>` : ""}
+        <input type="search" id="issueQ" class="iq" placeholder="Search issues, records, rules…"
+          aria-label="Search the issues" value="${att(V.q)}">
+        ${narrowed ? `<button type="button" class="btn tiny" data-iss-clear>Show all</button>` : ""}
+      </div>
+      <div id="issueList">${issueListHTML()}</div>
+    </div>`;
+}
+
+/** The list alone - what the search box redraws as it is typed into, so the box keeps
+ *  its caret. */
+function drawIssueList(){
+  const l = el("issueList");
+  if (l){ l.innerHTML = issueListHTML(); cueScrollers(); }
+}
+
+function issueListHTML(){
+  const V = S.issueView, all = issues();
+  /* The issue that was open has gone. If it has only CHANGED - a gap that is smaller now,
+     a run that is shorter - it is the same issue in other words, and it stays open; if
+     it has gone altogether, the fix worked, and that is worth saying. */
+  if (V.open && !all.some(it => it.id === V.open)){
+    const next = all.find(it => it.sig === V.openSig);
+    if (next) V.open = next.id;
+    else { V.done = V.openHead || "that issue"; V.open = null; }
+  }
+  if (!all.length)
+    return `<div class="iempty"><span class="iok" aria-hidden="true">&#10003;</span>`
+      + `<div><strong>No data issues.</strong> The plan passes every rule, and nobody is above `
+      + `the ceiling or under the floor from this month on.</div></div>`;
+  const q = V.q.trim().toLowerCase();
+  const shown = all.filter(it => (!V.lv.size || V.lv.has(it.lv))
+    && (!V.cat.size || V.cat.has(it.cat)) && (!q || it.find.includes(q)));
+  const done = V.done ? `<p class="idone" role="status">&#10003; <strong>Resolved</strong> — `
+    + `${esc(V.done)}</p>` : "";
+  if (!shown.length)
+    return done + `<div class="iempty"><div>No issue matches what is chosen above. `
+      + `<button type="button" class="btn tiny" data-iss-clear>Show all</button></div></div>`;
+  const sort = issueSorter();
+  const open = shown.filter(it => !it.acc).sort(sort), acc = shown.filter(it => it.acc).sort(sort);
+  const groups = [];
+  if (V.group === "none") groups.push([null, open]);
+  else {
+    const keyOf = V.group === "level" ? it => it.lv : V.group === "cat" ? it => it.cat
+      : it => it.home.kind + "|" + it.home.id;
+    const by = new Map();
+    for (const it of open){
+      const k = keyOf(it);
+      if (!by.has(k)) by.set(k, []);
+      by.get(k).push(it);
+    }
+    const order = V.group === "level" ? (a, b) => ISSUE_LV[a].rank - ISSUE_LV[b].rank
+      : V.group === "cat" ? (a, b) => ISSUE_CAT[a].rank - ISSUE_CAT[b].rank
+      : (a, b) => {
+          const x = by.get(a)[0].home, y = by.get(b)[0].home;
+          const r = k => k.kind === "project" ? 0 : k.kind === "person" ? 1 : 2;
+          return r(x) - r(y) || x.label.localeCompare(y.label, undefined, {numeric:true});
+        };
+    for (const k of [...by.keys()].sort(order)) groups.push([k, by.get(k)]);
+  }
+  if (acc.length) groups.push(["__acc", acc]);
+  const arrow = c => V.sort === c ? `<span class="sarr">${V.dir > 0 ? "&#9650;" : "&#9660;"}</span>` : "";
+  const th = (c, t, cls) => `<th class="${cls || ""}" aria-sort="${V.sort === c ? (V.dir > 0
+      ? "ascending" : "descending") : "none"}"><button type="button" class="isort" data-iss-sort="${c}">`
+    + `${t}${arrow(c)}</button></th>`;
+  return done + `<div class="scrollx free"><table class="isst">
+    <thead><tr>${th("level", "Level", "ilv")}${th("cat", "Category", "icat-h")}
+      ${th("rec", "Record", "irec")}${th("issue", "Issue", "ihead")}${th("rule", "Rule", "irule")}
+      <th class="iact"></th></tr></thead>
+    ${groups.map(([k, rows]) => `<tbody>${k === null ? "" : issueGroupHead(k, rows)}`
+      + rows.map(issueRowHTML).join("") + `</tbody>`).join("")}
+  </table></div>`;
+}
+
+function issueGroupHead(k, rows){
+  const V = S.issueView;
+  let title, sub = "";
+  if (k === "__acc"){
+    title = `<span class="ig-t">Accepted</span>`;
+    sub = "kept as they are this session — Undo puts one back";
+  } else if (V.group === "level"){
+    title = `<span class="lvpill lv-${k}">${ISSUE_LV[k].label}</span>`;
+    sub = ISSUE_LV[k].help;
+  } else if (V.group === "cat"){
+    title = `<span class="ig-t">${esc(ISSUE_CAT[k].label)}</span>`;
+    sub = ISSUE_CAT[k].help;
+  } else {
+    const h = rows[0].home;
+    title = h.kind === "sheet" ? `<span class="ig-t">${esc(h.label)}</span>`
+      : `<span class="mono xs${h.kind === "project" ? " sq" : ""}" style="--card-tint:`
+        + `${h.kind === "project" ? projColourOf(h.id) : persColourOf(h.id)}">${esc(monogram(h.label))}</span>`
+        + cardLink(h.kind, h.id, h.label, "ig-t") + `<span class="idchip">${esc(h.id)}</span>`;
+    const n = {};
+    for (const it of rows) n[it.lv] = (n[it.lv] || 0) + 1;
+    sub = ISSUE_LEVELS.filter(l => n[l.id]).map(l => `${n[l.id]} ${l.label.toLowerCase()}`).join(" &#183; ");
+    return `<tr class="igrp"><th colspan="6"><span class="ig">${title}<span class="ig-n">${rows.length}</span>`
+      + `<span class="ig-s">${sub}</span></span></th></tr>`;
+  }
+  return `<tr class="igrp"><th colspan="6"><span class="ig">${title}<span class="ig-n">${rows.length}</span>`
+    + `<span class="ig-s">${esc(sub)}</span></span></th></tr>`;
+}
+
+function issueRecordHTML(it){
+  const h = it.home;
+  if (h.kind === "sheet"){
+    const g = ISSUE_GEN_PANEL[h.id];
+    return g ? `<button type="button" class="namelink" data-iss-go="${g[0]}" data-tip="${att(
+        `<b>${esc(g[1])}</b><br>Open it on General assumptions`)}">${esc(h.label)}</button>`
+      : `<span class="muted">${esc(h.label)}</span>`;
+  }
+  const more = it.rec.project.length + it.rec.person.length - 1;
+  return cardLink(h.kind, h.id, h.label) + `<span class="sub">${esc(h.id)}`
+    + `${more > 0 ? ` &#183; +${more} more` : ""}</span>`;
+}
+
+function issueRowHTML(it){
+  const V = S.issueView, open = V.open === it.id, L = ISSUE_LV[it.lv];
+  const fixable = issueFixable(it);
+  const acc = it.acc ? `<span class="iacc">&#10003; Accepted${it.acc.who ? ` by ${esc(it.acc.who)}` : ""}`
+    + ` at ${String(it.acc.at.getHours()).padStart(2, "0")}:${String(it.acc.at.getMinutes()).padStart(2, "0")}`
+    + `</span>` : "";
+  return `<tr class="iss lv-${it.lv}${it.acc ? " acc" : ""}${open ? " open" : ""}" data-iss="${it.id}">`
+    + `<td class="ilv"><span class="lvpill lv-${it.lv}" data-tip="${att(`<b>${L.label}</b><br>${L.help}`)}">`
+    + `${L.label}</span></td>`
+    + `<td class="icat-c">${esc(ISSUE_CAT[it.cat].label)}</td>`
+    + `<td class="irec">${issueRecordHTML(it)}</td>`
+    + `<td class="ihead"><span class="itext">${esc(it.head)}</span>${acc}</td>`
+    + `<td class="irule"><code>${esc(it.rule)}</code></td>`
+    + `<td class="iact"><button type="button" class="btn tiny${open ? " on" : ""}" data-iss-open="${it.id}" `
+    + `aria-expanded="${open}">${fixable ? "Fix here" : "Details"}<span class="caret" aria-hidden="true">`
+    + `${open ? "&#9652;" : "&#9662;"}</span></button>`
+    + (issueAcceptable(it)
+        ? it.acc ? `<button type="button" class="btn tiny" data-iss-unacc="${it.id}" data-tip="${att(
+            "<b>Undo</b><br>Put it back among the open issues.")}">Undo</button>`
+          : `<button type="button" class="btn tiny" data-iss-acc="${it.id}" data-tip="${att(
+            "<b>Accept</b><br>Keep it as it is. It leaves the open count for this session, and the "
+            + "decision goes into the change log with the next Save. It comes back if what it says "
+            + "changes, and when the plan is opened again.")}">Accept</button>`
+        : `<span class="inoacc" data-tip="${att("<b>Must be fixed</b><br>The application refuses this, "
+            + "so it cannot be accepted — correct it.")}">&#8212;</span>`)
+    + `</td></tr>`
+    + (open ? `<tr class="issx lv-${it.lv}"><td colspan="6">${issueFixHTML(it)}</td></tr>` : "");
+}
+
+/* ------------------------------------------------------------- the fix */
+
+/** The rows an issue is about, to change in place - or null where there is nothing to
+ *  type into (a missing sheet, a setting the file did not carry). */
+function issueEditRows(it){
+  const M = S.model, pid = it.rec.project[0];
+  if (it.load || it.cat === "std") return null;
+  if (it.raw){
+    // A duplicate is about every row that shares the identifier, not the one it names.
+    if (it.rule === "V-08" && KEY_COL[it.sheet]){
+      const kc = KEY_COL[it.sheet], kv = it.raw[kc];
+      return {sheet: it.sheet, rows: (M.raw[it.sheet] || []).filter(r => r[kc] === kv)};
+    }
+    return {sheet: it.sheet, rows: [it.raw]};
+  }
+  if ((it.sheet === "Milestone" || it.sheet === "ProjectPeriod") && pid)
+    return {sheet: it.sheet, rows: (M.raw[it.sheet] || []).filter(r => r.project_id === pid)};
+  if (it.sheet === "PersonPeriodWeight" && it.rec.assignment[0])
+    return {sheet: it.sheet, rows: (M.raw.PersonPeriodWeight || [])
+      .filter(r => String(r.assignment_id) === it.rec.assignment[0])};
+  return null;
+}
+
+function issueFixable(it){
+  return !!(it.load || it.cat === "std" || issueEditRows(it) || issueQuick(it));
+}
+
+/** The columns to show: a narrow sheet whole, with the ones the issue is about marked; a
+ *  wide one as the columns that say which row it is plus the ones it is about - unless
+ *  nothing says which those are, and then the whole row. */
+function issueCols(sheet, it){
+  const cols = entryCols(sheet);
+  const focus = new Set((ISSUE_FOCUS[it.rule] || []).filter(c => cols.includes(c)));
+  for (const c of cols)
+    if (new RegExp(`(^|[^\\w])${c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\w]|$)`).test(it.msg))
+      focus.add(c);
+  if (cols.length <= 9 || !focus.size) return {cols, focus};
+  const ident = (ISSUE_IDENT[sheet] || [KEY_COL[sheet]]).filter(c => c && cols.includes(c));
+  return {cols: [...new Set([...ident, ...cols.filter(c => focus.has(c))])], focus};
+}
+
+/** The row a message names, among the several shown - "Inspection on 2028-06-01",
+ *  "overlap at Conduct (final)" - so the eye goes to it first. By its name, and by its
+ *  date as well where the message carries one, so 'final DB lock' is not read out of
+ *  'final DB lock cut-off'. */
+function issueHit(it, r){
+  const nm = r.milestone_name ?? r.period_name;
+  if (nm === null || nm === undefined || String(nm).trim().length < 3) return false;
+  const re = new RegExp(`(^|[\\s'"(])${String(nm).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`
+    + `(?=$|[\\s'".,;:)])`);
+  if (!re.test(it.msg)) return false;
+  const d = r.milestone_date ?? r.period_start;
+  return !(d instanceof Date) || !/\d{4}-\d{2}-\d{2}/.test(it.msg) || it.msg.includes(ymd(d));
+}
+
+function issueEditor(it){
+  const E = issueEditRows(it);
+  if (!E) return "";
+  const {sheet, rows} = E;
+  if (!rows.length)
+    return `<p class="note">There are no ${esc((SECTION[sheet] || sheet).toLowerCase())} rows for this yet.</p>`;
+  const {cols, focus} = issueCols(sheet, it);
+  return `<div class="ctwrap"><table class="ct cedit ied"><thead><tr>${cols.map(c =>
+      `<th class="${focus.has(c) ? "focus" : ""}" data-tip="${att(`${colHead(c)}<br>${COLUMN_HELP[c] || ""}`)}">`
+      + `${esc(COLUMN_LABEL[c] || c)}</th>`).join("")}<th></th></tr></thead><tbody>`
+    + rows.map(r => `<tr${rows.length > 1 && issueHit(it, r) ? ' class="hit"' : ""}>`
+      + `${cols.map(c => c === "estimation_type" ? cardEstCell(sheet, r)
+        : cardCell(sheet, r, c, "", focus.has(c) ? "focus" : "")).join("")}`
+      + `${cardDel(sheet, r, "row")}</tr>`).join("")
+    + `</tbody></table></div>`;
+}
+
+/** A person's assignments, to bring a load down: the weight and the window change here,
+ *  and the share each one puts on the worst month says which to change. */
+function issueLoadEditor(it){
+  const M = S.model, C = S.calc, sid = it.sid, k = it.peakK;
+  const rows = (M.raw.Assignment || []).filter(a => a.person_id === sid);
+  if (!rows.length) return `<p class="note">No assignment to change.</p>`;
+  return `<div class="ctwrap"><table class="ct cedit ied"><thead><tr><th>Project</th><th>Role</th>
+      <th>From</th><th>To</th><th class="num">Weight</th>
+      <th class="num">In ${esc(keyToLabel(k))}<span class="sub">FTE</span></th><th></th></tr></thead><tbody>`
+    + rows.map(a => {
+        const pr = M.projects[a.project_id] || {};
+        const v = C.cell.get([a.project_id, sid, a.role_name, k].join("|")) || 0;
+        return `<tr><td>${M.projects[a.project_id] ? cardLink("project", a.project_id,
+            pr.project_name || a.project_id) : `<span class="muted">${esc(a.project_id || "")}</span>`}`
+          + `<span class="sub">${esc(a.assignment_id || "")}</span></td>`
+          + cardCell("Assignment", a, "role_name")
+          + cardCell("Assignment", a, "assign_start_date", `from ${cardDate(pr.start_date) || "the start"}`)
+          + cardCell("Assignment", a, "assign_end_date", `to ${cardDate(pr.end_date) || "the end"}`)
+          + cardCell("Assignment", a, "person_weight", "", "num focus")
+          + `<td class="num">${v > 0.004 ? v.toFixed(2) : `<span class="muted">—</span>`}</td>`
+          + cardDel("Assignment", a, "assignment") + `</tr>`;
+      }).join("") + `</tbody></table></div>`;
+}
+
+/** The one-step fixes the application already has, offered where they apply. */
+function issueQuick(it){
+  const M = S.model, pid = it.rec.project[0], pr = pid ? M.projects[pid] : null, out = [];
+  const r = it.rule;
+  if (pr && (r === "V-12" || r === "V-16" || r === "V-06" || r === "V-15" || r === "V-18"
+             || (r === "V-05" && it.sheet === "ProjectPeriod")))
+    out.push(periodGenButton(pr, pid));
+  if (pr && (r === "V-16" || r === "V-14" || r === "V-20" || r === "V-21"))
+    out.push(`<button class="btn tiny" data-act="blankms" data-pid="${att(pid)}" `
+      + `data-tip="${att(HELP.blankms)}">Blank milestone list</button>`);
+  if (r === "V-31" || r === "V-32" || r === "V-33"){
+    const asg = /^Assignment\b/.test(it.msg) && it.rec.assignment[0];
+    const scope = asg ? "assignment" : "project", id = asg ? it.rec.assignment[0] : pid;
+    if (id) out.push(`<button class="btn tiny" data-act="estswitch" data-scope="${scope}" `
+      + `data-id="${att(id)}" data-tip="${att("<b>Switch how the figures are made</b><br>Asks first, "
+        + "and copies the months across so nothing jumps.")}">Switch to automatic&#8230;</button>`);
+  }
+  if (pr && it.cat === "std")
+    out.push(`<button class="btn tiny" data-team="${att(pid)}">Change team</button>`);
+  const g = r === "V-03" || r === "V-23" || r === "V-29" ? ISSUE_GEN_PANEL.RoleFactor
+    : r === "V-19" || r === "V-27" ? ISSUE_GEN_PANEL.PeriodFTEStandard
+    : !it.raw && ISSUE_GEN_PANEL[it.sheet] ? ISSUE_GEN_PANEL[it.sheet]
+    : r === "V-30" ? ISSUE_GEN_PANEL.Config : null;
+  if (g) out.push(`<button class="btn tiny" data-iss-go="${g[0]}">Open ${esc(g[1])}</button>`);
+  if (r === "V-09") out.push(`<button class="btn tiny" data-iss-go="gen-ver">Version information</button>`);
+  return out.join("");
+}
+
+function issueFixHTML(it){
+  const M = S.model, pid = it.rec.project[0];
+  const L = ISSUE_LV[it.lv];
+  let body = "";
+  if (it.load) body = issueLoadEditor(it);
+  else if (it.cat === "std" && pid){
+    const rows = gapRows([pid]);
+    /* V-40 is about ONE month's review. Where that month is still off its standard it is
+       a row like any other; where it is not, the review is all that is left of it, and
+       the month is opened by itself - to clear the review or keep it as history. */
+    const mm = it.rule === "V-40" ? (it.msg.match(/,\s(\d{4})-(\d{2}):/) || []) : [];
+    const mine = mm[0] ? rows.filter(x => isoMonth(x.k) === `${mm[1]}-${mm[2]}`) : rows;
+    const was = (it.msg.match(/when it was (short|over|unstaffed)/) || [])[1] || "";
+    body = (mine.length ? gapMonthsTable(pid, mine, "scrollx tall")
+        : mm[0] ? `<p class="note">${keyToLabel(+mm[1] * 12 + +mm[2] - 1)} is not off its standard any
+            more. <button type="button" class="btn tiny" data-gap="${att(pid)}"
+            data-gk="${+mm[1] * 12 + +mm[2] - 1}" data-gapis="${was}">Open the month</button></p>`
+        : `<p class="note">No month of this project is off its standard now.</p>`)
+      + `<p class="note">Click a month to change the figures behind it, and to record the
+          decision — <strong>Confirmed</strong>, <strong>Accepted</strong> or
+          <strong>To be fixed</strong> — which is kept in the file.</p>`;
+  } else body = issueEditor(it);
+  const quick = issueQuick(it);
+  const open = (kind, id, name) => `<button type="button" class="btn tiny" data-card="${kind}" `
+    + `data-cid="${att(id)}" data-tip="${att(`<b>${esc(name)}</b><br>Open this ${kind}'s page — `
+      + `everything about it, and every field to change.`)}">Open ${esc(name)} &#8599;</button>`;
+  const links = it.rec.project.map(id => open("project", id, M.projects[id].project_name || id))
+    .concat(it.rec.person.map(id => open("person", id, M.people[id].person_name || id)))
+    .slice(0, 4).join("");
+  return `<div class="ifix">
+      <p class="imsg"><span class="lvpill lv-${it.lv}">${L.label}</span> <code>${esc(it.rule)}</code>
+        ${esc(it.msg)}</p>
+      ${body}
+      ${quick || links ? `<div class="iacts">${quick}${links}</div>` : ""}
+      ${body && !it.load && it.cat !== "std" ? `<p class="note">Type a new value in any cell —
+        it is checked as it is entered, and kept as an unsaved change until you
+        <strong>Save</strong>. The issue leaves this list as soon as it is put right.</p>` : ""}
+    </div>`;
+}
+
+/* ------------------------------------------------------------- what the tab does */
+
+function issueGo(panel){
+  showTab("t-gen");
+  const p = document.querySelector(`#t-gen .panel[data-panel="${panel}"]`);
+  if (!p) return;
+  if (panel === "gen-ver"){ const d = el("prov"); if (d) d.open = true; }
+  p.scrollIntoView({block:"start"});
+}
+
+function issueAccept(id, on){
+  const it = issues().find(x => x.id === id);
+  if (!it || (on && !issueAcceptable(it))) return;
+  const f = {sev:it.sev, rule:it.rule, sheet:it.sheet, row:it.row, msg:it.msg};
+  if (on){
+    S.issueAck.set(it.key, {who: S.who || "", at: new Date()});
+    S.events.push(...findingEntries([f], [it.rule], "accepted on Data issues", S.who));
+  } else {
+    S.issueAck.delete(it.key);
+    S.events.push(...findingEntries([f], [], "acceptance withdrawn on Data issues", S.who));
+  }
+  S.issueAckV++;
+  if (S.issueView.open === id) S.issueView.open = null;
+  keepScroll(() => renderTab("t-issues"));
+  issueCount();
+}
+
+document.addEventListener("click", e => {
+  if (!e.target.closest || !e.target.closest("#t-issues")) return;
+  const V = S.issueView;
+  const t = e.target.closest("[data-iss-open], [data-iss-acc], [data-iss-unacc], [data-iss-sort], "
+    + "[data-iss-group], [data-iss-lv], [data-iss-cat], [data-iss-clear], [data-iss-go]");
+  if (t){
+    e.stopPropagation();
+    V.done = "";
+    const d = t.dataset, attr = [...t.attributes].find(a => a.name.startsWith("data-iss-"));
+    if (d.issGo) return issueGo(d.issGo);
+    if (d.issAcc) return issueAccept(d.issAcc, true);
+    if (d.issUnacc) return issueAccept(d.issUnacc, false);
+    if (d.issOpen){
+      const it = issues().find(x => x.id === d.issOpen);
+      V.open = V.open === d.issOpen || !it ? null : d.issOpen;
+      if (it){ V.openHead = it.head; V.openSig = it.sig; }
+      keepScroll(drawIssueList);
+      const b = document.querySelector(`#t-issues [data-iss-open="${d.issOpen}"]`);
+      if (b){
+        b.focus({preventScroll:true});
+        const x = b.closest("tr").nextElementSibling;
+        (x && x.classList.contains("issx") ? x : b).scrollIntoView({block:"nearest"});
+      }
+      return;
+    }
+    if (d.issSort){
+      if (V.sort === d.issSort) V.dir = -V.dir; else { V.sort = d.issSort; V.dir = 1; }
+    }
+    if (d.issGroup) V.group = d.issGroup;
+    if (d.issLv) V.lv.has(d.issLv) ? V.lv.delete(d.issLv) : V.lv.add(d.issLv);
+    if (d.issCat) V.cat.has(d.issCat) ? V.cat.delete(d.issCat) : V.cat.add(d.issCat);
+    if ("issClear" in d){ V.lv.clear(); V.cat.clear(); V.q = ""; }
+    keepScroll(() => renderTab("t-issues"));
+    // The control just pressed has been drawn again; the focus goes back to it.
+    const again = attr && document.querySelector(`#t-issues [${attr.name}`
+      + `${attr.value ? `="${CSS.escape(attr.value)}"` : ""}]`);
+    if (again) again.focus({preventScroll:true});
+    return;
+  }
+  /* A click on the row itself - not on anything in it that does something of its own -
+     opens it, as the button at its end does. */
+  const tr = e.target.closest("tr.iss");
+  if (tr && !e.target.closest("button, a, input, [contenteditable='true']")){
+    const b = tr.querySelector("[data-iss-open]");
+    if (b) b.click();
+  }
+});
+
+/* The search answers as it is typed; only the list is redrawn, so the box keeps its
+   caret. */
+document.addEventListener("input", e => {
+  if (e.target.id !== "issueQ") return;
+  S.issueView.q = e.target.value;
+  S.issueView.done = "";
+  drawIssueList();
+});
 /* ============================================================ 14. wiring */
 
 /* Re-rendering a panel replaces its DOM, and a fresh element starts at the top left.
@@ -12665,6 +13945,11 @@ function adopt(sheets, name, opts){
      against the old one - the worst kind of missing data, because nothing on screen
      connects the two. */
   S.colf = {};
+  /* The Data issues tab's narrowing and its accepted issues go with the plan they were
+     chosen against, for the same reason (R-69). How it is grouped and sorted is the
+     reader's, and stays. */
+  Object.assign(S.issueView, {lv:new Set(), cat:new Set(), q:"", open:null, done:""});
+  S.issueAck.clear(); S.issueAckV++;
   S.selProj = null; S.selPers = null; S.selAsg = null; S.newKeys = new Set();
   /* And a section left full screen is put back, for the reason the banner exists: a load
      reports what it found, and the one thing that must not happen is for that report to
@@ -12683,7 +13968,6 @@ function adopt(sheets, name, opts){
   const stamp = S.loadedAt.toISOString().slice(0,16).replace("T"," ");
   el("fileline").innerHTML = `${esc(name)} · ${opts.blank ? "started" : "loaded"} ${stamp} `
     + `<span class="tz">(GMT${tz>=0?"+":""}${tz}, ${esc(tzName)})</span>`;
-  renderProvenance();
   const errs = M.findings.filter(f => f.sev === "error").length;
   const n = S.cfgChanges.length;
   showBanner(errs ? "bad" : (n ? "warn" : ""),
@@ -12747,36 +14031,6 @@ function startBlankNow(){
 
 el("vers").textContent = `v${APP_VERSION} · expects source schema v${SCHEMA_EXPECTED}`;
 
-/** REQ-VC-01 / REQ-VC-02: what this build was written against, and - once a workbook
- *  is loaded - whether that workbook agrees with it. */
-function renderProvenance(){
-  const short = BUILT_AGAINST.map(d =>
-    `<span><span class="plabel">${esc(d.what.replace("Programming ","").replace("Source data ",""))}</span> `
-    + `<span class="pv">v${esc(d.ver)}</span></span>`).join("");
-  el("provSum").innerHTML =
-    `<span><span class="plabel">Application</span> <span class="pv">v${APP_VERSION}</span></span>`
-    + `<span class="plabel">built against</span>${short}`;
-
-  const loaded = S.model ? num(S.model.config.schema_version) : null;
-  const rows = BUILT_AGAINST.map(d =>
-    `<tr><td>${esc(d.what)}</td><td><span class="pv">v${esc(d.ver)}</span></td>`
-    + `<td><code>${esc(d.file)}</code></td><td>${esc(d.status)}</td></tr>`).join("");
-  const loadedRow = S.model
-    ? `<tr><td>Loaded workbook</td><td><span class="pv">schema v${loaded ?? "?"}</span></td>`
-      + `<td><code>${esc(S.fileName)}</code></td>`
-      + (String(loaded) === String(SCHEMA_EXPECTED)
-          ? `<td class="ok">✓ matches the schema this application expects</td>`
-          : `<td class="warn">▲ this application expects schema v${SCHEMA_EXPECTED} — see the findings report (V-09)</td>`)
-      + `</tr>`
-    : `<tr><td>Loaded workbook</td><td class="plabel">—</td><td colspan="2" class="plabel">nothing loaded yet</td></tr>`;
-  el("provBody").innerHTML =
-    `<div class="scrollx tall"><table><thead><tr><th>Controlled document</th><th>Version</th><th>File</th>`
-    + `<th>Status</th></tr></thead><tbody>${rows}${loadedRow}</tbody></table></div>`
-    + `<p class="note">These are the documents this build implements. The application does not read them —
-       they are recorded here so a file on someone's disk can be traced back to the issue it was built
-       from. tools/check_consistency.py verifies the list against the repository on every run.</p>`;
-}
-renderProvenance();
 el("loadBtn").onclick = el("loadBtn2").onclick = () => el("picker").click();
 el("startBtn").onclick = startBlank;
 /* Two defects in one line, both reported from the field.
@@ -12818,6 +14072,25 @@ document.addEventListener("focusin", e => {
 document.addEventListener("focusout", e => {
   const td = e.target.closest("td[data-gapnew]");
   if (td && td.textContent !== (td.dataset.orig ?? "")) stateMonth(td);
+});
+/* An empty place in an assumption matrix (R-69): a cell that creates its row. The same
+   shape as the Stated cell above - no data-sheet, so the ordinary commit leaves it alone -
+   and the caret goes on to where it was going, as it does from any other cell. */
+document.addEventListener("focusin", e => {
+  const td = e.target.closest("td[data-mknew]");
+  if (td) td.dataset.orig = td.textContent;
+});
+document.addEventListener("focusout", e => {
+  const td = e.target.closest("td[data-mknew]");
+  if (!td || td.textContent.trim() === "" || td.textContent === (td.dataset.orig ?? "")) return;
+  const next = e.relatedTarget, scope = next && next.closest ? next.closest("section.tab") : null;
+  const FOCUSABLE = 'td[contenteditable="true"], button:not([disabled]), input, select';
+  const at = scope ? [...scope.querySelectorAll(FOCUSABLE)].indexOf(next) : -1;
+  matrixCreate(td);
+  if (scope && at >= 0 && !next.isConnected){
+    const again = scope.querySelectorAll(FOCUSABLE)[at];
+    if (again) again.focus();
+  }
 });
 el("gapClose").onclick = () => closeGap();
 // Escape and the backdrop close it too; GAP_AT has to be cleared either way or a
@@ -13033,6 +14306,16 @@ document.addEventListener("click", e => {
     openGap(gp.dataset.gap, +gp.dataset.gk, gp.dataset.gapis || "");
     return;
   }
+  /* A name in the Overall tables, the Data issues tab or a card itself opens that
+     project's or person's card (R-69) - before the row, whose own click would fold it
+     open or shut. A name in an editable table is left to the end of this handler,
+     because there the row is selected as well. */
+  const cl = e.target.closest("[data-card]");
+  if (cl && !cl.closest(".data-t tbody tr")){
+    e.stopPropagation();
+    openCard(cl.dataset.card, cl.dataset.cid, !!cl.closest("#carddlg"));
+    return;
+  }
   /* The project's team (R-66) - also before the row, whose own click would fold it. */
   const tb = e.target.closest("[data-team]");
   if (tb){
@@ -13243,7 +14526,29 @@ document.addEventListener("focusout", e => {
   setTimeout(() => { if (!CAL.holding && CAL.owns(td)) CAL.close(); }, 120);
   const now = td.textContent;
   if (now === td.dataset.orig) return;
+  /* AND THE CARET GOES WHERE IT WAS GOING (R-69). A commit redraws the pane - and an
+     open card - so the cell a click or Tab was taking the caret to has been replaced by
+     the time the browser hands it the focus, and the focus went nowhere: every field
+     after the first needed a second click. The cell is found again by what it is over,
+     inside the same dialog or tab, and given the focus it was on its way to. */
+  /* Anything else the focus was going to - a button, Switch… beside a cell - is found
+     again by its place among the things that take the focus there, which a redraw of
+     the same record does not change. */
+  const next = e.relatedTarget;
+  const scope = next && next.closest ? next.closest("dialog[open]") || next.closest("section.tab") : null;
+  const cell = next && next.matches && next.matches('td[contenteditable="true"][data-sheet]')
+    ? `td[contenteditable="true"][data-sheet="${CSS.escape(next.dataset.sheet)}"]`
+      + `[data-row="${CSS.escape(next.dataset.row)}"][data-col="${CSS.escape(next.dataset.col)}"]`
+    : null;
+  const FOCUSABLE = 'td[contenteditable="true"], button:not([disabled]), input, select, '
+    + 'textarea, [tabindex="0"]';
+  const at = scope ? [...scope.querySelectorAll(FOCUSABLE)].indexOf(next) : -1;
   applyEdit(td.dataset.sheet, +td.dataset.row, td.dataset.col, now, td);
+  if (scope && !next.isConnected && scope.isConnected){
+    const again = (cell && scope.querySelector(cell))
+      || (at >= 0 ? scope.querySelectorAll(FOCUSABLE)[at] : null);
+    if (again) again.focus();
+  }
 });
 document.addEventListener("keydown", e => {
   const td = e.target.closest('td[contenteditable="true"]');
@@ -13264,6 +14569,18 @@ document.addEventListener("keydown", e => {
 document.addEventListener("input", e => {
   if (e.target.closest('td[contenteditable="true"]')){ el("tip").hidden = true; }
 });
+
+/* A FLOATING PANEL GOES WHERE ITS CELL IS (R-67, R-69). A modal dialog is drawn in the
+   top layer, above the whole page whatever anybody's z-index says, so a pop-up, the value
+   list or the calendar left on the body is drawn BEHIND the dialog whose cell it serves -
+   which since R-69 includes every field of a card. Each is moved into the open dialog
+   that holds its cell, and back to the body otherwise. They are fixed-position either
+   way, so moving one changes what it is drawn over and nothing about where. */
+function lodgeIn(box, node){
+  const d = node && node.closest && node.closest("dialog[open]");
+  const host = d || document.body;
+  if (box.parentNode !== host) host.appendChild(box);
+}
 
 /* ---- type-ahead ---- */
 const SUGG = (() => {
@@ -13351,6 +14668,7 @@ const SUGG = (() => {
               : `${hits.length}${hits.length === 60 ? "+" : ""} match${hits.length === 1 ? "" : "es"}`)
       + ` &middot; \u2191\u2193 then Enter picks one &middot; Enter alone keeps what you typed`
       + ` &middot; Esc closes</div>`;
+    lodgeIn(box, cell);
     box.hidden = false;
     place();
   }
@@ -13360,6 +14678,12 @@ const SUGG = (() => {
     // filter and the scroll position, and this runs again whenever focus is restored
     // after a scrollbar drag.
     if (cell === td && !box.hidden) return;
+    /* A figure in an assumption matrix is typed, not chosen (R-69): every other figure in
+       the sheet, listed over the one being changed, is only in the way. */
+    if (td.classList.contains("mx") || td.hasAttribute("data-mknew")){
+      if (cell !== td) api.close();
+      return;
+    }
     cell = td; idx = -1;
     const row = (S.model.raw[td.dataset.sheet] || []).find(r => r.__row === +td.dataset.row);
     items = suggestionsFor(td.dataset.sheet, td.dataset.col, row);
@@ -13665,6 +14989,7 @@ const CAL = (() => {
       + `<button type="button" class="btn tiny" data-d="${att(today)}">Today</button>`
       + `<button type="button" class="btn tiny" data-d="">Clear</button>`
       + `<span class="hint">or type it: YYYY-MM-DD</span></div>`;
+    lodgeIn(box, cell);
     box.hidden = false;
     place();
   }
@@ -13744,19 +15069,11 @@ const CAL = (() => {
     tip.style.left = Math.max(8, nx) + "px";
     tip.style.top = Math.max(8, ny) + "px";
   };
-  /* INSIDE A MODAL DIALOG THE POP-UP HAS TO BE IN THE DIALOG. A modal is drawn in the
-     top layer, above the whole page whatever anybody's z-index says, so a pop-up left on
-     the body was drawn BEHIND the dialog it was explaining - every chart in the card
-     (R-67), and every figure in the month and team dialogs, hovered to nothing. It is
-     fixed-position either way, so moving it changes what it is drawn over and nothing
-     about where. */
-  const lodge = node => {
-    const d = node && node.closest && node.closest("dialog[open]");
-    const host = d || document.body;
-    if (tip.parentNode !== host) host.appendChild(tip);
-  };
+  /* Inside a modal dialog the pop-up has to be in the dialog - see lodgeIn(). Every chart
+     in the card (R-67), and every figure in the month and team dialogs, used to hover to
+     nothing. */
   const show = (html, x, y, isPin, node) => {
-    lodge(node);
+    lodgeIn(tip, node);
     tip.innerHTML = html + (isPin ? `<span class="tipclose">click anywhere to close</span>` : "");
     tip.hidden = false;
     tip.classList.toggle("pinned", !!isPin);

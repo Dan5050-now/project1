@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.46"
+DOC_VERSION = "1.47"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.77.xlsx"
+PLAN = "PRAP_Development_Plan_v2.78.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -193,6 +193,34 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.47", "2026-11-28", "Claude Code", "Dan",
+         "R-69, REQ-DSH-29 to REQ-DSH-34. ui/13e_card.js: cardCell(sheet, row, col, ph, cls) is "
+         "td.cell.ccell[contenteditable][data-sheet][data-row][data-col] over the RAW row - the "
+         "attributes every table cell carries, so the document-level focusin / focusout / keydown "
+         "handlers commit it through applyEdit() with no card-specific path; cardFields() lays out "
+         "every entryCols() column in labelled groups (estimation_type as its value and the "
+         "estswitch button); Team, Assignments, Milestones and Periods rows are cells over their "
+         "Assignment, Milestone and ProjectPeriod rows; cardAdd(sheet) seeds a Milestone or "
+         "ProjectPeriod row with the project and nextSeq(); #cardSave clicks the page's Save; "
+         "cardEcho() repeats showBanner()'s text in #cardMsg; drawCard() follows a renamed key "
+         "through S.pending. shell/web/14b_wiring.js: the focusout commit re-focuses what the "
+         "focus was going to - the same cell by sheet, row and column, else the same place among "
+         "the focusable elements of its dialog or tab - after the redraw; lodgeIn(box, node) moves "
+         "the tip, value list and calendar into an open dialog. ui/11_tabs.js wmatrix(rows, keyOf, "
+         "labelOf, colKey, valKey, edit): with edit = {sheet, keyCols} each figure is td.mx over its "
+         "row, and an empty place whose period belongs to the key's type (CLINICAL_PERIODS / "
+         "OTHER_PERIODS) is td.mk[data-mknew][data-keys] - ui/12_editing.js matrixCreate() makes "
+         "the row with those keys and the figure, complete (no __new), probes rebuild() and takes "
+         "it back out if blocking findings rise. ui/10_tables.js: the names in Resource by "
+         "project / by person are cardLink() buttons, handled before the row's fold. ui/13f_issues.js "
+         "is new: issues() maps M.findings to {lv, cat, rec, home, head, key, id} - lv from sev and "
+         "ruleClass(), cat from the rule or sheet, rec from the row named and from the plan's "
+         "identifiers found in the message - plus loadIssues() over S.calc.persMonth from "
+         "max(nowKey(), lo) to hi; cached per model, calc and acceptance; renderIssuesTab() and "
+         "issueCount(); S.issueView and S.issueAck (keyed rule|sheet|row|msg; Accept pushes "
+         "findingEntries(..., 'accepted on Data issues') onto S.events). The version panel is "
+         "provenancePanel() at the head of renderGenTab(); #banner and #editbar are children of "
+         "#databand in #stickybar.", "Draft"],
         ["1.46", "2026-11-27", "Claude Code", "Dan",
          "R-68, REQ-DSH-27 and REQ-DSH-28. ui/09_charts.js chartGantt(): for more than one row "
          "the year labels leave the SVG (its top margin drops to CHART.gantt.padTAxis, 14) and are "

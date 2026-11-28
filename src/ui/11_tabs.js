@@ -98,7 +98,8 @@ function renderOverall(){
       <div class="phead"><h2>Resource by project</h2>
         <span class="scope k">${pids.length} project(s)</span>${projIssueControl()}${gapButton(pids)}</div>
       <p class="cap">Sorted NewDrug CT, then Biosimilar CT, then Others; earlier projects first.
-        <strong>Click a project name</strong> to expand it to the people and roles on it.
+        <strong>Click a project's name</strong> to open its page and change it there;
+        click anywhere else on the row (&#9656;) to expand it to the people and roles on it.
         Each project says how its figures are made — <span class="estb auto">Auto</span>
         from the standard, <span class="estb manual">Manual</span> stated by hand — and a
         month carrying a stated figure is marked &#9998;. <strong>Show</strong> narrows the
@@ -117,7 +118,8 @@ function renderOverall(){
       <div class="phead"><h2>Resource by person</h2>
         <span class="scope k">${sids.length} people</span></div>
       <p class="cap">Summed across every project. &#9650; above the ceiling, &#9660; below the floor.
-        <strong>Click a person name</strong> to expand to their projects and roles.</p>
+        <strong>Click a person's name</strong> to open their page; click anywhere else on
+        the row (&#9656;) to expand it to their projects and roles.</p>
       <div class="scrollx xl">${tablePeople(sids)}</div>
       <p class="note">Under-allocation is counted as a run of ${M.MINM} or more consecutive months, not
         per month — the run is what matters, a single quiet month is not.</p></div>`;
@@ -653,24 +655,57 @@ function selectedAssignment(asg){
    purpose, and it is usually the only row there is. */
 const scopeLabel = r => r.work_scope_type ? String(r.work_scope_type) : "any scope";
 
-function wmatrix(rows, keyOf, labelOf, colKey, valKey){
-  const cols = [], keys = [], grid = {};
+/** A sheet of figures keyed on several columns, read as a matrix: one line per key, one
+ *  column per `colKey`, the figure `valKey` in each place.
+ *
+ *  `edit` - {sheet, keyCols} - makes it the place the figures are CHANGED, too (R-69).
+ *  Every figure is the same editable cell the tables use, over the row it comes from, so
+ *  it goes through the same checks, change log and Save; and an empty place is a cell
+ *  that CREATES its row, carrying the key it stands for - the line's own key columns, as
+ *  the file spells them, and the column's name. The matrix is where a standard is read,
+ *  and it was the one place it could not be corrected: the rows it is made of are the
+ *  second view, and finding one figure among 289 rows to change what the matrix showed
+ *  at a glance was the wrong way round. */
+function wmatrix(rows, keyOf, labelOf, colKey, valKey, edit){
+  const cols = [], keys = [], grid = {}, at = {}, keyRaw = {};
   let vmax = 0;
   for (const r of rows){
     if (!cols.includes(r[colKey])) cols.push(r[colKey]);
     const k = keyOf(r).join(" · ");
-    if (!keys.includes(k)) keys.push(k);
+    if (!keys.includes(k)){
+      keys.push(k);
+      if (edit) keyRaw[k] = Object.fromEntries(edit.keyCols.map(c => [c, r[c] ?? null]));
+    }
     grid[k + "||" + r[colKey]] = num(r[valKey]);
+    at[k + "||" + r[colKey]] = r;
     vmax = Math.max(vmax, num(r[valKey]) || 0);
   }
   const head = cols.map(c => `<th>${esc(c)}</th>`).join("");
   const body = keys.map(k => {
     const [nm, sub] = labelOf(k);
     const tds = cols.map(c => {
-      const v = grid[k + "||" + c];
-      if (v === undefined || v === null) return '<td class="c z">&middot;</td>';
+      const v = grid[k + "||" + c], r = at[k + "||" + c];
+      const where = `<b>${esc(nm)}</b> &#183; ${esc(c)}<br><span class="tr">${esc(sub)}</span>`;
+      /* Only a place the calculation would read can be filled: a clinical type has the
+         clinical periods and an Others type the Others ones, and a figure for a period
+         the type never has would be a row that nothing uses. */
+      const fits = !edit || colKey !== "period_name" || !keyRaw[k]
+        || (CLINICAL_TYPES.has(keyRaw[k].project_type) ? CLINICAL_PERIODS : OTHER_PERIODS).includes(c);
+      if (edit && !r && !fits) return '<td class="c z">&middot;</td>';
+      if (edit && !r)
+        return `<td class="c z mk" contenteditable="true" data-mknew="${att(edit.sheet)}" `
+          + `data-col="${att(valKey)}" data-keys="${att(JSON.stringify({...keyRaw[k], [colKey]: c}))}" `
+          + `data-tip="${att(`${where}<br>No figure yet — type one to add it.`)}"></td>`;
+      const cell = edit
+        ? ` contenteditable="true" data-sheet="${att(edit.sheet)}" data-row="${r.__row}" `
+          + `data-col="${att(valKey)}" data-tip="${att(`${where}<br>Click to change it.`)}"`
+        : "";
+      const marked = edit && S.editedCells.has(`${edit.sheet}|${r.__row}|${valKey}`) ? " edited" : "";
+      if (v === undefined || v === null)
+        return edit ? `<td class="c z mx${marked}"${cell}></td>` : '<td class="c z">&middot;</td>';
       const i = seqStep(v, vmax);
-      return `<td class="c" style="background:${SEQ[i]};color:${i>6?"#fff":"var(--ink)"}">${v.toFixed(2)}</td>`;
+      return `<td class="c${edit ? " mx" : ""}${marked}"${cell} `
+        + `style="background:${SEQ[i]};color:${i>6?"#fff":"var(--ink)"}">${v.toFixed(2)}</td>`;
     }).join("");
     return `<tr><th class="rh"><span class="nm">${esc(nm)}</span>`
       + `<span class="sub">${esc(sub)}</span></th>${tds}</tr>`;
@@ -693,6 +728,42 @@ function viewToggle(id, label){
     + `</span>`;
 }
 
+/** REQ-VC-01 / REQ-VC-02: what this build was written against, and whether the loaded
+ *  workbook agrees with it. The first section of General assumptions since R-69: it was a
+ *  strip at the head of every page, read by almost nobody and pushing the plan down for
+ *  everybody - and it is a fact about the application's assumptions, so it sits with them.
+ *  The header keeps the one figure people look for, the application's own version. */
+function provenancePanel(){
+  const M = S.model;
+  const short = BUILT_AGAINST.map(d =>
+    `<span><span class="plabel">${esc(d.what.replace("Programming ","").replace("Source data ",""))}</span> `
+    + `<span class="pv">v${esc(d.ver)}</span></span>`).join("");
+  const loaded = M ? num(M.config.schema_version) : null;
+  const rows = BUILT_AGAINST.map(d =>
+    `<tr><td>${esc(d.what)}</td><td><span class="pv">v${esc(d.ver)}</span></td>`
+    + `<td><code>${esc(d.file)}</code></td><td>${esc(d.status)}</td></tr>`).join("");
+  const loadedRow = M
+    ? `<tr><td>Loaded workbook</td><td><span class="pv">schema v${loaded ?? "?"}</span></td>`
+      + `<td><code>${esc(S.fileName)}</code></td>`
+      + (String(loaded) === String(SCHEMA_EXPECTED)
+          ? `<td class="ok">✓ matches the schema this application expects</td>`
+          : `<td class="warn">▲ this application expects schema v${SCHEMA_EXPECTED} — see Data issues (V-09)</td>`)
+      + `</tr>`
+    : `<tr><td>Loaded workbook</td><td class="plabel">—</td><td colspan="2" class="plabel">nothing loaded yet</td></tr>`;
+  return `<div class="panel" data-panel="gen-ver">
+      <div class="phead"><h2>Version information</h2>
+        <span class="scope">this build and the file it has open</span></div>
+      <details id="prov"><summary id="provSum"><span><span class="plabel">Application</span> `
+    + `<span class="pv">v${APP_VERSION}</span></span><span class="plabel">built against</span>${short}`
+    + `</summary><div id="provBody">`
+    + `<div class="scrollx tall"><table><thead><tr><th>Controlled document</th><th>Version</th><th>File</th>`
+    + `<th>Status</th></tr></thead><tbody>${rows}${loadedRow}</tbody></table></div>`
+    + `<p class="note">These are the documents this build implements. The application does not read them —
+       they are recorded here so a file on someone's disk can be traced back to the issue it was built
+       from. tools/check_consistency.py verifies the list against the repository on every run.</p>`
+    + `</div></details></div>`;
+}
+
 function renderGenTab(){
   const M = S.model;
   const pwsRows = M.raw.PeriodFTEStandard, rfRows = M.raw.RoleFactor;
@@ -702,7 +773,8 @@ function renderGenTab(){
     : `<div class="scrollx tall">${wmatrix(pwsRows,
         r => [r.project_type, r.clinical_phase, scopeLabel(r)],
         k => { const p = k.split(" · "); return [p[1] + " · " + p[2], p[0]]; },
-        "period_name", "standard_fte")}</div>`;
+        "period_name", "standard_fte",
+        {sheet:"PeriodFTEStandard", keyCols:["project_type","clinical_phase","work_scope_type"]})}</div>`;
 
   const ct = rfRows.filter(r => CLINICAL_TYPES.has(r.project_type));
   const ot = rfRows.filter(r => !CLINICAL_TYPES.has(r.project_type));
@@ -713,10 +785,12 @@ function renderGenTab(){
     : `<div class="scrollx tall">${wmatrix(ct,
         r => [r.project_type, r.clinical_phase, scopeLabel(r), r.role_name],
         k => { const p = k.split(" · "); return [p[3], p[0] + " · " + p[1] + " · " + p[2]]; },
-        "period_name", "role_factor")}</div>
+        "period_name", "role_factor",
+        {sheet:"RoleFactor", keyCols:["project_type","clinical_phase","work_scope_type","role_name"]})}</div>
        <h2 class="subhead">Role factors — Others</h2>
        <div class="scrollx">${wmatrix(ot, r => [r.project_type, r.role_name],
-        k => { const p = k.split(" · "); return [p[1], p[0]]; }, "period_name", "role_factor")}</div>`;
+        k => { const p = k.split(" · "); return [p[1], p[0]]; }, "period_name", "role_factor",
+        {sheet:"RoleFactor", keyCols:["project_type","clinical_phase","work_scope_type","role_name"]})}</div>`;
 
   const grouped = {};
   for (const r of M.raw.Lists) (grouped[r.list_name] ||= []).push(String(r.value));
@@ -727,7 +801,7 @@ function renderGenTab(){
         `<tr><td>${esc(k)}</td><td class="vals">${esc(v.join(", "))}</td>`
         + `<td class="num">${v.length}</td></tr>`).join("")}</tbody></table></div>`;
 
-  el("t-gen").innerHTML =
+  el("t-gen").innerHTML = provenancePanel() +
     `<div class="panel" data-panel="gen-pws">
       <div class="phead"><h2>Standard period FTE for project types</h2>
         <span class="scope">PeriodFTEStandard</span>${viewToggle("pws")}</div>
@@ -735,8 +809,10 @@ function renderGenTab(){
         each period — a magnitude, not a multiplier: <strong>4.02</strong> means the project draws
         about four full-time people that month. This is where every figure gets its size; each
         project's own <strong>period weight</strong> then adjusts it up or down for that particular
-        study. The matrix is how a standard reads — across, not down. Switch to
-        <strong>Rows &amp; editing</strong> to add, change or delete individual rows.
+        study. The matrix is how a standard reads — across, not down, and it is where one is
+        changed: <strong>click any figure and type</strong>, or type into an empty
+        <strong>&middot;</strong> to add one. <strong>Rows &amp; editing</strong> lists the same
+        figures as rows, with their notes and a delete for each.
         <strong>Others</strong> projects are hand-entered per project instead.</p>
       ${pws}</div>
     <div class="panel" data-panel="gen-rf">
@@ -745,7 +821,9 @@ function renderGenTab(){
         <span class="scope k">${rfRows.length} row(s)</span>${viewToggle("rf")}</div>
       <p class="cap">What one person in this role costs the project per month, before their own weight
         and the period weight. Keyed on type, phase, period and role — read a row across to see how a
-        role's burden moves over the life of a project. ${rfRows.length} rows in all.</p>
+        role's burden moves over the life of a project. ${rfRows.length} rows in all.
+        <strong>Click any figure to change it</strong>, or type into an empty <strong>&middot;</strong>
+        to add one.</p>
       ${rf}</div>
     <div class="panel" data-panel="gen-phl">
       <div class="phead"><h2>Period colours</h2>
@@ -782,7 +860,8 @@ function renderGenTab(){
 }
 
 const TAB_RENDER = {"t-overall":renderOverall, "t-proj":renderProjTab,
-                    "t-pers":renderPersTab, "t-gen":renderGenTab};
+                    "t-pers":renderPersTab, "t-gen":renderGenTab,
+                    "t-issues":renderIssuesTab};
 const ALL_TABS = Object.keys(TAB_RENDER);
 
 /** Draw one pane, and remember that it now matches the model. */
@@ -822,5 +901,6 @@ function renderAll(){
   for (const id of ALL_TABS) S.stale.add(id);
   renderTab(S.tab);
   renderDirty();
+  issueCount();                     // the number on the Data issues tab (R-69)
 }
 

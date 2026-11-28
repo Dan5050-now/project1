@@ -320,9 +320,17 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.77.xlsx` — **current.** 101 requirements, 41 live
-  validation rules, source schema version 16. The latest change is **R-68**: **the
-  timeline's years stay on screen** — a bar held at the top of the Project timeline's
+- `docs/PRAP_Development_Plan_v2.78.xlsx` — **current.** 107 requirements, 41 live
+  validation rules, source schema version 16. The latest change is **R-69**: **the cards
+  are where a record is changed** — every field, the team or assignments, the milestones
+  and the periods typed into in place, through the tables' own cells (`REQ-DSH-30`);
+  **the assumption matrices are typed into**, an empty place creating its row
+  (`REQ-DSH-31`); **the Overall names open their cards** (`REQ-DSH-32`); **a Data issues
+  tab** — every finding and allocation problem by level, category and record, sortable and
+  groupable, each with its fix beneath it and Accept for what is deliberate
+  (`REQ-DSH-29`); **Version information** first on General assumptions (`REQ-DSH-33`); and
+  **the findings banner and the save bar as one band** (`REQ-DSH-34`). Before it,
+  **R-68**: **the timeline's years stay on screen** — a bar held at the top of the Project timeline's
   scroll region, Today marked in it (`REQ-DSH-27`); and **a Project status filter**,
   Planned / Active / On hold / Completed in that order, narrowing every tab
   (`REQ-DSH-28`). Before it, **R-67**: **the page
@@ -468,7 +476,10 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.46.xlsx` — **current specification.** Schema 16.
+- `docs/PRAP_Programming_Specification_v1.47.xlsx` — **current specification.** Schema 16.
+  Records the card's cells (`cardCell`, `cardFields`, `cardAdd`), the matrices' cells and
+  `matrixCreate`, and the Data issues tab (`ui/13f_issues.js`: `issues()`, `loadIssues()`,
+  `S.issueView`, `S.issueAck`) (R-69).
   Records the timeline's year bar (`div.gaxis`) and the status filter (`statusOf`,
   `NO_STATUS`) (R-68).
   Records how a chart is drawn to the room it has (`CHART_ROOM`, `fitW`, `withRoom`), the
@@ -497,7 +508,11 @@ document through the manifest rather than by sorting filenames.
   and states the quantity it had been missing: the Overall tab's cost follows
   `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same
   rendering problem.
-- `docs/PRAP_UI_Component_List_v2.12.xlsx` — **current component list.** Adds `O-16`, the
+- `docs/PRAP_UI_Component_List_v2.13.xlsx` — **current component list.** Adds `G-14`, the
+  Data issues tab; `G-15`, Version information; `G-16`, one band for the findings and the
+  save bar; `E-07`, the card is where the record is changed; `A-06`, the matrices are typed
+  into; and `O-17`, names open their cards (R-69).
+- `docs/PRAP_UI_Component_List_v2.12.xlsx` — superseded component list. Adds `O-16`, the
   Project status filter, and `X-19`, the timeline's years stay on screen (R-68).
 - `docs/PRAP_UI_Component_List_v2.11.xlsx` — superseded component list. Adds `P-09`, the
   name link; `P-10` and `S-09`, the project and person cards; `X-17`, the page is the

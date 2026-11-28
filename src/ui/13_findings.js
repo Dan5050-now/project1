@@ -18,10 +18,20 @@ function showBanner(kind, text, findings){
     + `<strong>${esc(text)}</strong>`
     + (n ? ` ${esc(summary)}.` : "")
     + (cfgN ? `<span class="lk" id="openCfg">Which settings changed</span>` : "")
-    + (n ? `<span class="lk" id="openRep">Open full report</span>` : "")
+    /* Once a plan is open its findings have a tab of their own (R-69), where they can be
+       sorted and fixed - and the way there stays in the band whatever it last said, with
+       the count of what is open beside it, since the band is where the state of the data
+       is read. The report is what a file that could not be opened still gets. */
+    + (!el("tabs").hidden && S.model
+        ? `<span class="lk" id="openIssues">Open data issues<span id="openIssuesN"></span></span>`
+        : n ? `<span class="lk" id="openRep">Open full report</span>` : "")
     + `</div>`;
   const b = el("openRep");
   if (b) b.onclick = () => { renderReport(findings); el("report").showModal(); };
+  const i = el("openIssues");
+  if (i) i.onclick = () => { closeCard(); showTab("t-issues"); window.scrollTo({top:0}); };
+  issueCount();
+  cardEcho(kind, text + (n ? ` ${summary}.` : ""));   // and inside an open card (R-69)
   const c = el("openCfg");
   if (c) c.onclick = () => { renderCfgChanges(); el("cfgchg").showModal(); };
 }

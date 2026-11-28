@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.12.xlsx
+Output: docs/PRAP_UI_Component_List_v2.13.xlsx
 """
 
 from pathlib import Path
@@ -40,7 +40,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.12"
+VERSION = "2.13"
 DATE = "2026-11-27"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
@@ -218,7 +218,8 @@ C = [
      "edit is rejected at entry so nothing invalid can reach the export. The rule has not changed; it "
      "has become visible."),
     ("G-07", "Global", "[CHANGED] Tab bar",
-     "Overall | Source data (project) | Source data (person) | General assumptions.",
+     "Overall | Source data (project) | Source data (person) | General assumptions | Data issues "
+     "(the fifth since v2.13, G-14).",
      "REQ-DSH-01..04, REQ-DSH-11", "Change",
      "Add 'General assumtions' tab having other general information (e.g. 'PeriodWeightStandard' "
      "sheet, 'RoleFactor' sheet)",
@@ -550,6 +551,55 @@ C = [
      "own year line; Today is marked in it, clear of the years' labels. A one-project timeline "
      "keeps its years in the drawing.",
      "REQ-DSH-27", A, "", "R-68."),
+    ("G-14", "Global", "[NEW v2.13] Data issues tab",
+     "A fifth tab, after General assumptions: every finding in the plan and every person above "
+     "the ceiling or under the floor for a run of months from this month on, as a list to work "
+     "down. Level chips (Must fix, May keep, Warning, Still to come, Note) with their counts, "
+     "which narrow the list; category buttons; a search; Group by Level, Category, Record or "
+     "None; sortable columns Level, Category, Record, Issue and Rule. Each issue opens beneath "
+     "its row ('Fix here'): the whole message, the row it is about as editable cells with the "
+     "field it concerns marked, the one-step fixes that apply (derive or lay out periods, the "
+     "blank milestone list, switch to automatic, change the team, the assumption section to "
+     "open), the record's card, and for a standard-vs-staffed issue its months, each opening "
+     "the month dialog and its review. Accept, for anything but a must-fix, moves it to "
+     "Accepted for the session and into the change log at the next Save; Undo puts it back. "
+     "An issue put right leaves the list and is said to be Resolved. Not narrowed by the "
+     "page's filters. The tab carries the count of open must-fix, may-keep and warning "
+     "issues, red while anything must be fixed.",
+     "REQ-DSH-29", A, "", "R-69."),
+    ("G-15", "Global", "[NEW v2.13] Version information",
+     "The first section of General assumptions: the application's version, the controlled "
+     "documents it was built against, and the loaded workbook's schema against the one it "
+     "expects, with the detail behind one click. It was a strip at the head of every page.",
+     "REQ-DSH-33, REQ-VC-01, REQ-VC-02", A, "", "R-69."),
+    ("G-16", "Global", "[NEW v2.13] One band for the findings and the save bar",
+     "The findings banner and the save bar side by side in one band, held at the top of the "
+     "page with the tabs: what the checks found, with the way to Data issues, beside what is "
+     "waiting to be saved - its sentence on one line and its controls under it.",
+     "REQ-DSH-34", A, "", "R-69."),
+    ("E-07", "Editing", "[NEW v2.13] The card is where the record is changed",
+     "On a project's or person's card every field of the row is a cell to type into, in "
+     "labelled groups; so are the team's or the person's assignments (role, from, to, weight), "
+     "the milestones (name, date, highlight) and the periods (name, from, to, weight, "
+     "highlight). The same cells as the tables - value list, calendar, checks, change log - so "
+     "a refused value is put back and the refusal is said inside the card. + Add on Milestones "
+     "and Periods makes a row for this project with the caret in it; a cross deletes one. The "
+     "card has its own Save, counting what is waiting; Tab goes on to the next field after the "
+     "card is redrawn.",
+     "REQ-DSH-30", A, "", "R-69."),
+    ("A-06", "Assumptions tab", "[NEW v2.13] The matrices are typed into",
+     "In Standard period FTE for project types and Role factors (both matrices) every figure is "
+     "a cell: click and type, Tab to the next; an unsaved change is ringed in amber. An empty "
+     "place the calculation would read - a period the project type has - shows a dot and a plus "
+     "under the pointer, and a figure typed into it creates the row with the key the place "
+     "stands for. A place the type never has offers nothing. Rows & editing still lists the "
+     "rows, with their notes and a delete for each.",
+     "REQ-DSH-31", A, "", "R-69."),
+    ("O-17", "Overall", "[NEW v2.13] Names open their cards",
+     "In Resource by project and Resource by person a project's or a person's name - on its "
+     "own row and on the rows folded under another - is a link to its card, where it can be "
+     "changed. A click anywhere else on a row still folds it open.",
+     "REQ-DSH-32", A, "", "R-69."),
     ("P-09", "Project tab / Person tab", "[NEW v2.11] A name is a link to its card",
      "In the Projects and People tables a saved project's or person's name is drawn as a link; "
      "clicking it selects the row, as any click on the row does, and opens the record's card. "
@@ -568,7 +618,9 @@ C = [
      "next one marked; the periods with weight and standard, the current one marked; the open "
      "standard-vs-staffed months, each opening its month dialog; and every field of the "
      "Project row. Change team, Back, Previous and Next in the table's order (arrow keys too), "
-     "and Show on Source data (project). Read-only.",
+     "and Show on Source data (project). [CHANGED v2.13, R-69] No longer read-only - see E-07: "
+     "the record's fields come first, then the team, the milestones and the periods, all "
+     "editable, then the charts and the open issues.",
      "REQ-DSH-25", A, "", "R-67."),
     ("S-09", "Person tab", "[NEW v2.11] Person card",
      "The same page for one person: name, identifier, department, usual role and capacity; "

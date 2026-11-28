@@ -411,6 +411,11 @@ function adopt(sheets, name, opts){
      against the old one - the worst kind of missing data, because nothing on screen
      connects the two. */
   S.colf = {};
+  /* The Data issues tab's narrowing and its accepted issues go with the plan they were
+     chosen against, for the same reason (R-69). How it is grouped and sorted is the
+     reader's, and stays. */
+  Object.assign(S.issueView, {lv:new Set(), cat:new Set(), q:"", open:null, done:""});
+  S.issueAck.clear(); S.issueAckV++;
   S.selProj = null; S.selPers = null; S.selAsg = null; S.newKeys = new Set();
   /* And a section left full screen is put back, for the reason the banner exists: a load
      reports what it found, and the one thing that must not happen is for that report to
@@ -429,7 +434,6 @@ function adopt(sheets, name, opts){
   const stamp = S.loadedAt.toISOString().slice(0,16).replace("T"," ");
   el("fileline").innerHTML = `${esc(name)} · ${opts.blank ? "started" : "loaded"} ${stamp} `
     + `<span class="tz">(GMT${tz>=0?"+":""}${tz}, ${esc(tzName)})</span>`;
-  renderProvenance();
   const errs = M.findings.filter(f => f.sev === "error").length;
   const n = S.cfgChanges.length;
   showBanner(errs ? "bad" : (n ? "warn" : ""),

@@ -19,8 +19,8 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.77.xlsx"
-SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.46.xlsx"
+PLAN = ROOT / "docs" / "PRAP_Development_Plan_v2.78.xlsx"
+SPEC = ROOT / "docs" / "PRAP_Programming_Specification_v1.47.xlsx"
 TEMPLATE = ROOT / "templates" / "PRAP_SourceData_Template_v1.21.xlsx"
 DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.23.xlsx"
 DUMMY_SMALL = ROOT / "templates" / "PRAP_SourceData_Dummy_10x10_v1.15.xlsx"
@@ -515,7 +515,7 @@ if spec_traced - plan_reqs:
 # undocumented components and five entries that had become actively WRONG. The lesson
 # is not "remember to update it"; it is that an artefact nobody checks is an artefact
 # that rots. So it is checked.
-COMPONENTS = ROOT / "docs" / "PRAP_UI_Component_List_v2.12.xlsx"
+COMPONENTS = ROOT / "docs" / "PRAP_UI_Component_List_v2.13.xlsx"
 if not COMPONENTS.exists():
     problems.append(f"{COMPONENTS.name} is missing")
 else:
@@ -559,8 +559,9 @@ else:
     #     second. Panel headings are <h2> literals; dialogs are ids on <dialog>.
     tabs_js = (ROOT / "src" / "ui" / "11_tabs.js").read_text()
     headings = {h.strip(" —") for h in re.findall(r"<h2>([^<${]*)", tabs_js)}
-    headings |= {h.strip(" —") for h in
-                 re.findall(r"<h2>([^<${]*)", (ROOT / "src" / "ui" / "12b_manual.js").read_text())}
+    for extra in ("12b_manual.js", "13f_issues.js"):
+        headings |= {h.strip(" —") for h in
+                     re.findall(r"<h2>([^<${]*)", (ROOT / "src" / "ui" / extra).read_text())}
     headings = {h for h in headings if len(h) > 3}
     unnamed = sorted(h for h in headings if h.lower() not in cl_blob)
     if unnamed:

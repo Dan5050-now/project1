@@ -291,6 +291,7 @@ function renderDirty(){
   bar.hidden = !S.model;
   bar.classList.toggle("dirty", n > 0);
   el("saveBtn").disabled = el("discardBtn").disabled = el("chgBtn").disabled = (n === 0);
+  cardSaveState();                              // the card's own Save (R-69)
   if (!n && el("changes").open) el("changes").close();   // nothing left to show
   // The name request belongs to the same moment as the rest of this bar: something is
   // unsaved and about to be attributed to somebody. Hidden the instant it is answered,
@@ -301,14 +302,20 @@ function renderDirty(){
     ? `${n} unsaved change${n===1?"":"s"}`
     : (S.saved ? `${S.saved} saved change${S.saved===1?"":"s"} · nothing pending`
                : "no changes");
+  /* Short since R-69: the bar shares its band with the findings now, and the long form
+     of each sentence is in the pop-up for anybody who wants it. */
   el("guide").innerHTML = n
-    ? `<strong>${n} change${n===1?"":"s"} not yet saved.</strong> They are applied on screen so you can
-       see their effect, but they are <em>not final</em>. All ${n} pass validation — an edit that fails a
-       rule is rejected at entry, so nothing invalid can be saved. <strong>Export is held</strong> until
-       you choose.`
-    : `<strong>Changes are temporary.</strong> Edits are applied on screen so you can see their effect,
-       but they are <em>not final</em> until you choose. Click <strong>Save</strong> to keep them — only
-       saved changes go into the exported file.`;
+    ? `<strong>${n} change${n===1?"":"s"} not yet saved</strong> — applied on screen, not final;
+       every one passed validation. <strong>Export is held</strong> until you choose.`
+    : `<strong>Changes are temporary</strong> until you press <strong>Save</strong> — only saved
+       changes go into the exported file.`;
+  el("guide").dataset.tip = n
+    ? `<b>Not yet saved</b><br>They are applied on screen so you can see their effect, but they `
+      + `are not final. Every one passed validation — an edit that fails a rule is rejected at `
+      + `entry, so nothing invalid can be saved. Export is held until you Save or Leave without change.`
+    : `<b>Changes are temporary</b><br>Edits are applied on screen so you can see their effect, but `
+      + `they are not final until you choose. Save keeps them; only saved changes go into the `
+      + `exported file.`;
 }
 
 /** Apply one cell edit: coerce, validate, write to the model, recalculate. */
@@ -444,6 +451,42 @@ function applyEdit(sheet, rowNum, col, raw, tdEl){
               press Save.`
           : `. The other ${sibs} ${sibs === 1 ? "is" : "are"} untouched.`));
   }
+}
+
+/** A figure typed into an EMPTY place in one of the assumption matrices (R-69). There is
+ *  no row under it to write to, so the row is made - with the key the place stands for
+ *  and the figure typed - and then checked exactly as an edit is: refused, and taken back
+ *  out, if it breaks a rule that must hold; otherwise an ordinary unsaved change that
+ *  Save keeps and Leave without change removes. Complete from the start, unlike a row
+ *  made with + row: nothing about it is left to fill in, so it counts at once. */
+function matrixCreate(td){
+  const text = td.textContent.trim();
+  if (text === "") return;
+  const sheet = td.dataset.mknew, col = td.dataset.col;
+  let keys;
+  try { keys = JSON.parse(td.dataset.keys); } catch (_){ return; }
+  const n = num(text);
+  if (n === undefined || n === null){
+    td.textContent = "";
+    showBanner("bad", `Edit rejected — '${text}' is not a number.`);
+    return;
+  }
+  beginEditSession();
+  const r = newRow(sheet, {...keys, [col]: n});
+  delete r.__new;
+  const probe = rebuild();
+  const newErrors = probe.findings.filter(blocking);
+  if (newErrors.length > (S.model.findings || []).filter(blocking).length){
+    S.model.raw[sheet].splice(S.model.raw[sheet].indexOf(r), 1);
+    td.textContent = "";
+    showBanner("bad", `Edit rejected — ${newErrors[newErrors.length - 1].msg}`);
+    return;
+  }
+  S.pending.push({at:new Date(), sheet, row:r.__row, col:"(new row)", from:null,
+    to:`${Object.values(keys).filter(v => v !== null && v !== "").join(" · ")}: ${n.toFixed(2)}`});
+  S.editedCells.add(`${sheet}|${r.__row}|${col}`);
+  rebuild(true);
+  renderKeepingTab();
 }
 
 function flashBad(tdEl, msg){

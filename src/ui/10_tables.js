@@ -219,7 +219,8 @@ function tableProjects(pids){
         + `it.">&#9702; ${fmt(utot)} unstaffed</span>` : "";
     body.push(`<tr class="parent" data-k="p-${esc(pid)}" tabindex="0" role="button" `
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
-      + `<span class="nm">${esc(M.projects[pid].project_name)}</span>${typePill(pid)}${phasePill(pid)}`
+      + cardLink("project", pid, M.projects[pid].project_name, "nm")
+      + `${typePill(pid)}${phasePill(pid)}`
       + estimationPill(pid)
       + `<button class="btn tiny teambtn" data-team="${att(pid)}" data-tip="${att(
           "<b>Change the team</b><br>Swap, add or take people off this project in one place, "
@@ -240,7 +241,7 @@ function tableProjects(pids){
       const stated = M.isManual && (M.isManual("assignment", a.assignment_id)
                                     || M.isManual("project", pid));
       body.push(`<tr class="child"><th class="rh">&#8627; `
-        + `${esc((M.people[a.person_id]||{}).person_name || a.person_id)}`
+        + cardLink("person", a.person_id, (M.people[a.person_id]||{}).person_name || a.person_id)
         + `<span class="role">${esc(a.role_name)}</span>`
         + (stated ? `<span class="estb manual sm" data-tip="${att(
             M.isManual("assignment", a.assignment_id)
@@ -297,7 +298,7 @@ function tablePeople(sids){
     const cap = num((M.people[sid]||{}).capacity_fte);
     body.push(`<tr class="parent" data-k="s-${esc(sid)}" tabindex="0" role="button" `
       + `aria-expanded="${open}"><th class="rh"><span class="exp">${open?"&#9662;":"&#9656;"}</span>`
-      + `<span class="nm">${esc((M.people[sid]||{}).person_name || sid)}</span>`
+      + cardLink("person", sid, (M.people[sid]||{}).person_name || sid, "nm")
       + `<span class="sub">${esc(sid)}${cap!==null&&cap!==undefined?` &middot; capacity ${cap.toFixed(2)} FTE`:""}`
       + ` &middot; ${esc((M.people[sid]||{}).department || "")}</span></th>${tds}<td>${fmt(tot)}</td></tr>`);
     if (!open) continue;
@@ -311,7 +312,7 @@ function tablePeople(sids){
       }), G).join("");
       if (dt <= 0.004) continue;
       body.push(`<tr class="child"><th class="rh">&#8627; `
-        + `${esc((M.projects[a.project_id]||{}).project_name || a.project_id)}`
+        + cardLink("project", a.project_id, (M.projects[a.project_id]||{}).project_name || a.project_id)
         + `${typePill(a.project_id)}${phasePill(a.project_id)}`
         + `<span class="role">${esc(a.role_name)}</span></th>${dtds}<td>${fmt(dt)}</td></tr>`);
     }

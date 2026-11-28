@@ -28,15 +28,6 @@
   <button class="btn" id="themeBtn" title="Switch light / dark">◐</button>
 </header>
 
-<details id="prov">
-  <summary id="provSum"></summary>
-  <div id="provBody"></div>
-</details>
-
-<!-- Announced, because it is the only place a load reports what happened, and a
-     screen-reader user has nothing else to notice it by. Polite, not assertive: it
-     should not interrupt whatever is being read at the time. -->
-<div id="banner" aria-live="polite"></div>
 <div class="panel" id="filterbar" hidden>
   <h2>Horizon and filters <span class="scope">applies to every tab</span></h2>
   <p class="cap">One setting drives the whole page — the charts, both Overall tables and
@@ -78,6 +69,13 @@
      through and nothing depends on the edit bar being exactly 60px tall - it wraps on a
      narrow window and its guide text changes length as you work. -->
 <div id="stickybar">
+<!-- THE STATE OF THE DATA, IN ONE BAND (R-69): what the plan's checks found and what is
+     waiting to be saved, side by side - the two are one question ("is this ready to
+     keep?") and used to be a page apart. The banner is announced, because it is the only
+     place a load reports what happened and a screen-reader user has nothing else to
+     notice it by; polite, so it does not interrupt whatever is being read. -->
+<div id="databand">
+<div id="banner" aria-live="polite"></div>
 <div id="editbar" hidden>
   <span class="guide" id="guide"></span>
   <span id="editstate"></span>
@@ -95,12 +93,14 @@
   <button class="btn primary" id="saveBtn" disabled>Save</button>
   <button class="btn" id="discardBtn" disabled>Leave without change</button>
 </div>
+</div>
 
 <nav role="tablist" id="tabs" hidden>
   <button role="tab" aria-selected="true" data-tab="t-overall">Overall</button>
   <button role="tab" aria-selected="false" data-tab="t-proj">Source data (project)</button>
   <button role="tab" aria-selected="false" data-tab="t-pers">Source data (person)</button>
   <button role="tab" aria-selected="false" data-tab="t-gen">General assumptions</button>
+  <button role="tab" aria-selected="false" data-tab="t-issues">Data issues<span class="tabcount" id="issueCount" hidden></span></button>
 </nav>
 </div>
 
@@ -139,6 +139,7 @@
 <section class="tab" id="t-proj" hidden></section>
 <section class="tab" id="t-pers" hidden></section>
 <section class="tab" id="t-gen" hidden></section>
+<section class="tab" id="t-issues" hidden></section>
 </div>
 
 <div id="tip" class="tip" hidden></div>

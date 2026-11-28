@@ -54,6 +54,14 @@ const S = {
      shell that archives incrementally appends only what is new - and, if a write fails,
      retries the same entries at the next save instead of losing or duplicating them. */
   audit:[], events:[], who:null, archived:0, eventsArchived:0,
+  /* The Data issues tab (R-69): how its list is grouped, sorted and narrowed, and which
+     issue is open under its row - by id, with the open issue's first sentence and its
+     signature kept so a fix that only CHANGED it keeps it open and one that cleared it
+     can say so. Accepted issues are keyed by their text, so an issue whose figures move
+     is a new issue; they are the plan's, and go when another plan is opened. */
+  issueView:{group:"level", sort:"level", dir:1, lv:new Set(), cat:new Set(), q:"",
+             open:null, openHead:"", openSig:"", done:""},
+  issueAck:new Map(), issueAckV:0,
 };
 
 /** A filter with nothing ticked narrows nothing. */

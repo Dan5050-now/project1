@@ -23,36 +23,6 @@ function startBlankNow(){
 
 el("vers").textContent = `v${APP_VERSION} · expects source schema v${SCHEMA_EXPECTED}`;
 
-/** REQ-VC-01 / REQ-VC-02: what this build was written against, and - once a workbook
- *  is loaded - whether that workbook agrees with it. */
-function renderProvenance(){
-  const short = BUILT_AGAINST.map(d =>
-    `<span><span class="plabel">${esc(d.what.replace("Programming ","").replace("Source data ",""))}</span> `
-    + `<span class="pv">v${esc(d.ver)}</span></span>`).join("");
-  el("provSum").innerHTML =
-    `<span><span class="plabel">Application</span> <span class="pv">v${APP_VERSION}</span></span>`
-    + `<span class="plabel">built against</span>${short}`;
-
-  const loaded = S.model ? num(S.model.config.schema_version) : null;
-  const rows = BUILT_AGAINST.map(d =>
-    `<tr><td>${esc(d.what)}</td><td><span class="pv">v${esc(d.ver)}</span></td>`
-    + `<td><code>${esc(d.file)}</code></td><td>${esc(d.status)}</td></tr>`).join("");
-  const loadedRow = S.model
-    ? `<tr><td>Loaded workbook</td><td><span class="pv">schema v${loaded ?? "?"}</span></td>`
-      + `<td><code>${esc(S.fileName)}</code></td>`
-      + (String(loaded) === String(SCHEMA_EXPECTED)
-          ? `<td class="ok">✓ matches the schema this application expects</td>`
-          : `<td class="warn">▲ this application expects schema v${SCHEMA_EXPECTED} — see the findings report (V-09)</td>`)
-      + `</tr>`
-    : `<tr><td>Loaded workbook</td><td class="plabel">—</td><td colspan="2" class="plabel">nothing loaded yet</td></tr>`;
-  el("provBody").innerHTML =
-    `<div class="scrollx tall"><table><thead><tr><th>Controlled document</th><th>Version</th><th>File</th>`
-    + `<th>Status</th></tr></thead><tbody>${rows}${loadedRow}</tbody></table></div>`
-    + `<p class="note">These are the documents this build implements. The application does not read them —
-       they are recorded here so a file on someone's disk can be traced back to the issue it was built
-       from. tools/check_consistency.py verifies the list against the repository on every run.</p>`;
-}
-renderProvenance();
 el("loadBtn").onclick = el("loadBtn2").onclick = () => el("picker").click();
 el("startBtn").onclick = startBlank;
 /* Two defects in one line, both reported from the field.
@@ -94,6 +64,25 @@ document.addEventListener("focusin", e => {
 document.addEventListener("focusout", e => {
   const td = e.target.closest("td[data-gapnew]");
   if (td && td.textContent !== (td.dataset.orig ?? "")) stateMonth(td);
+});
+/* An empty place in an assumption matrix (R-69): a cell that creates its row. The same
+   shape as the Stated cell above - no data-sheet, so the ordinary commit leaves it alone -
+   and the caret goes on to where it was going, as it does from any other cell. */
+document.addEventListener("focusin", e => {
+  const td = e.target.closest("td[data-mknew]");
+  if (td) td.dataset.orig = td.textContent;
+});
+document.addEventListener("focusout", e => {
+  const td = e.target.closest("td[data-mknew]");
+  if (!td || td.textContent.trim() === "" || td.textContent === (td.dataset.orig ?? "")) return;
+  const next = e.relatedTarget, scope = next && next.closest ? next.closest("section.tab") : null;
+  const FOCUSABLE = 'td[contenteditable="true"], button:not([disabled]), input, select';
+  const at = scope ? [...scope.querySelectorAll(FOCUSABLE)].indexOf(next) : -1;
+  matrixCreate(td);
+  if (scope && at >= 0 && !next.isConnected){
+    const again = scope.querySelectorAll(FOCUSABLE)[at];
+    if (again) again.focus();
+  }
 });
 el("gapClose").onclick = () => closeGap();
 // Escape and the backdrop close it too; GAP_AT has to be cleared either way or a
@@ -309,6 +298,16 @@ document.addEventListener("click", e => {
     openGap(gp.dataset.gap, +gp.dataset.gk, gp.dataset.gapis || "");
     return;
   }
+  /* A name in the Overall tables, the Data issues tab or a card itself opens that
+     project's or person's card (R-69) - before the row, whose own click would fold it
+     open or shut. A name in an editable table is left to the end of this handler,
+     because there the row is selected as well. */
+  const cl = e.target.closest("[data-card]");
+  if (cl && !cl.closest(".data-t tbody tr")){
+    e.stopPropagation();
+    openCard(cl.dataset.card, cl.dataset.cid, !!cl.closest("#carddlg"));
+    return;
+  }
   /* The project's team (R-66) - also before the row, whose own click would fold it. */
   const tb = e.target.closest("[data-team]");
   if (tb){
@@ -519,7 +518,29 @@ document.addEventListener("focusout", e => {
   setTimeout(() => { if (!CAL.holding && CAL.owns(td)) CAL.close(); }, 120);
   const now = td.textContent;
   if (now === td.dataset.orig) return;
+  /* AND THE CARET GOES WHERE IT WAS GOING (R-69). A commit redraws the pane - and an
+     open card - so the cell a click or Tab was taking the caret to has been replaced by
+     the time the browser hands it the focus, and the focus went nowhere: every field
+     after the first needed a second click. The cell is found again by what it is over,
+     inside the same dialog or tab, and given the focus it was on its way to. */
+  /* Anything else the focus was going to - a button, Switch… beside a cell - is found
+     again by its place among the things that take the focus there, which a redraw of
+     the same record does not change. */
+  const next = e.relatedTarget;
+  const scope = next && next.closest ? next.closest("dialog[open]") || next.closest("section.tab") : null;
+  const cell = next && next.matches && next.matches('td[contenteditable="true"][data-sheet]')
+    ? `td[contenteditable="true"][data-sheet="${CSS.escape(next.dataset.sheet)}"]`
+      + `[data-row="${CSS.escape(next.dataset.row)}"][data-col="${CSS.escape(next.dataset.col)}"]`
+    : null;
+  const FOCUSABLE = 'td[contenteditable="true"], button:not([disabled]), input, select, '
+    + 'textarea, [tabindex="0"]';
+  const at = scope ? [...scope.querySelectorAll(FOCUSABLE)].indexOf(next) : -1;
   applyEdit(td.dataset.sheet, +td.dataset.row, td.dataset.col, now, td);
+  if (scope && !next.isConnected && scope.isConnected){
+    const again = (cell && scope.querySelector(cell))
+      || (at >= 0 ? scope.querySelectorAll(FOCUSABLE)[at] : null);
+    if (again) again.focus();
+  }
 });
 document.addEventListener("keydown", e => {
   const td = e.target.closest('td[contenteditable="true"]');
@@ -540,6 +561,18 @@ document.addEventListener("keydown", e => {
 document.addEventListener("input", e => {
   if (e.target.closest('td[contenteditable="true"]')){ el("tip").hidden = true; }
 });
+
+/* A FLOATING PANEL GOES WHERE ITS CELL IS (R-67, R-69). A modal dialog is drawn in the
+   top layer, above the whole page whatever anybody's z-index says, so a pop-up, the value
+   list or the calendar left on the body is drawn BEHIND the dialog whose cell it serves -
+   which since R-69 includes every field of a card. Each is moved into the open dialog
+   that holds its cell, and back to the body otherwise. They are fixed-position either
+   way, so moving one changes what it is drawn over and nothing about where. */
+function lodgeIn(box, node){
+  const d = node && node.closest && node.closest("dialog[open]");
+  const host = d || document.body;
+  if (box.parentNode !== host) host.appendChild(box);
+}
 
 /* ---- type-ahead ---- */
 const SUGG = (() => {
@@ -627,6 +660,7 @@ const SUGG = (() => {
               : `${hits.length}${hits.length === 60 ? "+" : ""} match${hits.length === 1 ? "" : "es"}`)
       + ` &middot; \u2191\u2193 then Enter picks one &middot; Enter alone keeps what you typed`
       + ` &middot; Esc closes</div>`;
+    lodgeIn(box, cell);
     box.hidden = false;
     place();
   }
@@ -636,6 +670,12 @@ const SUGG = (() => {
     // filter and the scroll position, and this runs again whenever focus is restored
     // after a scrollbar drag.
     if (cell === td && !box.hidden) return;
+    /* A figure in an assumption matrix is typed, not chosen (R-69): every other figure in
+       the sheet, listed over the one being changed, is only in the way. */
+    if (td.classList.contains("mx") || td.hasAttribute("data-mknew")){
+      if (cell !== td) api.close();
+      return;
+    }
     cell = td; idx = -1;
     const row = (S.model.raw[td.dataset.sheet] || []).find(r => r.__row === +td.dataset.row);
     items = suggestionsFor(td.dataset.sheet, td.dataset.col, row);
@@ -941,6 +981,7 @@ const CAL = (() => {
       + `<button type="button" class="btn tiny" data-d="${att(today)}">Today</button>`
       + `<button type="button" class="btn tiny" data-d="">Clear</button>`
       + `<span class="hint">or type it: YYYY-MM-DD</span></div>`;
+    lodgeIn(box, cell);
     box.hidden = false;
     place();
   }
@@ -1020,19 +1061,11 @@ const CAL = (() => {
     tip.style.left = Math.max(8, nx) + "px";
     tip.style.top = Math.max(8, ny) + "px";
   };
-  /* INSIDE A MODAL DIALOG THE POP-UP HAS TO BE IN THE DIALOG. A modal is drawn in the
-     top layer, above the whole page whatever anybody's z-index says, so a pop-up left on
-     the body was drawn BEHIND the dialog it was explaining - every chart in the card
-     (R-67), and every figure in the month and team dialogs, hovered to nothing. It is
-     fixed-position either way, so moving it changes what it is drawn over and nothing
-     about where. */
-  const lodge = node => {
-    const d = node && node.closest && node.closest("dialog[open]");
-    const host = d || document.body;
-    if (tip.parentNode !== host) host.appendChild(tip);
-  };
+  /* Inside a modal dialog the pop-up has to be in the dialog - see lodgeIn(). Every chart
+     in the card (R-67), and every figure in the month and team dialogs, used to hover to
+     nothing. */
   const show = (html, x, y, isPin, node) => {
-    lodge(node);
+    lodgeIn(tip, node);
     tip.innerHTML = html + (isPin ? `<span class="tipclose">click anywhere to close</span>` : "");
     tip.hidden = false;
     tip.classList.toggle("pinned", !!isPin);

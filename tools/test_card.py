@@ -145,8 +145,9 @@ with sync_playwright() as pw:
     check(st["sel"] == pid and pg.locator(f"{P} tr.sel[data-id='{pid}']").count() == 1,
           "and selects its row, as any click on the row does", str(st["sel"]))
     secs = pg.eval_on_selector_all("#cardBody .csec h3", "hs => hs.map(h => h.textContent)")
-    want = ["Monthly resource", "Timeline", "Team", "Milestones", "Periods",
-            "Issues — standard vs staffed", "All fields"]
+    # R-69: the record comes first, now that it is where the record is changed.
+    want = ["Details", "Team", "Milestones", "Periods", "Monthly resource", "Timeline",
+            "Issues — standard vs staffed"]
     check(secs == want, "the sections, top to bottom", " · ".join(secs))
     check(pg.locator("#cardBody .kpis .kpi").count() == 6, "six headline figures above them")
     n_asg = pg.evaluate("p => S.model.assignments.filter(a => a.project_id === p).length", pid)
@@ -155,17 +156,27 @@ with sync_playwright() as pw:
         return s ? s.querySelectorAll('tbody tr').length : -1; }""")
     check(team_rows == n_asg and team_rows > 0, "the team: one row per assignment",
           f"{team_rows} rows, {n_asg} assignments")
-    fields = pg.evaluate("""p => { const r = S.model.projects[p], out = [];
-        const got = Object.fromEntries([...document.querySelectorAll('#cardBody .fgroup .f')]
-          .map(f => [f.querySelector('dt').textContent, f.querySelector('dd').textContent]));
+    # Each one the editable cell over the project's own row (R-69) - estimation_type
+    # excepted, which has one way in and shows it as a button beside the value.
+    fields = pg.evaluate("""p => { const r = S.model.raw.Project.find(x => x.project_id === p), out = [];
+        const got = Object.fromEntries([...document.querySelectorAll('#cardBody .fgroup .ftab tr')]
+          .map(tr => [tr.querySelector('th').textContent, tr.querySelector('td')]));
         for (const c of entryCols('Project')){
-          const v = r[c], want = v instanceof Date ? ymd(v) : (v === null || v === undefined || v === '' ? '—' : String(v));
-          const lab = COLUMN_LABEL[c] || c;
-          if (got[lab] !== want) out.push(c + ': ' + got[lab] + ' != ' + want);
+          const td = got[COLUMN_LABEL[c] || c];
+          if (!td){ out.push(c + ': missing'); continue; }
+          if (c === 'estimation_type'){
+            if (!td.textContent.includes(r.estimation_type || 'automatic')
+                || !td.querySelector('[data-act="estswitch"]')) out.push(c + ': ' + td.textContent);
+            continue;
+          }
+          const v = r[c], want = v instanceof Date ? ymd(v) : (v === null || v === undefined ? '' : String(v));
+          if (td.textContent !== want) out.push(c + ': ' + td.textContent + ' != ' + want);
+          if (!td.isContentEditable || td.dataset.sheet !== 'Project' || td.dataset.col !== c
+              || +td.dataset.row !== r.__row) out.push(c + ': not the editable cell over its row');
         }
         return {n: entryCols('Project').length, bad: out}; }""", pid)
-    check(not fields["bad"], f"EVERY ONE OF THE {fields['n']} FIELDS, with the value the table holds",
-          "; ".join(fields["bad"][:3]))
+    check(not fields["bad"], f"EVERY ONE OF THE {fields['n']} FIELDS, with the value the table holds "
+          "— each one a cell to type into, over the project's own row", "; ".join(fields["bad"][:3]))
     ch = pg.evaluate("""() => { const b = el('cardBody'), cs = getComputedStyle(b);
         const room = b.clientWidth - 2 * parseFloat(cs.paddingLeft) - 18;
         return {n: b.querySelectorAll('svg.chart').length, room,
@@ -179,8 +190,9 @@ with sync_playwright() as pw:
 
     # ------------------------------------------------------------------ 4
     print("\n4. pop-ups inside it")
-    pg.evaluate("el('cardBody').scrollTop = 0")
-    pg.wait_for_timeout(200)
+    # The charts follow the record since R-69, so the first one is scrolled to.
+    pg.evaluate("document.querySelector('#cardBody svg.chart').scrollIntoView({block: 'center'})")
+    pg.wait_for_timeout(300)
     box = pg.locator("#cardBody svg.chart rect[data-tip]").first.bounding_box()
     pg.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] - 2)
     pg.wait_for_timeout(300)
@@ -215,7 +227,7 @@ with sync_playwright() as pw:
           "A PERSON ON THE TEAM OPENS THEIR CARD, which lists the project they came from",
           f"{pc['title']} — {len(pc['projects'])} project(s)")
     secs = pg.eval_on_selector_all("#cardBody .csec h3", "hs => hs.map(h => h.textContent)")
-    check(secs == ["Monthly load", "Project timeline", "Assignments", "All fields"],
+    check(secs == ["Details", "Assignments", "Monthly load", "Project timeline"],
           "a person's sections", " · ".join(secs))
     pg.click("#cardBack")
     pg.wait_for_timeout(600)

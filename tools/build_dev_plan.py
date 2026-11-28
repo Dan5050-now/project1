@@ -17,8 +17,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-DOC_VERSION = "2.77"
-DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.66, source schema 16 - Gate 4 "
+DOC_VERSION = "2.78"
+DOC_STATUS = ("Baseline v2.0 + Step 4 progress. Application v1.67, source schema 16 - Gate 4 "
               "refinements, the work scope and the biosimilar split, the shared-role division, "
               "the delivered default assumptions, milestone and period highlighting, and the "
               "manager's review of issues.")
@@ -398,6 +398,29 @@ rows = [
      "from 731 to 4,334 FTE-months, which is the demand it always described and never "
      "showed.",
      "Superseded by v2.41"],
+    [f"{MARK_NEW}2.78", "2026-11-28", "Claude Code", "Pending",
+     "R-69, SIX REQUESTS FROM THE FIELD. REQ-DSH-30 - THE CARD IS WHERE THE RECORD IS CHANGED: "
+     "the project and person cards were read-only, which sent a reader away to do the one "
+     "thing they came for. Every value on them is now the same editable cell the tables use - "
+     "the same value lists, calendar, checks, change log and Save, so there is no second set of "
+     "rules - with the team's and a person's assignments (role, window, weight), the milestones "
+     "and the periods changed in place, rows added and deleted there, a Save on the card and the "
+     "banner's messages repeated inside it. REQ-DSH-31 - THE ASSUMPTION MATRICES ARE TYPED INTO: "
+     "a figure in Standard period FTE or Role factors changes where it is read, and an empty "
+     "place the calculation would read creates its row with the key it stands for. REQ-DSH-32 - "
+     "a project's or person's name in Resource by project / by person opens its card, and the "
+     "row still folds open from anywhere else. REQ-DSH-29 - A DATA ISSUES TAB: every finding in "
+     "the plan, and every person above the ceiling or under the floor from this month on, as a "
+     "worklist by level (must fix, may keep, warning, still to come, note), category and record; "
+     "sortable, groupable, narrowed by level, category or a search, never by the page's filters; "
+     "each with the row it is about editable beneath it and the one-step fixes the application "
+     "already has, and Accept for a deliberate warning or note - out of the open count for the "
+     "session, into the change log at the next Save. A count on the tab, red while anything must "
+     "be fixed. REQ-DSH-33 - the version information is the first section of General "
+     "assumptions. REQ-DSH-34 - the findings banner and the save bar are one band, side by side. "
+     "No figure moves. tools/test_r69.py is new: 52 checks, two proved by putting the fault "
+     "back; tools/test_card.py follows the card's new order. Python edition 1.41.",
+     "Issued for review"],
     [f"{MARK_NEW}2.77", "2026-11-27", "Claude Code", "Pending",
      "R-68, TWO REQUESTS FROM THE FIELD. REQ-DSH-27 - THE TIMELINE'S YEARS STAY ON SCREEN: on "
      "the Overall tab's Project timeline the years were drawn at the top of the chart and "
@@ -415,7 +438,7 @@ rows = [
      "with the others (AND), Reset filters clears it, and the calculated-FTE export names it. "
      "No figure moves. tools/test_r68.py is new: 20 checks, one proved by putting the fault "
      "back. Python edition 1.40.",
-     "Issued for review"],
+     "Superseded by v2.78"],
     [f"{MARK_NEW}2.76", "2026-11-27", "Claude Code", "Pending",
      "R-67, THREE REQUESTS FROM THE FIELD. REQ-DSH-24 - THE PAGE IS THE WINDOW: everything "
      "under the title stopped at 1400px and centred, leaving two broad grey margins on a wide "
@@ -2611,10 +2634,16 @@ reqs = [
 
     [f"{MARK_CHG}REQ-CAL-01", "Calculation", "Resource is simulated on a monthly grid, default horizon 24 months, expandable to the latest project end date.", "Must", "Q-11", "4"],
     [f"{MARK_CHG}REQ-CAL-02", "Calculation", "Monthly load for an assignment = project period weight x (role factor / people sharing that role) x person weight x fraction of the month covered. There is no separate base allocation. The role factor is selected by project type, clinical phase, WORK SCOPE, the period the month falls in, and the role - so a role's burden can vary across the life of a project and with how much of the work is kept in-house.", "Must", "Q-01, R-10, R-12, R-13", "2,4"],
+    [f"{MARK_NEW}REQ-DSH-34", "Dashboard", "WHAT THE CHECKS FOUND AND WHAT IS WAITING TO BE SAVED ARE ONE BAND. The findings banner and the save bar sit side by side in one band held at the top of the page with the tabs - the two answer one question, whether the plan is ready to keep - and the banner names the way to the Data issues tab.", "Should", "R-69", "4"],
+    [f"{MARK_NEW}REQ-DSH-33", "Dashboard", "THE VERSION INFORMATION IS THE FIRST SECTION OF GENERAL ASSUMPTIONS: the application's version, the controlled documents it was built against and the loaded workbook's schema, with the detail one click away. The page header keeps the application's own version.", "Should", "R-69", "4"],
+    [f"{MARK_NEW}REQ-DSH-32", "Dashboard", "A NAME IN RESOURCE BY PROJECT OR RESOURCE BY PERSON OPENS ITS CARD - the project's or the person's, including the people listed under a project and the projects under a person - so a record seen on the Overall tab is changed without leaving it. A click anywhere else on a row still folds it open.", "Should", "R-69", "4"],
+    [f"{MARK_NEW}REQ-DSH-31", "Dashboard", "THE ASSUMPTION MATRICES ARE EDITED WHERE THEY ARE READ. Every figure in the Standard period FTE and Role factors matrices is the editable cell over the row it comes from, checked, logged and saved like any edit; an empty place that the calculation would read - a period the project type has - creates its row, with the key the place stands for, when a figure is typed into it. A place the type never has offers nothing.", "Should", "R-69", "4"],
+    [f"{MARK_NEW}REQ-DSH-30", "Dashboard", "A PROJECT'S OR PERSON'S CARD IS WHERE THE RECORD IS CHANGED. Every field of the row, and the team's or the person's assignments (role, window, weight), the milestones and the periods, are the same editable cells as the tables - the same value lists, calendar, checks, change log and Save. Rows can be added and deleted there; the card carries its own Save and repeats the banner's messages; a refused value is put back and the refusal shown in the card.", "Should", "R-69", "4"],
+    [f"{MARK_NEW}REQ-DSH-29", "Dashboard", "THE DATA ISSUES TAB: every finding in the plan, and every person above the ceiling or under the floor for a run of months from the current month on, listed by level (must fix, may keep, warning, still to come, note), category and record; sortable by any of them and grouped by level, category or record; narrowed by level, category or a search and never by the page's filters. Each issue opens onto the row it is about, editable there, and the application's one-step fixes where they apply; a warning, note or may-keep can be accepted - out of the open count for the session and into the change log at the next Save - and is open again if what it says changes. The tab carries the count of open must-fix, may-keep and warning issues, red while anything must be fixed.", "Should", "R-69", "4"],
     [f"{MARK_NEW}REQ-DSH-28", "Dashboard", "PROJECTS CAN BE FILTERED BY STATUS. The filter bar offers the project statuses present in the plan - in the order a project lives through them, Planned, Active, On hold, Completed, then any other, then '(no status)' for projects with none - and choosing one or more leaves only the projects with those statuses on every tab, together with the other filters. Reset filters clears it; the calculated-FTE export records it.", "Should", "R-68", "4"],
     [f"{MARK_NEW}REQ-DSH-27", "Dashboard", "THE YEARS OF A PROJECT TIMELINE STAY ON SCREEN WHILE IT SCROLLS. On a timeline of more than one project the year labels, and today, are held at the top of the timeline's scroll region, each over its own year line, however far the rows have been scrolled in either direction.", "Should", "R-68", "4"],
     [f"{MARK_NEW}REQ-DSH-26", "Dashboard", "ONE VISUAL SYSTEM ACROSS THE APPLICATION, IN BOTH THEMES. Every colour, size, radius and shadow is drawn from a named token; colour carries meaning (blue interactive, red over the ceiling, amber under the floor) and the few decorative touches - a brand mark, the tab icons, the rules on the figure tiles and the bars before section headings - repeat the accent rather than adding hues. Text keeps its contrast in both themes.", "Should", "R-67", "4"],
-    [f"{MARK_NEW}REQ-DSH-25", "Dashboard", "A PROJECT OR A PERSON CAN BE READ ON ONE PAGE. Clicking a saved name in the Projects or People table opens a single scrolling pop-up with everything about that record: its span with today marked, headline figures, its charts, its team or its assignments, its milestones and periods, its open standard-vs-staffed months, and every field of its row. From it: the other side's card for any person or project named, Back, Previous and Next in the table's order, and the row itself on its tab. It changes nothing; the name stays renamable from its cell.", "Should", "R-67", "4"],
+    [f"{MARK_NEW}REQ-DSH-25", "Dashboard", "A PROJECT OR A PERSON CAN BE READ ON ONE PAGE. Clicking a saved name in the Projects or People table opens a single scrolling pop-up with everything about that record: its span with today marked, headline figures, its charts, its team or its assignments, its milestones and periods, its open standard-vs-staffed months, and every field of its row. From it: the other side's card for any person or project named, Back, Previous and Next in the table's order, and the row itself on its tab. The name stays renamable from its cell; since R-69 every value on the card can be changed there (REQ-DSH-30).", "Should", "R-67, R-69", "4"],
     [f"{MARK_NEW}REQ-DSH-24", "Dashboard", "THE PAGE USES THE WHOLE WIDTH OF THE WINDOW, less a gutter, and every chart is drawn to the width it is shown at - the extra width goes to the plot, the text stays at its designed size - and redrawn when the window is resized. A window narrower than a chart needs still scrolls it rather than squeezing it.", "Should", "R-67", "4"],
     [f"{MARK_NEW}REQ-DSH-23", "Dashboard", "A PROJECT'S TEAM CAN BE CHANGED FROM WHERE THE PROJECT IS VIEWED - Resource by project and the project's Utilisation - in one place: swap a person, change a role, window or weight, add or remove somebody, with each candidate's load beside them. Each change is an ordinary edit of the Assignment sheet: validated as any other, shown on every tab at once, kept by Save and recorded in the change log.", "Should", "R-66", "4"],
     [f"{MARK_NEW}REQ-DSH-22", "Dashboard", "THE PERSON TAB SHOWS THE SELECTED PERSON'S PROJECTS AS A TIMELINE - the Project timeline of the Overall tab, cut to the projects the person has an assignment on, whatever the filters say - with a mark under each project for when the person is on it, one per assignment.", "Should", "R-65", "4"],
@@ -3545,6 +3574,7 @@ r = note(ws, r, "Raised after Gate 1, so these are handled as a numbered change 
                 "file-reselection nuisance. Renumbering either now would invalidate the approval signatures "
                 "and cross-references already given against these IDs.")
 chg = [
+    ["R-69", "Dashboard", "Let users edit the information on the project and person pop-up pages; edit the Standard period FTE and Role factors matrices directly; link the names in Resource by project / by person to their pop-up pages; add a Data issues tab where issues are seen, sorted by level or category, and corrected or decided on; move the version information to the first section of General assumptions; put the issue section next to the data-saving section.", "Applied. The cards are edited in place through the tables' own cells (REQ-DSH-30); the matrices are typed into, an empty place creating its row (REQ-DSH-31); the Overall names open the cards (REQ-DSH-32); a Data issues tab with levels, categories, grouping, search, the fix under each issue and Accept (REQ-DSH-29); Version information first on General assumptions (REQ-DSH-33); the banner and the save bar one band (REQ-DSH-34). No figure moves.", "Applied"],
     ["R-68", "Dashboard", "On the Overall tab's Project timeline, keep the year axis fixed while scrolling; add a filter on project status so that projects not started or already ended can be left out.", "Applied. The years are a sticky bar over the timeline, with Today in it (REQ-DSH-27). A Project status filter in the filter bar, in lifecycle order (REQ-DSH-28). No figure moves.", "Applied"],
     ["R-67", "Dashboard", "Make the page under the title full width; open one project's or one person's information as a single scrolling pop-up when its name is clicked in Projects or People; review the whole UI and make it more polished, clear and friendly.", "Applied. The 1400px column is gone and the charts are drawn to the width they get (REQ-DSH-24). A saved name is a link to a read-only card with everything about the record, cross-linked between projects and people (REQ-DSH-25). A visual refresh in both themes (REQ-DSH-26). No figure moves.", "Applied"],
     ["R-66", "Dashboard", "Let a user change a project's members easily while looking at everybody's load - from Resource by project and the project's Utilisation - and have it update the people's assignments on Save.", "Applied. A Team dialog per project: swap, re-role, re-window, re-weight, add and remove, each person shown with their load; every change an ordinary pending edit of the Assignment sheet, kept by Save. REQ-DSH-23 added; no figure moves by itself.", "Applied"],

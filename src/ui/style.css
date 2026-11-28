@@ -167,6 +167,8 @@
   --ico-proj:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/%3E%3C/svg%3E");
   --ico-pers:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='9' cy='8' r='3.6'/%3E%3Cpath d='M2.5 20.5c.8-3.7 3.4-5.7 6.5-5.7s5.7 2 6.5 5.7'/%3E%3Cpath d='M15.5 4.6a3.6 3.6 0 0 1 0 6.9M18 14.9c1.8.8 3 2.7 3.5 5.6'/%3E%3C/svg%3E");
   --ico-gen:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6.5h9M19 6.5h1M4 12h3M11 12h9M4 17.5h11M20 17.5h0'/%3E%3Ccircle cx='16' cy='6.5' r='2.3'/%3E%3Ccircle cx='9' cy='12' r='2.3'/%3E%3Ccircle cx='17.5' cy='17.5' r='2.3'/%3E%3C/svg%3E");
+  /* R-69: Data issues - a warning sign, drawn like the other three. */
+  --ico-issues:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.6 2.6 19.8h18.8z'/%3E%3Cpath d='M12 10v4.3M12 17.1v.1'/%3E%3C/svg%3E");
   --ico-up:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 15V4M7.5 8.5 12 4l4.5 4.5'/%3E%3Cpath d='M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'/%3E%3C/svg%3E");
   --ico-new:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
 }
@@ -270,8 +272,8 @@ header .btn{min-height:34px}
 td.ins,th.ins{white-space:nowrap}
 .btn.reset{color:var(--accent)}
 
-/* --- provenance strip ---------------------------------------------------- */
-#prov{margin:12px 0 0;border-radius:var(--r-md);background:var(--quiet);
+/* --- provenance: the first section of General assumptions since R-69 ------- */
+#prov{margin:4px 0 0;border-radius:var(--r-md);background:var(--quiet);
  box-shadow:0 0 0 1px var(--hairline);font-size:var(--t-md)}
 #prov > summary{cursor:pointer;padding:9px 14px;color:var(--ink2);list-style:none;
  display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;border-radius:var(--r-md)}
@@ -316,6 +318,26 @@ td.ins,th.ins{white-space:nowrap}
    spinner is the part that keeps moving, so it is the part that says the wait is
    expected. Blue rather than green: this is in progress, not finished. */
 .banner.busy{border-left-color:var(--accent)}
+
+/* ---- the state of the data, in one band (R-69) -----------------------------------
+   What the checks found and what is waiting to be saved, side by side in one card at the
+   top of the sticky band. The rule between them is the 1px gap showing the hairline
+   behind: upright while they sit side by side, flat when a narrow window stacks them,
+   with nothing to switch. A part with nothing to say takes no room, and a band with
+   nothing in it at all - before anything is loaded - is not drawn. */
+#databand{display:flex;flex-wrap:wrap;gap:1px;margin:14px 0 0;border-radius:var(--r-lg);
+ background:var(--hairline);box-shadow:var(--shadow);overflow:hidden}
+#databand:not(:has(> #banner:not(:empty))):not(:has(> #editbar:not([hidden]))){display:none}
+#databand > #banner{flex:1 1 340px;min-width:0;display:flex;background:var(--surface)}
+#databand > #banner:empty{display:none}
+#databand > #banner > .banner{flex:1;margin:0;border-radius:0;box-shadow:none}
+#databand > #editbar{flex:2.2 1 640px;column-gap:10px;margin:0;border-radius:0;box-shadow:none}
+#databand > #editbar.dirty{box-shadow:inset 4px 0 0 var(--warn)}
+/* In the band the bar is two lines, always the same two: what the state of the work is,
+   in a sentence, and under it the controls. Letting them share a line made the sentence
+   the thing that gave way - one word to a line once the name box appeared beside it. */
+#databand > #editbar{row-gap:8px}
+#databand > #editbar .guide{flex:1 1 100%;max-width:none}
 .spin{width:14px;height:14px;flex:none;border-radius:50%;
  border:2px solid color-mix(in srgb,var(--accent) 25%,transparent);
  border-top-color:var(--accent);animation:spin .7s linear infinite}
@@ -474,6 +496,7 @@ nav button[data-tab="t-overall"]{--ico:var(--ico-overall)}
 nav button[data-tab="t-proj"]{--ico:var(--ico-proj)}
 nav button[data-tab="t-pers"]{--ico:var(--ico-pers)}
 nav button[data-tab="t-gen"]{--ico:var(--ico-gen)}
+nav button[data-tab="t-issues"]{--ico:var(--ico-issues)}
 nav button:hover{color:var(--ink);background:var(--fill)}
 nav button[aria-selected="true"]{color:var(--ink);font-weight:620;background:var(--surface);
  box-shadow:0 1px 3px rgba(0,0,0,.13),0 0 0 .5px rgba(0,0,0,.05)}
@@ -559,6 +582,8 @@ nav button[aria-selected="true"]::before{opacity:1;
 /* Charts are drawn at a fixed height, so their box only ever needs to grow sideways -
    but it is still bounded on both axes, and both scrollbars appear when they are needed. */
 .scrollx.fit{max-height:min(620px,70vh)}
+/* A list read top to bottom with the page, not in a window of its own (R-69). */
+.scrollx.free{max-height:none}
 /* Sticky headers in EVERY scroll region, not just the short ones. A month-column
    heading that scrolls away turns the table into a grid of unlabelled numbers.
    Three layers, and the order matters: the corner cell has to out-rank both the row
@@ -609,7 +634,7 @@ body.zoomed{overflow:hidden}
    gutter the page uses, so Save does not jump across the screen as the section opens. */
 body.zoomed #stickybar{position:fixed;top:var(--zoomchrome,0px);left:0;right:0;z-index:45;
  margin:0;padding:0 var(--gutter) 8px;box-shadow:0 1px 0 var(--hairline)}
-body.zoomed #editbar,body.zoomed #stickybar nav{margin-top:8px}
+body.zoomed #databand,body.zoomed #stickybar nav{margin-top:8px}
 
 /* --zoomtop is the measured height of that band - see fitZoom(). The fallback of 0 is
    deliberate: if the measurement has not happened yet the section covers the band for one
@@ -679,6 +704,20 @@ table{border-collapse:collapse;width:100%;font-size:var(--t-md)}
 .grid-t tr.child th.rh{padding-left:22px;font-weight:400;color:var(--ink2)}
 .grid-t td.c{color:var(--ink2)}
 .grid-t td.z{color:var(--muted)}
+/* The assumption matrices are typed into (R-69): a figure looks like a figure until the
+   pointer is on it, then like a field - the heat colour stays, ringed - and the caret
+   takes it to plain white, as any cell. An empty place shows its dot, and a plus under
+   the pointer: typing there adds the figure. An unsaved change is ringed in amber, since
+   the cell's own fill is the heat colour. */
+.grid-t td.mx,.grid-t td.mk{cursor:text;transition:box-shadow var(--dur) var(--ease)}
+.grid-t td.mx:hover,.grid-t td.mk:hover{box-shadow:inset 0 0 0 2px var(--accent)}
+.grid-t td.mx:focus,.grid-t td.mk:focus{outline:2px solid var(--accent);outline-offset:-2px;
+  background:var(--surface)!important;color:var(--ink)!important;box-shadow:none}
+.grid-t td.mk:empty::before{content:"\00B7"}
+.grid-t td.mk:hover:empty::before{content:"+";color:var(--accent);font-weight:600}
+.grid-t td.mk:focus:empty::before{content:""}
+.grid-t td.mx.edited{box-shadow:inset 0 0 0 2px var(--warn)}
+.grid-t td.mx.z:empty::before{content:"\00B7"}
 td.over{background:var(--overbg);color:var(--crit);font-weight:590}
 td.under{background:var(--underbg);color:var(--underink);font-weight:590}
 .grid-t tr.grand th,.grid-t tr.grand td{font-weight:620;border-top:1.5px solid var(--base)}
@@ -1566,3 +1605,171 @@ dialog.card[open]{display:flex;flex-direction:column}
   padding:3px 7px;background:var(--ink);color:var(--surface);z-index:1}
 .gaxis .gnow.l{transform:translateX(-100%);border-radius:999px 2px 2px 999px}
 .gaxis .gnow.r{border-radius:2px 999px 999px 2px}
+
+/* ---- the card's cells, where the record is changed (R-69) -----------------------
+   Every value on the card is the same editable cell the tables use, so it has to LOOK
+   editable without looking like a form: quiet until the pointer is on it, a soft field
+   under the pointer, the accent ring while the caret is in it - the tables' own focus -
+   and the amber of an unsaved change, the same amber as everywhere else. An empty cell
+   says what it will mean, in grey, where the record leaves it to something else. */
+.ftab{width:100%;border-collapse:collapse;font-size:var(--t-md);table-layout:fixed}
+.ftab th{width:42%;text-align:left;font-weight:400;color:var(--ink2);font-size:var(--t-sm);
+  padding:5px 12px 5px 0;border-bottom:1px solid var(--grid);vertical-align:middle;cursor:help;
+  overflow-wrap:anywhere}
+.ftab td{border-bottom:1px solid var(--grid)}
+.ftab tr:last-child th,.ftab tr:last-child td{border-bottom:0}
+td.ccell{padding:5px 8px;border-radius:var(--r-xs);font-weight:560;cursor:text;
+  overflow-wrap:anywhere;transition:background var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+td.ccell:hover{background:var(--fill);box-shadow:inset 0 0 0 1px var(--hairline)}
+td.ccell:focus{outline:2px solid var(--accent);outline-offset:-2px;background:var(--surface);
+  box-shadow:none}
+td.ccell:empty::before{content:attr(data-ph);color:var(--muted);font-weight:400}
+/* The dash only says "nothing here"; with the caret in the cell it would read as text. */
+td.ccell:focus:empty[data-ph="\2014"]::before{content:""}
+td.ccell.edited{background:color-mix(in srgb,var(--warn) 20%,transparent)}
+td.ccell.num{text-align:right;font-variant-numeric:tabular-nums}
+td.ffix{padding:5px 8px;font-weight:560}
+td.ffix .btn.tiny{margin-left:8px}
+.ct.cedit td{padding:4px 6px}
+.ct.cedit td.ccell{padding:6px 8px}
+.ct.cedit td.ccell[data-col$="_date"],.ct.cedit td.ccell[data-col="period_start"],
+.ct.cedit td.ccell[data-col="period_end"],.ct.cedit td.num{white-space:nowrap}
+.ct.cedit th{padding:6px 8px}
+td.rowx{width:1%;white-space:nowrap;text-align:right}
+td.msdot{width:14px;padding-right:0}
+td.msdot .dot{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--ink2);
+  vertical-align:-1px}
+td.msdot .dot.key{background:var(--crit)}
+.ct tr.past td.ccell{color:var(--ink2)}
+.ct tr.past .dot{opacity:.5}
+.ct tr.upcoming .dot{background:var(--accent);box-shadow:0 0 0 3px var(--glow1)}
+.csec.editable .csec-h h3::after{content:"\270E";font-size:var(--t-sm);font-weight:400;
+  color:var(--muted);margin-left:8px}
+.csec-a .btn.tiny{white-space:nowrap}
+/* What the page's banner says, said again inside the card - the band is behind it. */
+.card-msg{flex:none;padding:8px 22px;font-size:var(--t-sm);line-height:1.45;
+  border-bottom:1px solid var(--hairline);background:var(--surface);color:var(--ink)}
+.card-msg.bad{background:var(--overbg);color:var(--crit)}
+.card-msg.warn{background:var(--underbg);color:var(--underink)}
+
+/* ---- Data issues (R-69) -----------------------------------------------------------
+   The levels carry the application's own colours for what it does about each one: red
+   is refused, the deep amber is asked about at Save, the pale amber is a warning, and
+   the two that never stop anything are grey. The solid pills take the surface colour
+   for their text, so they read in both themes - white on red in light, near-black on
+   the lighter red of dark. */
+.tabcount{display:inline-block;min-width:20px;padding:0 6px;margin-left:7px;border-radius:999px;
+  background:var(--underbg);color:var(--underink);font-size:var(--t-xs);font-weight:700;
+  line-height:18px;text-align:center;font-variant-numeric:tabular-nums;vertical-align:1px}
+.tabcount.must{background:var(--crit);color:var(--surface)}
+.lvpill{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-xs);font-weight:650;
+  padding:2px 9px 2px 8px;border-radius:999px;white-space:nowrap;line-height:17px;
+  background:var(--fill);color:var(--ink)}
+.lvpill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.lvpill.lv-must{background:var(--crit);color:var(--surface)}
+.lvpill.lv-keep{background:var(--underink);color:var(--surface)}
+.lvpill.lv-warn{background:var(--underbg);color:var(--underink)}
+.lvpill.lv-soon::before{background:var(--accent)}
+.lvpill.lv-note{color:var(--ink2)}
+.lvpill.lv-note::before{background:var(--muted)}
+
+.ichips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}
+.ichip{display:inline-flex;align-items:center;gap:9px;border:0;cursor:pointer;font:inherit;
+  font-size:var(--t-sm);font-weight:560;padding:8px 14px 8px 12px;border-radius:12px;
+  background:var(--fill);color:var(--ink);transition:background var(--dur) var(--ease),
+  box-shadow var(--dur) var(--ease)}
+.ichip b{font-size:var(--t-lg);font-weight:700;font-variant-numeric:tabular-nums}
+.ichip .idot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none}
+.ichip.lv-must .idot{background:var(--crit)}
+.ichip.lv-keep .idot{background:var(--underink)}
+.ichip.lv-warn .idot{background:var(--warn)}
+.ichip.lv-soon .idot{background:var(--accent)}
+.ichip:hover{background:var(--fill2)}
+.ichip.on{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.ichip.zero{color:var(--ink2)}
+.ichip.zero b{font-weight:500}
+.ichip.lv-must:not(.zero) b{color:var(--crit)}
+
+.itools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:0 0 12px;
+  padding:8px 10px;background:var(--quiet);border-radius:var(--r-md);
+  box-shadow:inset 0 0 0 1px var(--grid)}
+.itools .ilabel{font-size:var(--t-xs);color:var(--muted);font-weight:650;letter-spacing:.05em;
+  text-transform:uppercase}
+.itools .vtog{margin-left:0}
+.icats{display:inline-flex;flex-wrap:wrap;gap:4px}
+.btn.tiny.icat .n{color:var(--muted);font-variant-numeric:tabular-nums;margin-left:5px}
+.btn.tiny.icat.on{background:var(--accent);color:#fff}
+.btn.tiny.icat.on .n{color:inherit;opacity:.85}
+.iq{margin-left:auto;flex:0 1 320px;min-width:200px;font:inherit;font-size:var(--t-sm);color:var(--ink);
+  padding:6px 10px;border-radius:8px;border:1px solid var(--base);background:var(--surface)}
+.iq:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--glow1)}
+
+.isst{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--t-md)}
+.isst > thead > tr > th{background:var(--thead);text-align:left;padding:0;font-size:var(--t-xs);
+  color:var(--muted);font-weight:650;white-space:nowrap;border-bottom:1px solid var(--hairline)}
+.isort{border:0;background:none;font:inherit;color:inherit;padding:8px 10px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;border-radius:var(--r-xs);letter-spacing:.02em}
+.isort:hover{color:var(--accent)}
+.sarr{font-size:9px;color:var(--accent)}
+.isst > tbody > tr > td{padding:10px;border-bottom:1px solid var(--grid);vertical-align:top}
+.isst > tbody > tr.iss{cursor:pointer;--lvc:var(--base)}
+.isst > tbody > tr.lv-must{--lvc:var(--crit)}
+.isst > tbody > tr.lv-keep{--lvc:var(--underink)}
+.isst > tbody > tr.lv-warn{--lvc:var(--warn)}
+.isst > tbody > tr.lv-soon{--lvc:var(--accent)}
+.isst > tbody > tr.iss > td:first-child{box-shadow:inset 3px 0 0 var(--lvc)}
+.isst > tbody > tr.iss:hover > td{background:var(--quiet)}
+.isst > tbody > tr.iss.open > td{background:var(--quiet);border-bottom-color:transparent}
+.isst > tbody > tr > td.ilv{width:1%;white-space:nowrap}
+.isst > tbody > tr > td.icat-c{white-space:nowrap;color:var(--ink2);font-size:var(--t-sm)}
+.isst > tbody > tr > td.irec{min-width:150px;max-width:280px}
+.isst td.irec .sub{display:block;font-size:var(--t-xs);color:var(--muted);margin-top:1px}
+.isst > tbody > tr > td.ihead{min-width:320px;line-height:1.45}
+.isst > tbody > tr > td.irule{white-space:nowrap}
+.isst td.irule code,.imsg code{font-family:var(--f-mono);font-size:var(--t-xs);color:var(--ink2);
+  background:var(--fill);padding:1px 6px;border-radius:var(--r-xs)}
+.isst > tbody > tr > td.iact{width:1%;white-space:nowrap;text-align:right}
+.isst td.iact .btn.tiny + .btn.tiny{margin-left:4px}
+.isst .caret{margin-left:5px;font-size:9px}
+.isst > tbody > tr.acc .itext{color:var(--ink2)}
+.iacc{display:block;font-size:var(--t-xs);color:var(--good);font-weight:600;margin-top:3px}
+.inoacc{color:var(--muted);padding:0 10px}
+.isst > tbody > tr.igrp > th{background:var(--surface);padding:18px 10px 8px;text-align:left;
+  border-bottom:1px solid var(--hairline);font-weight:400;white-space:normal}
+.isst > tbody:first-of-type > tr.igrp > th{padding-top:12px}
+.ig{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ig-t{font-size:var(--t-lg);font-weight:660;color:var(--ink);letter-spacing:-.01em}
+.ig .namelink.ig-t{font-size:var(--t-lg);color:var(--accent)}
+.ig .mono.xs{margin-right:0}
+.ig-n{font-size:var(--t-xs);font-weight:700;background:var(--fill2);color:var(--ink);
+  border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.ig-s{font-size:var(--t-xs);color:var(--muted)}
+.isst > tbody > tr.issx > td{padding:2px 10px 16px;background:var(--quiet);border-bottom:1px solid var(--hairline);
+  box-shadow:inset 3px 0 0 var(--lvc)}
+.isst > tbody > tr.issx{--lvc:var(--base)}
+.isst > tbody > tr.issx.lv-must{--lvc:var(--crit)}
+.isst > tbody > tr.issx.lv-keep{--lvc:var(--underink)}
+.isst > tbody > tr.issx.lv-warn{--lvc:var(--warn)}
+.isst > tbody > tr.issx.lv-soon{--lvc:var(--accent)}
+.ifix{background:var(--surface);border-radius:var(--r-md);padding:12px 14px 14px;box-shadow:var(--shadow);
+  cursor:auto}
+.imsg{margin:0 0 12px;line-height:1.55;color:var(--ink);max-width:130ch}
+.imsg .lvpill{margin-right:4px;vertical-align:1px}
+.iacts{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}
+.iacts .btn.tiny{font-size:var(--t-sm);padding:4px 10px}
+.iacts .btn.tiny.danger{margin-left:0}
+.ied th.focus{color:var(--accent)}
+.ied tr.hit > td:not(.edited){background:var(--quiet)}
+.ied tr.hit > td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+#openIssues{white-space:nowrap}
+.ied td.ccell.focus{box-shadow:inset 0 0 0 1px var(--accent);background:var(--quiet)}
+.ied td.ccell.focus:focus{box-shadow:none;background:var(--surface)}
+.ied td.ccell.focus.edited{background:color-mix(in srgb,var(--warn) 20%,transparent)}
+.idone{background:var(--surface);color:var(--good);border-radius:var(--r-md);padding:9px 12px;
+  margin:0 0 10px;font-size:var(--t-sm);box-shadow:inset 3px 0 0 var(--good),var(--shadow)}
+.idone strong{font-weight:700}
+.iempty{display:flex;align-items:center;gap:14px;padding:24px 18px;border-radius:var(--r-lg);
+  background:var(--quiet);color:var(--ink2);box-shadow:inset 0 0 0 1px var(--grid)}
+.iempty strong{color:var(--ink)}
+.iok{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  background:var(--good);color:var(--surface);font-size:20px;font-weight:700}
