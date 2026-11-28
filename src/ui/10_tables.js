@@ -340,6 +340,8 @@ const LIST_FOR = {
   EDC_system:"EDC_system", DataReviewSystem:"DataReviewSystem", RBQM_system:"RBQM_system",
   milestone_name:"milestone_name", milestone_highlight:"milestone_highlight",
   period_highlight:"period_highlight",
+  // R-70: a derivation rule names a milestone from the standard list
+  start_milestone:"milestone_name", end_milestone:"milestone_name",
 };
 /** A column the user TYPES INTO that is not stored on the row it appears in.
  *

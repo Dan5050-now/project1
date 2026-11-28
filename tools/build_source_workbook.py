@@ -39,10 +39,10 @@ from openpyxl.worksheet.protection import SheetProtection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-SCHEMA_VERSION = 16
-TEMPLATE_VERSION = "1.21"
-DUMMY_VERSION = "1.23"
-DUMMY_SMALL_VERSION = "1.15"
+SCHEMA_VERSION = 17
+TEMPLATE_VERSION = "1.22"
+DUMMY_VERSION = "1.24"
+DUMMY_SMALL_VERSION = "1.16"
 OUTDIR = Path(__file__).resolve().parents[1] / "templates"
 
 FONT = "Arial"
@@ -355,6 +355,25 @@ SHEETS = {
                              "project chooses a colour for its own period.", ""),
         ("note_1", "Free text. e.g. what the colour is meant to say.", ""),
     ],
+    # Schema 17 (R-70): how Auto derivation works out a project's periods from its
+    # milestones, per project type - each period's start and end a milestone plus or minus
+    # days. A standard like the sheets above, set once for the whole plan.
+    "PeriodRule": [
+        ("project_type", "The project type this rule is for. Every project of the type is "
+                         "derived by it.", "key"),
+        ("period_name", "The period, from the type's own period set. One row per type and "
+                        "period.", "key"),
+        ("start_milestone", "The milestone the period STARTS from. EMPTY = the day after the "
+                            "previous period ends (the first period: the project's start). A "
+                            "milestone the project has not recorded counts as empty.", ""),
+        ("start_offset_days", "Days added to it: -1 the day before, 1 the day after, 0 the "
+                              "day itself.", ""),
+        ("end_milestone", "The milestone the period ENDS on. EMPTY = the day before the next "
+                          "period starts (the last period: the project's end). A period with "
+                          "NEITHER milestone recorded is left out.", ""),
+        ("end_offset_days", "Days added to it: -92 is about three months before.", ""),
+        ("note_1", "Free text. e.g. why the rule is what it is.", ""),
+    ],
     "Person": [
         ("person_id", "Unique key, e.g. PSN-001.", "key"),
         ("person_name", "Display name.", ""),
@@ -442,6 +461,8 @@ DROPDOWNS = {
                   "milestone_highlight": "milestone_highlight"},
     "ProjectPeriod": {"period_highlight": "period_highlight"},
     "PeriodHighlight": {"period_highlight": "period_highlight"},
+    "PeriodRule": {"project_type": "project_type", "start_milestone": "milestone_name",
+                   "end_milestone": "milestone_name"},
     "IssueReview": {"status": "issue_review_status", "issue": "issue_kind"},
     "PeriodFTEStandard": {"project_type": "project_type", "clinical_phase": "clinical_phase",
                              "work_scope_type": "work_scope_type",
@@ -1202,6 +1223,35 @@ DEFAULT_PERIOD_HIGHLIGHT = {
 }
 
 
+# Schema 17 (R-70): the period derivation rules a plan starts with, for every clinical
+# type. They reproduce the built-in rule as nearly as whole days can - three months is
+# taken as 92 days - with the interim periods and After Close-out (final) anchored ONLY
+# on the milestones they exist for, so a project without an interim lock or a later
+# inspection simply has no such period. A team changes them on General assumptions.
+# 'Others' has no standard milestones to count from, so no standard rules.
+DEFAULT_PERIOD_RULES = [
+    ("Before-Start-up", None, None, "Protocol (v1)", 0,
+     "Default - from the project's start to the protocol date"),
+    ("Start-up", "Protocol (v1)", 1, "First SIV", 0,
+     "Default - the day after the protocol, until first SIV"),
+    ("Conduct (interim)", None, None, "interim DB lock", -92,
+     "Default - ends about three months before the interim lock; none without one"),
+    ("Close-out (interim)", None, None, "interim DB lock", 0,
+     "Default - up to the interim lock"),
+    ("Conduct (final)", None, None, "final DB lock", -92,
+     "Default - ends about three months before the final lock"),
+    ("Close-out (final)", None, None, "final DB lock", 0,
+     "Default - up to the final lock"),
+    ("After Close-out (final)", None, None, "Inspection", 0,
+     "Default - to the last inspection; none without one"),
+]
+
+
+def default_period_rules():
+    return [[t, p, sm, so, em, eo, note] for t in clinical_types()
+            for (p, sm, so, em, eo, note) in DEFAULT_PERIOD_RULES]
+
+
 def default_period_highlights():
     names = (dict(LISTS)["period_name_clinical"] + dict(LISTS)["period_name_others"])
     return [[n, DEFAULT_PERIOD_HIGHLIGHT.get(n),
@@ -1255,6 +1305,9 @@ def add_readme(wb, kind, facts=None):
         "                         WORK SCOPE and period. Leave clinical_phase empty on the 'Others' rows.",
         "   PeriodHighlight       the colour each period is drawn in, for every project. Empty =",
         "                         gray. A project's own Highlight on ProjectPeriod wins over it.",
+        "   PeriodRule            how Auto derivation works out each period from the milestones,",
+        "                         per project type: a milestone plus or minus days, for the start",
+        "                         and the end. Empty = follows the neighbouring period.",
         "   Person                one row per person.",
         "   Assignment            one row per person + project + role.",
         "   PersonPeriodWeight    optional windows where a person's weight differs.",
@@ -1510,6 +1563,7 @@ def build(kind):
                 r[8] = "manual"
         examples = {k: None for k in SHEETS}
         phl_rows = default_period_highlights()
+        prule_rows = default_period_rules()
         facts = describe(PROFILES[kind], projects, ms, periods, people, A, ppw, inspections)
     else:
         facts = None
@@ -1522,6 +1576,7 @@ def build(kind):
         pws_rows = [list(x) for x in default_period_weights()]
         role_rows = [list(x) for x in default_role_factors()]
         phl_rows = default_period_highlights()
+        prule_rows = default_period_rules()
         # one example row per sheet (REQ-IMP-03)
         examples = {
             "Project": ["PRJ-001", "ONV-101 First-in-human", "NewDrug CT", "Onvelaris", "Phase 1",
@@ -1539,6 +1594,7 @@ def build(kind):
             "PeriodFTEStandard": None,
             "RoleFactor": None,
             "PeriodHighlight": None,
+            "PeriodRule": None,
             "Person": ["PSN-001", "Kim S.", "Data Management", "Lead data manager", 1.00,
                        None, None, "example row - delete before use", None, None, None, None],
             "Assignment": ["ASG-001", "PSN-001", None, "PRJ-001", "Lead data manager",
@@ -1560,6 +1616,7 @@ def build(kind):
     write_sheet(wb, "PeriodFTEStandard", pws_rows, examples["PeriodFTEStandard"], list_ranges)
     write_sheet(wb, "RoleFactor", role_rows, examples["RoleFactor"], list_ranges)
     write_sheet(wb, "PeriodHighlight", phl_rows, examples["PeriodHighlight"], list_ranges)
+    write_sheet(wb, "PeriodRule", prule_rows, examples["PeriodRule"], list_ranges)
     write_sheet(wb, "Person", person_rows, examples["Person"], list_ranges)
     write_sheet(wb, "Assignment", asg_rows, examples["Assignment"], list_ranges)
     write_sheet(wb, "PersonPeriodWeight", ppw_rows, examples["PersonPeriodWeight"], list_ranges)

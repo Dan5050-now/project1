@@ -171,6 +171,16 @@
 <!-- Replacing the plan that is open. The browser already refuses to close the tab on
      unsaved work (beforeunload, REQ-IMP-08); this asks the same question of the
      application's own Load and New-plan buttons, which used to discard it in silence. -->
+<!-- Auto derivation's preview (R-70): every period it would write, the date of each and
+     how that date was found - a milestone, a neighbour, or an estimate - before anything
+     is written. Applying replaces the project's periods; cancelling changes nothing. -->
+<dialog id="derivedlg" class="big">
+  <div class="dlg-h"><strong id="dvTitle">Auto derivation</strong>
+    <button class="btn" style="margin-left:auto" id="dvNo">Cancel</button>
+    <button class="btn primary" id="dvYes">Apply</button></div>
+  <div class="dlg-b" id="dvBody"></div>
+</dialog>
+
 <dialog id="replace">
   <div class="dlg-h"><strong id="rpTitle">Discard the work in this plan?</strong>
     <button class="btn" style="margin-left:auto" id="rpNo">Keep it</button>

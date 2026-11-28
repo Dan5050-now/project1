@@ -26,7 +26,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "app" / "PRAP.html"
-DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.23.xlsx"
+DUMMY = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.24.xlsx"
 OUT = ROOT / "app" / "PRAP_Demo.html"
 
 

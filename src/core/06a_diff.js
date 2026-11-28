@@ -87,6 +87,7 @@ const DIFF_KEY = {
                          "role_name"],
   IssueReview:          ["project_id", "month", "issue"],
   PeriodHighlight:      ["period_name"],
+  PeriodRule:           ["project_type", "period_name"],
   Person:               ["person_id"],
   Assignment:           ["assignment_id"],
   PersonPeriodWeight:   ["assignment_id", "period_start"],

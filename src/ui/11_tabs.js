@@ -205,18 +205,22 @@ function renderProjTab(){
  *  not in yet is offered the derivation with the reason it cannot run yet in its place -
  *  because there the answer really will change, as soon as two dates are typed. */
 function periodGenButton(pr, pid){
-  if (!CLINICAL_TYPES.has(pr.project_type))
+  const rules = rulesFor(S.model, pr.project_type);
+  if (!CLINICAL_TYPES.has(pr.project_type) && !rules)
     return `<button class="btn tiny" data-act="blankper" data-pid="${att(pid)}"
       data-tip="${att(HELP.blankper)}">Standard periods</button>`;
-  const ms = {};
-  for (const m of S.model.raw.Milestone)
-    if (m.project_id === pid && m.milestone_name && m.milestone_date instanceof Date)
-      (ms[m.milestone_name] ||= []).push(m.milestone_date);
-  const can = !!derivePeriods(pr, ms);
+  /* By the plan's own rules for the type where there are some (R-70), the built-in rule
+     otherwise - the same question Auto derivation itself asks, so the button cannot be
+     live for a project the derivation would then refuse. */
+  const plan = derivationPlan(pr, rawMilestones(pid), S.model);
+  const can = !!(plan && plan.segs.length);
+  const tip = rules ? (can ? HELP.autoperrule : HELP.autoperrulenot)
+                    : (can ? HELP.autoper : HELP.autopernot);
   return `<button class="btn tiny" data-act="autoper" data-pid="${att(pid)}"
-    ${can ? "" : "disabled"} data-tip="${att(can ? HELP.autoper : HELP.autopernot)}"
+    ${can ? "" : "disabled"} data-tip="${att(tip)}"
     >Auto derivation</button>`
-    + (can ? "" : `<span class="scope k">needs a CTA submission date and a DB lock</span>`);
+    + (can ? "" : `<span class="scope k">${rules ? "needs a milestone its rules count from"
+                                                 : "needs a CTA submission date and a DB lock"}</span>`);
 }
 
 /** The Periods table's columns, with the STANDARD the period selects shown beside the
@@ -312,7 +316,10 @@ function projDetail(pid){
         <div class="phead"><h2>Periods — ${esc(pr.project_name)}</h2>
           ${periodGenButton(pr, pid)}
           <span class="scope k">${per.length} row(s)${derived ? " &#183; derived" : ""}</span></div>
-        <p class="cap">${derived ? "Derived from the milestones above." : "As entered in the workbook."}
+        <p class="cap">${derived ? (rulesFor(M, pr.project_type)
+            ? `Derived from the milestones above by the <strong>Period derivation rules</strong> for
+               ${esc(pr.project_type)} (General assumptions).`
+            : "Derived from the milestones above by the built-in rule.") : "As entered in the workbook."}
           Names are unique within a project, so <code>project_id + period_name</code> identifies a row.
           <code>standard_fte</code> beside the weight is the <strong>standard monthly FTE</strong>
           this period selects for a project of this type, phase and work scope — looked up, not
@@ -369,9 +376,11 @@ function scratchProject(draft){
           ${pid ? `<button class="btn tiny" data-act="autoper" data-pid="${att(pid)}"
             data-tip="${att(HELP.autoper)}">Auto derivation</button>` : ""}
           <span class="scope k">${per.length} row(s)</span></div>
-        <p class="cap">Leave this empty for a clinical trial and let the milestones derive it.
-          An <code>Others</code> project is not derived — enter Planning / Develop / Close
-          here yourself, with no gap and no overlap.</p>
+        <p class="cap">Leave this empty for a clinical trial and let the milestones derive it —
+          by the <strong>Period derivation rules</strong> for its type on General assumptions,
+          or the built-in rule where the type has none. An <code>Others</code> project with no
+          rules is not derived — enter Planning / Develop / Close here yourself, with no gap and
+          no overlap.</p>
         ${dataTable("ProjectPeriod", per, PERIOD_COLS, null, null,
           periodStandardCol(draft), lock)}</div>
     </div>`;
@@ -764,6 +773,79 @@ function provenancePanel(){
     + `</div></details></div>`;
 }
 
+/** PERIOD DERIVATION RULES (schema 17, R-70): how Auto derivation works out a project's
+ *  periods from its milestones, one project type at a time. Every period of the type is
+ *  a line - the ones with a rule are cells to type into, the ones without say so and
+ *  offer one - so the table reads as the type's whole lifecycle, and a period that is
+ *  not derived is visible as such rather than simply absent. */
+function periodRulePanel(){
+  const M = S.model, raw = M.raw.PeriodRule || [];
+  const types = [...new Set([...(M.lists.project_type || []).map(String),
+                             ...raw.map(r => r.project_type).filter(Boolean)])];
+  let t = S.genView.prule;
+  if (!types.includes(t)) t = types.find(x => CLINICAL_TYPES.has(x)) || types[0] || "";
+  S.genView.prule = t;
+  const mine = raw.filter(r => r.project_type === t);
+  const order = periodOrder(M, t), used = new Set();
+  const offCell = (r, col) => {
+    const v = num(r[col]);
+    const marked = S.editedCells.has(`PeriodRule|${r.__row}|${col}`) ? " edited" : "";
+    return `<td class="cell ccell num off${marked}" contenteditable="true" data-sheet="PeriodRule" `
+      + `data-row="${r.__row}" data-col="${col}" data-ph="0">`
+      + `${v === null || v === undefined ? "" : v > 0 ? "+" + v : String(v)}</td>`;
+  };
+  const line = (r, extra) => `<tr${extra ? ' class="odd"' : ""}>`
+    + (extra ? cardCell("PeriodRule", r, "period_name", "period", "pn")
+             : `<th class="pn">${esc(r.period_name)}</th>`)
+    + cardCell("PeriodRule", r, "start_milestone", "after the previous period")
+    + offCell(r, "start_offset_days")
+    + cardCell("PeriodRule", r, "end_milestone", "until the next period")
+    + offCell(r, "end_offset_days")
+    + cardCell("PeriodRule", r, "note_1", "")
+    + cardDel("PeriodRule", r, "rule") + `</tr>`;
+  const body = order.map(p => {
+    const r = mine.find(x => x.period_name === p && !used.has(x));
+    if (r){ used.add(r); return line(r); }
+    return `<tr class="norule"><th class="pn">${esc(p)}</th><td colspan="5" class="muted">No rule — `
+      + `not derived for a ${esc(t)} project. <button class="btn tiny" data-act="pruleadd" `
+      + `data-type="${att(t)}" data-period="${att(p)}">+ Add a rule</button></td><td></td></tr>`;
+  }).join("") + mine.filter(r => !used.has(r)).map(r => line(r, true)).join("");
+  const others = types.filter(x => x !== t);
+  const n = x => raw.filter(r => r.project_type === x).length;
+  const has = mine.length > 0, ct = CLINICAL_TYPES.has(t);
+  return `<div class="panel" data-panel="gen-prule">
+      <div class="phead"><h2>Period derivation rules</h2>
+        <span class="scope">PeriodRule</span>
+        <span class="scope k">${raw.length} rule(s)</span></div>
+      <p class="cap">How <strong>Auto derivation</strong> on a project's Periods table works out
+        each period's dates, by project type: a <strong>milestone</strong> the project has recorded,
+        plus or minus a number of <strong>days</strong> — <strong>−1</strong> the day before it,
+        <strong>1</strong> the day after (a plus sign is optional), <strong>0</strong> the day itself.
+        Where a milestone is not recorded, or a rule names none, the date follows its neighbours:
+        a start is the day after the previous period ends, an end the day before the next one
+        starts (the first period starts with the project, the last ends with it). A period with
+        <strong>neither</strong> of its milestones recorded is left out — no interim DB lock, no
+        interim periods. Every derived date is shown, with how it was found, before anything is
+        written.</p>
+      <div class="prtypes" role="group" aria-label="Project type">${types.map(x =>
+        `<button type="button" class="btn tiny${x === t ? " on" : ""}" data-prtype="${att(x)}" `
+        + `aria-pressed="${x === t}">${esc(x)} <span class="n">${n(x)}</span></button>`).join("")}</div>
+      <div class="ctwrap"><table class="ct cedit prt"><thead><tr><th>Period</th>
+        <th>Starts from milestone</th><th class="num">± days</th><th>Ends on milestone</th>
+        <th class="num">± days</th><th>Note</th><th></th></tr></thead><tbody>${body}</tbody></table></div>
+      <div class="prfoot">${has
+        ? (others.length ? `<label class="prcopy">Copy these rules to <select id="pruleCopy" `
+            + `data-from="${att(t)}"><option value="">choose a type…</option>${others.map(x =>
+              `<option value="${att(x)}">${esc(x)}${n(x) ? ` (has ${n(x)})` : ""}</option>`).join("")}`
+            + `</select></label>` : "")
+        : ct ? `<span class="note">No rules for ${esc(t)} yet, so its projects are derived by the
+              built-in rule.</span> <button class="btn tiny primary" data-act="prulestd"
+              data-type="${att(t)}">Lay out the standard rules</button>`
+             : `<span class="note">No rules for ${esc(t)}, so its projects' periods are entered by
+              hand (Standard periods). Add a rule to a period above to derive them.</span>`}</div>
+    </div>`;
+}
+
 function renderGenTab(){
   const M = S.model;
   const pwsRows = M.raw.PeriodFTEStandard, rfRows = M.raw.RoleFactor;
@@ -825,6 +907,7 @@ function renderGenTab(){
         <strong>Click any figure to change it</strong>, or type into an empty <strong>&middot;</strong>
         to add one.</p>
       ${rf}</div>
+    <div class="two prg">
     <div class="panel" data-panel="gen-phl">
       <div class="phead"><h2>Period colours</h2>
         <span class="scope">PeriodHighlight</span>
@@ -837,6 +920,8 @@ function renderGenTab(){
         figure.</p>
       ${dataTable("PeriodHighlight", M.raw.PeriodHighlight,
                   ["period_name","period_highlight","note_1"])}</div>
+    ${periodRulePanel()}
+    </div>
     <div class="two">
       <div class="panel" data-panel="gen-cfg">
         <div class="phead"><h2>Configuration</h2>

@@ -32,6 +32,7 @@ const SHEET_COLS = {
   PeriodFTEStandard: {date:[], num:["standard_fte"]},
   RoleFactor: {date:[], num:["role_factor"]},
   PeriodHighlight: {date:[], num:[]},
+  PeriodRule: {date:[], num:["start_offset_days","end_offset_days"]},
   Person: {date:["employment_start","employment_end"], num:["capacity_fte"]},
   Assignment: {date:["assign_start_date","assign_end_date"], num:["person_weight"]},
   PersonPeriodWeight: {date:["period_start","period_end"], num:["weight_override"]},
@@ -46,12 +47,16 @@ const REQUIRED_SHEETS = Object.keys(SHEET_COLS);
    colours - which is a complete plan, not a broken one; so its absence is reported as
    information and the sheet is supplied empty. Every other sheet has always been there,
    and one missing is a file that has lost something. */
-const LATER_SHEETS = {MonthlyEstimate:9, PeriodHighlight:15, IssueReview:16};
+const LATER_SHEETS = {MonthlyEstimate:9, PeriodHighlight:15, IssueReview:16, PeriodRule:17};
 /* The schema's own column order, independent of any one file. A workbook carries its
    headers, so the application takes them from what it loaded; the JSON interchange file
    carries row OBJECTS and has no column order at all, so it needs this. It is also the
    list a JSON file is checked against, which is how a mistyped column name is caught
    instead of silently ignored. tools/check_consistency.py holds it to the template. */
+/* PeriodRule (schema 17, R-70) is how a project's periods are derived from its milestones,
+   by type: each period's start and end a milestone plus or minus days - see deriveByRule().
+   No comments INSIDE the object below: tools/test_interop.py reads it out of the built page
+   as data. */
 const SHEET_HEADERS = {
   Project:["project_id","project_name","project_type","project_category","clinical_phase",
     "work_scope_type","outsourcing_scope_det","EDC_setup","DataReviewSystem_setup","RBQM_setup","DM_conduct",
@@ -66,6 +71,8 @@ const SHEET_HEADERS = {
   RoleFactor:["project_type","clinical_phase","work_scope_type","period_name","role_name",
     "role_factor","absorbed_by","role_note"],
   PeriodHighlight:["period_name","period_highlight","note_1"],
+  PeriodRule:["project_type","period_name","start_milestone","start_offset_days",
+    "end_milestone","end_offset_days","note_1"],
   Person:["person_id","person_name","department","primary_role","capacity_fte",
     "employment_start","employment_end","note_1","note_2","note_3","note_4","note_5"],
   Assignment:["assignment_id","person_id","person_name","project_id","role_name",
@@ -213,7 +220,9 @@ const KEY_COL = {Project:"project_id", Person:"person_id", Assignment:"assignmen
                  // assignment row. Which of the two is said by `scope`.
                  MonthlyEstimate:"ref_id",
                  // A review is OF a month of a project, so it hangs off the project (R-62).
-                 IssueReview:"project_id"};
+                 IssueReview:"project_id",
+                 // A derivation rule is a standard for a TYPE, as the two grids are (R-70).
+                 PeriodRule:"project_type"};
 // Which sheet OWNS each identifier. KEY_COL names the key column of every sheet, but
 // on a child sheet that column is a FOREIGN key - Milestone.project_id points at a
 // project, it does not define one. Deleting a milestone must not go looking for rows
@@ -272,6 +281,10 @@ const COLUMN_HELP = {
   rationale:"Why the issue was confirmed, accepted or left to fix - what anybody opening it later will read.",
   reviewed_by:"Who made the decision.", reviewed_at:"When, as YYYY-MM-DD HH:MM.",
   issue:"Which way the month is off its standard: short, over, or unstaffed (nobody on it).",
+  start_milestone:"PERIOD DERIVATION RULE (General assumptions). The milestone this period STARTS from, for every project of this type — the date Auto derivation counts from. Pick from the standard milestone list. EMPTY means the period starts the day after the one before it ends (the first period: with the project); so does a milestone the project has not recorded. A milestone recorded more than once (Inspection) gives a start its first date.",
+  start_offset_days:"Days added to the start milestone: −1 starts the day before it, 1 the day after, 0 on the day itself. A plus sign may be typed and is ignored; a fraction is rounded to whole days.",
+  end_milestone:"PERIOD DERIVATION RULE. The milestone this period ENDS on — as start_milestone, for the end. EMPTY means it ends the day before the next period starts (the last period: with the project); so does a milestone not recorded. A milestone recorded more than once gives an end its last date. A period NEITHER of whose milestones the project has recorded is left out — no interim DB lock, no interim periods.",
+  end_offset_days:"Days added to the end milestone: −92 ends about three months before it, 0 on the day. A plus sign may be typed and is ignored.",
   period_highlight:"OPTIONAL. The colour a period is drawn in on the Project timeline — on the Overall tab and on the project's own tab. On the GENERAL ASSUMPTIONS tab (Period colours) it is the DEFAULT for every project's period of that name. On a project's PERIODS table it is that project's own choice, and it wins over the default. Neither set: the period is drawn GRAY, shaded darker as its weight rises. Pick one of the values the Lists sheet offers; the colour word inside the value is what is read, so 'Highlight (Blue) - sponsor review' keeps the colour and says why.",
   milestone_highlight:"OPTIONAL. Marks this milestone on the Project timeline in a colour — on the Overall tab and on this project's own tab, wherever the timeline is drawn. Pick one of the values the Lists sheet offers; leave it empty and the milestone draws as it always did. The colour word inside the value is what is read, so a team that writes what their colours MEAN — 'Highlight (Red) - slipped' — keeps the colour and gains the reason.",
   project_id:"Unique identifier for the project. Editing it cascades to every row that references it.",
@@ -361,6 +374,9 @@ const COLUMN_LABEL = {
   // ProjectPeriod, and the standards it reads
   period_name:"Period", period_seq:"Order", period_start:"From", period_end:"To",
   period_highlight:"Highlight",
+  // PeriodRule (R-70)
+  start_milestone:"Starts from milestone", start_offset_days:"± days",
+  end_milestone:"Ends on milestone", end_offset_days:"± days",
   weight:"Period weight", standard_fte:"Standard monthly FTE",
   role_name:"Role", role_factor:"Role factor", absorbed_by:"Picked up by",
   role_note:"Basis for the factor",
@@ -393,14 +409,25 @@ const HELP = {
     + "their dates left empty, so only the dates have to be typed. Names already listed are "
     + "not repeated, and any you do not need can be deleted. The rows are ordinary rows - "
     + "provisional until Save, like anything else.",
+  autoperrule:"<b>Auto derivation</b><br>Works out this project's periods from its milestones "
+    + "by the <b>Period derivation rules</b> for its type on General assumptions: each period "
+    + "starts and ends at a milestone, plus or minus days. A date whose milestone is not "
+    + "recorded follows the neighbouring period; a period with neither of its milestones "
+    + "recorded is left out. Every date, and how it was found, is shown before anything is "
+    + "written. Each period takes the standard weight for this project's type and phase; they "
+    + "are ORDINARY ROWS afterwards - edit any of them, and Save when you are happy.",
+  autoperrulenot:"<b>Auto derivation</b> — not yet.<br>None of the milestones the Period "
+    + "derivation rules for this project's type count from is recorded for it. Enter one of "
+    + "them in the Milestones table beside this one - or change the rules on General "
+    + "assumptions.",
   autoper:"<b>Auto derivation</b><br>Builds this project's periods from its milestones, by "
-    + "the rule in the development plan: Start-up opens the day after Protocol (v1) or a "
+    + "the BUILT-IN rule - its type has no Period derivation rules on General assumptions: Start-up opens the day after Protocol (v1) or a "
     + "month before CTA submission, closes at First SIV or four months later; an interim DB "
     + "lock splits the conduct stretch in two; Close-out (final) starts three months before "
     + "the final DB lock; and an Inspection after that lock opens After Close-out (final). "
     + "Each period takes the standard weight for this project's type and phase. They are "
     + "ORDINARY ROWS afterwards - edit any of them, and Save when you are happy. Needs CTA "
-    + "submission and a DB lock (V-16), and applies to clinical trials only.",
+    + "submission and a DB lock (V-16). Every date is shown before anything is written.",
   autopernot:"<b>Auto derivation</b> — not yet.<br>The rule builds a trial's periods from "
     + "its milestones, so it needs two of them before it can say anything: a "
     + "<b>CTA submission</b> date and at least one <b>DB lock</b> (V-16). Enter those in "

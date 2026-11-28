@@ -14,7 +14,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-DOC_VERSION = "1.47"
+DOC_VERSION = "1.48"
 DOC_STATUS = "APPROVED - Dan, 2026-08-02. Step 2 gate closed; this governs Step 4."
 DOC_DATE = "2026-08-01"
 # The APPROVED BASELINE is v2.0, and the traceability sheet used to read from it.
@@ -22,7 +22,7 @@ DOC_DATE = "2026-08-01"
 # baseline - REQ-CAL-14 is the first - would otherwise be invisible here while
 # check_consistency.py reported it as untraced, which is the drift both documents
 # exist to prevent.
-PLAN = "PRAP_Development_Plan_v2.78.xlsx"
+PLAN = "PRAP_Development_Plan_v2.79.xlsx"
 PLAN_BASELINE = "PRAP_Development_Plan_v2.0.xlsx"    # approved, and unamended
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / f"PRAP_Programming_Specification_v{DOC_VERSION}.xlsx"
@@ -123,7 +123,7 @@ cover = [
     ("Issue date", DOC_DATE),
     ("Author", "Claude Code"),
     ("Governing document", f"{PLAN} - APPROVED BASELINE, Dan 2026-08-02"),
-    ("Schema version specified", "16"),
+    ("Schema version specified", "17"),
     ("Repository", "Dan5050-now/project1"),
     ("Branch", "claude/project-resource-assignment-app-1vjdzh"),
 ]
@@ -146,7 +146,7 @@ r = lines(ws, r, [
     "Two things make this specification unusual, and both are deliberate:",
     "",
     "  - The data schema is not described in prose. It already exists as a working file,",
-    "    templates/PRAP_SourceData_Template_v1.21.xlsx, and sheet 03 documents the parse contract against it.",
+    "    templates/PRAP_SourceData_Template_v1.22.xlsx, and sheet 03 documents the parse contract against it.",
     "  - The calculation and validation logic already has a reference implementation in",
     "    tools/verify_source_workbook.py, which runs against the dummy data. Sheet 05 gives the pseudocode;",
     "    that script is the executable check that the pseudocode is right.",
@@ -193,6 +193,28 @@ rows = [["1.0", "2026-08-02", "Claude Code", "Dan",
          "assignment-window overlap half, and referential integrity on PersonPeriodWeight.assignment_id. "
          "Both are now in the reference implementation, the second as new rule V-24. The dummy fixture "
          "gains an assignment with two windows. No schema change.", "Draft"],
+        ["1.48", "2026-11-28", "Claude Code", "Dan",
+         "R-70, REQ-CAL-21 and REQ-DSH-35. SOURCE SCHEMA STEPS 16 TO 17: a fourteenth sheet, "
+         "PeriodRule (project_type, period_name, start_milestone, start_offset_days, end_milestone, "
+         "end_offset_days, note_1), in LATER_SHEETS at 17, keyed for the import comparison by "
+         "project_type | period_name; SHEET_COLS num start_offset_days, end_offset_days. "
+         "core/05_model.js: M.periodRules[type] = the type's rows, first row per period wins; a "
+         "project with no ProjectPeriod rows is derived where its type is clinical OR has rules. "
+         "core/04_derive.js: derivePeriods(proj, ms, M) -> derivationPlan() -> deriveByRule(proj, ms, "
+         "rules, periodOrder(M, type)) where rulesFor(M, type), else derivePeriodsBuiltIn() for a "
+         "clinical type. deriveByRule: rows in the type's period order; start = first date of "
+         "start_milestone + round(start_offset_days), end = last date of end_milestone + "
+         "round(end_offset_days); a row with neither date is left out; first start <- project "
+         "start, last end <- project end; repeat {start <- previous end + 1; end <- next start - 1} "
+         "until stable, then a boundary unknown on both sides <- halfway between a.start and b.end; "
+         "drop a period still unplaced or ending before it starts; seams = consecutive gaps or "
+         "overlaps. Each date carries how[side] and est[side] (an estimate is a NAMED milestone "
+         "not recorded, or a halfway boundary). ui/13_findings.js: autoPeriods() -> openDerive() "
+         "(dialog #derivedlg: the periods, how each date was found, what is left out, seams) -> "
+         "applyDerived(); addPeriodRule(), layOutStandardRules() from SEED_PRULE (built from the "
+         "template), copyPeriodRules(). ui/11_tabs.js: periodRulePanel() in a .two.prg beside Period "
+         "colours, S.genView.prule the type shown. V-41 (warning). tools/prap_io.py mirrors "
+         "deriveByRule as derive_by_rule().", "Draft"],
         ["1.47", "2026-11-28", "Claude Code", "Dan",
          "R-69, REQ-DSH-29 to REQ-DSH-34. ui/13e_card.js: cardCell(sheet, row, col, ph, cls) is "
          "td.cell.ccell[contenteditable][data-sheet][data-row][data-col] over the RAW row - the "
@@ -869,8 +891,8 @@ ws, r = sheet(wb, "02_Scope", "Scope and source documents")
 r = section(ws, r, "Source documents")
 src = [
     [PLAN, "Development plan, v1.3 baseline approved by Dan 2026-08-01 plus changes APPROVED BASELINE 2026-08-02. 70 requirements, 24 validation rules, 11 decisions, source schema version 5.", "Governs this document"],
-    ["templates/PRAP_SourceData_Template_v1.21.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
-    ["templates/PRAP_SourceData_Dummy_v1.23.xlsx", "16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12 'Others', 20 people, 277 assignments over 74 months.", "The acceptance data for sheet 05"],
+    ["templates/PRAP_SourceData_Template_v1.22.xlsx", "The blank source workbook as delivered.", "The schema on sheet 03 documents this file"],
+    ["templates/PRAP_SourceData_Dummy_v1.24.xlsx", "16 NewDrug CT + 17 Biosimilar CT (Healthy) + 17 Biosimilar CT (Patient) + 12 'Others', 20 people, 277 assignments over 74 months.", "The acceptance data for sheet 05"],
     ["tools/verify_source_workbook.py", "Reference implementation of parsing, validation and the monthly engine.", "Executable check on sheets 04 and 05"],
     ["docs/STEP2_OPEN_POINTS.md", "Points raised while building the template.", "Carried into sheet 10"],
 ]
@@ -898,7 +920,7 @@ r = table(ws, r, ["Deferred", "Why"], defer, [56, 76], wrap_cols=(1, 2))
 
 # ---- 03 Data schema -------------------------------------------------------
 ws, r = sheet(wb, "03_Data_Schema", "Data schema - the parse contract",
-              "Documents templates/PRAP_SourceData_Template_v1.21.xlsx. Sheet and column names are matched "
+              "Documents templates/PRAP_SourceData_Template_v1.22.xlsx. Sheet and column names are matched "
               "exactly and case-sensitively.")
 
 r = section(ws, r, "Reading the workbook")
@@ -934,6 +956,7 @@ sheets = [
     ["Assignment", "assignment_id", "Person, Project, RoleFactor", "11", "One row per person + project + role."],
     ["PersonPeriodWeight", "assignment_id + period_start", "Assignment", "5", "Optional. Overrides person_weight for its window. period_start IS part of the key: one assignment may carry several non-overlapping windows, so assignment_id alone does not identify a row. See the note below."],
     ["MonthlyEstimate", "scope + ref_id + month", "Project or Assignment", "6", "Schema 9. Monthly FTE STATED rather than calculated (REQ-CAL-18). The only sheet whose parent depends on a value IN the row: scope says whether ref_id names a project or an assignment, which is why it is part of the key. Read only where the owning row carries estimation_type = 'manual'."],
+    ["PeriodRule", "project_type + period_name", "-", "7", "Schema 17 (R-70). How Auto derivation works out each period: a milestone plus or minus days for the start and the end, by project type. Empty milestone = follows the neighbouring period."],
     ["Lists", "list_name + value", "-", "3", "Value lists, long format. Each list occupies a contiguous block."],
     ["Config", "parameter", "-", "3", "Thresholds and settings."],
 ]
@@ -1047,7 +1070,7 @@ r += 1
 
 r = section(ws, r, "Config parameters")
 cfg = [
-    ["schema_version", "Integer", "16", "Compared with the version this application expects (sheet 08)."],
+    ["schema_version", "Integer", "17", "Compared with the version this application expects (sheet 08)."],
     ["absorb_unstaffed_role_factor", "Integer", "1", "1 = where nobody holds a role on a project, its factor is added to the role named in RoleFactor.absorbed_by (sheet 05). 0 = an unstaffed role costs nothing, the arithmetic of every version before this one."],
     ["split_shared_role_fte", "Integer", "1", "1 = the role factor is divided between the people sharing a role in a month (sheet 05). 0 = each carries the whole factor, the arithmetic of every version before this one. A switch, not a threshold - so the Config reader must distinguish a value of 0 from an absent value, which is the defect this setting exposed."],
     ["fte_hours_per_month", "Decimal", "160", "Converts FTE to hours for display."],
@@ -1544,7 +1567,7 @@ ex = [
 ]
 r = table(ws, r, ["Element", "Value", "Note"], ex, [22, 62, 44], wrap_cols=(2, 3))
 r = note(ws, r, "Plus the whole dummy dataset: running tools/verify_source_workbook.py against "
-                "PRAP_SourceData_Dummy_v1.23.xlsx must give no errors and no warnings, across 62 projects, "
+                "PRAP_SourceData_Dummy_v1.24.xlsx must give no errors and no warnings, across 62 projects, "
                 "20 people, 277 assignments and 308 periods spanning 74 months. Every period set must be "
                 "contiguous, all 50 trials must carry 'Conduct (final)', 30 must also carry "
                 "'Conduct (interim)', and 12 must carry the final inspection period. No project may carry "

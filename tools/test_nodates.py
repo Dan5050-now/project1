@@ -61,7 +61,7 @@ def check(ok, label, detail=""):
         fails.append(label)
 
 
-BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.21.xlsx")
+BASE = prap_io.read_xlsx(ROOT / "templates" / "PRAP_SourceData_Template_v1.22.xlsx")
 CTA, LOCK = date(2026, 1, 15), date(2027, 6, 30)
 
 
@@ -85,6 +85,10 @@ def fixture(name, start, end, extra_project=None):
                         "person_weight": 1.0, "__row": 2}]
     S["PersonPeriodWeight"] = []
     S["MonthlyEstimate"] = []
+    # What is tested here is the BUILT-IN rule, which a plan with no Period derivation
+    # rules is derived by (R-70); the template now carries the standard rules, so they
+    # are left out. tools/test_r70.py tests the rules.
+    S["PeriodRule"] = []
     if extra_project:
         S["Project"].append(extra_project)
     out = TMP / f"{name}.xlsx"

@@ -320,8 +320,14 @@ document through the manifest rather than by sorting filenames.
 
 ### Web application (first product line)
 
-- `docs/PRAP_Development_Plan_v2.78.xlsx` — **current.** 107 requirements, 41 live
-  validation rules, source schema version 16. The latest change is **R-69**: **the cards
+- `docs/PRAP_Development_Plan_v2.79.xlsx` — **current.** 109 requirements, 42 live
+  validation rules, source schema version 17. The latest change is **R-70**: **the period
+  derivation rules are the plan's** — a new sheet, `PeriodRule` (schema 17), holds them by
+  project type: each period's start and end a milestone plus or minus days, a date whose
+  milestone is missing following the neighbouring period, a period with neither milestone
+  left out (`REQ-CAL-21`); they are kept in **Period derivation rules** beside Period
+  colours on General assumptions, and Auto derivation shows every date and how it was found
+  before writing anything (`REQ-DSH-35`). Before it, **R-69**: **the cards
   are where a record is changed** — every field, the team or assignments, the milestones
   and the periods typed into in place, through the tables' own cells (`REQ-DSH-30`);
   **the assumption matrices are typed into**, an empty place creating its row
@@ -476,7 +482,9 @@ document through the manifest rather than by sorting filenames.
   summarised on the plan's own sheet `01_Version_History`, which is the authority —
   this list summarises the landmarks, and `docs/PRAP_Manifest.json` (with a sha256 per
   file) is what says which file is current.
-- `docs/PRAP_Programming_Specification_v1.47.xlsx` — **current specification.** Schema 16.
+- `docs/PRAP_Programming_Specification_v1.48.xlsx` — **current specification.** Schema 17.
+  Records the PeriodRule sheet and the derivation by rule (`deriveByRule`, `derivationPlan`,
+  the preview `#derivedlg`) and V-41 (R-70).
   Records the card's cells (`cardCell`, `cardFields`, `cardAdd`), the matrices' cells and
   `matrixCreate`, and the Data issues tab (`ui/13f_issues.js`: `issues()`, `loadIssues()`,
   `S.issueView`, `S.issueAck`) (R-69).
@@ -508,7 +516,9 @@ document through the manifest rather than by sorting filenames.
   and states the quantity it had been missing: the Overall tab's cost follows
   `projects + people` rows × horizon months, so 50 × 200 and 100 × 150 are the same
   rendering problem.
-- `docs/PRAP_UI_Component_List_v2.13.xlsx` — **current component list.** Adds `G-14`, the
+- `docs/PRAP_UI_Component_List_v2.14.xlsx` — **current component list.** Adds `A-07`, Period
+  derivation rules, and `P-11`, the Auto derivation dialog (R-70).
+- `docs/PRAP_UI_Component_List_v2.13.xlsx` — superseded component list. Adds `G-14`, the
   Data issues tab; `G-15`, Version information; `G-16`, one band for the findings and the
   save bar; `E-07`, the card is where the record is changed; `A-06`, the matrices are typed
   into; and `O-17`, names open their cards (R-69).

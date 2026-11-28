@@ -145,9 +145,21 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(1800)
 
     # ---- 2. the derivation, against the rule ---------------------------------
+    # The BUILT-IN rule, which is what this file tests: a plan with no Period derivation
+    # rules for the type is derived by it (R-70). A blank start carries the standard rules,
+    # so they are taken out for this type first; tools/test_r70.py tests the rules.
+    pg.evaluate("""t => { S.model.raw.PeriodRule = S.model.raw.PeriodRule
+        .filter(r => r.project_type !== t); rebuild(true); renderKeepingTab(); }""",
+                PROJECT["project_type"])
+    pg.wait_for_timeout(900)
     check(not periods(pg, pid), "the project has no period rows to begin with")
     pg.click("[data-act='autoper']")
-    pg.wait_for_timeout(1600)
+    pg.wait_for_timeout(900)
+    # R-70: what it would write is shown first, and applied on the reader's word.
+    check(pg.evaluate("el('derivedlg').open") and not periods(pg, pid),
+          "it shows the periods before writing anything")
+    pg.click("#dvYes")
+    pg.wait_for_timeout(1400)
     got = periods(pg, pid)
     names = [n for _, n, _, _, _ in got]
     by = {n: (s, e, w) for _, n, s, e, w in got}
@@ -197,12 +209,14 @@ with sync_playwright() as pw:
                       "&& r.period_name === 'Start-up').weight", pid) == 1.75,
           "what it generated is editable — a weight can simply be typed over")
 
-    asked.clear()
     pg.click("[data-act='autoper']")
-    pg.wait_for_timeout(1600)
-    check(len(asked) == 1 and "Replace" in asked[0] and len(periods(pg, pid)) == 7,
-          "running it again over an existing set asks before replacing them",
-          asked[0].split("\n")[0] if asked else "nothing was asked")
+    pg.wait_for_timeout(900)
+    said = pg.inner_text("#dvBody") if pg.evaluate("el('derivedlg').open") else ""
+    pg.click("#dvYes")
+    pg.wait_for_timeout(1400)
+    check("replaces the 7 period row(s)" in said and len(periods(pg, pid)) == 7,
+          "running it again over an existing set says it will replace them before it does",
+          next((l for l in said.splitlines() if "replaces" in l), "nothing was said")[:90])
 
     pg.click("#discardBtn")
     pg.wait_for_timeout(1500)

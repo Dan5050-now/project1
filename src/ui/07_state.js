@@ -39,7 +39,7 @@ const S = {
   baseFindings:[],
   // What the last import changed about the SETTINGS, as opposed to the plan.
   cfgChanges:[],
-  genView:{pws:"matrix", rf:"matrix", lists:"matrix"},
+  genView:{pws:"matrix", rf:"matrix", lists:"matrix", prule:""},   // prule: the type shown (R-70)
   /* PER-COLUMN filters on the editable tables: sheet -> column -> Set of kept values.
      Separate from S.f above, which is the horizon-wide filter bar and narrows the whole
      page. These narrow ONE TABLE, the way a spreadsheet's column filter does, and they

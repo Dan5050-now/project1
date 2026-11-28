@@ -35,9 +35,9 @@ CONTRACT_VERSION = "1.0"
 
 # The current issue of each controlled document. check_consistency.py verifies the
 # files exist and that the versions agree with the application's provenance strip.
-PLAN = "PRAP_Development_Plan_v2.78.xlsx"
-SPEC = "PRAP_Programming_Specification_v1.47.xlsx"
-UIL = "PRAP_UI_Component_List_v2.13.xlsx"   # v1.0 until R-47: never moved when v2.0 was issued
+PLAN = "PRAP_Development_Plan_v2.79.xlsx"
+SPEC = "PRAP_Programming_Specification_v1.48.xlsx"
+UIL = "PRAP_UI_Component_List_v2.14.xlsx"   # v1.0 until R-47: never moved when v2.0 was issued
 TEMPLATE = f"PRAP_SourceData_Template_v{B.TEMPLATE_VERSION}.xlsx"
 DUMMY = f"PRAP_SourceData_Dummy_v{B.DUMMY_VERSION}.xlsx"
 DUMMY_SMALL = f"PRAP_SourceData_Dummy_10x10_v{B.DUMMY_SMALL_VERSION}.xlsx"
@@ -159,6 +159,14 @@ SHEET_ROLE = {
                         "fallback": "no row, or an empty colour, means the period is drawn gray "
                                     "unless the project chose a colour on ProjectPeriod",
                         "parent": None},
+    # Schema 17 (R-70). How Auto derivation works out each period, by type: a milestone
+    # plus or minus whole days for the start and the end. A program deriving periods
+    # itself must apply the same fallbacks - see derive_by_rule() in tools/prap_io.py.
+    "PeriodRule": {"role": "reference", "key": ["project_type", "period_name"],
+                   "fallback": "no rows for a type means the built-in derivation (clinical "
+                               "trials) or none ('Others'); an empty or unrecorded milestone "
+                               "means the date follows the neighbouring period",
+                   "parent": None},
     # Schema 16 (R-62). A review changes no figure; it says whether a month that is off
     # its standard has been looked at. It closes the month only while gap_fte is still
     # the month's gap, to the cent (V-40).

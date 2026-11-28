@@ -123,6 +123,9 @@ function buildModel(sheets){
       F.push({sev:"information", rule:"V-09", sheet:s, row:"",
         msg:`This workbook has no ${s} sheet, so it carries `
           + (s === "MonthlyEstimate" ? `no manual monthly figures`
+             : s === "PeriodRule" ? `no period derivation rules (Auto derivation uses the `
+                                    + `built-in rule for clinical trials)`
+             : s === "IssueReview" ? `no reviews of months off their standard`
                                      : `no default period colours (every period is gray `
                                        + `unless a project chose one)`)
           + ` — which is what a plan written before schema ${LATER_SHEETS[s]} looks like. `
@@ -140,6 +143,7 @@ function buildModel(sheets){
 
   const M = {
     projects:{}, milestones:{}, msHighlight:{}, hlLabels:{}, perHlLabels:{}, periodHl:{}, reviews:{}, periods:{}, people:{}, assignments:[],
+    periodRules:{},
     ppw:{}, pws:{}, rf:{}, rfRoles:{}, rfAbsorb:{}, lists:{}, config:{}, raw, findings:F,
   };
   for (const r of raw.Lists) if (r.list_name) (M.lists[r.list_name] ||= []).push(r.value);
@@ -310,6 +314,15 @@ function buildModel(sheets){
     if (!(key in M.reviews)) M.reviews[key] = r;
   }
 
+  /* ---- how periods are derived, by project type (schema 17, R-70) ----------------
+     One rule per type and period; the first row wins and a second is V-41 rather than a
+     silent overwrite. A type with rules is derived by them; see derivePeriods(). */
+  for (const r of (raw.PeriodRule || [])){
+    if (!r.project_type || !r.period_name) continue;
+    const list = (M.periodRules[r.project_type] ||= []);
+    if (!list.some(x => x.period_name === r.period_name)) list.push(r);
+  }
+
   // ---- periods: use what is in the file; derive where a trial has none -------
   for (const r of raw.ProjectPeriod){
     if (r.__new && !r.period_name) continue;
@@ -322,7 +335,9 @@ function buildModel(sheets){
     if (tok) M.perHlLabels[tok] ||= String(r.period_highlight).trim();
   }
   for (const [pid, proj] of Object.entries(M.projects)){
-    if (!M.periods[pid] && CLINICAL_TYPES.has(proj.project_type)){
+    // A type the plan states rules for is derived by them, 'Others' included (R-70).
+    const ruled = rulesFor(M, proj.project_type);
+    if (!M.periods[pid] && (CLINICAL_TYPES.has(proj.project_type) || ruled)){
       /* One project must not be able to cost the user the whole file.
          The derivation reads dates that a hand-built plan may not carry yet, and until
          now anything it threw escaped buildModel: the load failed outright, with a raw
@@ -334,7 +349,7 @@ function buildModel(sheets){
          says so loudly, names it, and lets the other 61 projects load. */
       let derived = null;
       try {
-        derived = derivePeriods(proj, M.milestones[pid] || {});
+        derived = derivePeriods(proj, M.milestones[pid] || {}, M);
       } catch (e){
         F.push({sev:"error", rule:"V-16", sheet:"Project", row:proj.__row,
           msg:`Project ${pid}: its periods could not be derived from its milestones `
@@ -345,6 +360,14 @@ function buildModel(sheets){
       if (derived){
         M.periods[pid] = derived.map(d => ({...d, project_id:pid, __derived:true,
           weight: stdWeight(M, proj, d.period_name) ?? 1.00}));
+      } else if (ruled){
+        const named = [...new Set(ruled.flatMap(r => [r.start_milestone, r.end_milestone])
+          .filter(Boolean))];
+        F.push({sev:"error", rule:"V-16", sheet:"Project", row:proj.__row,
+          msg:`Project ${pid} has no periods and cannot derive them by the rules for `
+            + `'${proj.project_type}' on General assumptions — none of the milestones they `
+            + `count from is recorded for it (${named.join(", ") || "they name none"}). `
+            + `Add one of those milestones, or enter its periods by hand.`});
       } else {
         F.push({sev:"error", rule:"V-16", sheet:"Project", row:proj.__row,
           msg:`Project ${pid} has no periods and cannot derive them — it is missing CTA submission `
@@ -477,6 +500,53 @@ function validate(M, F){
           `period_highlight '${v}' for '${r.period_name}' names no colour this application `
           + `can draw, so that period is drawn gray. `
           + (offered ? `Valid: ${offered}.` : `Expected one of: ${HIGHLIGHT_WORDS.join(", ")}.`));
+      }
+    }
+  }
+
+  /* V-41: a period derivation rule that cannot do what it says (schema 17, R-70) - given
+     twice, for a period its type does not have, for a type the plan does not list,
+     counting from a milestone nobody records under that name, or a number of days with no
+     milestone to count from. Each one quietly derives a period differently from what the
+     rule-writer meant, or not at all, so it is said. A warning: the rows are kept, and a
+     rule moves no figure until Auto derivation is run, or a project has no periods. */
+  {
+    const seen = new Set(), types = M.lists.project_type || [], ms = M.lists.milestone_name || [];
+    for (const r of (M.raw.PeriodRule || [])){
+      if (!r.project_type && !r.period_name) continue;
+      const who = `The derivation rule for ${r.project_type || "(no type)"} / ${r.period_name || "(no period)"}`;
+      if (!r.project_type || !r.period_name){
+        add("warning","V-41","PeriodRule",r.__row, `${who} needs both a project type and a `
+          + `period; until it has them it derives nothing.`);
+        continue;
+      }
+      const k = r.project_type + "\u0000" + r.period_name;
+      if (seen.has(k))
+        add("warning","V-41","PeriodRule",r.__row, `${who} is given more than once; the first `
+          + `row is used and this one is ignored.`);
+      seen.add(k);
+      if (types.length && !types.includes(r.project_type))
+        add("warning","V-41","PeriodRule",r.__row, `${who}: '${r.project_type}' is not a project `
+          + `type in the list, so no project is derived by it.`);
+      else if (!periodOrder(M, r.project_type).includes(r.period_name))
+        add("warning","V-41","PeriodRule",r.__row, `${who}: '${r.period_name}' is not one of the `
+          + `periods of a ${CLINICAL_TYPES.has(r.project_type) ? "clinical trial" : "'Others' project"} `
+          + `(${periodOrder(M, r.project_type).join(", ")}), so a derived period of that name would `
+          + `be refused (V-15).`);
+      for (const [side, mc, oc] of [["start", "start_milestone", "start_offset_days"],
+                                    ["end", "end_milestone", "end_offset_days"]]){
+        const m = r[mc], o = num(r[oc]);
+        if (m && ms.length && !ms.includes(m))
+          add("warning","V-41","PeriodRule",r.__row, `${who}: its ${side} counts from '${m}', `
+            + `which is not in the milestone list, so it is found only where a project records `
+            + `a milestone with exactly that name.`);
+        if (!m && o !== null && o !== undefined && o !== 0)
+          add("warning","V-41","PeriodRule",r.__row, `${who}: its ${side} is ${o} days from no `
+            + `milestone, so the days are ignored — the ${side} follows the `
+            + `${side === "start" ? "previous" : "next"} period.`);
+        if (o !== null && o !== undefined && Math.round(o) !== o)
+          add("warning","V-41","PeriodRule",r.__row, `${who}: ${o} days is not a whole number; `
+            + `it is counted as ${Math.round(o)}.`);
       }
     }
   }

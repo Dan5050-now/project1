@@ -582,6 +582,9 @@ nav button[aria-selected="true"]::before{opacity:1;
 /* Charts are drawn at a fixed height, so their box only ever needs to grow sideways -
    but it is still bounded on both axes, and both scrollbars appear when they are needed. */
 .scrollx.fit{max-height:min(620px,70vh)}
+/* Period colours beside the derivation rules (R-70): the rules want the room. */
+.two.prg{grid-template-columns:minmax(0,1fr) minmax(0,1.7fr)}
+@media(max-width:1100px){.two.prg{grid-template-columns:1fr}}
 /* A list read top to bottom with the page, not in a window of its own (R-69). */
 .scrollx.free{max-height:none}
 /* Sticky headers in EVERY scroll region, not just the short ones. A month-column
@@ -1773,3 +1776,34 @@ td.msdot .dot.key{background:var(--crit)}
 .iempty strong{color:var(--ink)}
 .iok{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
   background:var(--good);color:var(--surface);font-size:20px;font-weight:700}
+
+/* ---- Period derivation rules and Auto derivation's preview (R-70) ----------------- */
+.prtypes{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 10px}
+.prtypes .btn.tiny{font-size:var(--t-sm);padding:4px 10px}
+.prtypes .btn.tiny.on{background:var(--accent);color:#fff}
+.prtypes .btn.tiny .n{opacity:.75;font-variant-numeric:tabular-nums;margin-left:4px}
+.prt th.pn{font-size:var(--t-md);font-weight:600;color:var(--ink);white-space:nowrap;text-align:left;
+  padding:6px 10px 6px 0;border-bottom:1px solid var(--grid);vertical-align:middle}
+.prt td.ccell[data-col$="_milestone"]{min-width:150px;white-space:nowrap}
+#dvTitle .tr{color:var(--muted);font-weight:500;font-size:var(--t-sm);margin-left:6px}
+.prt td.ccell.off{width:64px;white-space:nowrap}
+.prt td.ccell:not(.off){min-width:120px}
+.prt tr.norule th.pn{color:var(--ink2);font-weight:500}
+.prt tr.norule td{font-size:var(--t-sm)}
+.prt tr.norule .btn.tiny{margin-left:6px}
+.prt tr.odd td{background:var(--underbg)}
+.prfoot{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px}
+.prfoot .note{margin:0}
+.prcopy{font-size:var(--t-sm);color:var(--ink2);display:inline-flex;align-items:center;gap:8px}
+.prcopy select{font:inherit;font-size:var(--t-sm);padding:3px 6px;border:1px solid var(--base);
+  border-radius:7px;background:var(--surface);color:var(--ink)}
+.dvt td{vertical-align:top}
+.dvt td.estd{color:var(--underink);font-weight:600}
+.dvhow{color:var(--ink2);font-size:var(--t-sm)}
+.dvhow.est{color:var(--underink)}
+.estpill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.02em;padding:1px 6px;
+  border-radius:999px;background:var(--underbg);color:var(--underink);margin-right:2px;
+  vertical-align:1px}
+.dvh{font-size:var(--t-md);font-weight:650;margin:16px 0 4px}
+.dvl{margin:0;padding-left:18px;font-size:var(--t-sm);color:var(--ink2);line-height:1.6}
+.dvl.warn li{color:var(--underink)}

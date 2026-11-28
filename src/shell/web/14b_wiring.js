@@ -321,6 +321,15 @@ document.addEventListener("click", e => {
     S.expanded.has(k) ? S.expanded.delete(k) : S.expanded.add(k);
     renderKeepingTab(); return;
   }
+  // Which project type's derivation rules are shown (R-70).
+  const prt = e.target.closest("[data-prtype]");
+  if (prt){
+    S.genView.prule = prt.dataset.prtype;
+    keepScroll(() => renderTab("t-gen"));
+    const b = document.querySelector(`#t-gen [data-prtype="${CSS.escape(prt.dataset.prtype)}"]`);
+    if (b) b.focus({preventScroll:true});
+    return;
+  }
   const vt = e.target.closest("[data-setview]");
   if (vt){
     const [id, mode] = vt.dataset.setview.split("|");
@@ -379,6 +388,17 @@ document.addEventListener("click", e => {
     if (act.dataset.act === "blankper") blankPeriods(act.dataset.pid);
     if (act.dataset.act === "estswitch") switchEstimation(act.dataset.scope, act.dataset.id);
     if (act.dataset.act === "estfill") fillEstimates(act.dataset.scope, act.dataset.id);
+    /* Period derivation rules (R-70): a rule for a period that has none - with the caret
+       put in it - and a type's standard rules laid out. */
+    if (act.dataset.act === "pruleadd"){
+      const r = addPeriodRule(act.dataset.type, act.dataset.period);
+      rebuild(true);
+      renderKeepingTab();
+      const td = r && document.querySelector(`#t-gen td[data-sheet="PeriodRule"]`
+        + `[data-row="${r.__row}"][data-col="end_milestone"]`);
+      if (td) td.focus();
+    }
+    if (act.dataset.act === "prulestd") layOutStandardRules(act.dataset.type);
     /* The two levels of a manual figure are on different tabs, and the question the
        panel raises - "which assignment is stated, and what does it say" - is only
        answerable on the other one. So it takes you there, with the row already
@@ -471,6 +491,14 @@ document.addEventListener("click", e => {
   });
   if (ren) startRename(ren.closest("td"));
   else if (card) openCard(card.dataset.card, card.dataset.cid, !!card.closest("#carddlg"));
+});
+/* One type's derivation rules copied to another (R-70). The list puts itself back to its
+   prompt whatever is answered, so choosing the same type twice asks twice. */
+document.addEventListener("change", e => {
+  if (e.target.id !== "pruleCopy" || !e.target.value) return;
+  const from = e.target.dataset.from, to = e.target.value;
+  e.target.value = "";
+  copyPeriodRules(from, to);
 });
 /* F2 on a name's link renames it, as it would a cell in a spreadsheet (R-67). */
 document.addEventListener("keydown", e => {

@@ -35,7 +35,7 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = (ROOT / "app" / "PRAP.html").as_uri()
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
-BIG = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.23.xlsx"
+BIG = ROOT / "templates" / "PRAP_SourceData_Dummy_v1.24.xlsx"
 TMP = pathlib.Path(tempfile.mkdtemp(prefix="prap_r68_"))
 TL = '#t-overall .panel[data-panel="timeline"]'
 

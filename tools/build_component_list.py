@@ -30,7 +30,7 @@ rendering budget; so X-04 is now NOT BUILT AND NOT REQUIRED, with its figures. M
 
     python tools/build_component_list.py
 
-Output: docs/PRAP_UI_Component_List_v2.13.xlsx
+Output: docs/PRAP_UI_Component_List_v2.14.xlsx
 """
 
 from pathlib import Path
@@ -40,7 +40,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-VERSION = "2.13"
+VERSION = "2.14"
 DATE = "2026-11-27"
 PROTOTYPE = "app/PRAP.html"
 OUT = Path(__file__).resolve().parents[1] / "docs" / f"PRAP_UI_Component_List_v{VERSION}.xlsx"
@@ -551,6 +551,23 @@ C = [
      "own year line; Today is marked in it, clear of the years' labels. A one-project timeline "
      "keeps its years in the drawing.",
      "REQ-DSH-27", A, "", "R-68."),
+    ("A-07", "Assumptions tab", "[NEW v2.14] Period derivation rules",
+     "Beside Period colours: how Auto derivation works out each period, by project type - a "
+     "button per type with its number of rules; for the type shown, every period of the type on "
+     "a line: the milestone it starts from and its +/- days, the milestone it ends on and its "
+     "+/- days, a note, and a delete; an empty milestone reads 'after the previous period' or "
+     "'until the next period'. A period without a rule says it is not derived and offers + Add "
+     "a rule. A clinical type with no rules offers 'Lay out the standard rules' (and is derived "
+     "by the built-in rule until then); a type with rules can be copied to another.",
+     "REQ-DSH-35, REQ-CAL-21", A, "", "R-70."),
+    ("P-11", "Project tab", "[NEW v2.14] Auto derivation dialog",
+     "Opened by Auto derivation on a project's Periods (its tab, its card, or Data issues): "
+     "every period it would write with its dates, its length in days, how its start and end "
+     "were found - a milestone and its days, the neighbouring period, the project's own dates, "
+     "or halfway - with each estimate marked, the standard weight it would take, the periods "
+     "left out and why, and where periods would not meet. Apply replaces the project's periods "
+     "(an ordinary unsaved change); Cancel changes nothing.",
+     "REQ-DSH-35, REQ-CAL-21", A, "", "R-70."),
     ("G-14", "Global", "[NEW v2.13] Data issues tab",
      "A fifth tab, after General assumptions: every finding in the plan and every person above "
      "the ceiling or under the floor for a run of months from this month on, as a list to work "

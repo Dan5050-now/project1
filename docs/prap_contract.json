@@ -4,7 +4,7 @@
  "generated_by": "tools/build_ai_reference.py",
  "application": {
   "file": "app/PRAP.html",
-  "version": "1.67",
+  "version": "1.68",
   "kind": "single-file offline HTML application, no network access, no install",
   "reads": [
    "Excel .xlsx source workbook",
@@ -22,14 +22,14 @@
    "both_end_the_same": "A plan started blank exports to the same .xlsx and the same .prap.json as any other, so nothing downstream needs to know which way it began."
   }
  },
- "schema_version": 16,
+ "schema_version": 17,
  "documents": {
-  "development_plan": "docs/PRAP_Development_Plan_v2.78.xlsx",
-  "programming_specification": "docs/PRAP_Programming_Specification_v1.47.xlsx",
-  "ui_component_list": "docs/PRAP_UI_Component_List_v2.13.xlsx",
-  "source_data_template": "templates/PRAP_SourceData_Template_v1.21.xlsx",
-  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.23.xlsx",
-  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.15.xlsx",
+  "development_plan": "docs/PRAP_Development_Plan_v2.79.xlsx",
+  "programming_specification": "docs/PRAP_Programming_Specification_v1.48.xlsx",
+  "ui_component_list": "docs/PRAP_UI_Component_List_v2.14.xlsx",
+  "source_data_template": "templates/PRAP_SourceData_Template_v1.22.xlsx",
+  "worked_example_large": "templates/PRAP_SourceData_Dummy_v1.24.xlsx",
+  "worked_example_small": "templates/PRAP_SourceData_Dummy_10x10_v1.16.xlsx",
   "agent_guide": "docs/PRAP_AI_Agent_Guide.md"
  },
  "sheets": {
@@ -491,6 +491,64 @@
     }
    ]
   },
+  "PeriodRule": {
+   "role": "reference",
+   "parent_sheet": null,
+   "key": [
+    "project_type",
+    "period_name"
+   ],
+   "identifier_column": "project_type",
+   "derived_columns": [],
+   "date_columns": [],
+   "columns": [
+    {
+     "name": "project_type",
+     "type": "identifier",
+     "editable": true,
+     "note": "The project type this rule is for. Every project of the type is derived by it.",
+     "value_list": "project_type"
+    },
+    {
+     "name": "period_name",
+     "type": "identifier",
+     "editable": true,
+     "note": "The period, from the type's own period set. One row per type and period."
+    },
+    {
+     "name": "start_milestone",
+     "type": "text",
+     "editable": true,
+     "note": "The milestone the period STARTS from. EMPTY = the day after the previous period ends (the first period: the project's start). A milestone the project has not recorded counts as empty.",
+     "value_list": "milestone_name"
+    },
+    {
+     "name": "start_offset_days",
+     "type": "text",
+     "editable": true,
+     "note": "Days added to it: -1 the day before, 1 the day after, 0 the day itself."
+    },
+    {
+     "name": "end_milestone",
+     "type": "text",
+     "editable": true,
+     "note": "The milestone the period ENDS on. EMPTY = the day before the next period starts (the last period: the project's end). A period with NEITHER milestone recorded is left out.",
+     "value_list": "milestone_name"
+    },
+    {
+     "name": "end_offset_days",
+     "type": "text",
+     "editable": true,
+     "note": "Days added to it: -92 is about three months before."
+    },
+    {
+     "name": "note_1",
+     "type": "text",
+     "editable": true,
+     "note": "Free text. e.g. why the rule is what it is."
+    }
+   ]
+  },
   "Person": {
    "role": "master",
    "parent_sheet": null,
@@ -890,6 +948,7 @@
   "PeriodFTEStandard",
   "RoleFactor",
   "PeriodHighlight",
+  "PeriodRule",
   "Person",
   "Assignment",
   "PersonPeriodWeight",
@@ -1049,7 +1108,7 @@
  },
  "config": {
   "schema_version": {
-   "default": 16,
+   "default": 17,
    "meaning": "Structure version of this workbook. The application warns on a mismatch."
   },
   "fte_hours_per_month": {
@@ -1481,6 +1540,14 @@
    "effect": "Information - a gone issue's review is kept as history; a moved gap's review no longer closes the month, which is shown open and marked 're-check'. Never a refusal.",
    "severity_reported_by_app": [
     "information"
+   ],
+   "enforced_by_application": true
+  },
+  "V-41": {
+   "statement": "A PeriodRule row cannot do what it says: given twice for a type and period, for a period the type does not have, for a type the plan does not list, counting from a milestone not in the milestone list, days with no milestone to count from, or a number of days that is not whole.",
+   "effect": "Warning - the row is kept; each case derives a period differently from what was meant, or not at all, so it is said. Never a refusal: a rule moves no figure until it derives a period.",
+   "severity_reported_by_app": [
+    "warning"
    ],
    "enforced_by_application": true
   }

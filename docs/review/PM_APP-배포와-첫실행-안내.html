@@ -128,7 +128,7 @@
 <div class="wrap">
 
 <header>
-  <p class="kicker">PM_APP 1.41 · Windows</p>
+  <p class="kicker">PM_APP 1.42 · Windows</p>
   <h1>PM_APP 배포와 첫 실행</h1>
   <p class="dek">어느 PC에 어떤 폴더를 두고, 어떤 순서로 실행하는지. <strong>사용자 PC에는 아무것도 설치하지 않습니다</strong> — 파이썬이 없는 PC도 포함해서입니다.</p>
   <dl class="facts">
@@ -138,6 +138,13 @@
     <div><dt>사용자 1인 소요</dt><dd>2~3분</dd></div>
   </dl>
 </header>
+
+<div class="note"><span class="lbl">1.42에서 달라진 것</span>
+<p><strong>기간 자동 도출(Auto derivation) 규칙을 직접 정합니다.</strong> General assumptions 탭의 <strong>Period colours</strong> 옆에 <strong>Period derivation rules</strong> 칸이 생겼습니다. 과제 유형(project type)별로, 기간마다 시작일과 종료일을 "기준 마일스톤 ± 일수"로 정합니다 — 예: Start-up 시작 = Protocol (v1) <strong>+1</strong>, 종료 = First SIV <strong>0</strong>. 마일스톤보다 앞이면 음수(−), 뒤면 양수(+ 기호는 생략 가능)입니다. 유형 단추로 유형을 바꾸고, 칸을 눌러 바로 고칩니다. 규칙이 없는 기간은 "No rule"로 보이며 <strong>+ Add a rule</strong>로 추가합니다. 한 유형의 규칙을 다른 유형으로 복사할 수도 있습니다.</p>
+<p><strong>마일스톤이 없을 때는 앞뒤 기간으로 날짜를 정합니다.</strong> 시작 마일스톤이 기록되어 있지 않으면 <strong>앞 기간 종료일 다음 날</strong>, 종료 마일스톤이 없으면 <strong>다음 기간 시작일 전날</strong>이 됩니다. 첫 기간은 과제 시작일, 마지막 기간은 과제 종료일을 씁니다. 앞뒤 양쪽 모두 모르면 그 사이의 중간으로 둡니다. 시작 · 종료 마일스톤이 <strong>둘 다</strong> 기록되지 않은 기간은 그 과제에 없는 기간으로 보고 빼 둡니다 (예: interim DB lock 이 없으면 interim 기간 없음).</p>
+<p><strong>적용 전에 미리 보여 줍니다.</strong> Periods 의 <strong>Auto derivation</strong>을 누르면, 만들 기간과 날짜, 각 날짜를 어떻게 정했는지(마일스톤 ± 일수 / 앞뒤 기간 / 추정)가 표로 나오고, 추정한 날짜는 <strong>estimate</strong>로 표시됩니다. <strong>Apply</strong>를 눌러야 기록되며(저장 전까지 임시), Cancel 은 아무것도 바꾸지 않습니다.</p>
+<p><strong>파일 구조(schema)가 17 로 올라갔습니다.</strong> 새 시트 <code>PeriodRule</code> 이 추가되었고, 새 템플릿 · 예제 파일에는 임상 3개 유형의 표준 규칙이 들어 있습니다. 이전 파일(schema 16)도 그대로 열리며, 규칙이 없으면 예전과 똑같은 기본(built-in) 규칙으로 도출합니다 — 규칙 칸의 <strong>Lay out the standard rules</strong>로 표준 규칙을 넣을 수 있습니다. 내보내기(Export)를 하면 새 시트가 함께 저장됩니다.</p>
+<p><strong>숫자는 달라지지 않습니다</strong> — 규칙은 Auto derivation 을 실행하거나 기간이 없는 과제를 계산할 때만 쓰입니다.</p></div>
 
 <div class="note"><span class="lbl">1.41에서 달라진 것</span>
 <p><strong>카드에서 바로 고칩니다.</strong> 과제 · 사람 카드(이름을 누르면 뜨는 팝업)의 모든 값이 이제 표의 칸과 똑같이 고칠 수 있는 칸입니다 — 맨 위 <strong>Details</strong> 의 모든 항목, 팀(사람 카드는 배정)의 역할 · 시작 · 끝 · 가중치, 마일스톤과 기간. 값 목록 · 달력 · 검사 · 변경 기록 · Save 가 표에서와 똑같이 작동하고, 규칙에 어긋나는 값은 되돌려지며 그 이유가 카드 안에 나옵니다. 마일스톤 · 기간은 <strong>+ Add</strong> 로 더하고 ✕ 로 지웁니다. 카드 오른쪽 위의 <strong>Save</strong> 로 바로 저장할 수 있습니다.</p>
@@ -282,7 +289,7 @@
   <li><div>
     <b>런타임을 앱 폴더에 넣고 압축본 만들기</b>
     <pre><code>python tools\bundle_runtime.py python-3.13.15-embed-amd64.zip --zip</code></pre>
-    <p><code>dist\PM_APP_python_v1.41_with_runtime.zip</code> 이 만들어집니다. <strong>이것이 나눠 주실 파일입니다.</strong></p>
+    <p><code>dist\PM_APP_python_v1.42_with_runtime.zip</code> 이 만들어집니다. <strong>이것이 나눠 주실 파일입니다.</strong></p>
     <p><strong>파이썬 압축을 푸는 일은 여기서 끝납니다.</strong> 이 명령이 1번에서 받은 zip 을 앱 폴더 안 <code>runtime\</code> 으로 풀어 넣고, 그 상태를 통째로 다시 압축합니다. 사용자 PC에서는 파이썬을 다시 풀 일이 없습니다.</p>
     <div class="note stop"><span class="lbl">이 순서를 반드시 지키십시오</span>
     <p><code>build_python_app.py --zip</code> 으로 압축하지 마십시오. 그 명령은 <strong>먼저 다시 빌드</strong>하는데, 다시 빌드하면 앱 폴더가 비워지면서 <strong>런타임도 함께 지워집니다.</strong> 그렇게 만든 압축본에는 런타임이 없고, 아무 경고도 없습니다.</p>
@@ -317,7 +324,7 @@
 <ol class="steps">
   <li><div>
     <b>압축본을 내 PC로 복사</b>
-    <p><code>\\서버\공유\PRAP\배포\</code> 에서 <code>PM_APP_python_v1.41_with_runtime.zip</code> 을 <strong>자기 PC로 복사</strong>하십시오.</p>
+    <p><code>\\서버\공유\PRAP\배포\</code> 에서 <code>PM_APP_python_v1.42_with_runtime.zip</code> 을 <strong>자기 PC로 복사</strong>하십시오.</p>
   </div></li>
 
   <li><div>
@@ -349,7 +356,7 @@
   <li><div>
     <b>PM_APP.cmd 더블클릭</b>
     <p>검은 창이 뜨고 브라우저가 열립니다. 창에는 이렇게 나옵니다.</p>
-    <pre class="out"><code>  version      1.41
+    <pre class="out"><code>  version      1.42
   application  C:\Users\...\Documents\PM_APP
   your data    C:\Users\...\Documents\PM_APP\data\users\&lt;내계정&gt;
   chosen by    3 - writable data\ beside the application
@@ -482,7 +489,7 @@
 <p><strong>폴더를 지우면 끝입니다.</strong> 레지스트리에 남는 것도, PATH에 더해진 것도, 시작 프로그램에 등록된 것도 없습니다. 공유 폴더의 계획서는 그대로 남습니다.</p>
 
 <footer>
-  <p>이 안내서의 경로·화면 출력·폴더 구조는 모두 PM_APP 1.41 을 실제로 실행해 얻은 것입니다. 버전이 올라가면 <code>version.txt</code> 와 압축본 이름이 달라집니다.</p>
+  <p>이 안내서의 경로·화면 출력·폴더 구조는 모두 PM_APP 1.42 을 실제로 실행해 얻은 것입니다. 버전이 올라가면 <code>version.txt</code> 와 압축본 이름이 달라집니다.</p>
 </footer>
 
 </div>

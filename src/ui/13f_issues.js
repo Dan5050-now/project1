@@ -73,6 +73,7 @@ const ISSUE_SHEET_CAT = {
   Person:"pers", Assignment:"pers", PersonPeriodWeight:"pers",
   MonthlyEstimate:"fig",
   PeriodFTEStandard:"asm", RoleFactor:"asm", Lists:"asm", Config:"asm", PeriodHighlight:"asm",
+  PeriodRule:"asm",
 };
 /* The field a rule is about, where its message does not name the column itself - the
    editor puts these first and marks them. Every other rule names its column in so many
@@ -96,6 +97,7 @@ const ISSUE_IDENT = {
 const ISSUE_GEN_PANEL = {
   PeriodFTEStandard:["gen-pws", "Standard period FTE"], RoleFactor:["gen-rf", "Role factors"],
   PeriodHighlight:["gen-phl", "Period colours"], Config:["gen-cfg", "Configuration"],
+  PeriodRule:["gen-prule", "Period derivation rules"],
   Lists:["gen-lists", "Value lists"],
 };
 

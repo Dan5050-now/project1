@@ -71,12 +71,14 @@ NUM_COLS = {
     "PersonPeriodWeight": {"weight_override"},
     "MonthlyEstimate": {"fte"},
     "PeriodHighlight": set(),
+    "PeriodRule": {"start_offset_days", "end_offset_days"},
     "IssueReview": {"gap_fte"},
     "Lists": set(), "Config": set(),
 }
 # Sheets a later schema added; a file written before one has none of what it holds,
 # which is a complete plan. Mirrors LATER_SHEETS in src/core/03_parse.js.
-LATER_SHEETS = {"MonthlyEstimate": 9, "PeriodHighlight": 15, "IssueReview": 16}
+LATER_SHEETS = {"MonthlyEstimate": 9, "PeriodHighlight": 15, "IssueReview": 16,
+                "PeriodRule": 17}
 class _ClinicalTypes:
     """Which project types are clinical trials.
 
@@ -472,6 +474,78 @@ def derive_periods(proj, ms):
              "__derived": True} for i, (n, s, e) in enumerate(kept)]
 
 
+CLINICAL_PERIODS = ["Before-Start-up", "Start-up", "Conduct (interim)", "Close-out (interim)",
+                    "Conduct (final)", "Close-out (final)", "After Close-out (final)"]
+OTHER_PERIODS = ["Planning", "Develop", "Close"]
+
+
+def period_order(lists, ptype):
+    """The periods of a type in the order a project lives through them - the plan's own
+    list where it has one. Mirrors periodOrder() in src/core/04_derive.js."""
+    own = lists.get("period_name_clinical" if ptype in CLINICAL_TYPES else "period_name_others")
+    if own:
+        return [str(x) for x in own]
+    return CLINICAL_PERIODS if ptype in CLINICAL_TYPES else OTHER_PERIODS
+
+
+def derive_by_rule(proj, ms, rules, order):
+    """Periods by the plan's own rules (schema 17, R-70), identical to deriveByRule() in
+    src/core/04_derive.js: each date a milestone plus or minus days; a period with neither
+    milestone recorded is left out; a missing date follows its neighbours - the day after
+    the previous period ends, the day before the next one starts, the project's own dates
+    at either end - and a boundary unknown from both sides is put halfway. Returns the
+    periods, or None where nothing could be placed."""
+    one = timedelta(days=1)
+
+    def days(v):
+        n = _as_num(v)
+        return 0 if n is None else int(round(n))
+
+    def rank(n):
+        return order.index(n) if n in order else len(order)
+
+    segs = []
+    for r in sorted(rules, key=lambda r: (rank(r.get("period_name")), r.get("__row") or 0)):
+        sm, em = r.get("start_milestone") or None, r.get("end_milestone") or None
+        sd = ms.get(sm)[0] if sm and ms.get(sm) else None
+        ed = ms.get(em)[-1] if em and ms.get(em) else None
+        if not sd and not ed:
+            continue
+        segs.append({"name": r.get("period_name"),
+                     "start": sd + timedelta(days=days(r.get("start_offset_days"))) if sd else None,
+                     "end": ed + timedelta(days=days(r.get("end_offset_days"))) if ed else None})
+    if not segs:
+        return None
+    if not segs[0]["start"] and proj.get("start_date"):
+        segs[0]["start"] = proj["start_date"]
+    if not segs[-1]["end"] and proj.get("end_date"):
+        segs[-1]["end"] = proj["end_date"]
+    moved = True
+    while moved:
+        moved = False
+        for i in range(1, len(segs)):
+            if not segs[i]["start"] and segs[i - 1]["end"]:
+                segs[i]["start"] = segs[i - 1]["end"] + one
+                moved = True
+        for i in range(len(segs) - 2, -1, -1):
+            if not segs[i]["end"] and segs[i + 1]["start"]:
+                segs[i]["end"] = segs[i + 1]["start"] - one
+                moved = True
+        if moved:
+            continue
+        for i in range(len(segs) - 1):
+            a, b = segs[i], segs[i + 1]
+            if not a["end"] and not b["start"] and a["start"] and b["end"] and b["end"] >= a["start"]:
+                a["end"] = a["start"] + timedelta(days=((b["end"] - a["start"]).days) // 2)
+                b["start"] = a["end"] + one
+                moved = True
+    kept = [g for g in segs if g["start"] and g["end"] and g["end"] >= g["start"]]
+    if not kept:
+        return None
+    return [{"period_name": g["name"], "period_seq": i + 1, "period_start": g["start"],
+             "period_end": g["end"], "__derived": True} for i, g in enumerate(kept)]
+
+
 class Model:
     def __init__(self, sheets):
         self.raw = sheets
@@ -588,18 +662,33 @@ class Model:
                                 scope_of(r), r.get("period_name"),
                                 r["absorbed_by"])].append(r.get("role_name"))
 
+        # Schema 17 (R-70): how periods are derived, by project type; first row wins.
+        self.period_rules = defaultdict(list)
+        for r in sheets.get("PeriodRule", []) or []:
+            t, p = r.get("project_type"), r.get("period_name")
+            if t and p and not any(x.get("period_name") == p for x in self.period_rules[t]):
+                self.period_rules[t].append(r)
+
         self.periods = defaultdict(list)
         for r in sheets["ProjectPeriod"]:
             self.periods[r.get("project_id")].append(r)
         for pid, proj in self.projects.items():
-            if pid not in self.periods and proj.get("project_type") in CLINICAL_TYPES:
-                got = derive_periods(proj, self.milestones.get(pid, {}))
+            ruled = self.period_rules.get(proj.get("project_type"))
+            if pid not in self.periods and (proj.get("project_type") in CLINICAL_TYPES or ruled):
+                got = (derive_by_rule(proj, self.milestones.get(pid, {}), ruled,
+                                      period_order(self.lists, proj.get("project_type")))
+                       if ruled else derive_periods(proj, self.milestones.get(pid, {})))
                 if got:
                     for d in got:
                         d["project_id"] = pid
                         w = std_weight(self, proj, d["period_name"])
                         d["weight"] = 1.00 if w is None else w
                     self.periods[pid] = got
+                elif ruled:
+                    self.add("error", "V-16", "Project", proj.get("__row", ""),
+                             f"Project {pid} has no periods and cannot derive them by the "
+                             f"rules for '{proj.get('project_type')}' - none of the milestones "
+                             f"they count from is recorded for it.")
                 else:
                     self.add("error", "V-16", "Project", proj.get("__row", ""),
                              f"Project {pid} has no periods and cannot derive them - it is "
@@ -749,6 +838,49 @@ def validate(M):
                   f"can draw, so that period is drawn gray. "
                   + (f"Valid: {offered}." if offered
                      else f"Expected one of: {', '.join(HIGHLIGHT_WORDS)}."))
+
+    # V-41: a period derivation rule that cannot do what it says (schema 17, R-70) -
+    # given twice, for a period its type does not have, for a type the plan does not list,
+    # from a milestone not in the list, or days with no milestone. Mirrors core/05_model.js.
+    seen, types = set(), M.lists.get("project_type", [])
+    mlist = M.lists.get("milestone_name", [])
+    for r in M.raw.get("PeriodRule", []) or []:
+        t, p = r.get("project_type"), r.get("period_name")
+        if not t and not p:
+            continue
+        who = f"The derivation rule for {t or '(no type)'} / {p or '(no period)'}"
+        if not t or not p:
+            M.add("warning", "V-41", "PeriodRule", r.get("__row", ""),
+                  f"{who} needs both a project type and a period; until it has them it "
+                  f"derives nothing.")
+            continue
+        if (t, p) in seen:
+            M.add("warning", "V-41", "PeriodRule", r.get("__row", ""),
+                  f"{who} is given more than once; the first row is used and this one is "
+                  f"ignored.")
+        seen.add((t, p))
+        if types and t not in types:
+            M.add("warning", "V-41", "PeriodRule", r.get("__row", ""),
+                  f"{who}: '{t}' is not a project type in the list, so no project is "
+                  f"derived by it.")
+        elif p not in period_order(M.lists, t):
+            M.add("warning", "V-41", "PeriodRule", r.get("__row", ""),
+                  f"{who}: '{p}' is not one of the periods of this type, so a derived period "
+                  f"of that name would be refused (V-15).")
+        for side, mc, oc in (("start", "start_milestone", "start_offset_days"),
+                             ("end", "end_milestone", "end_offset_days")):
+            m, o = r.get(mc), _as_num(r.get(oc))
+            if m and mlist and m not in mlist:
+                M.add("warning", "V-41", "PeriodRule", r.get("__row", ""),
+                      f"{who}: its {side} counts from '{m}', which is not in the milestone "
+                      f"list.")
+            if not m and o not in (None, 0):
+                M.add("warning", "V-41", "PeriodRule", r.get("__row", ""),
+                      f"{who}: its {side} is {o} days from no milestone, so the days are "
+                      f"ignored.")
+            if o is not None and round(o) != o:
+                M.add("warning", "V-41", "PeriodRule", r.get("__row", ""),
+                      f"{who}: {o} days is not a whole number; it is counted as {round(o)}.")
 
     # V-38: the same for a period (schema 14) - an unreadable value leaves it drawn gray.
     for r in M.raw.get("ProjectPeriod", []):
